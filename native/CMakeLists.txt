@@ -1,4 +1,5 @@
 set(PLV_CORE_SOURCES
+    core/src/ideal_reference.cpp
     core/src/material.cpp
     core/src/state_executor.cpp
     core/src/transport.cpp
