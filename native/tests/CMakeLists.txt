@@ -1,7 +1,9 @@
 add_executable(plv_tests
     test_main.cpp
     test_abi.cpp
+    test_indicator.cpp
     test_material.cpp
+    test_mixing.cpp
     test_science.cpp
     test_scheduler.cpp
     test_persistence.cpp

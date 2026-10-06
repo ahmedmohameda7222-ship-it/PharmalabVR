@@ -67,5 +67,20 @@ namespace PharmaLabVR.Tests
             StringAssert.Contains("\"positionMetres\":[1.5,2,3]", json);
             StringAssert.Contains("\"sampleSequence\":\"2\"", json);
         }
+
+        [Test]
+        public void Q01_Q03_ProtocolTracksCommittedVolumesWithoutMutatingCoreOrResettingHistory()
+        {
+            var definition = new ProtocolDefinition { schemaVersion = 1, maturity = "Research", certifiedScoring = false,
+                steps = new[] { "Prepare", "Titrate" }, tracks = new[] { "cumulativeDeliveredVolumeM3", "stageDeliveredVolumeM3" } };
+            var runner = new ProtocolRunner(definition);
+            runner.RecordCommittedDelivery(2e-6);
+            runner.RecordRefill();
+            runner.RecordCommittedDelivery(3e-6);
+            Assert.That(runner.CumulativeDeliveredVolumeM3, Is.EqualTo(5e-6).Within(1e-15));
+            Assert.That(runner.StageDeliveredVolumeM3, Is.EqualTo(3e-6).Within(1e-15));
+            Assert.That(runner.AdvanceInstruction(), Is.True);
+            Assert.That(runner.AdvanceInstruction(), Is.False);
+        }
     }
 }
