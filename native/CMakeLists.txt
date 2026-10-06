@@ -1,8 +1,10 @@
 set(PLV_CORE_SOURCES
     core/src/ideal_reference.cpp
+    core/src/indicator_model.cpp
     core/src/iphreeqc_adapter.cpp
     core/src/journal.cpp
     core/src/material.cpp
+    core/src/mixing_model.cpp
     core/src/scheduler.cpp
     core/src/state_executor.cpp
     core/src/tool_models.cpp

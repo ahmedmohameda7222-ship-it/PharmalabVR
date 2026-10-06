@@ -10,7 +10,50 @@ namespace PharmaLabVR.Protocols
         public string maturity;
         public bool certifiedScoring;
         public string[] requiredObservables;
+        public string[] optionalUnsupportedObservables;
+        public string[] steps;
+        public string[] tracks;
         public string[] limitations;
+    }
+
+    [Serializable]
+    public sealed class AssessmentContext
+    {
+        public string inputMode;
+        public string[] assistanceUsed;
+        public bool EligibleForCertifiedAssessment => false;
+    }
+
+    public sealed class ProtocolRunner
+    {
+        public ProtocolDefinition Definition { get; }
+        public int StepIndex { get; private set; }
+        public double CumulativeDeliveredVolumeM3 { get; private set; }
+        public double StageDeliveredVolumeM3 { get; private set; }
+
+        public ProtocolRunner(ProtocolDefinition definition)
+        {
+            Definition = definition ?? throw new ArgumentNullException(nameof(definition));
+            if (definition.schemaVersion != 1 || definition.certifiedScoring || definition.maturity != "Research")
+                throw new ArgumentException("Only schema-1 ungraded Research protocols are supported.", nameof(definition));
+        }
+
+        public void RecordCommittedDelivery(double volumeM3)
+        {
+            if (double.IsNaN(volumeM3) || double.IsInfinity(volumeM3) || volumeM3 < 0.0)
+                throw new ArgumentOutOfRangeException(nameof(volumeM3));
+            CumulativeDeliveredVolumeM3 += volumeM3;
+            StageDeliveredVolumeM3 += volumeM3;
+        }
+
+        public void RecordRefill() => StageDeliveredVolumeM3 = 0.0;
+
+        public bool AdvanceInstruction()
+        {
+            if (Definition.steps == null || StepIndex + 1 >= Definition.steps.Length) return false;
+            StepIndex++;
+            return true;
+        }
     }
 
     public readonly struct ObservationCapability
