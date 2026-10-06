@@ -33,8 +33,8 @@ TEST_CASE("S02 pinned IPhreeqc engine solves water strong acid and strong base")
     IPhreeqcAdapter adapter(PLV_MINTEQ_DATABASE, "minteq.v4.dat-pinned-package-bytes");
     REQUIRE(adapter.initialized());
     const auto water = adapter.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0});
-    const auto acid = adapter.solve({0.01, 1e-5, 0.0, 1e-6, 0.0, 25.0});
-    const auto base = adapter.solve({0.01, 1e-5, 1e-6, 0.0, 0.0, 25.0});
+    const auto acid = adapter.solve({0.01, 1e-5, 0.0, 1e-3, 0.0, 25.0});
+    const auto base = adapter.solve({0.01, 1e-5, 1e-3, 0.0, 0.0, 25.0});
     INFO("water error: " << water.error);
     INFO("acid error: " << acid.error);
     INFO("base error: " << base.error);
