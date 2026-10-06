@@ -1,0 +1,89 @@
+{
+  "allowedMissing": [
+    "unity"
+  ],
+  "capturedAtUtc": "2026-10-06T01:00:35.880127+00:00",
+  "claims": {
+    "experimentalAccuracyEstablished": false,
+    "physicalVrTested": false,
+    "productBuilt": false
+  },
+  "host": {
+    "machine": "AMD64",
+    "release": "11",
+    "system": "Windows"
+  },
+  "missingRequired": [
+    "cmake",
+    "cxx"
+  ],
+  "ready": false,
+  "schemaVersion": 1,
+  "scope": "environment-discovery",
+  "tools": [
+    {
+      "available": true,
+      "detail": null,
+      "name": "git",
+      "path": "C:\\Program Files\\Git\\cmd\\git.EXE",
+      "required": true,
+      "version": "git version 2.54.0.windows.1"
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "python",
+      "path": "C:\\Users\\Ahmee\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "required": true,
+      "version": "3.12.14"
+    },
+    {
+      "available": false,
+      "detail": null,
+      "name": "cmake",
+      "path": null,
+      "required": true,
+      "version": null
+    },
+    {
+      "available": false,
+      "detail": null,
+      "name": "cxx",
+      "path": null,
+      "required": true,
+      "version": null
+    },
+    {
+      "available": false,
+      "detail": "Pinned Unity Editor not found.",
+      "name": "unity",
+      "path": null,
+      "required": true,
+      "version": null
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "github-cli",
+      "path": "C:\\Program Files\\GitHub CLI\\gh.EXE",
+      "required": false,
+      "version": "gh version 2.93.0 (2026-05-27)"
+    },
+    {
+      "available": false,
+      "detail": "Unavailable or invalid; no token content inspected.",
+      "name": "github-auth",
+      "path": null,
+      "required": false,
+      "version": null
+    },
+    {
+      "available": false,
+      "detail": "EvidenceMissing by assignment context.",
+      "name": "physical-vr-headset",
+      "path": null,
+      "required": false,
+      "version": null
+    }
+  ]
+}

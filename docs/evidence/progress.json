@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "authority": "docs/implementation-package-v3/05-EXACT-TASKS.md",
+  "branch": "feat/foundation-vr-first",
+  "tasks": {
+    "P00": "implemented-with-prerequisite-blockers",
+    "P01": "pending",
+    "P02": "pending",
+    "P03": "pending",
+    "P04": "pending",
+    "P05": "pending",
+    "P06": "pending",
+    "P07": "pending",
+    "P08": "pending",
+    "P09": "pending",
+    "P10": "pending",
+    "P11": "pending",
+    "P12": "pending",
+    "P13": "pending",
+    "P14": "pending",
+    "P15": "pending",
+    "P16": "pending"
+  },
+  "blockers": [
+    "Unity 6000.3.25f1 Editor not installed",
+    "CMake 3.24+ not installed or discoverable",
+    "C++ compiler not installed or discoverable",
+    "Physical VR headset unavailable as expected",
+    "GitHub CLI authentication invalid; Git credential push verified separately"
+  ]
+}
