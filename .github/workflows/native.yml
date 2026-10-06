@@ -1,0 +1,26 @@
+name: Native
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build/native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/native --config Release --parallel 2
+      - name: Test
+        run: ctest --test-dir build/native -C Release --output-on-failure
+      - name: Verify independent ideal fixtures
+        run: python science/reference/verify_ideal_fixtures.py
