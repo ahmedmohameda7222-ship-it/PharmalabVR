@@ -32,6 +32,6 @@ jobs:
             build/native/**/*.dll
             build/native/**/*.so
             build/native/**/*.dylib
-            build/native/**/plv_core_tests*
+            build/native/**/plv_tests*
           if-no-files-found: error
           retention-days: 30
