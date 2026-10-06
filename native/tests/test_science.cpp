@@ -35,6 +35,9 @@ TEST_CASE("S02 pinned IPhreeqc engine solves water strong acid and strong base")
     const auto water = adapter.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0});
     const auto acid = adapter.solve({0.01, 1e-5, 0.0, 1e-6, 0.0, 25.0});
     const auto base = adapter.solve({0.01, 1e-5, 1e-6, 0.0, 0.0, 25.0});
+    INFO("water error: " << water.error);
+    INFO("acid error: " << acid.error);
+    INFO("base error: " << base.error);
     REQUIRE(water.succeeded);
     REQUIRE(acid.succeeded);
     REQUIRE(base.succeeded);
@@ -50,7 +53,9 @@ TEST_CASE("S03 solver result does not depend on diverse prior request") {
     REQUIRE(adapter.initialized());
     const SolveRequest acid{0.01, 1e-5, 0.0, 1e-7, 0.0, 25.0};
     const auto first = adapter.solve(acid);
-    REQUIRE(adapter.solve({0.01, 1e-5, 1e-6, 0.0, 0.0, 25.0}).succeeded);
+    const auto intervening = adapter.solve({0.01, 1e-5, 1e-6, 0.0, 0.0, 25.0});
+    INFO("intervening error: " << intervening.error);
+    REQUIRE(intervening.succeeded);
     const auto second = adapter.solve(acid);
     REQUIRE(first.succeeded);
     REQUIRE(second.succeeded);

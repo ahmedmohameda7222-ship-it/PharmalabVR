@@ -72,6 +72,22 @@ bool selectedDouble(IPhreeqc& engine, const std::string& heading, double& output
     }
     return false;
 }
+
+std::string selectedHeadings(IPhreeqc& engine) {
+    std::ostringstream headings;
+    bool first = true;
+    for (int column = 0; column < engine.GetSelectedOutputColumnCount(); ++column) {
+        VAR header;
+        VarInit(&header);
+        if (engine.GetSelectedOutputValue(0, column, &header) == VR_OK && header.type == TT_STRING && header.sVal != nullptr) {
+            if (!first) headings << ',';
+            headings << header.sVal;
+            first = false;
+        }
+        VarClear(&header);
+    }
+    return headings.str();
+}
 }  // namespace
 
 IPhreeqcAdapter::IPhreeqcAdapter(std::string databasePath, std::string databaseIdentity)
@@ -120,12 +136,12 @@ SolveResult IPhreeqcAdapter::solve(const SolveRequest& request) {
         return result;
     }
     if (!selectedDouble(implementation_->engine, "pH", result.pH)) {
-        result.error = "selected output did not contain a finite named pH column";
+        result.error = "selected output did not contain a finite named pH column; headings=" + selectedHeadings(implementation_->engine);
         return result;
     }
     if (!selectedDouble(implementation_->engine, "charge", result.chargeBalance) &&
         !selectedDouble(implementation_->engine, "charge_balance", result.chargeBalance)) {
-        result.error = "selected output did not contain a finite named charge-balance column";
+        result.error = "selected output did not contain a finite named charge-balance column; headings=" + selectedHeadings(implementation_->engine);
         return result;
     }
     result.succeeded = true;
