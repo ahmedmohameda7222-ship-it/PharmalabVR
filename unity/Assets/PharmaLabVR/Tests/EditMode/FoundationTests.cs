@@ -4,6 +4,8 @@ using PharmaLabVR.Input;
 using PharmaLabVR.UI;
 using PharmaLabVR.Core;
 using UnityEngine;
+using PharmaLabVR.Tools;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Tests
 {
@@ -81,6 +83,33 @@ namespace PharmaLabVR.Tests
             Assert.That(runner.StageDeliveredVolumeM3, Is.EqualTo(3e-6).Within(1e-15));
             Assert.That(runner.AdvanceInstruction(), Is.True);
             Assert.That(runner.AdvanceInstruction(), Is.False);
+        }
+
+        [Test]
+        public void V01_LiquidVisualIsDerivedFromCommittedVolumeAndAnchoredAtTheBottom()
+        {
+            var root = new GameObject("vessel");
+            var visual = new GameObject("liquid");
+            visual.transform.SetParent(root.transform, false);
+            visual.transform.localScale = Vector3.one;
+            var presenter = root.AddComponent<LiquidPresenter>();
+            presenter.Configure(visual.transform, 1e-5, 0.2f, -0.1f);
+            presenter.SetCommittedVolume(5e-6);
+            Assert.That(presenter.Fill01, Is.EqualTo(0.5f).Within(1e-6));
+            Assert.That(visual.transform.localScale.y, Is.EqualTo(0.1f).Within(1e-6));
+            Assert.That(visual.transform.localPosition.y, Is.EqualTo(-0.05f).Within(1e-6));
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void J03_UnsupportedObservationNeverDisplaysAValue()
+        {
+            var root = new GameObject("measurement");
+            var view = root.AddComponent<MeasurementView>();
+            view.Present(MeasurementAvailability.Unsupported, "12.34", "No validated optical model");
+            Assert.That(view.DisplayValue, Is.EqualTo("--"));
+            Assert.That(view.Availability, Is.EqualTo(MeasurementAvailability.Unsupported));
+            Object.DestroyImmediate(root);
         }
     }
 }
