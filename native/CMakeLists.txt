@@ -1,5 +1,6 @@
 set(PLV_CORE_SOURCES
     core/src/ideal_reference.cpp
+    core/src/iphreeqc_adapter.cpp
     core/src/journal.cpp
     core/src/material.cpp
     core/src/scheduler.cpp
@@ -10,6 +11,7 @@ set(PLV_CORE_SOURCES
 
 add_library(plv_core STATIC ${PLV_CORE_SOURCES})
 target_include_directories(plv_core PUBLIC core/include)
+target_link_libraries(plv_core PUBLIC IPhreeqc)
 
 add_library(pharmalab_core SHARED core/src/abi.cpp)
 target_include_directories(pharmalab_core PUBLIC core/include PRIVATE ${PROJECT_SOURCE_DIR}/third_party/nlohmann)

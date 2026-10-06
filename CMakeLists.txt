@@ -7,4 +7,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 include(CTest)
+set(IPHREEQC_ENABLE_MODULE OFF CACHE BOOL "Disable legacy Fortran wrappers" FORCE)
+add_subdirectory(third_party/iphreeqc-source EXCLUDE_FROM_ALL)
 add_subdirectory(native)
