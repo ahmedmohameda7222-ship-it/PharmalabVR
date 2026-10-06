@@ -37,8 +37,13 @@ namespace PharmaLabVR.Editor
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             new GameObject("CoreDriver").AddComponent<CoreDriver>().transform.SetParent(lab.transform);
-            new GameObject("XRPlayerRig").AddComponent<XRInputAdapter>().transform.SetParent(lab.transform);
-            new GameObject("DesktopPlayerRig").AddComponent<DesktopInputAdapter>().transform.SetParent(lab.transform);
+            var xrRig = new GameObject("XRPlayerRig");
+            xrRig.AddComponent<XRInputAdapter>();
+            xrRig.transform.SetParent(lab.transform);
+            xrRig.SetActive(false);
+            var desktopRig = new GameObject("DesktopPlayerRig");
+            desktopRig.AddComponent<DesktopInputAdapter>();
+            desktopRig.transform.SetParent(lab.transform);
             new GameObject("LabPanels").transform.SetParent(lab.transform);
             new GameObject("SessionController").transform.SetParent(lab.transform);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);

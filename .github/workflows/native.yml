@@ -24,3 +24,14 @@ jobs:
         run: ctest --test-dir build/native -C Release --output-on-failure
       - name: Verify independent ideal fixtures
         run: python science/reference/verify_ideal_fixtures.py
+      - name: Upload tested native build
+        uses: actions/upload-artifact@v4
+        with:
+          name: pharmalabvr-native-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            build/native/**/*.dll
+            build/native/**/*.so
+            build/native/**/*.dylib
+            build/native/**/plv_core_tests*
+          if-no-files-found: error
+          retention-days: 30

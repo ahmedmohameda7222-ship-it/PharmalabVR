@@ -13,7 +13,8 @@ namespace PharmaLabVR.Input
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
-            if (!inputEnabled) return System.Array.Empty<LabInputSample>();
+            if (!inputEnabled || labFrame == null || leftController == null || rightController == null)
+                return System.Array.Empty<LabInputSample>();
             return new[] {
                 LabGeometryAdapter.BuildSample("left-controller", ++sequence, nowNs, labFrame, leftController, 0f, geometryProfileHash, leftController.gameObject.activeInHierarchy),
                 LabGeometryAdapter.BuildSample("right-controller", ++sequence, nowNs, labFrame, rightController, 0f, geometryProfileHash, rightController.gameObject.activeInHierarchy)
