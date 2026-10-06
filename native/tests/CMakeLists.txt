@@ -11,6 +11,7 @@ add_executable(plv_tests
 target_include_directories(plv_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/native/core/include
     ${PROJECT_SOURCE_DIR}/third_party/doctest
+    ${PROJECT_SOURCE_DIR}/third_party/nlohmann
 )
 target_link_libraries(plv_tests PRIVATE pharmalab_core plv_core)
 if(WIN32)

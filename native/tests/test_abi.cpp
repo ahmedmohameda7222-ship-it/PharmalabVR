@@ -1,9 +1,46 @@
 #include "doctest.h"
 #include "plv/abi.h"
+#include "json.hpp"
 
 #include <array>
 #include <cstdint>
 #include <string>
+
+namespace {
+using json = nlohmann::json;
+
+std::string read_text(std::uint64_t handle, bool exported = false) {
+    std::uint32_t required = 0;
+    const auto sizing = exported ? plv_export(handle, nullptr, 0, &required)
+                                 : plv_snapshot(handle, nullptr, 0, &required);
+    REQUIRE(sizing == PLV_BUFFER_TOO_SMALL);
+    std::string value(required, '\0');
+    const auto copied = exported ? plv_export(handle, value.data(), required, &required)
+                                 : plv_snapshot(handle, value.data(), required, &required);
+    REQUIRE(copied == PLV_OK);
+    value.pop_back();
+    return value;
+}
+
+void submit(std::uint64_t handle, const json& command) {
+    const auto value = command.dump();
+    REQUIRE(plv_submit(handle, value.data(), static_cast<std::uint32_t>(value.size())) == PLV_OK);
+}
+
+json poll(std::uint64_t handle) {
+    std::uint32_t required = 0;
+    REQUIRE(plv_poll(handle, nullptr, 0, &required) == PLV_BUFFER_TOO_SMALL);
+    std::string value(required, '\0');
+    REQUIRE(plv_poll(handle, value.data(), required, &required) == PLV_OK);
+    value.pop_back();
+    return json::parse(value);
+}
+
+json command(const std::string& sequence, const std::string& type, json payload = json::object(), json revisions = json::object()) {
+    return {{"schemaVersion", 1}, {"branchId", "branch-1"}, {"commandSequence", sequence},
+            {"type", type}, {"expectedMaterialRevisions", revisions}, {"payload", payload}};
+}
+}  // namespace
 
 TEST_CASE("A01 ABI version and handle lifecycle") {
     CHECK(plv_abi_version() == 1U);
@@ -52,4 +89,59 @@ TEST_CASE("A04 malformed and non-finite JSON inputs reject") {
     const std::string malformed = "{";
     CHECK(plv_create(malformed.data(), static_cast<std::uint32_t>(malformed.size()), &handle) == PLV_INVALID_ARGUMENT);
     CHECK(handle == 0U);
+}
+
+TEST_CASE("A02 discrete ABI commands mutate the native authority and duplicate safely") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 2e-5}}));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}}));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}}));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
+                                                   {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    const auto transfer = command("5", "TransferFixed",
+                                  {{"sourceId", "source"}, {"receiverId", "receiver"}, {"spillSinkId", "spill"},
+                                   {"requestedVolumeM3", 2e-6}},
+                                  {{"source", "1"}, {"receiver", "0"}});
+    submit(handle, transfer);
+    CHECK(poll(handle)["accepted"].get<bool>());
+    submit(handle, transfer);
+    CHECK(poll(handle)["code"] == "Accepted");
+
+    const auto snapshot = json::parse(read_text(handle));
+    const auto source = snapshot["vessels"][0]["id"] == "source" ? snapshot["vessels"][0] : snapshot["vessels"][1];
+    const auto receiver = snapshot["vessels"][0]["id"] == "receiver" ? snapshot["vessels"][0] : snapshot["vessels"][1];
+    CHECK(source["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(8e-6));
+    CHECK(receiver["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-6));
+
+    auto conflict = transfer;
+    conflict["payload"]["requestedVolumeM3"] = 1e-6;
+    submit(handle, conflict);
+    CHECK(poll(handle)["code"] == "CommandIdentityConflict");
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("R01 ABI export imports complete state into a fresh validated context") {
+    std::uint64_t original = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    submit(original, command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 2e-5}}));
+    poll(original);
+    submit(original, command("2", "PrepareStock", {{"vesselId", "stock"}, {"stockKind", "HydrochloricAcid"},
+                                                     {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}));
+    poll(original);
+    const auto exported = read_text(original, true);
+
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    CHECK(json::parse(read_text(imported)) == json::parse(read_text(original)));
+    CHECK(imported != original);
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
 }
