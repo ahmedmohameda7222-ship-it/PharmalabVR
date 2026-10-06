@@ -1,7 +1,9 @@
 #include "doctest.h"
 #include "plv/tool_models.hpp"
 
+#include <algorithm>
 #include <array>
+#include <cmath>
 
 using namespace plv;
 

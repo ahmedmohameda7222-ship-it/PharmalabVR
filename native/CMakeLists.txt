@@ -1,7 +1,10 @@
 set(PLV_CORE_SOURCES
     core/src/ideal_reference.cpp
+    core/src/journal.cpp
     core/src/material.cpp
+    core/src/scheduler.cpp
     core/src/state_executor.cpp
+    core/src/tool_models.cpp
     core/src/transport.cpp
 )
 
