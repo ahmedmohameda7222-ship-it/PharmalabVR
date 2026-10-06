@@ -113,6 +113,29 @@ json snapshotJson(const plv::SessionSnapshot& snapshot) {
     };
 }
 
+json exportJson(const Context& context) {
+    auto result = snapshotJson(context.executor.snapshot());
+    result["nextCommandSequence"] = std::to_string(context.nextCommandSequence);
+    result["commandReceipts"] = json::array();
+    std::vector<std::uint64_t> sequences;
+    sequences.reserve(context.receipts.size());
+    for (const auto& receipt : context.receipts) sequences.push_back(receipt.first);
+    std::sort(sequences.begin(), sequences.end());
+    for (const auto sequence : sequences) {
+        const auto& receipt = context.receipts.at(sequence);
+        result["commandReceipts"].push_back({
+            {"commandSequence", std::to_string(sequence)},
+            {"canonicalCommand", json::parse(receipt.first)},
+            {"terminalOutcome", json::parse(receipt.second)}
+        });
+    }
+    result["inputSequences"] = json::object();
+    for (const auto& item : context.inputSequences) {
+        result["inputSequences"][item.first] = std::to_string(item.second);
+    }
+    return result;
+}
+
 std::optional<std::uint64_t> decimalSequence(const std::string& value) {
     if (value.empty() || value.size() > 20 || (value.size() > 1 && value.front() == '0')) return std::nullopt;
     std::uint64_t result = 0;
@@ -391,7 +414,16 @@ std::int32_t plv_poll(std::uint64_t handle, char* out, std::uint32_t capacity, s
 }
 
 std::int32_t plv_export(std::uint64_t handle, char* out, std::uint32_t capacity, std::uint32_t* required) {
-    return plv_snapshot(handle, out, capacity, required);
+    const auto context = getContext(handle);
+    if (!context) {
+        return PLV_INVALID_HANDLE;
+    }
+    try {
+        std::lock_guard<std::mutex> lock(context->mutex);
+        return copyString(exportJson(*context).dump(), out, capacity, required);
+    } catch (...) {
+        return PLV_INTERNAL_ERROR;
+    }
 }
 
 std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* new_handle) {
@@ -405,6 +437,33 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
         auto context = std::make_shared<Context>(snapshot.branchId);
         const auto outcome = context->executor.restore(snapshot);
         if (!outcome.accepted) return PLV_INVALID_ARGUMENT;
+        const auto nextSequence = decimalSequence(parsed.at("nextCommandSequence").get<std::string>());
+        if (!nextSequence || *nextSequence == 0U || !parsed.at("commandReceipts").is_array() ||
+            !parsed.at("inputSequences").is_object()) {
+            return PLV_INVALID_ARGUMENT;
+        }
+        for (const auto& item : parsed.at("commandReceipts")) {
+            const auto sequence = decimalSequence(item.at("commandSequence").get<std::string>());
+            if (!sequence || *sequence == 0U || *sequence >= *nextSequence) return PLV_INVALID_ARGUMENT;
+            const auto& command = item.at("canonicalCommand");
+            const auto& terminalOutcome = item.at("terminalOutcome");
+            if (!command.is_object() || !terminalOutcome.is_object() ||
+                command.value("schemaVersion", 0) != 1 || terminalOutcome.value("schemaVersion", 0) != 1 ||
+                command.at("branchId").get<std::string>() != snapshot.branchId ||
+                terminalOutcome.at("branchId").get<std::string>() != snapshot.branchId ||
+                command.at("commandSequence").get<std::string>() != std::to_string(*sequence) ||
+                terminalOutcome.at("commandSequence").get<std::string>() != std::to_string(*sequence) ||
+                !context->receipts.emplace(*sequence, std::make_pair(command.dump(), terminalOutcome.dump())).second) {
+                return PLV_INVALID_ARGUMENT;
+            }
+        }
+        if (context->receipts.size() != *nextSequence - 1U) return PLV_INVALID_ARGUMENT;
+        for (const auto& item : parsed.at("inputSequences").items()) {
+            const auto sequence = decimalSequence(item.value().get<std::string>());
+            if (!plv::isValidId(item.key()) || !sequence) return PLV_INVALID_ARGUMENT;
+            context->inputSequences.emplace(item.key(), *sequence);
+        }
+        context->nextCommandSequence = *nextSequence;
         std::lock_guard<std::mutex> lock(registryMutex);
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
