@@ -6,6 +6,7 @@ set(PLV_CORE_SOURCES
     core/src/material.cpp
     core/src/mixing_model.cpp
     core/src/scheduler.cpp
+    core/src/solver_worker.cpp
     core/src/state_executor.cpp
     core/src/tool_models.cpp
     core/src/transport.cpp
@@ -14,6 +15,8 @@ set(PLV_CORE_SOURCES
 add_library(plv_core STATIC ${PLV_CORE_SOURCES})
 target_include_directories(plv_core PUBLIC core/include)
 target_link_libraries(plv_core PUBLIC IPhreeqc)
+find_package(Threads REQUIRED)
+target_link_libraries(plv_core PUBLIC Threads::Threads)
 
 add_library(pharmalab_core SHARED core/src/abi.cpp)
 target_include_directories(pharmalab_core PUBLIC core/include PRIVATE ${PROJECT_SOURCE_DIR}/third_party/nlohmann)

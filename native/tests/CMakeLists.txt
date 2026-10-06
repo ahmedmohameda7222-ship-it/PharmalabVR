@@ -6,6 +6,7 @@ add_executable(plv_tests
     test_mixing.cpp
     test_science.cpp
     test_scheduler.cpp
+    test_solver_worker.cpp
     test_persistence.cpp
     test_tools.cpp
     test_transport.cpp
