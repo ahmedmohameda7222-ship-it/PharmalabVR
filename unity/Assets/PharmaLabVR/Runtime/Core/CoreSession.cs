@@ -16,8 +16,26 @@ namespace PharmaLabVR.Core
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
         }
 
-        public void Submit(string commandJson) => Ensure(NativeMethods.Submit(handle, Utf8(commandJson), (uint)Utf8(commandJson).Length), "submit");
-        public void SubmitInputs(string batchJson) => Ensure(NativeMethods.InputBatch(handle, Utf8(batchJson), (uint)Utf8(batchJson).Length), "input batch");
+        private CoreSession(CoreSafeHandle importedHandle) => handle = importedHandle;
+
+        public static CoreSession ImportSession(string json)
+        {
+            if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
+            var bytes = Utf8(json);
+            Ensure(NativeMethods.Import(bytes, (uint)bytes.Length, out var imported), "import");
+            return new CoreSession(imported);
+        }
+
+        public void Submit(string commandJson)
+        {
+            var bytes = Utf8(commandJson);
+            Ensure(NativeMethods.Submit(handle, bytes, (uint)bytes.Length), "submit");
+        }
+        public void SubmitInputs(string batchJson)
+        {
+            var bytes = Utf8(batchJson);
+            Ensure(NativeMethods.InputBatch(handle, bytes, (uint)bytes.Length), "input batch");
+        }
         public void Step(double deltaSeconds, ulong nowNs) => Ensure(NativeMethods.Step(handle, deltaSeconds, nowNs), "step");
         public string ReadSnapshot() => ReadBuffer(NativeMethods.Snapshot, false);
         public string ExportSession() => ReadBuffer(NativeMethods.Export, false);

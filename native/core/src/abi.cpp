@@ -25,6 +25,7 @@ struct Context {
     plv::StateExecutor executor;
     std::deque<std::string> events;
     std::unordered_map<std::uint64_t, std::pair<std::string, std::string>> receipts;
+    std::unordered_map<std::string, std::uint64_t> inputSequences;
     std::uint64_t nextCommandSequence = 1;
     std::mutex mutex;
 };
@@ -303,7 +304,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
 }
 
 std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uint32_t size) {
-    if (!getContext(handle)) {
+    const auto context = getContext(handle);
+    if (!context) {
         return PLV_INVALID_HANDLE;
     }
     if (!validInput(samples, size)) {
@@ -311,7 +313,34 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
     }
     try {
         const auto parsed = json::parse(samples, samples + size);
-        return parsed.is_array() ? PLV_OK : PLV_INVALID_ARGUMENT;
+        if (!parsed.is_array() || parsed.size() > 128U) return PLV_INVALID_ARGUMENT;
+        std::lock_guard<std::mutex> lock(context->mutex);
+        auto proposedSequences = context->inputSequences;
+        for (const auto& sample : parsed) {
+            const auto toolId = sample.at("toolId").get<std::string>();
+            const auto profile = sample.at("geometryProfileHash").get<std::string>();
+            const auto sequence = decimalSequence(sample.at("sampleSequence").get<std::string>());
+            const auto timestamp = decimalSequence(sample.at("captureMonotonicNs").get<std::string>());
+            const auto& position = sample.at("positionMetres");
+            const auto& rotation = sample.at("rotation");
+            const double actuator = sample.at("actuator01").get<double>();
+            if (!plv::isValidId(toolId) || profile.empty() || profile.size() > 128U || !sequence || !timestamp ||
+                !position.is_array() || position.size() != 3U || !rotation.is_array() || rotation.size() != 4U ||
+                !sample.at("trackingValid").is_boolean() || !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
+                return PLV_INVALID_ARGUMENT;
+            }
+            double normSquared = 0.0;
+            for (const auto& coordinate : position) if (!coordinate.is_number() || !std::isfinite(coordinate.get<double>())) return PLV_INVALID_ARGUMENT;
+            for (const auto& coordinate : rotation) {
+                if (!coordinate.is_number() || !std::isfinite(coordinate.get<double>())) return PLV_INVALID_ARGUMENT;
+                const double value = coordinate.get<double>();
+                normSquared += value * value;
+            }
+            if (std::abs(normSquared - 1.0) > 1e-6 || *sequence <= proposedSequences[toolId]) return PLV_INVALID_ARGUMENT;
+            proposedSequences[toolId] = *sequence;
+        }
+        context->inputSequences = std::move(proposedSequences);
+        return PLV_OK;
     } catch (...) {
         return PLV_INVALID_ARGUMENT;
     }

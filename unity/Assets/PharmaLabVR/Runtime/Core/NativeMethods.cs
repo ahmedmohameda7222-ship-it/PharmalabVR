@@ -53,5 +53,8 @@ namespace PharmaLabVR.Core
 
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "plv_export")]
         internal static extern NativeStatus Export(CoreSafeHandle handle, byte[] output, uint capacity, out uint required);
+
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "plv_import")]
+        internal static extern NativeStatus Import(byte[] json, uint size, out CoreSafeHandle handle);
     }
 }
