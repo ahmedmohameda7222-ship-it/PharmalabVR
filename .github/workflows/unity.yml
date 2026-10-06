@@ -1,0 +1,57 @@
+name: Unity licensed verification
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Build target
+        required: true
+        default: AllAssets
+        type: choice
+        options: [AllAssets, WindowsDesktop, WindowsVR, AndroidVR, AndroidVRPico]
+
+permissions:
+  contents: read
+
+jobs:
+  unity:
+    runs-on: [self-hosted, Windows, X64, unity-6000.3.25f1]
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require pinned licensed Editor
+        shell: pwsh
+        run: |
+          if (-not $env:PLV_UNITY_EDITOR) { throw 'PLV_UNITY_EDITOR is not configured on this licensed runner.' }
+          if (-not (Test-Path -LiteralPath $env:PLV_UNITY_EDITOR -PathType Leaf)) { throw "Pinned Unity Editor not found: $env:PLV_UNITY_EDITOR" }
+          $version = & $env:PLV_UNITY_EDITOR -version
+          if ($version -notmatch '^6000\.3\.25f1') { throw "Expected Unity 6000.3.25f1, found $version" }
+      - name: Build native Windows plugin
+        shell: pwsh
+        run: ./scripts/build-native.ps1 -Configuration Release
+      - name: Stage native plugin
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force unity/Assets/Plugins/x86_64 | Out-Null
+          Copy-Item -LiteralPath build/native/native/Release/pharmalab_core.dll -Destination unity/Assets/Plugins/x86_64/pharmalab_core.dll
+      - name: Generate assets
+        shell: pwsh
+        run: ./scripts/build-unity.ps1 -UnityEditor $env:PLV_UNITY_EDITOR -Target AllAssets
+      - name: EditMode tests
+        shell: pwsh
+        run: ./scripts/test-unity.ps1 -UnityEditor $env:PLV_UNITY_EDITOR -Platform EditMode
+      - name: PlayMode tests
+        shell: pwsh
+        run: ./scripts/test-unity.ps1 -UnityEditor $env:PLV_UNITY_EDITOR -Platform PlayMode
+      - name: Build selected target
+        if: ${{ inputs.target != 'AllAssets' }}
+        shell: pwsh
+        run: ./scripts/build-unity.ps1 -UnityEditor $env:PLV_UNITY_EDITOR -Target '${{ inputs.target }}'
+      - name: Upload real logs and results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: unity-${{ inputs.target }}-${{ github.sha }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
