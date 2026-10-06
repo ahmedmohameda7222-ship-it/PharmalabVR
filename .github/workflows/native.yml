@@ -35,3 +35,5 @@ jobs:
         run: ctest --test-dir build/native -C Release --output-on-failure
       - name: Verify independent ideal fixtures
         run: python science/reference/verify_ideal_fixtures.py
+      - name: Verify repository tooling
+        run: python -m unittest discover -s scripts/tests -v
