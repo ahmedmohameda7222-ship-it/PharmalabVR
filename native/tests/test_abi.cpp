@@ -145,3 +145,17 @@ TEST_CASE("R01 ABI export imports complete state into a fresh validated context"
     CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(original) == PLV_OK);
 }
+
+TEST_CASE("A04 input batches validate geometry atomically and reject stale samples") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    const std::string valid = R"([{"toolId":"tool-1","sampleSequence":"1","captureMonotonicNs":"100","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    CHECK(plv_input_batch(handle, valid.data(), static_cast<std::uint32_t>(valid.size())) == PLV_OK);
+    CHECK(plv_input_batch(handle, valid.data(), static_cast<std::uint32_t>(valid.size())) == PLV_INVALID_ARGUMENT);
+    const std::string invalid = R"([{"toolId":"tool-2","sampleSequence":"1","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,2],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    CHECK(plv_input_batch(handle, invalid.data(), static_cast<std::uint32_t>(invalid.size())) == PLV_INVALID_ARGUMENT);
+    const std::string corrected = R"([{"toolId":"tool-2","sampleSequence":"1","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    CHECK(plv_input_batch(handle, corrected.data(), static_cast<std::uint32_t>(corrected.size())) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
