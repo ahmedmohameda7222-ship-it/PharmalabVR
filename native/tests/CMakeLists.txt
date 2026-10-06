@@ -3,6 +3,9 @@ add_executable(plv_tests
     test_abi.cpp
     test_material.cpp
     test_science.cpp
+    test_scheduler.cpp
+    test_persistence.cpp
+    test_tools.cpp
     test_transport.cpp
 )
 target_include_directories(plv_tests PRIVATE
