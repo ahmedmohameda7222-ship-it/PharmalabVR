@@ -9,4 +9,11 @@ target_include_directories(plv_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/third_party/doctest
 )
 target_link_libraries(plv_tests PRIVATE pharmalab_core plv_core)
+if(WIN32)
+    add_custom_command(TARGET plv_tests POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            $<TARGET_FILE:pharmalab_core>
+            $<TARGET_FILE_DIR:plv_tests>
+    )
+endif()
 add_test(NAME plv_tests COMMAND plv_tests)
