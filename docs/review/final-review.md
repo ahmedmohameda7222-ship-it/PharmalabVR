@@ -1,32 +1,22 @@
 # Delivery review
 
-## Review scope
+## Confirmed implementation and evidence
 
-This review compares the delivered branch with the v3 authority. It does not reinterpret BuildNotVerified work as complete.
+- The untouched v3 package verifier passed over 285 files, 17 tasks, 95 specified tests, six original documents, and 40 ideal-reference cases.
+- The native C++ library compiles and tests on GitHub-hosted Windows 2022/MSVC and Ubuntu 24.04/GCC. CI publishes the actual shared library, test executable, and pinned database.
+- One StateExecutor owns material. Transfers conserve represented water/components/reference volume and route or reject overflow explicitly. Tool models retain rinse, tip, residual, and in-flight parcels.
+- The production adapter constructs complete IPhreeqc inputs, loads the bundled `minteq.v4.dat`, extracts named columns, rejects failed/missing inputs, and is tested for water, strong acid/base, and context reuse. The ideal adapter remains a separately identified numerical reference.
+- A bounded single solver worker runs outside queue locks; the scheduler rejects stale completions, enforces gross-volume/age budgets, and represents Unsupported, Pending, Stale, and Current separately. Holds require neutral input, a fresh baseline, and an explicit continue action.
+- Session export/import round-trips material, pause/time state, ordered command receipts, next command identity, and per-tool input watermarks. The journal detects truncated and corrupt tails. Unity-side save replacement uses flushed temporary files.
+- Unity source uses one native core for desktop and XR. It includes a boot mode selector, desktop camera/pick/place/actuator input, XR geometry samples, generated inspectable tool/panel assets, committed-volume liquid visuals, truthful measurement states, English/Arabic content with RTLTMPro and licensed Noto fonts, research-only protocols, and strict build entry points.
+- Repository tooling tests the environment report and performance analyzer. Performance publication requires a real Player run, a five-minute warmup, exactly three 30-minute captures, finite samples, and zero recurring compute holds.
 
-## Confirmed evidence
+## Plan, review, critic, alternatives and long-term result
 
-- The package preparation verifier passed: 285 files, 17 tasks, 95 specified tests, 6 original documents, and 40 ideal cases.
-- The native C++ boundary is compiled and tested on GitHub-hosted Windows 2022/MSVC and Ubuntu 24.04/GCC runners.
-- CTest exercises ABI sizing, event polling, material conservation, capacity rejection, snapshot round trips, transport, and ideal aqueous behavior.
-- The independent Python verifier passes all 40 packaged ideal fixtures with zero maximum pH error and a maximum charge-balance residual of approximately `5.2e-17` mol/L.
-- Original DOCX/PDF source references remain outside the public repository.
+**Plan:** Deliver the largest independently verifiable native and Unity-source foundation while preserving the v3 capability boundaries. **Review:** Native changes are exact-head CI tested on two operating systems; Python reference/tooling tests and package integrity are independently rerun. **Critic:** Unity source could not be imported or compiled locally, so API/package/serialization defects may remain and there are no legitimate Player screenshots. The working receipt representation is restored correctly but full on-disk identity compaction and 256 MiB lifecycle policy need further implementation. Physical flow, optical response, mixing, performance, comfort, and scientific validity are not established. **Alternatives/long term:** Run the committed manual Unity workflow on a licensed pinned runner, fix any Editor-derived defects on this same PR, then perform simulator, desktop Player, and separate physical-device/experimental campaigns. Do not promote Research observations or change calibrated flow to satisfy performance targets.
 
-## Critic findings and fixes
+## Explicit evidence boundaries
 
-- The first native workflow correctly failed before implementation. Subsequent review fixed static-library linkage and staged the Windows runtime library beside the tests.
-- The initial generated Lab scene enabled both input rigs and the unbound XR adapter could dereference missing controllers. The scene now begins with exactly one adapter surface active (desktop), and the XR adapter fails closed until its frame/controllers are bound.
-- CI initially proved builds but retained no binaries. Each platform now uploads the exact tested native library and test executable for 30 days.
+The following remain `EvidenceMissing`: Unity package resolution and `packages-lock.json`; Unity EditMode/PlayMode results; serialized scene/prefab inspection; Windows Desktop/VR Player builds; Android APK/IL2CPP/signing; actual screenshots; simulator journey; physical headset/controller tests; target frame/thermal/power captures; participant/human-factor studies; burette calibration; tracer/mixing validation; optical validation; and experimental scientific validation.
 
-## Alternatives and long-term checks
-
-- A web or simulator-only replacement was rejected. Unity is an adapter over the same native authority used by Windows desktop and VR targets.
-- The ideal aqueous adapter is intentionally narrow and deterministic. It is not a substitute for the required IPhreeqc production adapter, experimental validation, or expanded chemistry support.
-- Editor-generated scenes and prefabs are preferable to hand-authored YAML, but they must be generated and inspected with the pinned Unity Editor before any Player-build claim.
-- Durable journals, recovery UX, scheduler/holds, metrology, authored tools, polished RTL UI, protocol execution, and validation campaigns remain substantial implementation work rather than documentation tasks.
-
-## Residual risk and blocked evidence
-
-Unity 6000.3.25f1, its Windows/Android build modules, a C++ toolchain on the local host, Android signing inputs, and physical VR hardware were unavailable. Consequently there is no Unity package lock, Player build, rendered screenshot, profiler capture, Android APK, headset run, device-performance evidence, experimental validity evidence, or human-factor evidence. Source-only Unity files have not been compiled by the Editor and may require API/package corrections.
-
-This revision is a working native research foundation with partial Unity integration. It is not completion of every P00-P16 acceptance gate and must not be described as a finished or validated product.
+No web application, browser simulator, fabricated build, fabricated screenshot, fabricated measurement, or fabricated hardware/validation claim is included. The PR remains open and unmerged for planner review.

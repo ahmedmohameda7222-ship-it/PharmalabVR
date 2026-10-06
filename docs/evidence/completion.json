@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "branch": "feat/foundation-vr-first",
+  "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
+  "pullRequestMerged": false,
+  "packageVerification": "Passed",
+  "nativePlatforms": ["windows-2022", "ubuntu-24.04"],
+  "productionScientificAdapter": "IPhreeqc with pinned minteq.v4.dat",
+  "idealReferenceCases": 40,
+  "pythonToolingTests": 6,
+  "unityEditorStatus": "EvidenceMissing",
+  "desktopPlayerStatus": "BuildNotVerified",
+  "simulatedXrStatus": "BuildNotVerified",
+  "physicalVrStatus": "EvidenceMissing",
+  "experimentalValidation": "EvidenceMissing",
+  "screenshots": [],
+  "notes": "Exact final commit and CI run IDs are supplied by the immutable Git revision and delivery report; no self-referential SHA is embedded here."
+}
