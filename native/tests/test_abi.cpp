@@ -146,6 +146,41 @@ TEST_CASE("R01 ABI export imports complete state into a fresh validated context"
     CHECK(plv_destroy(original) == PLV_OK);
 }
 
+TEST_CASE("R05 export preserves command identities and the next ordered sequence") {
+    std::uint64_t original = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    const auto first = command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 2e-5}});
+    const auto second = command("2", "PrepareStock", {{"vesselId", "stock"}, {"stockKind", "HydrochloricAcid"},
+                                                        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}});
+    submit(original, first);
+    CHECK(poll(original)["accepted"].get<bool>());
+    submit(original, second);
+    CHECK(poll(original)["accepted"].get<bool>());
+
+    const auto exported = json::parse(read_text(original, true));
+    CHECK(exported["nextCommandSequence"] == "3");
+    REQUIRE(exported["commandReceipts"].is_array());
+    CHECK(exported["commandReceipts"].size() == 2U);
+
+    const auto serialized = exported.dump();
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(serialized.data(), static_cast<std::uint32_t>(serialized.size()), &imported) == PLV_OK);
+
+    submit(imported, second);
+    CHECK(poll(imported)["code"] == "Accepted");
+    auto conflictingSecond = second;
+    conflictingSecond["payload"]["concentrationMolPerL"] = 0.2;
+    submit(imported, conflictingSecond);
+    CHECK(poll(imported)["code"] == "CommandIdentityConflict");
+    submit(imported, command("3", "Pause"));
+    CHECK(poll(imported)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(imported))["paused"].get<bool>());
+
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
+}
+
 TEST_CASE("A04 input batches validate geometry atomically and reject stale samples") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
