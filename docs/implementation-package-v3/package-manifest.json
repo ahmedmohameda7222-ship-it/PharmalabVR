@@ -1,0 +1,1476 @@
+{
+  "schemaVersion": 1,
+  "packageVersion": "3.0",
+  "preparedDate": "2026-10-06",
+  "priority": "VR-first with desktop support",
+  "repository": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR",
+  "repositoryInspection": {
+    "defaultBranch": "main",
+    "remoteHeadRefs": "None returned",
+    "sourceCodeObserved": false
+  },
+  "dependencies": {
+    "iphreeqc": {
+      "tag": "v3.8.6",
+      "commit": "47ce8e0adbad8f9dc67a9d977c339a611ba753eb",
+      "sourceSubset": "src + root CMake metadata + pinned databases + notices",
+      "compiled": false
+    },
+    "json": {
+      "tag": "v3.12.0",
+      "commit": "55f93686c01528224f448c19128836e7df245f72",
+      "tagObject": "65ee68451d8eb2b5f3a30b410476ab83deb3289b"
+    },
+    "doctest": {
+      "tag": "v2.4.12",
+      "commit": "1da23a3e8119ec5cce4f9388e91b065e20bf06f5"
+    },
+    "rtltmpro": {
+      "tag": "v4.0.0",
+      "commit": "ba92e0261e6b7d5b74c38949314b19c0f9c2d950",
+      "sourceSubset": "Assets/RTLTMPro/Scripts + Tests; not stale UPMPackage"
+    },
+    "fonts": {
+      "repository": "google/fonts",
+      "commit": "7085eb89a950e85db5b166b7a58d414544b4140c",
+      "license": "OFL",
+      "staticInstanceTool": "4.60.1"
+    },
+    "pico": {
+      "commit": "3aa3e62bff41df618529eeb60ff02c29a515dafe",
+      "version": "1.4.1",
+      "bundled": false,
+      "integrationTested": false
+    }
+  },
+  "files": [
+    {
+      "path": "00-START-HERE.md",
+      "bytes": 4788,
+      "sha256": "807dd5f2431814ce6b3fce9f393826fc9f6f1df05b39e94c611923a4af2d8954"
+    },
+    {
+      "path": "01-EXECUTE-PROMPT.md",
+      "bytes": 5754,
+      "sha256": "fcad96fe9f2fa3c02f4a046ed2cb523e579592c8c1f395bcf8ff60eae6f3d04e"
+    },
+    {
+      "path": "02-CONTRACTS.md",
+      "bytes": 12305,
+      "sha256": "72c9aabd27a1217b53a91785c71ee410036fbe41b046b8299f9deb03cea3581a"
+    },
+    {
+      "path": "03-UI-UX-AND-SCENE.md",
+      "bytes": 10719,
+      "sha256": "a3eb6fe43e3e0964d4d24f020c351744565548d8a0907136b91027d745f6eee0"
+    },
+    {
+      "path": "04-SCIENCE-AND-CAPABILITIES.md",
+      "bytes": 9178,
+      "sha256": "7dae01b608960f4d6f696d2758d3fa5637a81e70e4909cbe26923061325ffd4c"
+    },
+    {
+      "path": "05-EXACT-TASKS.md",
+      "bytes": 22912,
+      "sha256": "dd954c24e38a62db990b7b1cf0d3942292ecdb295e2286f77c0c27e9d51aa08b"
+    },
+    {
+      "path": "06-TEST-CATALOG.md",
+      "bytes": 15036,
+      "sha256": "0ebda37b96d03eba55ddac8b6bec453fc5a449f46687a8f54bc4b48ee324d272"
+    },
+    {
+      "path": "07-BUILD-CI-AND-PUSH.md",
+      "bytes": 9388,
+      "sha256": "272cd8024d78dbfdf384e499372430923062b21469ba63e2de630aaed83eea95"
+    },
+    {
+      "path": "08-FINAL-REVIEW-CHECKLIST.md",
+      "bytes": 4582,
+      "sha256": "b9d879249b1c975b0791a8ee339b899362efffcf7dc3b45374299fc1086067dc"
+    },
+    {
+      "path": "09-SOURCES-AND-PINS.md",
+      "bytes": 8787,
+      "sha256": "84e8b61eaf1cd33fb76cec366e724752cdd9b0b8f22bf3d4987634c80206885c"
+    },
+    {
+      "path": "10-PREPARATION-REVIEW.md",
+      "bytes": 5628,
+      "sha256": "71c932fa62d6c61cceb155153cacca5617c99c54ee8f86179a5dedf9d38a26d6"
+    },
+    {
+      "path": "authority/PharmaLabVR-Audit-Closure-v2-EN.md",
+      "bytes": 6444,
+      "sha256": "463f37bfc4a07a561b313021841ee994bb761a68ea99d583fbf41bf4b50754c1"
+    },
+    {
+      "path": "authority/PharmaLabVR-Desktop-and-VR-Design-EN.md",
+      "bytes": 11218,
+      "sha256": "0bbe920a7a43e89762bb2ec32c93b0f2904a161cbd68fe4bc70b0efaa35d62b7"
+    },
+    {
+      "path": "authority/PharmaLabVR-Foundation-Design-v2-EN.md",
+      "bytes": 23375,
+      "sha256": "e7b0f8554300b774b9d196a1fd7d6d7621bea1ca5b6bab54e0f855f9631efca5"
+    },
+    {
+      "path": "authority/PharmaLabVR-Full-Approval-Review-EN.md",
+      "bytes": 13225,
+      "sha256": "7105e39d6e88336fbe1c6d490af9b3fd2e41c695cec956bebe77fc3ebc920f00"
+    },
+    {
+      "path": "authority/PharmaLabVR-Implementation-Plan-v2-EN.md",
+      "bytes": 23584,
+      "sha256": "127633676c2c4b336c4449c0ccbda7040bdd6a342990810b6afe283ca7623dcb"
+    },
+    {
+      "path": "authority/PharmaLabVR-UX-Spec-v2-EN.md",
+      "bytes": 11934,
+      "sha256": "9c50bac105c4fce3fbc72b70142aeda034eb579e18e6b61cdc973185a56507cd"
+    },
+    {
+      "path": "fixtures/ideal-aqueous.json",
+      "bytes": 10986,
+      "sha256": "9027f9c69cabdc53a1a84529ef88781e81cf1d98957699bfe929a96ae136ec25"
+    },
+    {
+      "path": "fixtures/reference-verification.json",
+      "bytes": 239,
+      "sha256": "157f6351e5f34ee977b50521a56c5c4d521f7bc16637d4f72dbaa6f03e090de3"
+    },
+    {
+      "path": "LAUNCH-PROMPT.txt",
+      "bytes": 2151,
+      "sha256": "5b6de360b98c1c894cfbd0c347258b6ad61cf4e02d4deeda9485513ae6cf2fba"
+    },
+    {
+      "path": "source-documents/cost.docx",
+      "bytes": 27323,
+      "sha256": "b6fb23aa7c9773e59d8910691fff7c0c2a9659c8bfb228ae3c907badb82c27b7"
+    },
+    {
+      "path": "source-documents/Experiment 1 vr.docx",
+      "bytes": 142628,
+      "sha256": "13c328500d6360cf41769c17e71eeb81e5ece06649e8c7bc713a4d317b0b54fa"
+    },
+    {
+      "path": "source-documents/Experiment 2 VR.docx",
+      "bytes": 163401,
+      "sha256": "b15414ffdfa5b11d11e8d59fb1f7357c61c7fa6c5a5a595ea773aa1ddb54cf74"
+    },
+    {
+      "path": "source-documents/Labak_20251003_103734_0000.pdf",
+      "bytes": 2673143,
+      "sha256": "dad0d242381c2070db17330cca0e1ac9d930dc97bc4376bdbea47ac419f9c1b5"
+    },
+    {
+      "path": "source-documents/Market Analysis_ VR Pharmaceutical Training.pdf",
+      "bytes": 2047117,
+      "sha256": "5dc95a3fa907dbd27f0b80bcb3ab11fe13be445b078c91fcdb99c3912cdeabf2"
+    },
+    {
+      "path": "source-documents/VirtualChemLab_ExecutionPlan_v1.0.docx",
+      "bytes": 25056,
+      "sha256": "1ed8b9a47e04ddfcc670cb3c29c3d73deac9def05a184b23c0942c5c01c3ac9b"
+    },
+    {
+      "path": "tools/verify_ideal_fixtures.py",
+      "bytes": 2471,
+      "sha256": "549fd78d50c3eb618ed3fa323c8223128b8b919e877472a6eeb896e7d3a74d1e"
+    },
+    {
+      "path": "tools/verify_package.py",
+      "bytes": 3365,
+      "sha256": "f0960dff3bb774ecaa9af180a9865dbae64d0e72374a3a10396438c021b330ad"
+    },
+    {
+      "path": "vendor/doctest/doctest.h",
+      "bytes": 330334,
+      "sha256": "2a31654ead2a6e5ef93086ca97659b701710c80275207b3bdb12676c012daceb"
+    },
+    {
+      "path": "vendor/doctest/LICENSE.txt",
+      "bytes": 1107,
+      "sha256": "24e297bbcc924852cdba45b81caf17d79aa4def2791635606bec3a9f2e9ea7a8"
+    },
+    {
+      "path": "vendor/iphreeqc-source/CMakeLists.txt",
+      "bytes": 14297,
+      "sha256": "57a31e112454ecf8af016b8184a0c4376314235c21950b924180b9ea9c0ddd70"
+    },
+    {
+      "path": "vendor/iphreeqc-source/database/minteq.v4.dat",
+      "bytes": 334121,
+      "sha256": "ab0a8f7c7375e1bd997990f4bc3a9af497516f10e57f4aaa3cefb55dccac5ae7"
+    },
+    {
+      "path": "vendor/iphreeqc-source/database/phreeqc.dat",
+      "bytes": 55183,
+      "sha256": "3be63aa92ab61fffd70e4bdf39e488bc32c1c1eaa71e1b41a4bf2fd33c1f5624"
+    },
+    {
+      "path": "vendor/iphreeqc-source/IPhreeqcConfig.cmake.in",
+      "bytes": 117,
+      "sha256": "5e80d1b34c63ad09a9aa2bbcacb655de4b6c0c9e6fabc41f90e80a8907c0ddf9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/R/LICENSE.note",
+      "bytes": 3113,
+      "sha256": "643dccbca0623dc6107d7a782e900d2b096564fbc44aeef9fe33d13de2512a34"
+    },
+    {
+      "path": "vendor/iphreeqc-source/README.md",
+      "bytes": 104,
+      "sha256": "d24ef85425a66bf1cf7d0988bdf50a12bcc0059e391d5c3d800ad658c30b4bcc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/CSelectedOutput.cpp",
+      "bytes": 9103,
+      "sha256": "c61131d4e9a84aa11fa89d997da825503d0a90ebcc91c0a719808f74523f1cb4"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/CSelectedOutput.hxx",
+      "bytes": 1807,
+      "sha256": "a61e647e6a0dcc046e3bd92a4fd5cdd8af87bc505dcab9da9cf4ff80cf8b5973"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/CVar.hxx",
+      "bytes": 2776,
+      "sha256": "e82f098a3c27334fa33ba053711d7fefb654a5dcebd9e0297f29c766115fe7e2"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/Debug.h",
+      "bytes": 200,
+      "sha256": "22296a1bd25beee499df7cc7c6e5d0d876111005d587fc04287d214b410059f2"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/ErrorReporter.hxx",
+      "bytes": 1401,
+      "sha256": "b4b19bc761b9d3400e04cd774159c7811938834692b89aaeb6244951daeb9c78"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fimpl.h",
+      "bytes": 13792,
+      "sha256": "fcd9ab00f5275030dc32a704833e792497838d13b318d776485e894056f09428"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap.cpp",
+      "bytes": 12016,
+      "sha256": "1181c2931d4722015152aabfce3b5809cc822a51d78eb2d644c5ee8bb3b7bc1d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap.h",
+      "bytes": 12507,
+      "sha256": "bf92d62e5451aaa0bafc00e06eb710244061b244b8a8556e4aeb07169ba36e2a"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap1.cpp",
+      "bytes": 385,
+      "sha256": "6fb17ec07b0d8bf8e60638eb41f26e23f500711db72fdd01d594a440c9657d98"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap2.cpp",
+      "bytes": 351,
+      "sha256": "637f08ccbf4127cccf9f08c3ee1e4f3f8b131c0da3b5b73d066a59479c2550cc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap3.cpp",
+      "bytes": 375,
+      "sha256": "3552a0faec825a4d38b430fc69c5f470711f6972a0d069c5c5cd04b9e8333556"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap4.cpp",
+      "bytes": 373,
+      "sha256": "0b6d67ea7dd38ae575f44a8421ecd8d725c8f9241bd355f2336b8ccb4e57df45"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap5.cpp",
+      "bytes": 391,
+      "sha256": "57b4303306565a3b03facaeb1691fee1ecdf1bf4725f2af3bdaf48068f57f81c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap6.cpp",
+      "bytes": 437,
+      "sha256": "8d937be510d57c7fe1900d7929262e1f7262cef73e1565c3c3f61ef5e659b6b8"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap7.cpp",
+      "bytes": 437,
+      "sha256": "12fc5ad35f12bed088695fe6c5b2ebe8889d9840b49b9b2847407e792bc42040"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/fwrap8.cpp",
+      "bytes": 415,
+      "sha256": "d3ec77d0fa79d101b49600bc3cf2b20a8570ac3d3a9bb85fee5b364a77f7e8a3"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc.cpp",
+      "bytes": 48080,
+      "sha256": "de50931873197afbd674c7797b0ec0c1c57b0184fcfca869bc1ea4323cc085aa"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc.f.inc",
+      "bytes": 2927,
+      "sha256": "4166ee2a598cf7ef38b015e7d814335b854dea7cbf769481306558d8e4f84972"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc.f90.inc",
+      "bytes": 18682,
+      "sha256": "f7263bab8528bfe8e03fca99e52b9893b394f8583ce78b621546781639318560"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc.h",
+      "bytes": 81478,
+      "sha256": "59d8b563dd78c86ba909c83216e48bf0bce181031a50dc975ce375d40d83ba26"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc.hpp",
+      "bytes": 48041,
+      "sha256": "ce4cb0f87d897766e853dd223c8e7b89b4c2d3a8746d571a4aaaf6dbada0fa60"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc_interface.F90",
+      "bytes": 43301,
+      "sha256": "051838f09b4c3c6ffd594c7c1900b69cde1e771f732cf1737e11b584c4d7a57e"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc_interface_F.cpp",
+      "bytes": 9628,
+      "sha256": "299eb832b5bc5416276d428ad8cfb230354d0e60e8f070975f267b21fc28928b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqc_interface_F.h",
+      "bytes": 13389,
+      "sha256": "3e50e3e0a3130b5e3b67043d2dc3218ddebbd512a754e975a60a0a3327ad4e68"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqcCallbacks.h",
+      "bytes": 362,
+      "sha256": "bf8453bdcc77fcd6f4d482a65e2e30c8027b9625c01584befd6779f55ec1082b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqcF.f",
+      "bytes": 28259,
+      "sha256": "c44394a11f9f6c3e8da777f297e26fecdcc4150dd5c75ce7a71f387cdfae513f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/IPhreeqcLib.cpp",
+      "bytes": 21015,
+      "sha256": "e44ce97bf267ba55bac7d7f69798ae759759d21a6761983674f25e2038e7ef4e"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/advection.cpp",
+      "bytes": 3539,
+      "sha256": "4a0da75b21b24cc555a830d8bc40696e279ee966f4cd836a9db959cf4316e8c2"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/basicsubs.cpp",
+      "bytes": 118064,
+      "sha256": "6292e90a99233eb19ef9d944ee356ac7ddb27ed7d9d02b54f6aba0d6e2430cc9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ChartHandler.cpp",
+      "bytes": 5274,
+      "sha256": "2fc046a502c2075c1fd0a2a0c5ca8838d83affba312b6d47e5456a7c640d6162"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ChartHandler.h",
+      "bytes": 1318,
+      "sha256": "f0a07c0330b0a18896f3e60661b0fd14c6710c1b9a60b2487e22c6b746d98413"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ChartObject.cpp",
+      "bytes": 33593,
+      "sha256": "d8e25d668a1ce9880972044557aaff6eef2afcfd6ff016d24079d6b199ba0813"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ChartObject.h",
+      "bytes": 9650,
+      "sha256": "4699e3aca2e30522b0fc49bb5ca8bf248e97a85551d1fe72e24f468ac88ea95d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cl1.cpp",
+      "bytes": 20023,
+      "sha256": "9c87c4429ebf7ae1b746a8644a9fca32c13d6e28011a001840789385d1668046"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cl1mp.cpp",
+      "bytes": 28053,
+      "sha256": "7ce3eb86a4d129c6abd343a4bca0157a09ee759cadcd51c6ce45a3e95c7e1b1a"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/class_main.cpp",
+      "bytes": 18335,
+      "sha256": "e8dfb8370ae218bfc558477e0e6c160e9ba113149da106c16c737c4d7211bbcf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/Parser.cxx",
+      "bytes": 30268,
+      "sha256": "244b10571a82c2e56b0b03fe2fe86c8d336e2fe7d8a410649fb1f2ec4502aff6"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/Parser.h",
+      "bytes": 9663,
+      "sha256": "44953fe9a7bb6f46752c85aa978f285f205c745fb9b811fe932cb8e6e8baadab"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/PHRQ_base.cxx",
+      "bytes": 1786,
+      "sha256": "384fbb600061db0c141f69a40ae591cce8672db9e7b0ede452dcd9f60c3170fc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/PHRQ_base.h",
+      "bytes": 826,
+      "sha256": "4a73713646602862d946146b9b601ec39a380397455734b8354e098c59134b50"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/PHRQ_exports.h",
+      "bytes": 406,
+      "sha256": "c49bdb096d404d91883c2583a720046fe74421e20b15c89409ccea669955b62b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/PHRQ_io.cpp",
+      "bytes": 22581,
+      "sha256": "96cb69e54f5129cbf4e48d2f8bea20fd5299a73f8e25c24dc79c83c363355ded"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/PHRQ_io.h",
+      "bytes": 6698,
+      "sha256": "322c22b015effcb90ddd3be3bec61f9eecfa0d77d8bd6992e1a88a043f66cde5"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/phrqtype.h",
+      "bytes": 473,
+      "sha256": "7cc1161ae6f739a8d165cfb8d64ebfdf271044a673351dea892653e948bc3609"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/Utils.cxx",
+      "bytes": 5990,
+      "sha256": "828137dd2ee0a92e2296f88be75a26a7edf22b334d1f57f1e470e37dd5f64930"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/common/Utils.h",
+      "bytes": 969,
+      "sha256": "69f3794f7e490ce2135205e2f793f6419d0382119031432d9693329aea71d8ee"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/CurveObject.cpp",
+      "bytes": 909,
+      "sha256": "06b46aa344535a1014012cd0403dd172581973caa219b59994073676e085af8f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/CurveObject.h",
+      "bytes": 1205,
+      "sha256": "38781d0e64f02d07a99633f47867f7cea290bde89f57d0365fc811023c919bcc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cvdense.cpp",
+      "bytes": 19116,
+      "sha256": "3211daf6b9d9f4b43cf6c7cedab18a4fad929e33c6f3657573e2a2c0ec4ac753"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cvdense.h",
+      "bytes": 16428,
+      "sha256": "b32497157c3ad5310f8e97e017f4431a5ee8676f404b39845ac0002fc5bad0c9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cvode.cpp",
+      "bytes": 106517,
+      "sha256": "41a992b91e7a88e75d83527d8e96b7985f643d07ac2fa5edab8bb530dc6778c3"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cvode.h",
+      "bytes": 53498,
+      "sha256": "22513d4e8b874c344af2b499672dd0b04673e3d89866266a6984e6dc8a8c98ef"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cxxKinetics.cxx",
+      "bytes": 16078,
+      "sha256": "e05fe3777f041b7bcbe28847b3bbcd850e65ad0372eeb527c2c4629aee653579"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cxxKinetics.h",
+      "bytes": 2909,
+      "sha256": "84a2757ed73070e004576df073045acaee5b4cece055ba09e41e75ba04ad04c2"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cxxMix.cxx",
+      "bytes": 3706,
+      "sha256": "fee53330541dd10cb20d484ccf61da11e50cb28ccbe5585b85d6965e08759c55"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/cxxMix.h",
+      "bytes": 1252,
+      "sha256": "a751d8d55f3987247893d771ddb2d7b5143054218c8af702137f54a2727da0e1"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/dense.cpp",
+      "bytes": 6184,
+      "sha256": "a78bd53e3d4cdfc38f321fa9d248b327e24dd59d4feac438320ea49fb42ca2bd"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/dense.h",
+      "bytes": 19503,
+      "sha256": "03fd50dcd4eb0f4ff6c1607da47171b5cac01ea495654d1785e9caded6236019"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Dictionary.cpp",
+      "bytes": 769,
+      "sha256": "1f2d6cc4a82eca1108cc67630c36ed2802ad769012ce410f4d50548b39b5de7b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Dictionary.h",
+      "bytes": 744,
+      "sha256": "6bdd49e5b4dfc83889f87668da9bcb9275efc1ce83f0387aec9c959653045fd9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/dumper.cpp",
+      "bytes": 6979,
+      "sha256": "58f141f4e19da8f14abbb2944f673906193a49d61e04cb489a14d343937d473c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/dumper.h",
+      "bytes": 3316,
+      "sha256": "36aed9ce0fb021fe7ff9498393cec7f789ae10d47ca686344dbbaef3fc609121"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Exchange.cxx",
+      "bytes": 12833,
+      "sha256": "29023e33d3cec5dce96dc7059e336f843940f6b8582804cd011b8eac44c2fa37"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Exchange.h",
+      "bytes": 2390,
+      "sha256": "02905c47b05b81b78b9f4c6ee3c18a68c5c6474742e3ab30596b9d1d705fdb14"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ExchComp.cxx",
+      "bytes": 11396,
+      "sha256": "268daeea320d53abc4854962858f82887a4f132ed7b8855c5a0b826c84d09e19"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ExchComp.h",
+      "bytes": 2655,
+      "sha256": "435e386593ebc93c8ad7dfaf9d61bed99412e20c8719b1b2ea79c203ad7b369c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Form1.h",
+      "bytes": 39184,
+      "sha256": "545983b6994571fb6a29dface6b5de5d63bad620a7171a48b062ace44baaa7c8"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/GasComp.cxx",
+      "bytes": 7133,
+      "sha256": "0d26c10c94ff89b80ac3d693660fb62b3b5416295ea50d3b8cc7fcb4f7cff77b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/GasComp.h",
+      "bytes": 1847,
+      "sha256": "bc7b62c2a3c309d9944167bd3be659e28d003517b336fb4af4a5386a0e0a5fe1"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/gases.cpp",
+      "bytes": 22584,
+      "sha256": "ec800f7f6a14395bfe7f3dd3c3e45206f09678b3bfae90b54d115baab108a9bf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/GasPhase.cxx",
+      "bytes": 18137,
+      "sha256": "cbbdbabe4ec96c8da253ca521d50f3a27f07d239a5473301377815e191e055ca"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/GasPhase.h",
+      "bytes": 3500,
+      "sha256": "c53ce23151391419ac19444247250d0c841e4f2de53cdbef6e1e7f39dcee262b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/global_structures.h",
+      "bytes": 39114,
+      "sha256": "805c3ebb18a40641fcc863e60827fe6a0889bdc9db28b8f2f0298a3fd9ed8a24"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/input.cpp",
+      "bytes": 4018,
+      "sha256": "5318ec65649883609c1fd8e45027ef1e0f3727f40ccb9b55b162171a67a6b450"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/integrate.cpp",
+      "bytes": 37015,
+      "sha256": "4d88847debd861462e4f5f7adeba9913c78647f997d649edb3bed9db8fa8ad78"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/inverse.cpp",
+      "bytes": 144993,
+      "sha256": "bd30fc31cc8aae1cfa63e252037c796d1f2395716e056b9ae19d1093f7861494"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ISolution.cxx",
+      "bytes": 998,
+      "sha256": "38acf3cd85538e0bce32e2f2589076d7b270b383ef012c6163f5c049dd21ed1c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ISolution.h",
+      "bytes": 1930,
+      "sha256": "3f7c39260d7d414e38b334c6f96fb448b107de52f1bc8aa24a9bf23c8ff1d736"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ISolutionComp.cxx",
+      "bytes": 5153,
+      "sha256": "177deea3e801d5731590654820fcc5bf678f32408474be8866bada7b704d160b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ISolutionComp.h",
+      "bytes": 2806,
+      "sha256": "adb383a218f655ca8dbdad739c06d80bede5fa5ac2a2afda0ea38d8206ad2fb0"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/isotopes.cpp",
+      "bytes": 52368,
+      "sha256": "f46722f68239351ce2cd6f27935c780b5c8ef8d8bc279540eb1937fe6575d390"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/kinetics.cpp",
+      "bytes": 95242,
+      "sha256": "124103e2c704b851f71fd0bd5aa68b62c68f379294d57184b804c5b228f62895"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/KineticsComp.cxx",
+      "bytes": 8512,
+      "sha256": "26ee5b57e49cf00a26f89a904068ddebbda6748f36a698f40a9ea28bb719a8f1"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/KineticsComp.h",
+      "bytes": 2739,
+      "sha256": "86c88588add12020649f5f80baab0fe9d04d5a851d0486d38881ccc320c11d4e"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/mainsubs.cpp",
+      "bytes": 64659,
+      "sha256": "77462297cfa1804424cfe6dde07c3d374e43a278a23c1aee6eea49b514496f37"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/model.cpp",
+      "bytes": 162037,
+      "sha256": "01e444fddcda90ca0195f45855fc86d07c89911f4a8abc862b574260f74f3938"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/NA.h",
+      "bytes": 24,
+      "sha256": "865ab5454f03e4fef65fedcce90215e796c9a8f4b68b9d0de9f5888cdd243873"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/NameDouble.cxx",
+      "bytes": 12529,
+      "sha256": "c7673ad12be8892c7a05e209300dacfbeab6da05ca8cfd8ad27dc347ac23ee06"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/NameDouble.h",
+      "bytes": 1994,
+      "sha256": "7371eb985bf71cf369efc1927089ec8421250b6301ac005f7f77999a697d1faf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/NumKeyword.cxx",
+      "bytes": 4014,
+      "sha256": "333fcae4248ff0390798855a1f531f6ac775ff0412dea6da20c5cda1d73abd9a"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/NumKeyword.h",
+      "bytes": 1390,
+      "sha256": "94a21f708f4736a09664f7bdbe21198e2f73c1e28d7fb3236dfbda6cafa6a615"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/nvector.cpp",
+      "bytes": 8001,
+      "sha256": "3114e9bca6fcca96f7bee59f6ed9ac3b51cf177aeeffdc56f88f63df6d6c73b4"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/nvector.h",
+      "bytes": 26014,
+      "sha256": "2b807bfec3ecfd87a3e541b292999448e85135936b8d9b03586a886da7de5575"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/nvector_serial.cpp",
+      "bytes": 21814,
+      "sha256": "163212e65dd8fc21d6f812fed5e14b9243b8743756263ff088bb82157b5c26dd"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/nvector_serial.h",
+      "bytes": 21674,
+      "sha256": "dde5d5daab3b89425b73fe890f209ec3648509628902fd1ac01b76f3104096dc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/parse.cpp",
+      "bytes": 24233,
+      "sha256": "100e37ce3f8c747e3bf658ac8265375dad5e2ad0a13b53117b45b7f7899f391b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PBasic.cpp",
+      "bytes": 197985,
+      "sha256": "325567a962b2f0a26596f9ef095ead9827bd0c45fbff1677ff2eece535d4ecdf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PBasic.h",
+      "bytes": 12944,
+      "sha256": "c309a6570e63f2076847e743716356c96542ab884aed7831c233ece6d43ea746"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/phqalloc.cpp",
+      "bytes": 7233,
+      "sha256": "c3f13e40c5416070a59a82e9b373ef2f00a73f306b1d5d215916bb78a80a09ed"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/phqalloc.h",
+      "bytes": 1475,
+      "sha256": "707a8d72c088878d1911f8e5ef00ba9dc0713740f9e13cfd80485ada2f711e50"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Phreeqc.cpp",
+      "bytes": 67608,
+      "sha256": "e7d7a7fceacfc251ccd2bca752ca7229b0aff13a2a1c27ae4c9b96827906e6e6"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Phreeqc.h",
+      "bytes": 78252,
+      "sha256": "6e16c99904f856ba010d18cf23b7cc5c734d597b044bdfb71a1ba19b4a4c4a0a"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PhreeqcKeywords/Keywords.cpp",
+      "bytes": 23392,
+      "sha256": "f826c80fc2e7af89a779c6839889d6e219758c8e312285adbb1855c84c75bd5f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PhreeqcKeywords/Keywords.h",
+      "bytes": 2320,
+      "sha256": "a7e6c7215aa793c02eefec07c9c7ccddd7ef3fd78c4b428d07eaa93691f9e06a"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PHRQ_io_output.cpp",
+      "bytes": 11322,
+      "sha256": "0522465231dfda9b6c1af1eae2b52935ba0777db6a6ce00d0df73342a7fb0249"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/pitzer.cpp",
+      "bytes": 66294,
+      "sha256": "f57ab2fecdf895d10879340ff80993c0b8a7e0689a1ac5549ee05d8c16ae1a4f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/pitzer_structures.cpp",
+      "bytes": 6045,
+      "sha256": "fac77e683597d738748e28fc6259905e37ff1f53ae0cb2faa931b2596325f40d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PPassemblage.cxx",
+      "bytes": 10968,
+      "sha256": "7de3c7344cbfaf46784dd2fd84fd1845b53b6e35b94a98602c1c2e84e4ac1148"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PPassemblage.h",
+      "bytes": 2359,
+      "sha256": "4d0bda1d3382042cdf507f5160c2052d7c93fd60749d6af1cb006a10118b2dca"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PPassemblageComp.cxx",
+      "bytes": 12742,
+      "sha256": "25b91be1142a92350fc742dcd725fedc9429c6f42f64d7158d31d6e3ad9d27fc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/PPassemblageComp.h",
+      "bytes": 2732,
+      "sha256": "a46439f3c74dc7d8a988c89d87742ad69a300018ffb200338f6b00df2386063d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/prep.cpp",
+      "bytes": 179069,
+      "sha256": "067b8ca655d75c429d5bc0c1f01b0ad621fd4477c9973450aee313b22f38f1fc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Pressure.cxx",
+      "bytes": 10040,
+      "sha256": "ac2be1110789bfa7aa95495fe9b35be9243ab79c88aa8da19696065741e65f44"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Pressure.h",
+      "bytes": 1412,
+      "sha256": "454ea96f3c54b1ffb83f0e85fb5b80433527b6d5be51fe22dd25bb1e295196cd"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/print.cpp",
+      "bytes": 106024,
+      "sha256": "43de43ecd24187e067619442a4d73cfd2c76c07f899727de35d7352fc0958249"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Reaction.cxx",
+      "bytes": 7336,
+      "sha256": "ac33971fda7b7bd6b7c2413fefba346a46478dcbf341c985daf365bf1042fd37"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Reaction.h",
+      "bytes": 1828,
+      "sha256": "81fd6ee13db196c4e165e200fcdc613ac211167eff6fb746983e4915b279e231"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/read.cpp",
+      "bytes": 267006,
+      "sha256": "921b5b0dc07b689a68d535694432a3fcfd0085b8fced2db6b7eaf2af96f3450b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/ReadClass.cxx",
+      "bytes": 28695,
+      "sha256": "428dda9c3e0ac0c526550f6998009879d0d1f1fe51f6686fe655108daa6762bc"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/readtr.cpp",
+      "bytes": 40550,
+      "sha256": "b7cc990249b0e1149ab221663756abbdb303172890f75ea8e049dbdfc4e98bb5"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/runner.cpp",
+      "bytes": 3689,
+      "sha256": "48ba0cefef61b40605556a89b24c4da3075a394436c7a2fdbe857a2e724b42b3"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/runner.h",
+      "bytes": 994,
+      "sha256": "10626cd4bb85b380597de81a6e045345e03d0b8d8a4937df07f247a0ec094442"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SelectedOutput.cpp",
+      "bytes": 2544,
+      "sha256": "26e45b1c2f196dee7813cb7d2f5ea21c037bb7d27cfeb7bcfee2ec002e669f23"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SelectedOutput.h",
+      "bytes": 11853,
+      "sha256": "740c8a160541d56aa9d7e5e25f4c6ac64caae8a471c6c391a8f9debf8a086c44"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Serializer.cxx",
+      "bytes": 5953,
+      "sha256": "98057738ce3c8be10769df3e988729b4d96cc7415497b9ca85626eddf1f9137c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Serializer.h",
+      "bytes": 1209,
+      "sha256": "69e29f9fbaa1a6073ccfde94ee5a6bfb94087bc7aa4587d14f65a7c245c4434b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/sit.cpp",
+      "bytes": 39281,
+      "sha256": "cb169ae143d39854016b00b4a1a8407aa0b75017e84578ac6741b80e2fe87d38"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/smalldense.cpp",
+      "bytes": 9199,
+      "sha256": "44aa2b7751147b1f93b521e56d07a8cca9bd4bfe61e69d18370fb11e54f7ab58"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/smalldense.h",
+      "bytes": 15418,
+      "sha256": "b50eefed89eaaad42dd6318e1bcab3aaffaba4b9ecd9288a5fbd43a563e884f4"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Solution.cxx",
+      "bytes": 49189,
+      "sha256": "bc064dbb6b10b9f0b275719e496cc6291236be4baf388f281e4d2c70215e989f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Solution.h",
+      "bytes": 6681,
+      "sha256": "3b6b0d111ccd65a4d632443b10388cae0a20ab44203554956650090fabcda3c9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SolutionIsotope.cxx",
+      "bytes": 10009,
+      "sha256": "93dc38f4bfaafdc233f6d67da619b0694a55c16eb268222ff011617f67a1cf8f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SolutionIsotope.h",
+      "bytes": 2853,
+      "sha256": "2ec3fd832cba43c999aa8d3de5f9b1d205e577081fa562b2ffdf68581b5e937f"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/spread.cpp",
+      "bytes": 34057,
+      "sha256": "752287ce4d040180ce3ca757a9bfe0a5bd72358b8ea0cb59e1b9266264804c8d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SS.cxx",
+      "bytes": 16679,
+      "sha256": "87b14ae5849ad110f4a73e1efb3b49ab85bf0c5390cc04cc12f7a1b400f4153c"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SS.h",
+      "bytes": 3747,
+      "sha256": "c9243734597bddc7bfdbcbf9df0f6c48bb9807a2c6dd8c09d9e021414fde033d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SSassemblage.cxx",
+      "bytes": 8181,
+      "sha256": "63dfd928103d13b60e74708feb616774e0500b1d780dbf4c63d4f7f92124cb8b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SSassemblage.h",
+      "bytes": 1882,
+      "sha256": "96bdc08d17d1795b51299daaa60711dd9913fd7a21a2659c1e3588181763f0a8"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SScomp.cxx",
+      "bytes": 8335,
+      "sha256": "6bb513329cb2e02255857f17aaded4ad34a63c396de7fb9146b72e7cdc14873b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SScomp.h",
+      "bytes": 2291,
+      "sha256": "d2de6216e03c66a9eeaee9f8a0b7fc4c06511722994a79a286cfcf54fb833dbf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/step.cpp",
+      "bytes": 41393,
+      "sha256": "d5a721da60bebf8e9e91897c146d71acb9979875e533edfee86edc8927774b3b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/StorageBin.cxx",
+      "bytes": 34920,
+      "sha256": "35cff129be0562bace6c9efe1700ad9160b061fcb21e6c37040dd0c188530a49"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/StorageBin.h",
+      "bytes": 4716,
+      "sha256": "dccd98abff79721b74881b1e5f270928789b381dda462398c928e7ef4f8dfebf"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/StorageBinList.cpp",
+      "bytes": 8359,
+      "sha256": "7ae5a28c537df3f13a519a151cd0bcba6e310e41b4f620e4b4116b6c3e90212b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/StorageBinList.h",
+      "bytes": 3746,
+      "sha256": "fb20bb2bbc4e09a6a4d77c8b2582829d878ec439f3186992108098fa29763b4d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/structures.cpp",
+      "bytes": 88749,
+      "sha256": "c91fea419b86a3ff6e33f33ea0c59bdcce1b0a5fee93aea9cedff3497d740274"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/sundialsmath.cpp",
+      "bytes": 5605,
+      "sha256": "aa44be1e8f12f2f4794a252a9c554558ee4aa40316fa728b0a2ca27a749a88f7"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/sundialsmath.h",
+      "bytes": 9560,
+      "sha256": "10c9c5006ea89f6f19ddd9c68b7826ee9c9a23fd541bc80c330017e4e2ace427"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/sundialstypes.h",
+      "bytes": 10652,
+      "sha256": "a7c79d4d497eb8867aba909811d307ff273c79fe864cfbe1287fc7c8e8ff7f35"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Surface.cxx",
+      "bytes": 24398,
+      "sha256": "7909a313e167e8fb5ca018bfd9c65971fe7f1a4363cbdb1bb00fe88ae445f769"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Surface.h",
+      "bytes": 4372,
+      "sha256": "33165b6924f055adf5b35856c165e6786d55ac30b5143d5242cf4ff3d4c8fc7b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SurfaceCharge.cxx",
+      "bytes": 18412,
+      "sha256": "8054a1f021299a7e767e4dd558c50f66cfe358a988ec3ff5c3fb71838a653782"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SurfaceCharge.h",
+      "bytes": 5423,
+      "sha256": "63944b83e8aabd661f911d2a75cdc0697e1216ccd20b67db5a925f6f7dae4ac5"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SurfaceComp.cxx",
+      "bytes": 14778,
+      "sha256": "c2f6bcbf9ef5c466206f4c4cab0e62022da1d3efa7861d75cbfa23d1fd53eba0"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/SurfaceComp.h",
+      "bytes": 2738,
+      "sha256": "4aefd27b6365c4c451b2401fe9497bcffe21ea4164d3ef15f1b99c9be8363905"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/System.cxx",
+      "bytes": 2544,
+      "sha256": "2ac511a90108fe4b20e6409dc40b2e8ff7a2769f48b663f74a633276922206c1"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/System.h",
+      "bytes": 1840,
+      "sha256": "ffb6942a6df37b56cb0d4ae1ad800a373de2281acedbef826fbc8a75008cb39b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/tally.cpp",
+      "bytes": 35711,
+      "sha256": "2e15f54486ad3b7524b0a7f6664c1b520c5756d9de85ec6533763e1065b06df1"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Temperature.cxx",
+      "bytes": 10148,
+      "sha256": "964ad97d094f64314b8d11a340b22965ce9ad25ae4e00ec33868b841ecc7cd82"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Temperature.h",
+      "bytes": 1414,
+      "sha256": "ffa3b3a4e25f514e363b51cf1f4fc0cb8b6142823ff17501b0eb14144c613549"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/tidy.cpp",
+      "bytes": 163370,
+      "sha256": "0ed19a032a9a9cdf9ad5b9fc45347a494f71272da9fa43133c00d0c870e74a98"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/transport.cpp",
+      "bytes": 200207,
+      "sha256": "baef9040f7ba839f1cdc012aebe0c07b0d522c9eac663eaa8932734bb312d1fd"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Use.cpp",
+      "bytes": 1266,
+      "sha256": "1cc3d6e8c921a9ac16625ebe7c93d37928477ee54dd7a91b78eb45ab5e74524b"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/Use.h",
+      "bytes": 7029,
+      "sha256": "574e9bbccb8fc9f35cdb64b02e1890dfe88085dc5906bc511210f407f5e41371"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/UserPunch.cpp",
+      "bytes": 547,
+      "sha256": "3790fefa6b23b0332362bb42257b9444753389be39e6013f61da338a9e85cd63"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/UserPunch.h",
+      "bytes": 1075,
+      "sha256": "8980f6c3bdfdaf536012878b943a580ce4f75a595d1faf773ce21e8e3f722b95"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/phreeqcpp/utilities.cpp",
+      "bytes": 34019,
+      "sha256": "eb2e737fcd4a4c8a0e4f8a1f6041b9691af0c41d5bd289138f1a0c1c793e147e"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/pp_sys.cpp",
+      "bytes": 3523,
+      "sha256": "3388b14bded2cb780a9429e002fdaaf77ed702d3788fb32220ce6ee441548571"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/thread.h",
+      "bytes": 1829,
+      "sha256": "ef19da974cf976feb222ad238e33dc3e5b382b8f0b109506d7216066afa732d9"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/Var.c",
+      "bytes": 1518,
+      "sha256": "bfe1d24f764860cea6a939d10c4861a8d4ec0e0589b2062af7c38eb471584b6d"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/Var.h",
+      "bytes": 3915,
+      "sha256": "5eac520b1f2e9152249a9c81e08962affcd9dd22eecbe348d3869ea3a2588c06"
+    },
+    {
+      "path": "vendor/iphreeqc-source/src/Version.h",
+      "bytes": 1298,
+      "sha256": "08f7f8fba189348b53648d5f630ac05dbc5b859a48f79c0151e4831c4da62c78"
+    },
+    {
+      "path": "vendor/json/json.hpp",
+      "bytes": 978962,
+      "sha256": "5f09d1eebe9b3557f21df155869af13bcde79b74a0748f82ca946e8cc088aaa0"
+    },
+    {
+      "path": "vendor/json/LICENSE.MIT",
+      "bytes": 1097,
+      "sha256": "b9715282b2f1db1359a919bb3a542dd4362fd9e38ae72d421367eb11abe62eec"
+    },
+    {
+      "path": "vendor/rtltmpro/LICENSE",
+      "bytes": 1106,
+      "sha256": "6e5e6a0f43b38cd752508b32f90fdd26bcf2257e3805047a69e0b5791ea474a8"
+    },
+    {
+      "path": "vendor/rtltmpro/README.md",
+      "bytes": 5859,
+      "sha256": "80b3ee83497e7bc6262796daf1776c713cda97740e72ae4fce0a80bbebf64d8e"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/ContextMenu.cs",
+      "bytes": 15579,
+      "sha256": "7a4c6d0b2d854ffad01178241750c683ca7cf72ab602f76f701275c18db1fa00"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/ContextMenu.cs.meta",
+      "bytes": 254,
+      "sha256": "8a11c0a39e8416b6614c8550a7811b5d130a34382aa81a0cb70f40425e771cbb"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLDefaultControls.cs",
+      "bytes": 15992,
+      "sha256": "ed7b9f065edd7584d53f3b18688ea8f69370d3345458de72d57a068e429edb8e"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLDefaultControls.cs.meta",
+      "bytes": 88,
+      "sha256": "f2f6fb7837a50c2442c59f5664f9c44ece779f487a2f6e83bc8ab9c09d612ba8"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTextMeshPro3DEditor.cs",
+      "bytes": 4038,
+      "sha256": "0fceeefb01c0893aec83d9aca34b808a41843347d3b8ec21326502a9186ccb77"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTextMeshPro3DEditor.cs.meta",
+      "bytes": 254,
+      "sha256": "b77a00a5c40cc8b97684472236582fab1e4c0b0f6e87968580f2652ba01f88a5"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTextMeshProEditor.cs",
+      "bytes": 4227,
+      "sha256": "73f2a070493aacfb010d05e055ef537db3d29278bc3ef3401d8c97acda124103"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTextMeshProEditor.cs.meta",
+      "bytes": 254,
+      "sha256": "779a85681e78d26eecef85438b5e187bb947bc4af6bbc3601344fb9edfef0f66"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTMPro-Editor.asmdef",
+      "bytes": 614,
+      "sha256": "16a372990cb318f629666c5db1ff515c0755148d48124d267885208cbd992bad"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor/RTLTMPro-Editor.asmdef.meta",
+      "bytes": 173,
+      "sha256": "2f1b95a464d76269782c0640bb1625b9a5efe31dfaf1b368d28734a3b5473307"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Editor.meta",
+      "bytes": 180,
+      "sha256": "77b2331a7e0b83509f065a0368451f5e1816c775034386a11053f0a14bde515e"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Char32Utils.cs",
+      "bytes": 1626,
+      "sha256": "e31826920da8ff0f9596adf28fd7e19efff0c773341e9fb9560d34b909a1bb44"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Char32Utils.cs.meta",
+      "bytes": 254,
+      "sha256": "5323e74edb67b81c5ea443dad4e253e31da0f0059741237a97e6791e28368268"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/FastStringBuilder.cs",
+      "bytes": 8546,
+      "sha256": "422c30f274b1c35cf8f24f7ae0d896257e91809ac2e6051be18d9e47cc2f0700"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/FastStringBuilder.cs.meta",
+      "bytes": 88,
+      "sha256": "94f606c4f9b4b2e342b2b4344fbc127dd38021e13a3e1ee74a66f816218d0ca1"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/GlyphFixer.cs",
+      "bytes": 24699,
+      "sha256": "8d1766ae1ee3c528db24cc2517b8378f96dd56b8ecaf7fba5f5bee6d9d222d6d"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/GlyphFixer.cs.meta",
+      "bytes": 88,
+      "sha256": "6717ba67b428b1c5c3353544c5bd9bdff85e4eef8219b47b297c9087bdf57bf7"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/GlyphTable.cs",
+      "bytes": 1072,
+      "sha256": "29b944e253182b3a5751a1fb5c81c05466d281c0094d4787727bb750a5783b73"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/GlyphTable.cs.meta",
+      "bytes": 88,
+      "sha256": "b43bf7ff4ef763d65a2d587ee6f0fb040e447e28fcdb25329e2be60976ec0be3"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/LigatureFixer.cs",
+      "bytes": 8597,
+      "sha256": "b6b429e0eeb9b1a0c31b87f901b3e7e90cc63bb2bd207eca0fabb33b48d51205"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/LigatureFixer.cs.meta",
+      "bytes": 88,
+      "sha256": "ea54143e2f407bbc057447e3ee62ace4b5f8e85d1ae6743d76a5958c9277df98"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RichTextFixer.cs",
+      "bytes": 4065,
+      "sha256": "bd88ed46af12d43c03c7e480dc6a8fc3fe4b437a7969ecb4662f13d34bce280f"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RichTextFixer.cs.meta",
+      "bytes": 88,
+      "sha256": "57a7c33c66ad6eb2a9c85f7dc11e083bddeb2f9017cb02914c5a0aec943cbae0"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLSupport.cs",
+      "bytes": 1989,
+      "sha256": "93774f3ddeaafb2e252e72efb87110a8ab83d86cff97f43fabe535f05a152547"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLSupport.cs.meta",
+      "bytes": 254,
+      "sha256": "b85204bdc5e1e9f2da423b0f50e642cf616aa3946c119306694fc32f935b3e4c"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTextMeshPro.cs",
+      "bytes": 3322,
+      "sha256": "61accbd8bd3f0626f2f0cd25feb6e851b01c3de9db1087ee2733f7f4743d0a0a"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTextMeshPro.cs.meta",
+      "bytes": 254,
+      "sha256": "6ea923cc44a64285da157f358bc85605173eacb08fb9d9e38decad0538da1b2a"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTextMeshPro3D.cs",
+      "bytes": 3313,
+      "sha256": "f5aee91397cd2bd4f432c68badf76ce5c945fd6fb537d64ed8189fa2acd16df5"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTextMeshPro3D.cs.meta",
+      "bytes": 254,
+      "sha256": "0b4feb86824c0c4b488d8f88c38c8eafd8b9a5154f34aa713b73629667197663"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTMPro.asmdef",
+      "bytes": 525,
+      "sha256": "1b2f0905952861c94ea339ecc9c1754b59445cd26c0f9dfd871684c685fd432e"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/RTLTMPro.asmdef.meta",
+      "bytes": 173,
+      "sha256": "3dfdddf9192d6de441f272b54177790a63b08dee4861b491b1c8f0f674385dda"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TashkeelFixer.cs",
+      "bytes": 6200,
+      "sha256": "5a1a3575ee5360aade7b0d744912f320a19baf5ffd73855097ee4f35109303de"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TashkeelFixer.cs.meta",
+      "bytes": 88,
+      "sha256": "8f4595aaca9b0d228914c1410399f842a821692b66f21ee1844ecbf9e1ef4a52"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TashkeelLocation.cs",
+      "bytes": 345,
+      "sha256": "bb73ff2c2e62556fb547f7fba24a453462edea5eea04e5d4fdd5ab8aff990f1d"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TashkeelLocation.cs.meta",
+      "bytes": 88,
+      "sha256": "319087df8c33e31a0b53f24f83e197321c67e4fc311e0b3b64e7126f296b0452"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TextUtils.cs",
+      "bytes": 15554,
+      "sha256": "8be06102bca42941dc7e35ed675ac0b26b476a94e75b50905892e6c578686b7c"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/TextUtils.cs.meta",
+      "bytes": 88,
+      "sha256": "e6d17009d5f37a802815178f8dff8e4c34964ee91474dbadaea422dcae1cfd82"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/ArabicGeneralLetters.cs",
+      "bytes": 1492,
+      "sha256": "c46ac85056641aeb9b7d931ce7b7445df9bef9d714cb603d7dd22a6e3d0f0512"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/ArabicGeneralLetters.cs.meta",
+      "bytes": 88,
+      "sha256": "5d5f04d900d2ed80ad32c51c0362596e542b295b5aa25fdd0413f5da3c9574b0"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/ArabicIsolatedLetters.cs",
+      "bytes": 1255,
+      "sha256": "03578c10b8c40c04beac80a943a54551a03a55a6f2c0d13e0fe0d13dc94500fe"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/ArabicIsolatedLetters.cs.meta",
+      "bytes": 88,
+      "sha256": "7d1ae40a849d8c0054a6ef4b52d1acab24fb5b443c4efad2b3fcbc257362fc46"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/EnglishNumbers.cs",
+      "bytes": 312,
+      "sha256": "6f09338abd9d69596499cb21a9d5c3b9340206be494d17c44548d3e67b3a5ba8"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/EnglishNumbers.cs.meta",
+      "bytes": 88,
+      "sha256": "efae917c3da3e995ba2691407d916cbfd58940b17303a37c0e292c5390ead561"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/FarsiNumbers.cs",
+      "bytes": 300,
+      "sha256": "a64e9f2fb315e6054ce0506527ba400b0da7c60c23f7fdf0e401157c6fb1d9b2"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/FarsiNumbers.cs.meta",
+      "bytes": 88,
+      "sha256": "4a56a7a0d200ddd1fddc8ad531e3885e2b9b7942d8ca3b00d5eb16cfee7b6b09"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/HinduNumbers.cs",
+      "bytes": 310,
+      "sha256": "f317f140b255e0651f98f6b97ae34fc118ddd2a5d648811a886e6a9751cfb27c"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/HinduNumbers.cs.meta",
+      "bytes": 88,
+      "sha256": "04f4eb9925ff1eefbb66add12c814ddbe36d66d88ad3dbd0e84116f6b7e6dca3"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/SpecialCharacters.cs",
+      "bytes": 214,
+      "sha256": "e66b9757a9f6dcab5c5595da21ab3eee7f59398ef227f7b25c6007d68feb7a4e"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/SpecialCharacters.cs.meta",
+      "bytes": 254,
+      "sha256": "cbb26f789916d469e2c1d0c708d8a9bd56ad0d3d69ef55b8929a352ba001ffd5"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/TashkeelCharacters.cs",
+      "bytes": 812,
+      "sha256": "d916e0b157985d6b1511a4e9bf29c23b16fa0da030d55bd755a8044f9ff26f7c"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types/TashkeelCharacters.cs.meta",
+      "bytes": 254,
+      "sha256": "bcd571df62a966469bacb31c7e130d3d3d8c05f05a78438e68074862b1e916bd"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime/Types.meta",
+      "bytes": 180,
+      "sha256": "67cd31899f342535c286fd0fe92e7d22390409ff6d5fc27c0f69927c2a3bfcbe"
+    },
+    {
+      "path": "vendor/rtltmpro/Scripts/Runtime.meta",
+      "bytes": 180,
+      "sha256": "9c30da397de9385c1e3847be49d5af59d5dd967eabc5bb9507437a1b1def27c6"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/FastStringBuilderTests.cs",
+      "bytes": 7769,
+      "sha256": "68e006415faf6a9c8689e00cbc7d3f752253abeda2df8de1a5c128b7e967820f"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/FastStringBuilderTests.cs.meta",
+      "bytes": 254,
+      "sha256": "2a9e6ddea9fca75abefad43761e9da209f6b41891a6191e9df269aa797851417"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/GlyphFixerTests.cs",
+      "bytes": 3241,
+      "sha256": "3e538d3b815ff6b91883339d366ca0ea3c49bad9e47123c945666f0b28ae8ef5"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/GlyphFixerTests.cs.meta",
+      "bytes": 254,
+      "sha256": "a8a6dba1d26b9cdae59b1062e72d9b6c50efcf03f80a4dd4565b9471b7c81b11"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RichTextFixerTests.cs",
+      "bytes": 9131,
+      "sha256": "86a00aebe5bc22c60ffb0cd6742f218824d61dabfe17008382039bcaef133cc2"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RichTextFixerTests.cs.meta",
+      "bytes": 254,
+      "sha256": "8622c76ba1ae9ca926449b9c6d9d8f9bd1727199614c14a334e966e11ec40941"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RTLSupportTests.cs",
+      "bytes": 2075,
+      "sha256": "9bb3f8ecaa4919cfed245f0614d0fa4abb1c783e94340840e96b686326a758c1"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RTLSupportTests.cs.meta",
+      "bytes": 254,
+      "sha256": "02a24d2f1089473b928b1409ac80706e47448d12199928f5c7fae7e6a5a22474"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RTLTMPro-Tests.asmdef",
+      "bytes": 391,
+      "sha256": "2808999f472ba75a7f21ee14330260bcbe28026c679de8ef9be8364cdd7c82cc"
+    },
+    {
+      "path": "vendor/rtltmpro/Tests/RTLTMPro-Tests.asmdef.meta",
+      "bytes": 173,
+      "sha256": "a6c26b7c3bf83d338294b7637150024cb7ead5c6be13a8f237cdcd6156e6f92f"
+    },
+    {
+      "path": "visuals/approved-vr-concept.png",
+      "bytes": 1797629,
+      "sha256": "1dc32ec0405666561ff7d7d4303cf9ef5b7e9ccafbc98c42333e07c639298679"
+    },
+    {
+      "path": "visuals/fonts/arabic/METADATA.pb",
+      "bytes": 4560,
+      "sha256": "be1f4ca6b0d73271dd5414eead270740d53d2e775cbf785b35991f06f528cc6a"
+    },
+    {
+      "path": "visuals/fonts/arabic/NotoSansArabic-Regular.ttf",
+      "bytes": 194336,
+      "sha256": "01d6058ea7171a816db7841ba2eab93019b65fe4be7f86609cd41c518744b466"
+    },
+    {
+      "path": "visuals/fonts/arabic/NotoSansArabic-variable.ttf",
+      "bytes": 844676,
+      "sha256": "63111b5b2e074dd48cc67692e0a2726d86ee94c1c37fe8598257b7b4e87e869e"
+    },
+    {
+      "path": "visuals/fonts/arabic/OFL.txt",
+      "bytes": 4475,
+      "sha256": "3b7e321615e412e5fbb9eab5bf1c0a4cb84c732d3d5a9e9e3822972d5fb70b97"
+    },
+    {
+      "path": "visuals/fonts/latin/METADATA.pb",
+      "bytes": 33264,
+      "sha256": "d432fe4a5f89e00c9dbecc5d553c975d0cf86507a0ce6ae30cf14b92440154cb"
+    },
+    {
+      "path": "visuals/fonts/latin/NotoSans-Regular.ttf",
+      "bytes": 646160,
+      "sha256": "d9712166703a101fd60261781b135e1f44202985a33f6f5c5a32c1029374741e"
+    },
+    {
+      "path": "visuals/fonts/latin/NotoSans-variable.ttf",
+      "bytes": 2049096,
+      "sha256": "bfb7bb691513f12e734dc346c03a03f784912432d7e3fa8e56efcf906fe86b3d"
+    },
+    {
+      "path": "visuals/fonts/latin/OFL.txt",
+      "bytes": 4489,
+      "sha256": "bf51547e7634b219e85d0391a5836850696497e0cef079857978f286b5d9377f"
+    },
+    {
+      "path": "visuals/fonts/preparation.json",
+      "bytes": 504,
+      "sha256": "9ed81750115108f21d34dbee2fb440bbfa56d0b6abcee697578dff5a61bab872"
+    }
+  ],
+  "productImplementationIncluded": false,
+  "scientificValidationComplete": false,
+  "physicalVRTested": false
+}

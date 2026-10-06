@@ -1,0 +1,26 @@
+# Native builds and artifacts
+/build/
+/artifacts/
+
+# Unity generated state
+/unity/Library/
+/unity/Temp/
+/unity/Logs/
+/unity/Obj/
+/unity/UserSettings/
+
+# Local sessions, secrets, signing, and source references
+/.env
+/.env.*
+*.keystore
+*.jks
+*.pfx
+*.p12
+/sessions/
+/journals/
+/source-documents/
+
+# Local execution ledgers and caches
+/.superpowers/
+__pycache__/
+*.pyc

@@ -1,0 +1,18 @@
+{
+  "status": "Passed",
+  "scope": "package preparation checks only",
+  "filesChecked": 285,
+  "tasks": 17,
+  "testCasesSpecified": 95,
+  "originalDocuments": 6,
+  "idealReference": {
+    "scope": "independent ideal numeric reference only",
+    "cases": 40,
+    "maxExpectedPHError": 0.0,
+    "maxChargeResidualMolPerL": 5.204170427930421e-17,
+    "productEngineTested": false,
+    "experimentalAccuracyEstablished": false
+  },
+  "productBuilt": false,
+  "physicalVRTested": false
+}
