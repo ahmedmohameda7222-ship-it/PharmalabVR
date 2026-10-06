@@ -142,7 +142,42 @@ MaterialState StateExecutor::totalLedger() const {
 }
 
 SessionSnapshot StateExecutor::snapshot() const {
-    return SessionSnapshot{branchId_, eventSequence_, 0.0, vessels_};
+    return SessionSnapshot{branchId_, eventSequence_, simulationTimeS_, paused_, vessels_, sinks_};
 }
+
+CommandOutcome StateExecutor::restore(const SessionSnapshot& snapshot) {
+    if (snapshot.branchId != branchId_ || !std::isfinite(snapshot.simulationTimeS) || snapshot.simulationTimeS < 0.0 ||
+        snapshot.vessels.size() > 1024 || snapshot.sinks.size() > 1024) {
+        return rejected("InvalidSnapshot", "snapshot identity or limits invalid");
+    }
+    for (const auto& entry : snapshot.vessels) {
+        const auto& vessel = entry.second;
+        if (entry.first != vessel.id || !isValidId(vessel.id) || !std::isfinite(vessel.capacityM3) ||
+            vessel.capacityM3 <= 0.0 || !vessel.inventory.isFiniteNonNegative() ||
+            vessel.inventory.referenceVolumeM3 > vessel.capacityM3 + 1e-15) {
+            return rejected("InvalidSnapshot", "invalid vessel in snapshot");
+        }
+    }
+    for (const auto& entry : snapshot.sinks) {
+        if (!isValidId(entry.first) || !entry.second.isFiniteNonNegative() || snapshot.vessels.count(entry.first) != 0) {
+            return rejected("InvalidSnapshot", "invalid sink in snapshot");
+        }
+    }
+    eventSequence_ = snapshot.eventSequence;
+    simulationTimeS_ = snapshot.simulationTimeS;
+    paused_ = snapshot.paused;
+    vessels_ = snapshot.vessels;
+    sinks_ = snapshot.sinks;
+    return accepted();
+}
+
+void StateExecutor::advanceTime(double deltaS) {
+    if (!paused_ && std::isfinite(deltaS) && deltaS >= 0.0) {
+        simulationTimeS_ += deltaS;
+    }
+}
+
+void StateExecutor::setPaused(bool paused) { paused_ = paused; }
+bool StateExecutor::paused() const { return paused_; }
 
 }  // namespace plv

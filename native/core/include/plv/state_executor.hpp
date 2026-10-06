@@ -30,10 +30,16 @@ public:
     const MaterialState& sink(const std::string& id) const;
     MaterialState totalLedger() const;
     SessionSnapshot snapshot() const;
+    CommandOutcome restore(const SessionSnapshot& snapshot);
+    void advanceTime(double deltaS);
+    void setPaused(bool paused);
+    bool paused() const;
 
 private:
     std::string branchId_;
     std::uint64_t eventSequence_ = 0;
+    double simulationTimeS_ = 0.0;
+    bool paused_ = false;
     std::unordered_map<std::string, VesselState> vessels_;
     std::unordered_map<std::string, MaterialState> sinks_;
 };

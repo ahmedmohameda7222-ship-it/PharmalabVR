@@ -25,7 +25,9 @@ struct SessionSnapshot {
     std::string branchId;
     std::uint64_t eventSequence = 0;
     double simulationTimeS = 0.0;
+    bool paused = false;
     std::unordered_map<std::string, VesselState> vessels;
+    std::unordered_map<std::string, MaterialState> sinks;
 };
 
 }  // namespace plv
