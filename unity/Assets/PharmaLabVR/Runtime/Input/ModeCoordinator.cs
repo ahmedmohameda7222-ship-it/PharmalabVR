@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Input
 {
@@ -16,7 +17,7 @@ namespace PharmaLabVR.Input
         {
             desktopRig = desktop;
             xrRig = xr;
-            Select(ApplicationMode.Desktop);
+            Select(BootMenu.RequestedMode);
         }
 
         public void Select(ApplicationMode mode)

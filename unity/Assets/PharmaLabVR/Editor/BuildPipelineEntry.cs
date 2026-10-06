@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Editor
 {
@@ -17,7 +18,7 @@ namespace PharmaLabVR.Editor
         {
             Directory.CreateDirectory("Assets/PharmaLabVR/Scenes");
             BuildLabAssets.Generate();
-            CreateScene(Scenes[0], "BootRoot");
+            CreateBootScene();
             CreateLabScene();
             CreateScene(Scenes[2], "ReviewRoot");
             AssetDatabase.SaveAssets();
@@ -28,6 +29,17 @@ namespace PharmaLabVR.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             new GameObject(rootName);
             EditorSceneManager.SaveScene(scene, path);
+        }
+
+        private static void CreateBootScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var root = new GameObject("BootRoot");
+            root.AddComponent<BootMenu>();
+            var camera = new GameObject("BootCamera");
+            camera.AddComponent<Camera>();
+            camera.transform.SetParent(root.transform);
+            EditorSceneManager.SaveScene(scene, Scenes[0]);
         }
 
         private static void CreateLabScene()
