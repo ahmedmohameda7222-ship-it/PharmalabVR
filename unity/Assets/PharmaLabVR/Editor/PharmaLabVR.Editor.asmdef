@@ -1,0 +1,6 @@
+{
+  "name": "PharmaLabVR.Editor",
+  "rootNamespace": "PharmaLabVR.Editor",
+  "references": ["PharmaLabVR.Runtime"],
+  "includePlatforms": ["Editor"]
+}
