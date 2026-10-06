@@ -28,6 +28,7 @@ jobs:
             build/native/**/*.dll
             build/native/**/*.so
             build/native/**/*.dylib
+            build/native/**/minteq.v4.dat
             build/native/**/plv_tests*
           if-no-files-found: error
           retention-days: 30

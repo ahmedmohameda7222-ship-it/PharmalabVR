@@ -26,3 +26,9 @@ if(WIN32)
     )
 endif()
 add_test(NAME plv_tests COMMAND plv_tests)
+set_tests_properties(plv_tests PROPERTIES WORKING_DIRECTORY $<TARGET_FILE_DIR:plv_tests>)
+add_custom_command(TARGET plv_tests POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/third_party/iphreeqc-source/database/minteq.v4.dat"
+        "$<TARGET_FILE_DIR:plv_tests>/minteq.v4.dat"
+)

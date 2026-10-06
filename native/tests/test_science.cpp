@@ -3,9 +3,18 @@
 #include "plv/solver.hpp"
 
 #include <cmath>
+#include <filesystem>
 #include <stdexcept>
 
 using namespace plv;
+
+namespace {
+std::string minteqDatabasePath() {
+    if (std::filesystem::is_regular_file(PLV_MINTEQ_DATABASE)) return PLV_MINTEQ_DATABASE;
+    const auto besideExecutable = std::filesystem::current_path() / "minteq.v4.dat";
+    return besideExecutable.string();
+}
+}  // namespace
 
 TEST_CASE("S01 ideal charge root handles water strong acid and strong base") {
     const auto water = solveIdealAqueous({});
@@ -30,7 +39,7 @@ TEST_CASE("S05 invalid scientific inputs reject rather than fabricate an observa
 }
 
 TEST_CASE("S02 pinned IPhreeqc engine solves water strong acid and strong base") {
-    IPhreeqcAdapter adapter(PLV_MINTEQ_DATABASE, "minteq.v4.dat-pinned-package-bytes");
+    IPhreeqcAdapter adapter(minteqDatabasePath(), "minteq.v4.dat-pinned-package-bytes");
     REQUIRE(adapter.initialized());
     const auto water = adapter.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0});
     const auto acid = adapter.solve({0.01, 1e-5, 0.0, 1e-3, 0.0, 25.0});
@@ -49,7 +58,7 @@ TEST_CASE("S02 pinned IPhreeqc engine solves water strong acid and strong base")
 }
 
 TEST_CASE("S03 solver result does not depend on diverse prior request") {
-    IPhreeqcAdapter adapter(PLV_MINTEQ_DATABASE, "minteq");
+    IPhreeqcAdapter adapter(minteqDatabasePath(), "minteq");
     REQUIRE(adapter.initialized());
     const SolveRequest acid{0.01, 1e-5, 0.0, 1e-7, 0.0, 25.0};
     const auto first = adapter.solve(acid);
@@ -63,7 +72,7 @@ TEST_CASE("S03 solver result does not depend on diverse prior request") {
 }
 
 TEST_CASE("S05 engine adapter rejects invalid requests and missing database") {
-    IPhreeqcAdapter adapter(PLV_MINTEQ_DATABASE, "minteq");
+    IPhreeqcAdapter adapter(minteqDatabasePath(), "minteq");
     REQUIRE(adapter.initialized());
     const auto invalid = adapter.solve({0.0, 0.0, -1.0, 0.0, 0.0, 25.0});
     CHECK_FALSE(invalid.succeeded);
