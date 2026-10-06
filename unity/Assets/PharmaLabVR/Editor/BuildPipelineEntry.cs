@@ -16,6 +16,7 @@ namespace PharmaLabVR.Editor
         public static void AllAssets()
         {
             Directory.CreateDirectory("Assets/PharmaLabVR/Scenes");
+            BuildLabAssets.Generate();
             CreateScene(Scenes[0], "BootRoot");
             CreateLabScene();
             CreateScene(Scenes[2], "ReviewRoot");
