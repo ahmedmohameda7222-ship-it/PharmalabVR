@@ -8,5 +8,5 @@ target_include_directories(plv_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/native/core/include
     ${PROJECT_SOURCE_DIR}/third_party/doctest
 )
-target_link_libraries(plv_tests PRIVATE pharmalab_core)
+target_link_libraries(plv_tests PRIVATE pharmalab_core plv_core)
 add_test(NAME plv_tests COMMAND plv_tests)

@@ -17,6 +17,7 @@ TEST_CASE("C01 stale touched revision rejects atomically while unrelated changes
     REQUIRE(executor.createVessel("source", 0.000020).accepted);
     REQUIRE(executor.createVessel("receiver", 0.000020).accepted);
     REQUIRE(executor.createVessel("unrelated", 0.000020).accepted);
+    REQUIRE(executor.createSink("spill").accepted);
     REQUIRE(executor.prepareStock("source", StockKind::HydrochloricAcid, 0.1, 0.000010).accepted);
     const auto expected_source = executor.vessel("source").materialRevision;
     REQUIRE(executor.prepareStock("unrelated", StockKind::SodiumChloride, 0.1, 0.000001).accepted);
