@@ -139,7 +139,8 @@ SolveResult IPhreeqcAdapter::solve(const SolveRequest& request) {
         result.error = "selected output did not contain a finite named pH column; headings=" + selectedHeadings(implementation_->engine);
         return result;
     }
-    if (!selectedDouble(implementation_->engine, "charge", result.chargeBalance) &&
+    if (!selectedDouble(implementation_->engine, "charge(eq)", result.chargeBalance) &&
+        !selectedDouble(implementation_->engine, "charge", result.chargeBalance) &&
         !selectedDouble(implementation_->engine, "charge_balance", result.chargeBalance)) {
         result.error = "selected output did not contain a finite named charge-balance column; headings=" + selectedHeadings(implementation_->engine);
         return result;

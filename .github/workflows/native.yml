@@ -20,11 +20,7 @@ jobs:
         run: cmake -S . -B build/native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build/native --config Release --parallel 2
-      - name: Test
-        run: ctest --test-dir build/native -C Release --output-on-failure
-      - name: Verify independent ideal fixtures
-        run: python science/reference/verify_ideal_fixtures.py
-      - name: Upload tested native build
+      - name: Upload compiled native build
         uses: actions/upload-artifact@v4
         with:
           name: pharmalabvr-native-${{ matrix.os }}-${{ github.sha }}
@@ -35,3 +31,7 @@ jobs:
             build/native/**/plv_tests*
           if-no-files-found: error
           retention-days: 30
+      - name: Test
+        run: ctest --test-dir build/native -C Release --output-on-failure
+      - name: Verify independent ideal fixtures
+        run: python science/reference/verify_ideal_fixtures.py
