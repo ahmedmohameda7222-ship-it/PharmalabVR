@@ -8,6 +8,9 @@
 /unity/Logs/
 /unity/Obj/
 /unity/UserSettings/
+/unity/Assets/Resources/
+/unity/Assets/Resources.meta
+/unity/.utmp/
 /unity/Assets/Plugins/x86_64/pharmalab_core.dll
 /unity/Assets/Plugins/x86_64/pharmalab_core.dll.meta
 /unity/Assets/Plugins/Android/arm64-v8a/libpharmalab_core.so

@@ -13,6 +13,10 @@ using UnityEngine.InputSystem.XR;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.XR.Management;
+using UnityEngine.XR.OpenXR;
+using UnityEditor.XR.Management;
+using UnityEditor.XR.Management.Metadata;
 using Unity.XR.CoreUtils;
 
 namespace PharmaLabVR.Editor
@@ -25,6 +29,7 @@ namespace PharmaLabVR.Editor
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             ConfigureNativePlugins();
+            ConfigureOpenXrLoaders();
             Directory.CreateDirectory("Assets/PharmaLabVR/Scenes");
             BuildLabAssets.Generate();
             CreateBootScene();
@@ -170,15 +175,51 @@ namespace PharmaLabVR.Editor
             return new InputActionProperty(action);
         }
 
-        public static void WindowsDesktop() => Build(BuildTarget.StandaloneWindows64, "../artifacts/WindowsDesktop/PharmaLabVR.exe");
-        public static void WindowsVR() => Build(BuildTarget.StandaloneWindows64, "../artifacts/WindowsVR/PharmaLabVR.exe");
-        public static void AndroidVR() => Build(BuildTarget.Android, "../artifacts/AndroidVR/PharmaLabVR-research.apk");
-        public static void AndroidVRPico() => Build(BuildTarget.Android, "../artifacts/AndroidVRPico/PharmaLabVR-pico-research.apk");
+        public static void WindowsDesktop() => Build(BuildTarget.StandaloneWindows64, "../artifacts/WindowsDesktop/PharmaLabVR.exe", false);
+        public static void WindowsVR() => Build(BuildTarget.StandaloneWindows64, "../artifacts/WindowsVR/PharmaLabVR.exe", true);
+        public static void AndroidVR() => Build(BuildTarget.Android, "../artifacts/AndroidVR/PharmaLabVR-research.apk", true);
+        public static void AndroidVRPico() => Build(BuildTarget.Android, "../artifacts/AndroidVRPico/PharmaLabVR-pico-research.apk", true);
 
         private static void ConfigureNativePlugins()
         {
             ConfigurePlugin("Assets/Plugins/x86_64/pharmalab_core.dll", BuildTarget.StandaloneWindows64, "x86_64", true);
             ConfigurePlugin("Assets/Plugins/Android/arm64-v8a/libpharmalab_core.so", BuildTarget.Android, "ARM64", false);
+        }
+
+        public static void ConfigureOpenXrLoaders(bool standaloneAutoStart = true, bool androidAutoStart = true)
+        {
+            const string settingsPath = "Assets/XR/XRGeneralSettingsPerBuildTarget.asset";
+            var perTarget = AssetDatabase.LoadAssetAtPath<XRGeneralSettingsPerBuildTarget>(settingsPath);
+            if (perTarget == null)
+            {
+                Directory.CreateDirectory("Assets/XR");
+                perTarget = ScriptableObject.CreateInstance<XRGeneralSettingsPerBuildTarget>();
+                AssetDatabase.CreateAsset(perTarget, settingsPath);
+            }
+            EditorBuildSettings.AddConfigObject(XRGeneralSettings.k_SettingsKey, perTarget, true);
+            foreach (var group in new[] { BuildTargetGroup.Standalone, BuildTargetGroup.Android })
+            {
+                if (!perTarget.HasSettingsForBuildTarget(group)) perTarget.CreateDefaultSettingsForBuildTarget(group);
+                if (!perTarget.HasManagerSettingsForBuildTarget(group)) perTarget.CreateDefaultManagerSettingsForBuildTarget(group);
+                var settings = perTarget.SettingsForBuildTarget(group);
+                var autoStart = group == BuildTargetGroup.Standalone
+                    ? standaloneAutoStart
+                    : androidAutoStart;
+                settings.InitManagerOnStart = autoStart;
+                if (autoStart)
+                {
+                    if (!XRPackageMetadataStore.AssignLoader(settings.Manager, typeof(OpenXRLoader).FullName, group))
+                        throw new InvalidOperationException($"Failed to assign OpenXR loader for {group}.");
+                }
+                else if (!XRPackageMetadataStore.RemoveLoader(settings.Manager, typeof(OpenXRLoader).FullName, group))
+                {
+                    throw new InvalidOperationException($"Failed to remove OpenXR loader for {group}.");
+                }
+                EditorUtility.SetDirty(settings);
+                EditorUtility.SetDirty(settings.Manager);
+            }
+            EditorUtility.SetDirty(perTarget);
+            AssetDatabase.SaveAssets();
         }
 
         private static void ConfigurePlugin(string path, BuildTarget target, string cpu, bool editorCompatible)
@@ -192,9 +233,9 @@ namespace PharmaLabVR.Editor
             importer.SaveAndReimport();
         }
 
-        private static void Build(BuildTarget target, string location)
+        private static void Build(BuildTarget target, string location, bool vrFirst)
         {
-            PrepareForBuild();
+            PrepareForBuild(target, vrFirst);
             PlayerSettings.productName = "PharmaLabVR";
             PlayerSettings.bundleVersion = "0.1.0-research";
             if (target == BuildTarget.Android)
@@ -204,14 +245,22 @@ namespace PharmaLabVR.Editor
                 PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
                 PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
             }
-            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = Scenes, target = target, locationPathName = location, options = BuildOptions.StrictMode });
+            var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+            {
+                scenes = Scenes,
+                target = target,
+                locationPathName = location,
+                options = BuildOptions.StrictMode,
+                extraScriptingDefines = vrFirst ? new[] { "PHARMALABVR_VR_FIRST" } : Array.Empty<string>()
+            });
             if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException($"Build failed: {report.summary.result}");
         }
 
-        private static void PrepareForBuild()
+        private static void PrepareForBuild(BuildTarget target, bool vrFirst)
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
             ConfigureNativePlugins();
+            ConfigureOpenXrLoaders(target != BuildTarget.StandaloneWindows64 || vrFirst, true);
             foreach (var scene in Scenes)
                 if (!File.Exists(scene)) throw new FileNotFoundException("Generated build scene is missing.", scene);
         }

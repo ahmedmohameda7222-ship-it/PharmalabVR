@@ -7,7 +7,19 @@ namespace PharmaLabVR.UI
     public sealed class BootMenu : MonoBehaviour
     {
         public const string LabScene = "Lab";
-        public static ApplicationMode RequestedMode { get; private set; } = ApplicationMode.Desktop;
+        public static ApplicationMode RequestedMode { get; private set; } = DefaultMode;
+
+        public static ApplicationMode DefaultMode
+        {
+            get
+            {
+#if PHARMALABVR_VR_FIRST
+                return ApplicationMode.VirtualReality;
+#else
+                return ApplicationMode.Desktop;
+#endif
+            }
+        }
 
         public void StartDesktop()
         {

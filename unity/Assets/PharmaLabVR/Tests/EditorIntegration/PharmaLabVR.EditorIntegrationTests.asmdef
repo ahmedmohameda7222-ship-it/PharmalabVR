@@ -4,7 +4,10 @@
     "PharmaLabVR.Runtime",
     "PharmaLabVR.Editor",
     "Unity.XR.Interaction.Toolkit",
-    "Unity.XR.CoreUtils"
+    "Unity.XR.CoreUtils",
+    "Unity.XR.Management",
+    "Unity.XR.Management.Editor",
+    "Unity.XR.OpenXR"
   ],
   "optionalUnityReferences": ["TestAssemblies"],
   "includePlatforms": ["Editor"]

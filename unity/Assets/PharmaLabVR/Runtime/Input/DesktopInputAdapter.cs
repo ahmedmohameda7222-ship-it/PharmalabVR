@@ -18,6 +18,8 @@ namespace PharmaLabVR.Input
         private float actuator;
         private bool inputEnabled = true;
 
+        private void Awake() => RefreshRegisteredToolId();
+
         public void Configure(Transform frame, Camera camera, Transform anchor, Transform tool, LabCaptureTarget target, string profileHash)
         {
             labFrame = frame;
@@ -26,6 +28,7 @@ namespace PharmaLabVR.Input
             registeredTool = tool;
             captureTarget = target;
             geometryProfileHash = profileHash;
+            RefreshRegisteredToolId();
         }
 
         private void OnApplicationFocus(bool focused)
@@ -37,6 +40,7 @@ namespace PharmaLabVR.Input
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
+            RefreshRegisteredToolId();
             HandlePickOrPlace();
             if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { inputEnabled = false; actuator = 0f; return System.Array.Empty<LabInputSample>(); }
@@ -50,6 +54,12 @@ namespace PharmaLabVR.Input
 
         public void ResetBaselines() { actuator = 0f; sequence = 0; }
         public void SetEnabled(bool value) { inputEnabled = value; if (!value) actuator = 0f; }
+
+        private void RefreshRegisteredToolId()
+        {
+            if (registeredTool != null && registeredTool.TryGetComponent<DesktopGrabbable>(out var grabbable))
+                heldToolId = grabbable.ToolId;
+        }
 
         private void HandlePickOrPlace()
         {
