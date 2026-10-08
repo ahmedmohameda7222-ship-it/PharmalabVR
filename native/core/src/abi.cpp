@@ -4,6 +4,7 @@
 #include "json.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <deque>
@@ -70,6 +71,15 @@ json materialJson(const plv::MaterialState& material) {
 }
 
 plv::MaterialState parseMaterial(const json& value) {
+    if (!value.is_object()) throw std::invalid_argument("material must be an object");
+    static constexpr std::array<const char*, 7> allowedKeys{
+        "solventWaterKg", "sodiumMol", "chlorideMol", "acetateMol",
+        "researchAdditiveVolumeM3", "preparationId", "provenanceId"};
+    for (const auto& item : value.items()) {
+        if (std::find(allowedKeys.begin(), allowedKeys.end(), item.key()) == allowedKeys.end()) {
+            throw std::invalid_argument("unknown material pool or field");
+        }
+    }
     plv::MaterialState material;
     material.solventWaterKg = value.at("solventWaterKg").get<double>();
     material.sodiumMol = value.at("sodiumMol").get<double>();

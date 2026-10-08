@@ -181,6 +181,23 @@ TEST_CASE("R05 export preserves command identities and the next ordered sequence
     CHECK(plv_destroy(original) == PLV_OK);
 }
 
+TEST_CASE("S05 import rejects unknown material pools instead of silently discarding them") {
+    std::uint64_t original = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    submit(original, command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 2e-5}}));
+    REQUIRE(poll(original)["accepted"].get<bool>());
+
+    auto exported = json::parse(read_text(original, true));
+    exported["vessels"][0]["inventory"]["carbonateMol"] = 0.001;
+    const auto serialized = exported.dump();
+    std::uint64_t imported = 99;
+    CHECK(plv_import(serialized.data(), static_cast<std::uint32_t>(serialized.size()), &imported) == PLV_INVALID_ARGUMENT);
+    CHECK(imported == 0U);
+
+    CHECK(plv_destroy(original) == PLV_OK);
+}
+
 TEST_CASE("A04 input batches validate geometry atomically and reject stale samples") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";

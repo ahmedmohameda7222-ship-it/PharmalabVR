@@ -29,8 +29,12 @@ StateExecutor::StateExecutor(std::string branchId) : branchId_(std::move(branchI
 }
 
 CommandOutcome StateExecutor::createVessel(const std::string& id, double capacityM3) {
-    if (!isValidId(id) || !std::isfinite(capacityM3) || capacityM3 <= 0.0 || vessels_.count(id) != 0) {
+    if (!isValidId(id) || !std::isfinite(capacityM3) || capacityM3 <= 0.0 ||
+        vessels_.count(id) != 0 || sinks_.count(id) != 0) {
         return rejected("InvalidVessel", "invalid or duplicate vessel");
+    }
+    if (vessels_.size() >= kMaxVesselInventories) {
+        return rejected("VesselLimitReached", "vessel inventory limit reached");
     }
     vessels_.emplace(id, VesselState{id, capacityM3, {}, 0});
     ++eventSequence_;
@@ -40,6 +44,9 @@ CommandOutcome StateExecutor::createVessel(const std::string& id, double capacit
 CommandOutcome StateExecutor::createSink(const std::string& id) {
     if (!isValidId(id) || sinks_.count(id) != 0 || vessels_.count(id) != 0) {
         return rejected("InvalidSink", "invalid or duplicate sink");
+    }
+    if (sinks_.size() >= kMaxSinks) {
+        return rejected("SinkLimitReached", "sink limit reached");
     }
     sinks_.emplace(id, MaterialState{});
     ++eventSequence_;
@@ -147,7 +154,7 @@ SessionSnapshot StateExecutor::snapshot() const {
 
 CommandOutcome StateExecutor::restore(const SessionSnapshot& snapshot) {
     if (snapshot.branchId != branchId_ || !std::isfinite(snapshot.simulationTimeS) || snapshot.simulationTimeS < 0.0 ||
-        snapshot.vessels.size() > 1024 || snapshot.sinks.size() > 1024) {
+        snapshot.vessels.size() > kMaxVesselInventories || snapshot.sinks.size() > kMaxSinks) {
         return rejected("InvalidSnapshot", "snapshot identity or limits invalid");
     }
     for (const auto& entry : snapshot.vessels) {

@@ -7,6 +7,9 @@
 
 namespace plv {
 
+inline constexpr std::size_t kMaxVesselInventories = 16;
+inline constexpr std::size_t kMaxSinks = 4;
+
 class StateExecutor {
 public:
     explicit StateExecutor(std::string branchId);
