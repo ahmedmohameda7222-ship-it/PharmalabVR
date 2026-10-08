@@ -45,6 +45,13 @@ bool validRequest(const SolveRequest& request) {
            request.temperatureC >= 0.0 && request.temperatureC <= 100.0;
 }
 
+bool poolMatches(double expectedMol, double actualMol) {
+    constexpr double absoluteToleranceMol = 1e-12;
+    constexpr double relativeTolerance = 1e-9;
+    return std::abs(actualMol - expectedMol) <=
+           absoluteToleranceMol + relativeTolerance * std::abs(expectedMol);
+}
+
 bool selectedDouble(IPhreeqc& engine, const std::string& heading, double& output) {
     const int columns = engine.GetSelectedOutputColumnCount();
     const int rows = engine.GetSelectedOutputRowCount();
@@ -110,21 +117,24 @@ SolveResult IPhreeqcAdapter::solve(const SolveRequest& request) {
         return result;
     }
 
-    const double volumeL = request.referenceVolumeM3 * 1000.0;
     std::ostringstream input;
     input << std::setprecision(17)
           << "DELETE\n-all\nEND\n"
           << "SOLUTION 1\n"
           << "temp " << request.temperatureC << "\n"
-          << "units mol/L\n"
+          << "units mol/kgw\n"
           << "pH 7 charge\n"
-          << "Na " << request.sodiumMol / volumeL << "\n"
-          << "Cl " << request.chlorideMol / volumeL << "\n"
-          << "Acetate " << request.acetateMol / volumeL << "\n"
+          << "Na " << request.sodiumMol / request.solventWaterKg << "\n"
+          << "Cl " << request.chlorideMol / request.solventWaterKg << "\n"
+          << "Acetate " << request.acetateMol / request.solventWaterKg << "\n"
           << "-water " << request.solventWaterKg << "\n"
           << "SELECTED_OUTPUT 1\n"
           << "-reset false\n"
+          << "-high_precision true\n"
           << "-pH true\n"
+          << "-totals Na Cl Acetate\n"
+          << "-ionic_strength true\n"
+          << "-water true\n"
           << "-charge_balance true\n"
           << "END\n";
 
@@ -143,6 +153,34 @@ SolveResult IPhreeqcAdapter::solve(const SolveRequest& request) {
         !selectedDouble(implementation_->engine, "charge", result.chargeBalance) &&
         !selectedDouble(implementation_->engine, "charge_balance", result.chargeBalance)) {
         result.error = "selected output did not contain a finite named charge-balance column; headings=" + selectedHeadings(implementation_->engine);
+        return result;
+    }
+    double sodiumMolPerKg = 0.0;
+    double chlorideMolPerKg = 0.0;
+    double acetateMolPerKg = 0.0;
+    if (!selectedDouble(implementation_->engine, "mass_H2O", result.solventWaterKg) ||
+        !selectedDouble(implementation_->engine, "Na(mol/kgw)", sodiumMolPerKg) ||
+        !selectedDouble(implementation_->engine, "Cl(mol/kgw)", chlorideMolPerKg) ||
+        !selectedDouble(implementation_->engine, "Acetate(mol/kgw)", acetateMolPerKg) ||
+        !selectedDouble(implementation_->engine, "mu", result.ionicStrengthMolPerKg)) {
+        result.error = "selected output omitted a represented pool, solvent mass, or ionic strength; headings=" +
+                       selectedHeadings(implementation_->engine);
+        return result;
+    }
+    result.sodiumMol = sodiumMolPerKg * result.solventWaterKg;
+    result.chlorideMol = chlorideMolPerKg * result.solventWaterKg;
+    result.acetateMol = acetateMolPerKg * result.solventWaterKg;
+    if (!poolMatches(request.solventWaterKg, result.solventWaterKg) ||
+        !poolMatches(request.sodiumMol, result.sodiumMol) ||
+        !poolMatches(request.chlorideMol, result.chlorideMol) ||
+        !poolMatches(request.acetateMol, result.acetateMol)) {
+        result.error = "represented pool or solvent balance gate failed";
+        return result;
+    }
+    const double chargeToleranceEq = 1e-12 + 1e-9 *
+        (request.sodiumMol + request.chlorideMol + request.acetateMol);
+    if (std::abs(result.chargeBalance) > chargeToleranceEq) {
+        result.error = "solution charge residual gate failed";
         return result;
     }
     result.succeeded = true;

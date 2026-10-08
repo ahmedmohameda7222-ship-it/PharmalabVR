@@ -28,6 +28,9 @@ public:
         double requestedVolumeM3,
         std::uint64_t expectedSourceRevision,
         std::uint64_t expectedReceiverRevision);
+    CommandOutcome transferFixed(
+        const TransferFixedRequest& request,
+        const std::unordered_map<std::string, std::uint64_t>& expectedMaterialRevisions);
 
     const VesselState& vessel(const std::string& id) const;
     const MaterialState& sink(const std::string& id) const;

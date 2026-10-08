@@ -71,6 +71,23 @@ TEST_CASE("S03 solver result does not depend on diverse prior request") {
     CHECK(second.pH == doctest::Approx(first.pH).epsilon(1e-12));
 }
 
+TEST_CASE("S03 IPhreeqc preserves represented pools using actual solvent molality") {
+    IPhreeqcAdapter adapter(minteqDatabasePath(), "minteq");
+    REQUIRE(adapter.initialized());
+    const SolveRequest mixed{0.0125, 9e-6, 4e-4, 2.5e-4, 3e-4, 25.0};
+
+    const auto result = adapter.solve(mixed);
+    INFO("mixed solve error: " << result.error);
+    REQUIRE(result.succeeded);
+    CHECK(result.solventWaterKg == doctest::Approx(mixed.solventWaterKg).epsilon(1e-10));
+    CHECK(result.sodiumMol == doctest::Approx(mixed.sodiumMol).epsilon(1e-9));
+    CHECK(result.chlorideMol == doctest::Approx(mixed.chlorideMol).epsilon(1e-9));
+    CHECK(result.acetateMol == doctest::Approx(mixed.acetateMol).epsilon(1e-9));
+    CHECK(std::isfinite(result.ionicStrengthMolPerKg));
+    CHECK(result.ionicStrengthMolPerKg >= 0.0);
+    CHECK(std::abs(result.chargeBalance) <= 1e-10);
+}
+
 TEST_CASE("S05 engine adapter rejects invalid requests and missing database") {
     IPhreeqcAdapter adapter(minteqDatabasePath(), "minteq");
     REQUIRE(adapter.initialized());

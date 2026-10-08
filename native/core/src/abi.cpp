@@ -168,6 +168,12 @@ plv::StockKind stockKind(const std::string& value) {
     throw std::invalid_argument("unknown stock kind");
 }
 
+std::optional<plv::TransferQuantityBasis> transferQuantityBasis(const std::string& value) {
+    if (value == "WaterMassKg") return plv::TransferQuantityBasis::WaterMassKg;
+    if (value == "LiquidVolumeM3") return plv::TransferQuantityBasis::LiquidVolumeM3;
+    return std::nullopt;
+}
+
 std::uint64_t revision(const json& revisions, const std::string& id) {
     const auto value = revisions.at(id).get<std::string>();
     const auto parsed = decimalSequence(value);
@@ -310,11 +316,29 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 payload.at("vesselId").get<std::string>(), stockKind(payload.at("stockKind").get<std::string>()),
                 payload.at("concentrationMolPerL").get<double>(), payload.at("referenceVolumeM3").get<double>());
         } else if (type == "TransferFixed") {
-            const auto sourceId = payload.at("sourceId").get<std::string>();
-            const auto receiverId = payload.at("receiverId").get<std::string>();
-            outcome = context->executor.transferFixed(
-                sourceId, receiverId, payload.at("spillSinkId").get<std::string>(),
-                payload.at("requestedVolumeM3").get<double>(), revision(revisions, sourceId), revision(revisions, receiverId));
+            const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
+            const auto basis = transferQuantityBasis(payload.at("quantity").at("basis").get<std::string>());
+            if (payload.at("sourceRegion").get<std::string>() != "Homogeneous" ||
+                payload.at("selection").get<std::string>() != "HomogeneousAqueousLiquid" || !basis ||
+                !payload.at("captureFractions").is_array()) {
+                outcome = {false, "InvalidTransfer", "unsupported source region, selection, or quantity basis"};
+            } else {
+                std::vector<plv::CaptureFraction> captures;
+                std::unordered_map<std::string, std::uint64_t> expected;
+                expected.emplace(sourceId, revision(revisions, sourceId));
+                for (const auto& capture : payload.at("captureFractions")) {
+                    const auto destinationId = capture.at("destinationInventoryId").get<std::string>();
+                    captures.push_back({destinationId, capture.at("fraction").get<double>()});
+                    expected.emplace(destinationId, revision(revisions, destinationId));
+                }
+                outcome = context->executor.transferFixed(
+                    {sourceId,
+                     *basis,
+                     payload.at("quantity").at("value").get<double>(),
+                     std::move(captures),
+                     payload.at("overflowSinkId").get<std::string>()},
+                    expected);
+            }
         } else if (type == "Pause") {
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
@@ -330,6 +354,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         context->events.push_back(serializedOutcome);
         return PLV_OK;
     } catch (const json::exception&) {
+        return PLV_INVALID_ARGUMENT;
+    } catch (const std::invalid_argument&) {
         return PLV_INVALID_ARGUMENT;
     } catch (...) {
         return PLV_INTERNAL_ERROR;

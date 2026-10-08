@@ -18,6 +18,11 @@ struct SolveResult {
     bool succeeded = false;
     double pH = 0.0;
     double chargeBalance = 0.0;
+    double solventWaterKg = 0.0;
+    double sodiumMol = 0.0;
+    double chlorideMol = 0.0;
+    double acetateMol = 0.0;
+    double ionicStrengthMolPerKg = 0.0;
     std::string error;
     std::string engineVersion;
     std::string databaseIdentity;

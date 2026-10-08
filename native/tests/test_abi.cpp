@@ -106,8 +106,11 @@ TEST_CASE("A02 discrete ABI commands mutate the native authority and duplicate s
                                                    {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}));
     CHECK(poll(handle)["accepted"].get<bool>());
     const auto transfer = command("5", "TransferFixed",
-                                  {{"sourceId", "source"}, {"receiverId", "receiver"}, {"spillSinkId", "spill"},
-                                   {"requestedVolumeM3", 2e-6}},
+                                  {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+                                   {"selection", "HomogeneousAqueousLiquid"},
+                                   {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 2e-6}}},
+                                   {"captureFractions", {{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}}},
+                                   {"overflowSinkId", "spill"}},
                                   {{"source", "1"}, {"receiver", "0"}});
     submit(handle, transfer);
     CHECK(poll(handle)["accepted"].get<bool>());
@@ -121,7 +124,7 @@ TEST_CASE("A02 discrete ABI commands mutate the native authority and duplicate s
     CHECK(receiver["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-6));
 
     auto conflict = transfer;
-    conflict["payload"]["requestedVolumeM3"] = 1e-6;
+    conflict["payload"]["quantity"]["value"] = 1e-6;
     submit(handle, conflict);
     CHECK(poll(handle)["code"] == "CommandIdentityConflict");
     CHECK(plv_destroy(handle) == PLV_OK);

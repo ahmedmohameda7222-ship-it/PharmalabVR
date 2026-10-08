@@ -1,8 +1,10 @@
 #include "plv/state_executor.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <regex>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 
 namespace plv {
@@ -81,50 +83,118 @@ CommandOutcome StateExecutor::transferFixed(
     double requestedVolumeM3,
     std::uint64_t expectedSourceRevision,
     std::uint64_t expectedReceiverRevision) {
-    auto source = vessels_.find(sourceId);
-    auto receiver = vessels_.find(receiverId);
-    auto spill = sinks_.find(spillSinkId);
-    if (source == vessels_.end() || receiver == vessels_.end() || spill == sinks_.end() ||
-        source == receiver || !std::isfinite(requestedVolumeM3) || requestedVolumeM3 <= 0.0) {
+    return transferFixed(
+        {sourceId,
+         TransferQuantityBasis::LiquidVolumeM3,
+         requestedVolumeM3,
+         {{receiverId, 1.0}},
+         spillSinkId},
+        {{sourceId, expectedSourceRevision}, {receiverId, expectedReceiverRevision}});
+}
+
+CommandOutcome StateExecutor::transferFixed(
+    const TransferFixedRequest& request,
+    const std::unordered_map<std::string, std::uint64_t>& expectedMaterialRevisions) {
+    const auto source = vessels_.find(request.sourceInventoryId);
+    const auto overflowSink = sinks_.find(request.overflowSinkId);
+    if (source == vessels_.end() || overflowSink == sinks_.end() ||
+        !std::isfinite(request.quantityValue) || request.quantityValue <= 0.0) {
         return rejected("InvalidTransfer", "invalid transfer participants or quantity");
     }
-    if (source->second.materialRevision != expectedSourceRevision ||
-        receiver->second.materialRevision != expectedReceiverRevision) {
-        return rejected("StaleRevision", "touched material revision changed");
+
+    std::vector<CaptureFraction> captures = request.captureFractions;
+    std::sort(captures.begin(), captures.end(), [](const auto& left, const auto& right) {
+        return left.destinationInventoryId < right.destinationInventoryId;
+    });
+    std::unordered_set<std::string> destinationIds;
+    double fractionSum = 0.0;
+    for (const auto& capture : captures) {
+        if (!isValidId(capture.destinationInventoryId) ||
+            capture.destinationInventoryId == request.sourceInventoryId ||
+            !std::isfinite(capture.fraction) || capture.fraction < 0.0 ||
+            vessels_.count(capture.destinationInventoryId) == 0 ||
+            !destinationIds.insert(capture.destinationInventoryId).second) {
+            return rejected("InvalidTransfer", "invalid or duplicate capture destination");
+        }
+        fractionSum += capture.fraction;
+        if (!std::isfinite(fractionSum) || fractionSum > 1.0 + 1e-12) {
+            return rejected("InvalidTransfer", "capture fractions exceed one");
+        }
     }
-    if (requestedVolumeM3 > source->second.inventory.referenceVolumeM3 + 1e-15) {
+
+    if (expectedMaterialRevisions.size() != destinationIds.size() + 1U) {
+        return rejected("StaleRevision", "expected revisions do not match touched inventories");
+    }
+    const auto sourceRevision = expectedMaterialRevisions.find(request.sourceInventoryId);
+    if (sourceRevision == expectedMaterialRevisions.end() ||
+        sourceRevision->second != source->second.materialRevision) {
+        return rejected("StaleRevision", "source material revision changed");
+    }
+    for (const auto& destinationId : destinationIds) {
+        const auto expected = expectedMaterialRevisions.find(destinationId);
+        if (expected == expectedMaterialRevisions.end() ||
+            expected->second != vessels_.at(destinationId).materialRevision) {
+            return rejected("StaleRevision", "destination material revision changed");
+        }
+    }
+
+    double requestedVolumeM3 = request.quantityValue;
+    if (request.quantityBasis == TransferQuantityBasis::WaterMassKg) {
+        const double availableWaterKg = source->second.inventory.solventWaterKg;
+        if (availableWaterKg <= 0.0 || request.quantityValue > availableWaterKg + 1e-15) {
+            return rejected("InsufficientSource", "fixed transfer exceeds source water inventory");
+        }
+        requestedVolumeM3 = source->second.inventory.referenceVolumeM3 *
+                            (request.quantityValue / availableWaterKg);
+    }
+    if (!std::isfinite(requestedVolumeM3) || requestedVolumeM3 <= 0.0 ||
+        requestedVolumeM3 > source->second.inventory.referenceVolumeM3 + 1e-15) {
         return rejected("InsufficientSource", "fixed transfer exceeds source inventory");
     }
 
     const auto parcel = source->second.inventory.fraction(requestedVolumeM3);
-    const double freeCapacity = std::max(
-        0.0,
-        receiver->second.capacityM3 - receiver->second.inventory.referenceVolumeM3);
-    const double capturedVolume = std::min(parcel.referenceVolumeM3, freeCapacity);
-    const auto captured = parcel.fraction(capturedVolume);
-    auto overflow = parcel;
-    if (!overflow.subtract(captured)) {
-        return rejected("InternalConservation", "parcel split failed");
-    }
-
-    auto sourceAfter = source->second.inventory;
-    auto receiverAfter = receiver->second.inventory;
-    auto spillAfter = spill->second;
-    if (!sourceAfter.subtract(parcel)) {
+    auto vesselsAfter = vessels_;
+    auto sinksAfter = sinks_;
+    auto remaining = parcel;
+    if (!vesselsAfter.at(request.sourceInventoryId).inventory.subtract(parcel)) {
         return rejected("InternalConservation", "source debit failed");
     }
-    receiverAfter.add(captured);
-    spillAfter.add(overflow);
-    if (!sourceAfter.isFiniteNonNegative() || !receiverAfter.isFiniteNonNegative() ||
-        !spillAfter.isFiniteNonNegative() || receiverAfter.referenceVolumeM3 > receiver->second.capacityM3 + 1e-15) {
-        return rejected("InternalConservation", "post-transfer validation failed");
+
+    std::unordered_set<std::string> changedDestinations;
+    for (const auto& capture : captures) {
+        auto& destination = vesselsAfter.at(capture.destinationInventoryId);
+        const double requestedCaptureM3 = parcel.referenceVolumeM3 * capture.fraction;
+        const double freeCapacityM3 = std::max(
+            0.0,
+            destination.capacityM3 - destination.inventory.referenceVolumeM3);
+        const double capturedVolumeM3 = std::min(requestedCaptureM3, freeCapacityM3);
+        const auto captured = parcel.fraction(capturedVolumeM3);
+        if (!remaining.subtract(captured)) {
+            return rejected("InternalConservation", "parcel split failed");
+        }
+        destination.inventory.add(captured);
+        if (captured.referenceVolumeM3 > 0.0) changedDestinations.insert(capture.destinationInventoryId);
+    }
+    sinksAfter.at(request.overflowSinkId).add(remaining);
+
+    for (const auto& destinationId : destinationIds) {
+        const auto& destination = vesselsAfter.at(destinationId);
+        if (!destination.inventory.isFiniteNonNegative() ||
+            destination.inventory.referenceVolumeM3 > destination.capacityM3 + 1e-15) {
+            return rejected("InternalConservation", "post-transfer destination validation failed");
+        }
+    }
+    if (!vesselsAfter.at(request.sourceInventoryId).inventory.isFiniteNonNegative() ||
+        !sinksAfter.at(request.overflowSinkId).isFiniteNonNegative()) {
+        return rejected("InternalConservation", "post-transfer ledger validation failed");
     }
 
-    source->second.inventory = sourceAfter;
-    receiver->second.inventory = receiverAfter;
-    spill->second = spillAfter;
-    ++source->second.materialRevision;
-    ++receiver->second.materialRevision;
+    vessels_ = std::move(vesselsAfter);
+    sinks_ = std::move(sinksAfter);
+    ++vessels_.at(request.sourceInventoryId).materialRevision;
+    for (const auto& destinationId : changedDestinations) {
+        ++vessels_.at(destinationId).materialRevision;
+    }
     ++eventSequence_;
     return accepted();
 }

@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace plv {
 
@@ -12,6 +13,21 @@ struct CommandOutcome {
     bool accepted = false;
     std::string code;
     std::string message;
+};
+
+enum class TransferQuantityBasis { WaterMassKg, LiquidVolumeM3 };
+
+struct CaptureFraction {
+    std::string destinationInventoryId;
+    double fraction = 0.0;
+};
+
+struct TransferFixedRequest {
+    std::string sourceInventoryId;
+    TransferQuantityBasis quantityBasis = TransferQuantityBasis::LiquidVolumeM3;
+    double quantityValue = 0.0;
+    std::vector<CaptureFraction> captureFractions;
+    std::string overflowSinkId;
 };
 
 struct VesselState {
