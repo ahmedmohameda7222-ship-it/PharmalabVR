@@ -194,7 +194,7 @@ namespace PharmaLabVR.Editor
 
         private static void Build(BuildTarget target, string location)
         {
-            AllAssets();
+            PrepareForBuild();
             PlayerSettings.productName = "PharmaLabVR";
             PlayerSettings.bundleVersion = "0.1.0-research";
             if (target == BuildTarget.Android)
@@ -206,6 +206,14 @@ namespace PharmaLabVR.Editor
             }
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = Scenes, target = target, locationPathName = location, options = BuildOptions.StrictMode });
             if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException($"Build failed: {report.summary.result}");
+        }
+
+        private static void PrepareForBuild()
+        {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            ConfigureNativePlugins();
+            foreach (var scene in Scenes)
+                if (!File.Exists(scene)) throw new FileNotFoundException("Generated build scene is missing.", scene);
         }
     }
 }
