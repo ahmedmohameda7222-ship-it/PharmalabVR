@@ -1,7 +1,6 @@
 using NUnit.Framework;
 using PharmaLabVR.Protocols;
 using PharmaLabVR.Input;
-using PharmaLabVR.UI;
 using PharmaLabVR.Core;
 using UnityEngine;
 using PharmaLabVR.Tools;

@@ -7,6 +7,12 @@ using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using PharmaLabVR.UI;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.XR;
+using UnityEngine.XR;
+using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using Unity.XR.CoreUtils;
 
 namespace PharmaLabVR.Editor
 {
@@ -52,8 +58,25 @@ namespace PharmaLabVR.Editor
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
             coreDriver.transform.SetParent(lab.transform);
             var xrRig = new GameObject("XRPlayerRig");
-            xrRig.AddComponent<XRInputAdapter>();
             xrRig.transform.SetParent(lab.transform);
+            var xrOrigin = xrRig.AddComponent<XROrigin>();
+            var cameraOffset = new GameObject("Camera Offset");
+            cameraOffset.transform.SetParent(xrRig.transform, false);
+            var xrCameraObject = new GameObject("XR Camera");
+            xrCameraObject.transform.SetParent(cameraOffset.transform, false);
+            var xrCamera = xrCameraObject.AddComponent<Camera>();
+            xrCameraObject.AddComponent<AudioListener>();
+            xrCameraObject.AddComponent<TrackedPoseDriver>();
+            xrOrigin.CameraFloorOffsetObject = cameraOffset;
+            xrOrigin.Camera = xrCamera;
+            xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
+            var interactionManager = new GameObject("XRInteractionManager");
+            interactionManager.transform.SetParent(xrRig.transform, false);
+            interactionManager.AddComponent<XRInteractionManager>();
+            var leftController = CreateXrController(cameraOffset.transform, true);
+            var rightController = CreateXrController(cameraOffset.transform, false);
+            var xrInput = xrRig.AddComponent<XRInputAdapter>();
+            xrInput.Configure(lab.transform, leftController, rightController, "openxr-controller-research-v1");
             xrRig.SetActive(false);
             var desktopRig = new GameObject("DesktopPlayerRig");
             var desktopInput = desktopRig.AddComponent<DesktopInputAdapter>();
@@ -63,9 +86,11 @@ namespace PharmaLabVR.Editor
             camera.AddComponent<DesktopCameraController>();
             camera.transform.SetParent(desktopRig.transform);
             camera.transform.localPosition = new Vector3(0f, 1.55f, -1.2f);
-            var holdAnchor = new GameObject("ToolHoldAnchor");
-            holdAnchor.transform.SetParent(camera.transform);
-            holdAnchor.transform.localPosition = new Vector3(0.25f, -0.18f, 0.65f);
+            var holdAnchor = new GameObject("DesktopToolHoldAnchor");
+            holdAnchor.transform.SetParent(desktopRig.transform, false);
+            holdAnchor.AddComponent<DesktopHoldAnchorFollower>().Configure(
+                camera.transform,
+                new Vector3(0.25f, -0.18f, 0.65f));
             var researchTool = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             researchTool.name = "DesktopResearchTool";
             researchTool.transform.SetParent(lab.transform);
@@ -83,6 +108,46 @@ namespace PharmaLabVR.Editor
             sessionController.transform.SetParent(lab.transform);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
+        }
+
+        private static ActionBasedController CreateXrController(Transform parent, bool leftHand)
+        {
+            var hand = leftHand ? "Left" : "Right";
+            var usage = leftHand ? "LeftHand" : "RightHand";
+            var controllerObject = new GameObject($"{hand} Controller");
+            controllerObject.transform.SetParent(parent, false);
+            var controller = controllerObject.AddComponent<ActionBasedController>();
+            controller.positionAction = Action($"{hand} Position", InputActionType.Value, "Vector3", $"<XRController>{{{usage}}}/devicePosition");
+            controller.rotationAction = Action($"{hand} Rotation", InputActionType.Value, "Quaternion", $"<XRController>{{{usage}}}/deviceRotation");
+            controller.isTrackedAction = Action($"{hand} Is Tracked", InputActionType.Button, "Button", $"<XRController>{{{usage}}}/isTracked");
+            controller.trackingStateAction = Action($"{hand} Tracking State", InputActionType.Value, "Integer", $"<XRController>{{{usage}}}/trackingState");
+            controller.selectAction = Action($"{hand} Select", InputActionType.Button, "Button", $"<XRController>{{{usage}}}/gripPressed");
+            controller.selectActionValue = Action($"{hand} Select Value", InputActionType.Value, "Axis", $"<XRController>{{{usage}}}/grip");
+            controller.activateAction = Action($"{hand} Activate", InputActionType.Button, "Button", $"<XRController>{{{usage}}}/triggerPressed");
+            controller.activateActionValue = Action($"{hand} Activate Value", InputActionType.Value, "Axis", $"<XRController>{{{usage}}}/trigger");
+            controller.hapticDeviceAction = Action($"{hand} Haptic Device", InputActionType.PassThrough, string.Empty, $"<XRController>{{{usage}}}/*");
+
+            var direct = new GameObject($"{hand} Direct Interactor");
+            direct.transform.SetParent(controllerObject.transform, false);
+            var collider = direct.AddComponent<SphereCollider>();
+            collider.radius = 0.08f;
+            collider.isTrigger = true;
+            direct.AddComponent<XRDirectInteractor>();
+
+            var ray = new GameObject($"{hand} Ray Interactor");
+            ray.transform.SetParent(controllerObject.transform, false);
+            ray.AddComponent<XRRayInteractor>();
+            return controller;
+        }
+
+        private static InputActionProperty Action(
+            string name,
+            InputActionType type,
+            string expectedControlType,
+            string binding)
+        {
+            var action = new InputAction(name, type, binding, expectedControlType: expectedControlType);
+            return new InputActionProperty(action);
         }
 
         public static void WindowsDesktop() => Build(BuildTarget.StandaloneWindows64, "../artifacts/WindowsDesktop/PharmaLabVR.exe");

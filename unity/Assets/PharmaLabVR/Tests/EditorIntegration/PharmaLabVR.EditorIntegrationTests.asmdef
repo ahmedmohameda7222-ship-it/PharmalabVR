@@ -1,0 +1,11 @@
+{
+  "name": "PharmaLabVR.EditorIntegrationTests",
+  "references": [
+    "PharmaLabVR.Runtime",
+    "PharmaLabVR.Editor",
+    "Unity.XR.Interaction.Toolkit",
+    "Unity.XR.CoreUtils"
+  ],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": ["Editor"]
+}

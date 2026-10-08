@@ -3,6 +3,7 @@ using PharmaLabVR.Tools;
 using PharmaLabVR.UI;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace PharmaLabVR.Editor
 {
@@ -33,6 +34,8 @@ namespace PharmaLabVR.Editor
             liquidPresenter.Configure(liquid.transform, 0.00005, 0.48f, -0.24f);
             var valve = root.AddComponent<ValveActuator>();
             root.AddComponent<ToolPresenter>().Configure("burette-50ml-research-v1", liquidPresenter, valve);
+            root.AddComponent<Rigidbody>().isKinematic = false;
+            root.AddComponent<XRGrabInteractable>();
             PrefabUtility.SaveAsPrefabAsset(root, "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
             Object.DestroyImmediate(root);
         }

@@ -13,6 +13,8 @@ namespace PharmaLabVR.Input
         public ApplicationMode Mode { get; private set; }
         public event Action<ApplicationMode> ModeChanged;
 
+        private void Start() => Select(BootMenu.RequestedMode);
+
         public void Configure(GameObject desktop, GameObject xr)
         {
             desktopRig = desktop;

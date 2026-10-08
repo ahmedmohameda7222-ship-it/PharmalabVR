@@ -1,6 +1,6 @@
 {
   "name": "PharmaLabVR.Editor",
   "rootNamespace": "PharmaLabVR.Editor",
-  "references": ["PharmaLabVR.Runtime"],
+  "references": ["PharmaLabVR.Runtime", "Unity.InputSystem", "Unity.XR.Interaction.Toolkit", "Unity.XR.CoreUtils"],
   "includePlatforms": ["Editor"]
 }
