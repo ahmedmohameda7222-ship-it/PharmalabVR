@@ -44,7 +44,7 @@ namespace PharmaLabVR.Input
             if (!inputEnabled || labFrame == null || leftController == null || rightController == null || registeredTool == null)
                 return System.Array.Empty<LabInputSample>();
             var selected = grabInteractable != null && grabInteractable.isSelected;
-            var actuator = selected ? Mathf.Max(Actuator(leftActionController), Actuator(rightActionController)) : 0f;
+            var actuator = selected ? Actuator(SelectingController()) : 0f;
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
@@ -55,8 +55,24 @@ namespace PharmaLabVR.Input
 
         private static float Actuator(ActionBasedController controller)
         {
-            var action = controller != null ? controller.selectActionValue.action : null;
-            return action != null ? Mathf.Clamp01(action.ReadValue<float>()) : 0f;
+            if (controller == null) return 0f;
+            var grip = controller.selectActionValue.action;
+            var trigger = controller.activateActionValue.action;
+            return ChooseActuatorValue(
+                grip != null ? grip.ReadValue<float>() : 0f,
+                trigger != null ? trigger.ReadValue<float>() : 0f);
+        }
+
+        private static float ChooseActuatorValue(float gripValue, float triggerValue) => Mathf.Clamp01(triggerValue);
+
+        private ActionBasedController SelectingController()
+        {
+            var interactor = grabInteractable != null ? grabInteractable.firstInteractorSelecting : null;
+            var selectingTransform = interactor?.transform;
+            if (selectingTransform == null) return null;
+            if (leftController != null && selectingTransform.IsChildOf(leftController)) return leftActionController;
+            if (rightController != null && selectingTransform.IsChildOf(rightController)) return rightActionController;
+            return null;
         }
 
         private static bool Tracked(ActionBasedController controller)

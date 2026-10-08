@@ -15,6 +15,7 @@ using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.XR.Management;
 using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features.Interactions;
 using UnityEditor.XR.Management;
 using UnityEditor.XR.Management.Metadata;
 using Unity.XR.CoreUtils;
@@ -120,7 +121,7 @@ namespace PharmaLabVR.Editor
             var captureTarget = receiver.AddComponent<LabCaptureTarget>();
             captureTarget.Configure("receiver", 0.08f);
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
-                researchTool.transform, captureTarget, "burette-50ml-research-v1");
+                researchTool.transform, captureTarget, "burette-50ml-research-v1", coreDriver);
             xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,
                 captureTarget, "burette-50ml-research-v1");
             var modes = new GameObject("ModeCoordinator").AddComponent<ModeCoordinator>();
@@ -217,9 +218,36 @@ namespace PharmaLabVR.Editor
                 }
                 EditorUtility.SetDirty(settings);
                 EditorUtility.SetDirty(settings.Manager);
+                ConfigureControllerProfiles(group);
             }
             EditorUtility.SetDirty(perTarget);
             AssetDatabase.SaveAssets();
+        }
+
+        private static void ConfigureControllerProfiles(BuildTargetGroup group)
+        {
+            var settings = OpenXRSettings.GetSettingsForBuildTargetGroup(group);
+            if (settings == null) throw new InvalidOperationException($"Missing OpenXR package settings for {group}.");
+            EnableProfiles(settings.GetFeatures<OculusTouchControllerProfile>());
+            EnableProfiles(settings.GetFeatures<KHRSimpleControllerProfile>());
+            if (group == BuildTargetGroup.Standalone)
+            {
+                EnableProfiles(settings.GetFeatures<MicrosoftMotionControllerProfile>());
+                EnableProfiles(settings.GetFeatures<HTCViveControllerProfile>());
+                EnableProfiles(settings.GetFeatures<ValveIndexControllerProfile>());
+            }
+            EditorUtility.SetDirty(settings);
+        }
+
+        private static void EnableProfiles<T>(T[] profiles) where T : UnityEngine.XR.OpenXR.Features.OpenXRFeature
+        {
+            if (profiles == null || profiles.Length == 0)
+                throw new InvalidOperationException($"OpenXR profile {typeof(T).Name} is unavailable.");
+            foreach (var profile in profiles)
+            {
+                profile.enabled = true;
+                EditorUtility.SetDirty(profile);
+            }
         }
 
         private static void ConfigurePlugin(string path, BuildTarget target, string cpu, bool editorCompatible)
