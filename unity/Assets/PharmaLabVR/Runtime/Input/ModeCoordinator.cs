@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using PharmaLabVR.UI;
+using PharmaLabVR.Core;
 
 namespace PharmaLabVR.Input
 {
@@ -10,19 +11,28 @@ namespace PharmaLabVR.Input
     {
         [SerializeField] private GameObject desktopRig;
         [SerializeField] private GameObject xrRig;
+        [SerializeField] private CoreDriver coreDriver;
         public ApplicationMode Mode { get; private set; }
         public event Action<ApplicationMode> ModeChanged;
 
-        private void Start() => Select(BootMenu.RequestedMode);
+        private void Start() => Apply(BootMenu.RequestedMode);
 
-        public void Configure(GameObject desktop, GameObject xr)
+        public void Configure(GameObject desktop, GameObject xr, CoreDriver driver = null)
         {
             desktopRig = desktop;
             xrRig = xr;
-            Select(BootMenu.RequestedMode);
+            coreDriver = driver;
+            Apply(BootMenu.RequestedMode);
         }
 
         public void Select(ApplicationMode mode)
+        {
+            if (Application.isPlaying && mode != Mode && coreDriver != null && !coreDriver.BeginModeChange(mode))
+                throw new InvalidOperationException("Native core rejected the mode change.");
+            Apply(mode);
+        }
+
+        private void Apply(ApplicationMode mode)
         {
             if (desktopRig == null || xrRig == null) throw new InvalidOperationException("Both mode rigs must be assigned.");
             desktopRig.SetActive(mode == ApplicationMode.Desktop);

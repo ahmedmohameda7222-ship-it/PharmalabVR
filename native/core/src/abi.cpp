@@ -1,6 +1,7 @@
 #include "plv/abi.h"
 
 #include "plv/state_executor.hpp"
+#include "plv/tool_models.hpp"
 #include "json.hpp"
 
 #include <algorithm>
@@ -16,18 +17,55 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace {
 using json = nlohmann::json;
 
 struct Context {
+    struct ToolInput {
+        std::uint64_t sampleSequence = 0;
+        std::uint64_t captureMonotonicNs = 0;
+        double actuator01 = 0.0;
+        bool trackingValid = false;
+        std::vector<plv::CaptureFraction> captures;
+    };
+
+    struct ToolState {
+        std::string sourceInventoryId;
+        std::string overflowSinkId;
+        std::string coordinateFrame;
+        std::string geometryProfileHash;
+        std::uint64_t profileRevision = 0;
+        std::uint64_t toolRevision = 1;
+        std::uint64_t actuatorRevision = 0;
+        std::uint64_t inventoryRevision = 0;
+        double actuator01 = 0.0;
+        plv::MaterialState tipInventory;
+        plv::MaterialState residualInventory;
+        plv::MaterialState inFlightInventory;
+        std::optional<ToolInput> latestInput;
+    };
+
+    struct CheckpointState {
+        plv::SessionSnapshot snapshot;
+        std::unordered_map<std::string, ToolState> tools;
+        std::string mode;
+    };
+
     explicit Context(std::string branch) : executor(std::move(branch)) {}
     plv::StateExecutor executor;
     std::deque<std::string> events;
     std::unordered_map<std::uint64_t, std::pair<std::string, std::string>> receipts;
     std::unordered_map<std::string, std::uint64_t> inputSequences;
+    std::unordered_map<std::string, ToolState> tools;
+    std::unordered_map<std::string, CheckpointState> checkpoints;
     std::uint64_t nextCommandSequence = 1;
+    std::string mode = "Desktop";
+    bool holdActive = false;
+    std::string holdReason;
+    bool recoveryReady = false;
     std::mutex mutex;
 };
 
@@ -35,6 +73,9 @@ std::mutex registryMutex;
 std::unordered_map<std::uint64_t, std::shared_ptr<Context>> contexts;
 std::uint64_t nextHandle = 1;
 constexpr std::uint32_t maxInputSize = 16U * 1024U * 1024U;
+constexpr std::size_t maxTools = 64U;
+constexpr std::uint64_t inputStaleCutoffNs = 100'000'000ULL;
+constexpr double transportTickS = 0.020;
 
 std::shared_ptr<Context> getContext(std::uint64_t handle) {
     std::lock_guard<std::mutex> lock(registryMutex);
@@ -67,6 +108,24 @@ json materialJson(const plv::MaterialState& material) {
         {"researchAdditiveVolumeM3", material.referenceVolumeM3},
         {"preparationId", material.preparationId},
         {"provenanceId", material.provenanceId}
+    };
+}
+
+json toolJson(const std::string& id, const Context::ToolState& tool) {
+    return {
+        {"id", id},
+        {"sourceInventoryId", tool.sourceInventoryId},
+        {"overflowSinkId", tool.overflowSinkId},
+        {"coordinateFrame", tool.coordinateFrame},
+        {"geometryProfileHash", tool.geometryProfileHash},
+        {"profileRevision", std::to_string(tool.profileRevision)},
+        {"toolRevision", std::to_string(tool.toolRevision)},
+        {"actuatorRevision", std::to_string(tool.actuatorRevision)},
+        {"inventoryRevision", std::to_string(tool.inventoryRevision)},
+        {"actuator01", tool.actuator01},
+        {"tipInventory", materialJson(tool.tipInventory)},
+        {"residualInventory", materialJson(tool.residualInventory)},
+        {"inFlightInventory", materialJson(tool.inFlightInventory)}
     };
 }
 
@@ -123,8 +182,27 @@ json snapshotJson(const plv::SessionSnapshot& snapshot) {
     };
 }
 
-json exportJson(const Context& context) {
+json contextSnapshotJson(const Context& context) {
     auto result = snapshotJson(context.executor.snapshot());
+    result["mode"] = context.mode;
+    result["hold"] = {
+        {"active", context.holdActive},
+        {"reason", context.holdReason},
+        {"recoveryReady", context.recoveryReady}
+    };
+    result["tools"] = json::array();
+    std::vector<std::string> toolIds;
+    toolIds.reserve(context.tools.size());
+    for (const auto& item : context.tools) toolIds.push_back(item.first);
+    std::sort(toolIds.begin(), toolIds.end());
+    for (const auto& id : toolIds) {
+        result["tools"].push_back(toolJson(id, context.tools.at(id)));
+    }
+    return result;
+}
+
+json exportJson(const Context& context) {
+    auto result = contextSnapshotJson(context);
     result["nextCommandSequence"] = std::to_string(context.nextCommandSequence);
     result["commandReceipts"] = json::array();
     std::vector<std::uint64_t> sequences;
@@ -142,6 +220,26 @@ json exportJson(const Context& context) {
     result["inputSequences"] = json::object();
     for (const auto& item : context.inputSequences) {
         result["inputSequences"][item.first] = std::to_string(item.second);
+    }
+    result["checkpoints"] = json::array();
+    std::vector<std::string> checkpointIds;
+    checkpointIds.reserve(context.checkpoints.size());
+    for (const auto& item : context.checkpoints) checkpointIds.push_back(item.first);
+    std::sort(checkpointIds.begin(), checkpointIds.end());
+    for (const auto& checkpointId : checkpointIds) {
+        const auto& checkpoint = context.checkpoints.at(checkpointId);
+        json tools = json::array();
+        std::vector<std::string> ids;
+        ids.reserve(checkpoint.tools.size());
+        for (const auto& item : checkpoint.tools) ids.push_back(item.first);
+        std::sort(ids.begin(), ids.end());
+        for (const auto& id : ids) tools.push_back(toolJson(id, checkpoint.tools.at(id)));
+        result["checkpoints"].push_back({
+            {"checkpointId", checkpointId},
+            {"snapshot", snapshotJson(checkpoint.snapshot)},
+            {"tools", std::move(tools)},
+            {"mode", checkpoint.mode}
+        });
     }
     return result;
 }
@@ -245,6 +343,9 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
         }
         const auto branch = parsed.at("branchId").get<std::string>();
         auto context = std::make_shared<Context>(branch);
+        const auto initialMode = parsed.value("initialMode", "Desktop");
+        if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
+        context->mode = initialMode;
         std::lock_guard<std::mutex> lock(registryMutex);
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
@@ -277,6 +378,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         if (parsed.value("schemaVersion", 0) != 1) {
             return PLV_UNSUPPORTED_VERSION;
         }
+        std::lock_guard<std::mutex> lock(context->mutex);
         if (parsed.at("branchId").get<std::string>() != context->executor.snapshot().branchId) {
             return PLV_INVALID_ARGUMENT;
         }
@@ -284,7 +386,6 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         const auto sequence = decimalSequence(sequenceText);
         if (!sequence) return PLV_INVALID_ARGUMENT;
         const auto type = parsed.at("type").get<std::string>();
-        std::lock_guard<std::mutex> lock(context->mutex);
         if (context->events.size() >= 256U) {
             return PLV_BUSY;
         }
@@ -312,9 +413,18 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         } else if (type == "CreateSink") {
             outcome = context->executor.createSink(payload.at("id").get<std::string>());
         } else if (type == "PrepareStock") {
-            outcome = context->executor.prepareStock(
-                payload.at("vesselId").get<std::string>(), stockKind(payload.at("stockKind").get<std::string>()),
-                payload.at("concentrationMolPerL").get<double>(), payload.at("referenceVolumeM3").get<double>());
+            const auto vesselId = payload.at("vesselId").get<std::string>();
+            const auto snapshot = context->executor.snapshot();
+            const auto vessel = snapshot.vessels.find(vesselId);
+            if (!revisions.is_object() || revisions.size() != 1U || !revisions.contains(vesselId) ||
+                vessel == snapshot.vessels.end() ||
+                revision(revisions, vesselId) != vessel->second.materialRevision) {
+                outcome = {false, "StaleRevision", "stock preparation revision does not match touched inventory"};
+            } else {
+                outcome = context->executor.prepareStock(
+                    vesselId, stockKind(payload.at("stockKind").get<std::string>()),
+                    payload.at("concentrationMolPerL").get<double>(), payload.at("referenceVolumeM3").get<double>());
+            }
         } else if (type == "TransferFixed") {
             const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
             const auto basis = transferQuantityBasis(payload.at("quantity").at("basis").get<std::string>());
@@ -339,12 +449,142 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                      payload.at("overflowSinkId").get<std::string>()},
                     expected);
             }
+        } else if (type == "PlaceTool") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
+            const auto sinkId = payload.at("overflowSinkId").get<std::string>();
+            const auto frame = payload.at("coordinateFrame").get<std::string>();
+            const auto profile = payload.at("geometryProfileHash").get<std::string>();
+            const auto profileRevision = decimalSequence(payload.at("profileRevision").get<std::string>());
+            const auto snapshot = context->executor.snapshot();
+            if (!plv::isValidId(toolId) || !profileRevision || *profileRevision == 0U || frame != "lab" ||
+                profile != plv::BuretteProfile::researchDefault().id || snapshot.vessels.count(sourceId) == 0U ||
+                snapshot.sinks.count(sinkId) == 0U) {
+                outcome = {false, "InvalidToolPlacement", "tool identity, profile, source, sink, or frame is invalid"};
+            } else if (context->tools.count(toolId) != 0U) {
+                outcome = {false, "ToolIdentityConflict", "tool identity already exists"};
+            } else if (context->tools.size() >= maxTools) {
+                outcome = {false, "ToolLimitReached", "tool inventory limit reached"};
+            } else {
+                context->tools.emplace(toolId, Context::ToolState{
+                    sourceId, sinkId, frame, profile, *profileRevision, 1U, 0U, 0U, 0.0, {}, {}, {}, std::nullopt});
+                outcome = {true, "Accepted", ""};
+            }
+        } else if (type == "SetActuator") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto expectedActuatorRevision = decimalSequence(payload.at("expectedActuatorRevision").get<std::string>());
+            const double actuator = payload.at("actuator01").get<double>();
+            const auto found = context->tools.find(toolId);
+            if (found == context->tools.end() || !expectedActuatorRevision ||
+                *expectedActuatorRevision != found->second.actuatorRevision) {
+                outcome = {false, "StaleActuatorRevision", "tool actuator revision changed"};
+            } else if (!std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
+                outcome = {false, "InvalidActuator", "actuator must be finite and within [0,1]"};
+            } else {
+                found->second.actuator01 = actuator;
+                ++found->second.actuatorRevision;
+                found->second.latestInput.reset();
+                outcome = {true, "Accepted", ""};
+            }
+        } else if (type == "DisposeContents") {
+            const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
+            const auto sinkId = payload.at("sinkInventoryId").get<std::string>();
+            const auto snapshot = context->executor.snapshot();
+            const auto source = snapshot.vessels.find(sourceId);
+            if (source == snapshot.vessels.end() || snapshot.sinks.count(sinkId) == 0U) {
+                outcome = {false, "InvalidDisposal", "source vessel or sink is not registered"};
+            } else if (source->second.inventory.referenceVolumeM3 <= 0.0) {
+                outcome = {false, "AlreadyEmpty", "source inventory is empty"};
+            } else {
+                outcome = context->executor.transferFixed(
+                    {sourceId, plv::TransferQuantityBasis::LiquidVolumeM3,
+                     source->second.inventory.referenceVolumeM3, {}, sinkId},
+                    {{sourceId, revision(revisions, sourceId)}});
+            }
+        } else if (type == "RinseTool") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto sourceId = payload.at("rinseSourceInventoryId").get<std::string>();
+            const auto sinkId = payload.at("wasteSinkId").get<std::string>();
+            const auto expectedInventoryRevision = decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
+            const auto basis = transferQuantityBasis(payload.at("quantity").at("basis").get<std::string>());
+            const auto found = context->tools.find(toolId);
+            if (found == context->tools.end() || !expectedInventoryRevision ||
+                *expectedInventoryRevision != found->second.inventoryRevision) {
+                outcome = {false, "StaleInventoryRevision", "tool rinse inventory revision changed"};
+            } else if (!basis) {
+                outcome = {false, "InvalidRinse", "unsupported rinse quantity basis"};
+            } else {
+                outcome = context->executor.transferFixed(
+                    {sourceId, *basis, payload.at("quantity").at("value").get<double>(), {}, sinkId},
+                    {{sourceId, revision(revisions, sourceId)}});
+                if (outcome.accepted) {
+                    ++found->second.inventoryRevision;
+                    found->second.actuator01 = 0.0;
+                    found->second.latestInput.reset();
+                }
+            }
+        } else if (type == "CreateCheckpoint") {
+            const auto checkpointId = payload.at("checkpointId").get<std::string>();
+            if (!plv::isValidId(checkpointId)) {
+                outcome = {false, "InvalidCheckpoint", "checkpoint identity is invalid"};
+            } else if (context->checkpoints.size() >= 16U && context->checkpoints.count(checkpointId) == 0U) {
+                outcome = {false, "CheckpointLimitReached", "checkpoint limit reached"};
+            } else {
+                context->checkpoints.insert_or_assign(
+                    checkpointId,
+                    Context::CheckpointState{context->executor.snapshot(), context->tools, context->mode});
+                outcome = {true, "Accepted", ""};
+            }
+        } else if (type == "RestartCheckpoint") {
+            const auto checkpointId = payload.at("checkpointId").get<std::string>();
+            const auto found = context->checkpoints.find(checkpointId);
+            if (found == context->checkpoints.end()) {
+                outcome = {false, "CheckpointNotFound", "checkpoint identity is unknown"};
+            } else {
+                auto restartSnapshot = found->second.snapshot;
+                restartSnapshot.eventSequence = context->executor.snapshot().eventSequence + 1U;
+                outcome = context->executor.restore(restartSnapshot);
+                if (outcome.accepted) {
+                    context->tools = found->second.tools;
+                    for (auto& item : context->tools) item.second.latestInput.reset();
+                    context->mode = found->second.mode;
+                    context->holdActive = true;
+                    context->holdReason = "CheckpointRestart";
+                    context->recoveryReady = context->tools.empty();
+                }
+            }
+        } else if (type == "BeginModeChange") {
+            const auto mode = payload.at("mode").get<std::string>();
+            if (mode != "Desktop" && mode != "VR") {
+                outcome = {false, "InvalidMode", "mode must be Desktop or VR"};
+            } else {
+                context->mode = mode;
+                context->holdActive = true;
+                context->holdReason = "ModeChange";
+                context->recoveryReady = context->tools.empty();
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                outcome = {true, "Accepted", ""};
+            }
+        } else if (type == "Recenter") {
+            context->holdActive = true;
+            context->holdReason = "Recenter";
+            context->recoveryReady = false;
+            for (auto& item : context->tools) item.second.latestInput.reset();
+            outcome = {true, "Accepted", ""};
         } else if (type == "Pause") {
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
         } else if (type == "Continue") {
-            context->executor.setPaused(false);
-            outcome = {true, "Accepted", ""};
+            if (context->holdActive && !context->recoveryReady) {
+                outcome = {false, "RecoveryNotReady", "neutral fresh tracked baselines are required"};
+            } else {
+                context->holdActive = false;
+                context->holdReason.clear();
+                context->recoveryReady = false;
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                context->executor.setPaused(false);
+                outcome = {true, "Accepted", ""};
+            }
         } else {
             outcome = {false, "UnsupportedCommand", "command type is not implemented"};
         }
@@ -375,16 +615,27 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
         if (!parsed.is_array() || parsed.size() > 128U) return PLV_INVALID_ARGUMENT;
         std::lock_guard<std::mutex> lock(context->mutex);
         auto proposedSequences = context->inputSequences;
+        auto proposedTools = context->tools;
+        const auto snapshot = context->executor.snapshot();
         for (const auto& sample : parsed) {
             const auto toolId = sample.at("toolId").get<std::string>();
             const auto profile = sample.at("geometryProfileHash").get<std::string>();
+            const auto frame = sample.at("coordinateFrame").get<std::string>();
             const auto sequence = decimalSequence(sample.at("sampleSequence").get<std::string>());
             const auto timestamp = decimalSequence(sample.at("captureMonotonicNs").get<std::string>());
+            const auto profileRevision = decimalSequence(sample.at("profileRevision").get<std::string>());
+            const auto toolRevision = decimalSequence(sample.at("toolRevision").get<std::string>());
             const auto& position = sample.at("positionMetres");
             const auto& rotation = sample.at("rotation");
+            const auto& captureFractions = sample.at("captureFractions");
             const double actuator = sample.at("actuator01").get<double>();
-            if (!plv::isValidId(toolId) || profile.empty() || profile.size() > 128U || !sequence || !timestamp ||
+            const auto registered = proposedTools.find(toolId);
+            if (!plv::isValidId(toolId) || registered == proposedTools.end() || !sequence || !timestamp ||
+                !profileRevision || !toolRevision || frame != registered->second.coordinateFrame ||
+                profile != registered->second.geometryProfileHash || *profileRevision != registered->second.profileRevision ||
+                *toolRevision != registered->second.toolRevision ||
                 !position.is_array() || position.size() != 3U || !rotation.is_array() || rotation.size() != 4U ||
+                !captureFractions.is_array() || captureFractions.size() > plv::kMaxVesselInventories ||
                 !sample.at("trackingValid").is_boolean() || !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
                 return PLV_INVALID_ARGUMENT;
             }
@@ -396,22 +647,129 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
                 normSquared += value * value;
             }
             if (std::abs(normSquared - 1.0) > 1e-6 || *sequence <= proposedSequences[toolId]) return PLV_INVALID_ARGUMENT;
+
+            std::vector<plv::CaptureFraction> captures;
+            std::unordered_set<std::string> destinations;
+            double captureSum = 0.0;
+            for (const auto& capture : captureFractions) {
+                const auto destinationId = capture.at("destinationInventoryId").get<std::string>();
+                const double fraction = capture.at("fraction").get<double>();
+                if (!plv::isValidId(destinationId) || destinationId == registered->second.sourceInventoryId ||
+                    snapshot.vessels.count(destinationId) == 0U || !destinations.insert(destinationId).second ||
+                    !std::isfinite(fraction) || fraction < 0.0 || fraction > 1.0) {
+                    return PLV_INVALID_ARGUMENT;
+                }
+                captureSum += fraction;
+                if (!std::isfinite(captureSum) || captureSum > 1.0 + 1e-12) return PLV_INVALID_ARGUMENT;
+                captures.push_back({destinationId, fraction});
+            }
             proposedSequences[toolId] = *sequence;
+            registered->second.latestInput = Context::ToolInput{
+                *sequence,
+                *timestamp,
+                actuator,
+                sample.at("trackingValid").get<bool>(),
+                std::move(captures)};
         }
         context->inputSequences = std::move(proposedSequences);
+        context->tools = std::move(proposedTools);
         return PLV_OK;
     } catch (...) {
         return PLV_INVALID_ARGUMENT;
     }
 }
 
-std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t) {
+std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monotonic_now_ns) {
     const auto context = getContext(handle);
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
     if (!std::isfinite(delta_s) || delta_s < 0.0) return PLV_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(context->mutex);
+    if (context->holdActive) {
+        bool ready = true;
+        for (const auto& item : context->tools) {
+            const auto& input = item.second.latestInput;
+            if (!input || !input->trackingValid || input->actuator01 > 1e-9 ||
+                input->captureMonotonicNs > monotonic_now_ns ||
+                monotonic_now_ns - input->captureMonotonicNs > inputStaleCutoffNs) {
+                ready = false;
+                break;
+            }
+        }
+        context->recoveryReady = ready;
+        return PLV_OK;
+    }
+    if (delta_s > transportTickS * 2.0 + 1e-12) {
+        context->holdActive = true;
+        context->holdReason = "TimeDiscontinuity";
+        context->recoveryReady = false;
+        for (auto& item : context->tools) item.second.latestInput.reset();
+        return PLV_OK;
+    }
+    if (context->executor.paused()) return PLV_OK;
+
+    std::vector<std::string> toolIds;
+    toolIds.reserve(context->tools.size());
+    for (const auto& item : context->tools) toolIds.push_back(item.first);
+    std::sort(toolIds.begin(), toolIds.end());
+
+    std::size_t activeToolCount = 0U;
+    for (const auto& toolId : toolIds) {
+        const auto& tool = context->tools.at(toolId);
+        if (!tool.latestInput || tool.latestInput->actuator01 <= 0.0) continue;
+        const auto& input = *tool.latestInput;
+        if (!input.trackingValid || input.captureMonotonicNs > monotonic_now_ns ||
+            monotonic_now_ns - input.captureMonotonicNs > inputStaleCutoffNs) {
+            context->holdActive = true;
+            context->holdReason = "Input";
+            context->recoveryReady = false;
+            for (auto& item : context->tools) item.second.latestInput.reset();
+            return PLV_OK;
+        }
+        ++activeToolCount;
+    }
+    if (context->events.size() + activeToolCount > 256U) return PLV_BUSY;
+
+    for (const auto& toolId : toolIds) {
+        const auto& tool = context->tools.at(toolId);
+        if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0 || delta_s == 0.0) {
+            continue;
+        }
+        const auto snapshot = context->executor.snapshot();
+        const auto source = snapshot.vessels.find(tool.sourceInventoryId);
+        if (source == snapshot.vessels.end() || source->second.inventory.referenceVolumeM3 <= 0.0) continue;
+        const double requestedVolumeM3 = plv::simulateBuretteDelivery(
+            plv::BuretteProfile::researchDefault(),
+            source->second.inventory.referenceVolumeM3,
+            tool.latestInput->actuator01,
+            delta_s,
+            transportTickS);
+        if (requestedVolumeM3 <= 0.0) continue;
+
+        std::unordered_map<std::string, std::uint64_t> revisions;
+        revisions.emplace(tool.sourceInventoryId, source->second.materialRevision);
+        for (const auto& capture : tool.latestInput->captures) {
+            const auto destination = snapshot.vessels.find(capture.destinationInventoryId);
+            if (destination == snapshot.vessels.end()) return PLV_INTERNAL_ERROR;
+            revisions.emplace(capture.destinationInventoryId, destination->second.materialRevision);
+        }
+        const auto outcome = context->executor.transferFixed(
+            {tool.sourceInventoryId,
+             plv::TransferQuantityBasis::LiquidVolumeM3,
+             requestedVolumeM3,
+             tool.latestInput->captures,
+             tool.overflowSinkId},
+            revisions);
+        if (!outcome.accepted) return PLV_INTERNAL_ERROR;
+        context->events.push_back(json({
+            {"schemaVersion", 1},
+            {"type", "LiveTransferCommitted"},
+            {"toolId", toolId},
+            {"sampleSequence", std::to_string(tool.latestInput->sampleSequence)},
+            {"quantityM3", requestedVolumeM3}
+        }).dump());
+    }
     context->executor.advanceTime(delta_s);
     return PLV_OK;
 }
@@ -423,7 +781,7 @@ std::int32_t plv_snapshot(std::uint64_t handle, char* out, std::uint32_t capacit
     }
     try {
         std::lock_guard<std::mutex> lock(context->mutex);
-        return copyString(snapshotJson(context->executor.snapshot()).dump(), out, capacity, required);
+        return copyString(contextSnapshotJson(*context).dump(), out, capacity, required);
     } catch (...) {
         return PLV_INTERNAL_ERROR;
     }
@@ -473,6 +831,49 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
         auto context = std::make_shared<Context>(snapshot.branchId);
         const auto outcome = context->executor.restore(snapshot);
         if (!outcome.accepted) return PLV_INVALID_ARGUMENT;
+        const auto parseTools = [](const json& tools, const plv::SessionSnapshot& ownerSnapshot) {
+            std::unordered_map<std::string, Context::ToolState> result;
+            if (!tools.is_array() || tools.size() > maxTools) throw std::invalid_argument("invalid tools");
+            for (const auto& item : tools) {
+                const auto id = item.at("id").get<std::string>();
+                const auto sourceId = item.at("sourceInventoryId").get<std::string>();
+                const auto sinkId = item.at("overflowSinkId").get<std::string>();
+                const auto frame = item.at("coordinateFrame").get<std::string>();
+                const auto profile = item.at("geometryProfileHash").get<std::string>();
+                const auto profileRevision = decimalSequence(item.at("profileRevision").get<std::string>());
+                const auto toolRevision = decimalSequence(item.at("toolRevision").get<std::string>());
+                const auto actuatorRevision = decimalSequence(item.at("actuatorRevision").get<std::string>());
+                const auto inventoryRevision = decimalSequence(item.at("inventoryRevision").get<std::string>());
+                const double actuator = item.at("actuator01").get<double>();
+                const auto tip = parseMaterial(item.at("tipInventory"));
+                const auto residual = parseMaterial(item.at("residualInventory"));
+                const auto inFlight = parseMaterial(item.at("inFlightInventory"));
+                if (!plv::isValidId(id) || !profileRevision || !toolRevision || *profileRevision == 0U ||
+                    !actuatorRevision || !inventoryRevision || *toolRevision == 0U ||
+                    !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
+                    !tip.isFiniteNonNegative() || !residual.isFiniteNonNegative() || !inFlight.isFiniteNonNegative() ||
+                    frame != "lab" || profile != plv::BuretteProfile::researchDefault().id ||
+                    ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
+                    !result.emplace(id, Context::ToolState{
+                        sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,
+                        *inventoryRevision, actuator,
+                        tip, residual, inFlight, std::nullopt}).second) {
+                    throw std::invalid_argument("invalid tool");
+                }
+            }
+            return result;
+        };
+        context->tools = parseTools(parsed.at("tools"), snapshot);
+        context->mode = parsed.at("mode").get<std::string>();
+        if (context->mode != "Desktop" && context->mode != "VR") return PLV_INVALID_ARGUMENT;
+        const auto& hold = parsed.at("hold");
+        if (!hold.is_object() || !hold.at("active").is_boolean() || !hold.at("reason").is_string() ||
+            !hold.at("recoveryReady").is_boolean()) {
+            return PLV_INVALID_ARGUMENT;
+        }
+        context->holdActive = hold.at("active").get<bool>();
+        context->holdReason = hold.at("reason").get<std::string>();
+        context->recoveryReady = false;
         const auto nextSequence = decimalSequence(parsed.at("nextCommandSequence").get<std::string>());
         if (!nextSequence || *nextSequence == 0U || !parsed.at("commandReceipts").is_array() ||
             !parsed.at("inputSequences").is_object()) {
@@ -496,8 +897,25 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
         if (context->receipts.size() != *nextSequence - 1U) return PLV_INVALID_ARGUMENT;
         for (const auto& item : parsed.at("inputSequences").items()) {
             const auto sequence = decimalSequence(item.value().get<std::string>());
-            if (!plv::isValidId(item.key()) || !sequence) return PLV_INVALID_ARGUMENT;
+            if (!plv::isValidId(item.key()) || !sequence || context->tools.count(item.key()) == 0U) {
+                return PLV_INVALID_ARGUMENT;
+            }
             context->inputSequences.emplace(item.key(), *sequence);
+        }
+        const auto& checkpoints = parsed.at("checkpoints");
+        if (!checkpoints.is_array() || checkpoints.size() > 16U) return PLV_INVALID_ARGUMENT;
+        for (const auto& item : checkpoints) {
+            const auto checkpointId = item.at("checkpointId").get<std::string>();
+            const auto checkpointSnapshot = parseSnapshot(item.at("snapshot"));
+            const auto checkpointMode = item.at("mode").get<std::string>();
+            if (!plv::isValidId(checkpointId) || checkpointSnapshot.branchId != snapshot.branchId ||
+                (checkpointMode != "Desktop" && checkpointMode != "VR") ||
+                !context->checkpoints.emplace(
+                    checkpointId,
+                    Context::CheckpointState{
+                        checkpointSnapshot, parseTools(item.at("tools"), checkpointSnapshot), checkpointMode}).second) {
+                return PLV_INVALID_ARGUMENT;
+            }
         }
         context->nextCommandSequence = *nextSequence;
         std::lock_guard<std::mutex> lock(registryMutex);

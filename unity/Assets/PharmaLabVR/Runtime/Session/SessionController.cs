@@ -9,6 +9,7 @@ namespace PharmaLabVR.Session
     {
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string saveName = "autosave";
+        [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
         public string LastError { get; private set; }
         private readonly SaveService saves = new();
@@ -46,6 +47,54 @@ namespace PharmaLabVR.Session
             catch (Exception exception)
             {
                 imported?.Dispose();
+                LastError = exception.Message;
+                return false;
+            }
+        }
+
+        public bool CreateCheckpoint()
+        {
+            try
+            {
+                if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
+                if (!driver.CreateCheckpoint(checkpointId)) throw new InvalidOperationException("Native checkpoint was rejected.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = exception.Message;
+                return false;
+            }
+        }
+
+        public bool RestartCheckpoint()
+        {
+            try
+            {
+                if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
+                if (!driver.RestartCheckpoint(checkpointId)) throw new InvalidOperationException("Native checkpoint restart was rejected.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = exception.Message;
+                return false;
+            }
+        }
+
+        public bool ContinueHeldSession()
+        {
+            try
+            {
+                if (driver == null || !driver.ResumeAfterTimeHold())
+                    throw new InvalidOperationException("Fresh neutral tracked baselines are required before continuing.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
                 LastError = exception.Message;
                 return false;
             }

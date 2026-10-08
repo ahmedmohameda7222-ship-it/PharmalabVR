@@ -103,7 +103,8 @@ TEST_CASE("A02 discrete ABI commands mutate the native authority and duplicate s
     submit(handle, command("3", "CreateSink", {{"id", "spill"}}));
     CHECK(poll(handle)["accepted"].get<bool>());
     submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
-                                                   {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}));
+                                                   {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}},
+                           {{"source", "0"}}));
     CHECK(poll(handle)["accepted"].get<bool>());
     const auto transfer = command("5", "TransferFixed",
                                   {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
@@ -137,7 +138,8 @@ TEST_CASE("R01 ABI export imports complete state into a fresh validated context"
     submit(original, command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 2e-5}}));
     poll(original);
     submit(original, command("2", "PrepareStock", {{"vesselId", "stock"}, {"stockKind", "HydrochloricAcid"},
-                                                     {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}));
+                                                     {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}},
+                             {{"stock", "0"}}));
     poll(original);
     const auto exported = read_text(original, true);
 
@@ -149,13 +151,44 @@ TEST_CASE("R01 ABI export imports complete state into a fresh validated context"
     CHECK(plv_destroy(original) == PLV_OK);
 }
 
+TEST_CASE("C01 PrepareStock requires current revision and setup-only eligibility") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "TransferFixed",
+                           {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+                            {"selection", "HomogeneousAqueousLiquid"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 4e-6}}},
+                            {"captureFractions", {{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}}},
+                            {"overflowSinkId", "spill"}},
+                           {{"source", "1"}, {"receiver", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+
+    const auto refillPayload = json{{"vesselId", "source"}, {"stockKind", "Water"},
+                                    {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}};
+    submit(handle, command("6", "PrepareStock", refillPayload, {{"source", "0"}}));
+    CHECK(poll(handle)["code"] == "StaleRevision");
+    submit(handle, command("7", "PrepareStock", refillPayload, {{"source", "2"}}));
+    CHECK(poll(handle)["code"] == "InvalidPreparation");
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("R05 export preserves command identities and the next ordered sequence") {
     std::uint64_t original = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
     REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
     const auto first = command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 2e-5}});
     const auto second = command("2", "PrepareStock", {{"vesselId", "stock"}, {"stockKind", "HydrochloricAcid"},
-                                                        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}});
+                                                        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}},
+                                {{"stock", "0"}});
     submit(original, first);
     CHECK(poll(original)["accepted"].get<bool>());
     submit(original, second);
@@ -205,12 +238,197 @@ TEST_CASE("A04 input batches validate geometry atomically and reject stale sampl
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
     REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
-    const std::string valid = R"([{"toolId":"tool-1","sampleSequence":"1","captureMonotonicNs":"100","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PlaceTool",
+                           {{"toolId", "tool-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const std::string valid = R"([{"toolId":"tool-1","sampleSequence":"1","captureMonotonicNs":"100","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
     CHECK(plv_input_batch(handle, valid.data(), static_cast<std::uint32_t>(valid.size())) == PLV_OK);
     CHECK(plv_input_batch(handle, valid.data(), static_cast<std::uint32_t>(valid.size())) == PLV_INVALID_ARGUMENT);
-    const std::string invalid = R"([{"toolId":"tool-2","sampleSequence":"1","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,2],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    const std::string invalid = R"([{"toolId":"tool-1","sampleSequence":"2","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,2],"trackingValid":true,"actuator01":0.5,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
     CHECK(plv_input_batch(handle, invalid.data(), static_cast<std::uint32_t>(invalid.size())) == PLV_INVALID_ARGUMENT);
-    const std::string corrected = R"([{"toolId":"tool-2","sampleSequence":"1","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"geometryProfileHash":"profile-1"}])";
+    const std::string corrected = R"([{"toolId":"tool-1","sampleSequence":"2","captureMonotonicNs":"101","positionMetres":[0,1,2],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.5,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
     CHECK(plv_input_batch(handle, corrected.data(), static_cast<std::uint32_t>(corrected.size())) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport tick") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+
+    const std::string sample = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":1.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":0.75}]}])";
+    REQUIRE(plv_input_batch(handle, sample.data(), static_cast<std::uint32_t>(sample.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1010000000) == PLV_OK);
+
+    const auto snapshot = json::parse(read_text(handle));
+    const auto& vessels = snapshot["vessels"];
+    const auto source = vessels[0]["id"] == "source" ? vessels[0] : vessels[1];
+    const auto receiver = vessels[0]["id"] == "receiver" ? vessels[0] : vessels[1];
+    const double sourceVolume = source["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    const double receiverVolume = receiver["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    const double spillVolume = snapshot["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    CHECK(sourceVolume < 4e-6);
+    CHECK(sourceVolume >= 0.0);
+    CHECK(receiverVolume > 0.0);
+    CHECK(spillVolume > 0.0);
+    CHECK(sourceVolume + receiverVolume + spillVolume == doctest::Approx(4e-6).epsilon(1e-12));
+    CHECK(snapshot["hold"]["active"].get<bool>() == false);
+    const auto exported = read_text(handle, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    CHECK(json::parse(read_text(imported)) == snapshot);
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("H05 transport backlog enters time-discontinuity hold without catch-up pour") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("3", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}})); poll(handle);
+    const auto before = json::parse(read_text(handle));
+    REQUIRE(plv_step(handle, 0.061, 1000000000) == PLV_OK);
+    const auto after = json::parse(read_text(handle));
+    CHECK(after["simulationTimeS"] == before["simulationTimeS"]);
+    CHECK(after["vessels"] == before["vessels"]);
+    CHECK(after["hold"]["active"].get<bool>());
+    CHECK(after["hold"]["reason"] == "TimeDiscontinuity");
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("H02 held session requires neutral fresh baseline and explicit Continue") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); poll(handle);
+
+    REQUIRE(plv_step(handle, 0.061, 1000000000) == PLV_OK);
+    submit(handle, command("6", "Continue"));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+
+    const std::string neutral = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
+    REQUIRE(plv_input_batch(handle, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1020000000) == PLV_OK);
+    CHECK(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    submit(handle, command("7", "Continue"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto before = json::parse(read_text(handle));
+    REQUIRE(plv_step(handle, 0.02, 1040000000) == PLV_OK);
+    const auto after = json::parse(read_text(handle));
+    CHECK_FALSE(after["hold"]["active"].get<bool>());
+    CHECK(after["vessels"] == before["vessels"]);
+    CHECK(after["simulationTimeS"].get<double>() == doctest::Approx(0.02));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restart restores state") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","initialMode":"Desktop"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "waste"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PrepareStock",
+                           {{"vesselId", "rinse"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 3e-6}},
+                           {{"rinse", "0"}})); poll(handle);
+    submit(handle, command("6", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "waste"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+
+    submit(handle, command("7", "SetActuator", {{"toolId", "burette-1"}, {"actuator01", 0.25}, {"expectedActuatorRevision", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto snapshot = json::parse(read_text(handle));
+    CHECK(snapshot["tools"][0]["actuator01"].get<double>() == doctest::Approx(0.25));
+    CHECK(snapshot["tools"][0]["toolRevision"] == "1");
+    CHECK(snapshot["tools"][0]["actuatorRevision"] == "1");
+
+    submit(handle, command("8", "CreateCheckpoint", {{"checkpointId", "before-disposal"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("9", "DisposeContents",
+                           {{"sourceInventoryId", "source"}, {"sinkInventoryId", "waste"}},
+                           {{"source", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    snapshot = json::parse(read_text(handle));
+    const auto disposedSource = snapshot["vessels"][0]["id"] == "source" ? snapshot["vessels"][0] : snapshot["vessels"][1];
+    CHECK(disposedSource["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(0.0));
+    const auto disposedEventSequence = std::stoull(snapshot["eventSequence"].get<std::string>());
+
+    submit(handle, command("10", "RestartCheckpoint", {{"checkpointId", "before-disposal"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    snapshot = json::parse(read_text(handle));
+    const auto restoredSource = snapshot["vessels"][0]["id"] == "source" ? snapshot["vessels"][0] : snapshot["vessels"][1];
+    CHECK(restoredSource["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(4e-6));
+    CHECK(std::stoull(snapshot["eventSequence"].get<std::string>()) > disposedEventSequence);
+
+    submit(handle, command("11", "RinseTool",
+                           {{"toolId", "burette-1"}, {"rinseSourceInventoryId", "rinse"},
+                            {"wasteSinkId", "waste"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+                            {"expectedInventoryRevision", "0"}},
+                           {{"rinse", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    snapshot = json::parse(read_text(handle));
+    const auto rinsed = snapshot["vessels"][0]["id"] == "rinse" ? snapshot["vessels"][0] : snapshot["vessels"][1];
+    CHECK(rinsed["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-6));
+    CHECK(snapshot["tools"][0]["toolRevision"] == "1");
+    CHECK(snapshot["tools"][0]["inventoryRevision"] == "1");
+
+    submit(handle, command("12", "BeginModeChange", {{"mode", "VR"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    snapshot = json::parse(read_text(handle));
+    CHECK(snapshot["mode"] == "VR");
+    CHECK(snapshot["hold"]["active"].get<bool>());
+    CHECK(snapshot["hold"]["reason"] == "ModeChange");
+
+    const auto exported = read_text(handle, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    submit(imported, command("13", "RestartCheckpoint", {{"checkpointId", "before-disposal"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto importedSnapshot = json::parse(read_text(imported));
+    const auto importedSource = importedSnapshot["vessels"][0]["id"] == "source"
+                                    ? importedSnapshot["vessels"][0]
+                                    : importedSnapshot["vessels"][1];
+    CHECK(importedSource["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(4e-6));
+    CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(handle) == PLV_OK);
 }

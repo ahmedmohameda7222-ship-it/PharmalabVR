@@ -63,7 +63,8 @@ CommandOutcome StateExecutor::prepareStock(
     auto found = vessels_.find(vesselId);
     if (found == vessels_.end() || !std::isfinite(volumeM3) || volumeM3 < 0.0 ||
         !std::isfinite(concentrationMolPerL) || concentrationMolPerL < 0.0 ||
-        found->second.inventory.referenceVolumeM3 != 0.0 || volumeM3 > found->second.capacityM3) {
+        found->second.materialRevision != 0U || found->second.inventory.referenceVolumeM3 != 0.0 ||
+        volumeM3 > found->second.capacityM3) {
         return rejected("InvalidPreparation", "stock preparation rejected");
     }
     auto prepared = MaterialState::preparedStock(vesselId, kind, concentrationMolPerL, volumeM3);

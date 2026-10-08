@@ -61,12 +61,17 @@ namespace PharmaLabVR.Tests
         {
             var sample = new LabInputSample { toolId = "tool\"1", sampleSequence = 2, captureMonotonicNs = 3,
                 positionMetres = new Vector3(1.5f, 2f, 3f), rotation = Quaternion.identity,
-                trackingValid = true, actuator01 = 0.25f, geometryProfileHash = "profile" };
+                trackingValid = true, actuator01 = 0.25f, coordinateFrame = "lab", geometryProfileHash = "profile",
+                profileRevision = 4, toolRevision = 5,
+                captureFractions = new[] { new LabCaptureEstimate { destinationInventoryId = "receiver", fraction = 0.75f } } };
             var json = NativeJsonCodec.EncodeInputBatch(new[] { sample });
             StringAssert.StartsWith("[", json);
             StringAssert.Contains("\"toolId\":\"tool\\\"1\"", json);
             StringAssert.Contains("\"positionMetres\":[1.5,2,3]", json);
             StringAssert.Contains("\"sampleSequence\":\"2\"", json);
+            StringAssert.Contains("\"coordinateFrame\":\"lab\"", json);
+            StringAssert.Contains("\"profileRevision\":\"4\"", json);
+            StringAssert.Contains("\"destinationInventoryId\":\"receiver\"", json);
         }
 
         [Test]

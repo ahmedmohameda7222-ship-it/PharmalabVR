@@ -3,6 +3,7 @@ using System.IO;
 using PharmaLabVR.Core;
 using PharmaLabVR.Input;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -22,6 +23,8 @@ namespace PharmaLabVR.Editor
 
         public static void AllAssets()
         {
+            AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
+            ConfigureNativePlugins();
             Directory.CreateDirectory("Assets/PharmaLabVR/Scenes");
             BuildLabAssets.Generate();
             CreateBootScene();
@@ -76,7 +79,6 @@ namespace PharmaLabVR.Editor
             var leftController = CreateXrController(cameraOffset.transform, true);
             var rightController = CreateXrController(cameraOffset.transform, false);
             var xrInput = xrRig.AddComponent<XRInputAdapter>();
-            xrInput.Configure(lab.transform, leftController, rightController, "openxr-controller-research-v1");
             xrRig.SetActive(false);
             var desktopRig = new GameObject("DesktopPlayerRig");
             var desktopInput = desktopRig.AddComponent<DesktopInputAdapter>();
@@ -91,16 +93,34 @@ namespace PharmaLabVR.Editor
             holdAnchor.AddComponent<DesktopHoldAnchorFollower>().Configure(
                 camera.transform,
                 new Vector3(0.25f, -0.18f, 0.65f));
-            var researchTool = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var researchTool = new GameObject("ResearchBurette");
             researchTool.name = "DesktopResearchTool";
             researchTool.transform.SetParent(lab.transform);
-            researchTool.transform.localPosition = new Vector3(0.25f, 0.85f, 0.2f);
-            researchTool.transform.localScale = new Vector3(0.025f, 0.25f, 0.025f);
+            researchTool.transform.localPosition = new Vector3(0.25f, 0.60f, 0.2f);
+            var toolVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            toolVisual.name = "CalibratedBody";
+            toolVisual.transform.SetParent(researchTool.transform, false);
+            toolVisual.transform.localPosition = new Vector3(0f, 0.25f, 0f);
+            toolVisual.transform.localScale = new Vector3(0.025f, 0.25f, 0.025f);
             researchTool.AddComponent<DesktopGrabbable>();
-            desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform, "burette-50ml-research-v1");
+            var body = researchTool.AddComponent<Rigidbody>();
+            body.useGravity = false;
+            body.isKinematic = false;
+            var grab = researchTool.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            var receiver = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            receiver.name = "ReceiverVessel";
+            receiver.transform.SetParent(lab.transform);
+            receiver.transform.localPosition = new Vector3(0.25f, 0.53f, 0.2f);
+            receiver.transform.localScale = new Vector3(0.10f, 0.08f, 0.10f);
+            var captureTarget = receiver.AddComponent<LabCaptureTarget>();
+            captureTarget.Configure("receiver", 0.08f);
+            desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
+                researchTool.transform, captureTarget, "burette-50ml-research-v1");
+            xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,
+                captureTarget, "burette-50ml-research-v1");
             var modes = new GameObject("ModeCoordinator").AddComponent<ModeCoordinator>();
             modes.transform.SetParent(lab.transform);
-            modes.Configure(desktopRig, xrRig);
+            modes.Configure(desktopRig, xrRig, coreDriver);
             coreDriver.ConfigureInputs(desktopInput, xrRig.GetComponent<XRInputAdapter>());
             new GameObject("LabPanels").transform.SetParent(lab.transform);
             var sessionController = new GameObject("SessionController").AddComponent<PharmaLabVR.Session.SessionController>();
@@ -155,9 +175,35 @@ namespace PharmaLabVR.Editor
         public static void AndroidVR() => Build(BuildTarget.Android, "../artifacts/AndroidVR/PharmaLabVR-research.apk");
         public static void AndroidVRPico() => Build(BuildTarget.Android, "../artifacts/AndroidVRPico/PharmaLabVR-pico-research.apk");
 
+        private static void ConfigureNativePlugins()
+        {
+            ConfigurePlugin("Assets/Plugins/x86_64/pharmalab_core.dll", BuildTarget.StandaloneWindows64, "x86_64", true);
+            ConfigurePlugin("Assets/Plugins/Android/arm64-v8a/libpharmalab_core.so", BuildTarget.Android, "ARM64", false);
+        }
+
+        private static void ConfigurePlugin(string path, BuildTarget target, string cpu, bool editorCompatible)
+        {
+            if (AssetImporter.GetAtPath(path) is not PluginImporter importer) return;
+            importer.SetCompatibleWithAnyPlatform(false);
+            importer.SetCompatibleWithEditor(editorCompatible);
+            importer.SetCompatibleWithPlatform(BuildTarget.StandaloneWindows64, target == BuildTarget.StandaloneWindows64);
+            importer.SetCompatibleWithPlatform(BuildTarget.Android, target == BuildTarget.Android);
+            importer.SetPlatformData(target, "CPU", cpu);
+            importer.SaveAndReimport();
+        }
+
         private static void Build(BuildTarget target, string location)
         {
             AllAssets();
+            PlayerSettings.productName = "PharmaLabVR";
+            PlayerSettings.bundleVersion = "0.1.0-research";
+            if (target == BuildTarget.Android)
+            {
+                PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, "com.pharmalabvr.lab");
+                PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+                PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+                PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
+            }
             var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions { scenes = Scenes, target = target, locationPathName = location, options = BuildOptions.StrictMode });
             if (report.summary.result != BuildResult.Succeeded) throw new InvalidOperationException($"Build failed: {report.summary.result}");
         }

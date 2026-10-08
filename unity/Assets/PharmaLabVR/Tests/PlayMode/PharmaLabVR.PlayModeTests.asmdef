@@ -1,0 +1,5 @@
+{
+  "name": "PharmaLabVR.PlayModeTests",
+  "references": ["PharmaLabVR.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

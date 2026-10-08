@@ -1,29 +1,68 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 
 namespace PharmaLabVR.Core
 {
     public sealed class CoreSession : IDisposable
     {
         private CoreSafeHandle handle;
+        private readonly string branchId;
+        private ulong nextCommandSequence;
+        private readonly Queue<string> pendingEvents = new();
         public bool IsOpen => handle != null && !handle.IsInvalid && !handle.IsClosed;
 
-        public CoreSession(string branchId)
+        public CoreSession(string branchId, string initialMode = "Desktop")
         {
+            if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
-            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\"}}");
+            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\"}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
+            this.branchId = branchId;
+            nextCommandSequence = 1;
         }
 
-        private CoreSession(CoreSafeHandle importedHandle) => handle = importedHandle;
+        private CoreSession(CoreSafeHandle importedHandle, string importedBranchId, ulong importedNextSequence)
+        {
+            handle = importedHandle;
+            branchId = importedBranchId;
+            nextCommandSequence = importedNextSequence;
+        }
 
         public static CoreSession ImportSession(string json)
         {
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
             var bytes = Utf8(json);
             Ensure(NativeMethods.Import(bytes, (uint)bytes.Length, out var imported), "import");
-            return new CoreSession(imported);
+            var envelope = JsonUtility.FromJson<SessionEnvelope>(json);
+            if (envelope == null || string.IsNullOrWhiteSpace(envelope.branchId) ||
+                !ulong.TryParse(envelope.nextCommandSequence, out var nextSequence))
+            {
+                imported.Dispose();
+                throw new InvalidOperationException("Imported session identity is invalid.");
+            }
+            return new CoreSession(imported, envelope.branchId, nextSequence);
+        }
+
+        public string SubmitOrdered(string type, string payloadJson = "{}", string expectedMaterialRevisionsJson = "{}")
+        {
+            var sequence = nextCommandSequence.ToString();
+            var command = $"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"commandSequence\":\"{sequence}\",\"type\":\"{Escape(type)}\",\"expectedMaterialRevisions\":{expectedMaterialRevisionsJson},\"payload\":{payloadJson}}}";
+            Submit(command);
+            while (true)
+            {
+                var value = ReadBuffer(NativeMethods.Poll, true);
+                if (value == null) break;
+                var outcome = JsonUtility.FromJson<CommandOutcomeEnvelope>(value);
+                if (outcome != null && outcome.type == "CommandOutcome" && outcome.commandSequence == sequence)
+                {
+                    nextCommandSequence++;
+                    return value;
+                }
+                pendingEvents.Enqueue(value);
+            }
+            throw new InvalidOperationException("Native command did not emit a terminal outcome.");
         }
 
         public void Submit(string commandJson)
@@ -43,6 +82,7 @@ namespace PharmaLabVR.Core
         public IReadOnlyList<string> PollEvents()
         {
             var events = new List<string>();
+            while (pendingEvents.Count > 0) events.Add(pendingEvents.Dequeue());
             while (true)
             {
                 var value = ReadBuffer(NativeMethods.Poll, true);
@@ -78,6 +118,20 @@ namespace PharmaLabVR.Core
         {
             handle?.Dispose();
             handle = null;
+        }
+
+        [Serializable]
+        private sealed class SessionEnvelope
+        {
+            public string branchId;
+            public string nextCommandSequence;
+        }
+
+        [Serializable]
+        private sealed class CommandOutcomeEnvelope
+        {
+            public string type;
+            public string commandSequence;
         }
     }
 }

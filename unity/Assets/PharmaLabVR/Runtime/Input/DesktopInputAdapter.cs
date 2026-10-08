@@ -8,19 +8,23 @@ namespace PharmaLabVR.Input
     {
         [SerializeField] private Transform labFrame;
         [SerializeField] private Transform heldTool;
+        [SerializeField] private Transform registeredTool;
         [SerializeField] private Camera viewCamera;
         [SerializeField] private Transform holdAnchor;
+        [SerializeField] private LabCaptureTarget captureTarget;
         [SerializeField] private string heldToolId = "desktop-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
         private float actuator;
         private bool inputEnabled = true;
 
-        public void Configure(Transform frame, Camera camera, Transform anchor, string profileHash)
+        public void Configure(Transform frame, Camera camera, Transform anchor, Transform tool, LabCaptureTarget target, string profileHash)
         {
             labFrame = frame;
             viewCamera = camera;
             holdAnchor = anchor;
+            registeredTool = tool;
+            captureTarget = target;
             geometryProfileHash = profileHash;
         }
 
@@ -34,10 +38,14 @@ namespace PharmaLabVR.Input
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
             HandlePickOrPlace();
-            if (!inputEnabled || heldTool == null) return System.Array.Empty<LabInputSample>();
+            if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { inputEnabled = false; actuator = 0f; return System.Array.Empty<LabInputSample>(); }
             if (Mouse.current != null && Mouse.current.leftButton.isPressed) actuator = Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f);
-            return new[] { LabGeometryAdapter.BuildSample(heldToolId, ++sequence, nowNs, labFrame, heldTool, actuator, geometryProfileHash, true) };
+            var sampledTool = heldTool != null ? heldTool : registeredTool;
+            var sampledActuator = heldTool != null ? actuator : 0f;
+            return new[] { LabGeometryAdapter.BuildSample(
+                heldToolId, ++sequence, nowNs, labFrame, sampledTool, sampledActuator,
+                geometryProfileHash, true, captureTarget != null ? captureTarget.Estimate(sampledTool) : null) };
         }
 
         public void ResetBaselines() { actuator = 0f; sequence = 0; }

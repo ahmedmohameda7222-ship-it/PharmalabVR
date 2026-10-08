@@ -4,6 +4,13 @@ using UnityEngine;
 namespace PharmaLabVR.Input
 {
     [Serializable]
+    public struct LabCaptureEstimate
+    {
+        public string destinationInventoryId;
+        public float fraction;
+    }
+
+    [Serializable]
     public struct LabInputSample
     {
         public string toolId;
@@ -13,7 +20,11 @@ namespace PharmaLabVR.Input
         public Quaternion rotation;
         public bool trackingValid;
         public float actuator01;
+        public string coordinateFrame;
         public string geometryProfileHash;
+        public ulong profileRevision;
+        public ulong toolRevision;
+        public LabCaptureEstimate[] captureFractions;
     }
 
     public interface ILabInputAdapter

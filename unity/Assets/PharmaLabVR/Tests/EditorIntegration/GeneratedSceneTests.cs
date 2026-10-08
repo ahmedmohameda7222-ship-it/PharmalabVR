@@ -1,6 +1,5 @@
 using System.Linq;
 using NUnit.Framework;
-using PharmaLabVR.Editor;
 using PharmaLabVR.Input;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -16,9 +15,8 @@ namespace PharmaLabVR.Tests.EditorIntegration
     public sealed class GeneratedSceneTests
     {
         [SetUp]
-        public void GenerateAndOpenLab()
+        public void OpenGeneratedLab()
         {
-            BuildPipelineEntry.AllAssets();
             EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity");
         }
 
@@ -43,8 +41,10 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(adapter, Is.Not.Null);
             adapter.SetEnabled(true);
             var samples = adapter.SampleInputs(1);
-            Assert.That(samples.Length, Is.EqualTo(2));
+            Assert.That(samples.Length, Is.EqualTo(1));
             Assert.That(samples.All(sample => sample.geometryProfileHash != "unassigned"), Is.True);
+            Assert.That(samples.All(sample => sample.coordinateFrame == "lab"), Is.True);
+            Assert.That(samples.All(sample => sample.toolId == "research-tool"), Is.True);
         }
 
         [Test]

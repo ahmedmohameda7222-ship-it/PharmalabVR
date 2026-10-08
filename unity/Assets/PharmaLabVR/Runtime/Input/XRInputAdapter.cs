@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace PharmaLabVR.Input
 {
@@ -10,6 +11,10 @@ namespace PharmaLabVR.Input
         [SerializeField] private Transform rightController;
         [SerializeField] private ActionBasedController leftActionController;
         [SerializeField] private ActionBasedController rightActionController;
+        [SerializeField] private Transform registeredTool;
+        [SerializeField] private XRGrabInteractable grabInteractable;
+        [SerializeField] private LabCaptureTarget captureTarget;
+        [SerializeField] private string toolId = "research-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
         private bool inputEnabled;
@@ -18,6 +23,9 @@ namespace PharmaLabVR.Input
             Transform frame,
             ActionBasedController left,
             ActionBasedController right,
+            Transform tool,
+            XRGrabInteractable grab,
+            LabCaptureTarget target,
             string profileHash)
         {
             labFrame = frame;
@@ -25,16 +33,23 @@ namespace PharmaLabVR.Input
             rightActionController = right;
             leftController = left != null ? left.transform : null;
             rightController = right != null ? right.transform : null;
+            registeredTool = tool;
+            grabInteractable = grab;
+            captureTarget = target;
             geometryProfileHash = profileHash;
         }
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
-            if (!inputEnabled || labFrame == null || leftController == null || rightController == null)
+            if (!inputEnabled || labFrame == null || leftController == null || rightController == null || registeredTool == null)
                 return System.Array.Empty<LabInputSample>();
+            var selected = grabInteractable != null && grabInteractable.isSelected;
+            var actuator = selected ? Mathf.Max(Actuator(leftActionController), Actuator(rightActionController)) : 0f;
             return new[] {
-                LabGeometryAdapter.BuildSample("left-controller", ++sequence, nowNs, labFrame, leftController, Actuator(leftActionController), geometryProfileHash, Tracked(leftActionController)),
-                LabGeometryAdapter.BuildSample("right-controller", ++sequence, nowNs, labFrame, rightController, Actuator(rightActionController), geometryProfileHash, Tracked(rightActionController))
+                LabGeometryAdapter.BuildSample(
+                    toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
+                    !selected || Tracked(leftActionController) || Tracked(rightActionController),
+                    captureTarget != null ? captureTarget.Estimate(registeredTool) : null)
             };
         }
 
