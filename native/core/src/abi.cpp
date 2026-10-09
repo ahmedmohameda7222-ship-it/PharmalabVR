@@ -298,7 +298,8 @@ json contextSnapshotJson(const Context& context) {
         } else if (record != nullptr) {
             observation["freshness"] = record->freshness == plv::ObservationFreshness::Current ? "Current" :
                 record->freshness == plv::ObservationFreshness::Stale ? "Stale" : "Pending";
-            observation["computationState"] = record->succeeded ? "Ready" : "Failed";
+            observation["computationState"] = record->freshness == plv::ObservationFreshness::Pending
+                ? "Pending" : record->succeeded ? "Ready" : "Failed";
             if (record->succeeded && std::isfinite(record->value)) observation["value"] = record->value;
             if (solved != context.scienceResults.end()) {
                 observation["engineVersion"] = solved->second.engineVersion;
@@ -1086,8 +1087,8 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
             !hold.at("recoveryReady").is_boolean()) {
             return PLV_INVALID_ARGUMENT;
         }
-        context->holdActive = hold.at("active").get<bool>();
-        context->holdReason = hold.at("reason").get<std::string>();
+        context->holdActive = true;
+        context->holdReason = "SessionLoad";
         context->recoveryReady = false;
         const auto nextSequence = decimalSequence(parsed.at("nextCommandSequence").get<std::string>());
         if (!nextSequence || *nextSequence == 0U || !parsed.at("commandReceipts").is_array() ||

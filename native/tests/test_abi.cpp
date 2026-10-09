@@ -147,7 +147,13 @@ TEST_CASE("R01 ABI export imports complete state into a fresh validated context"
 
     std::uint64_t imported = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
-    CHECK(json::parse(read_text(imported)) == json::parse(read_text(original)));
+    const auto restored = json::parse(read_text(imported));
+    const auto previous = json::parse(read_text(original));
+    CHECK(restored["vessels"] == previous["vessels"]);
+    CHECK(restored["sinks"] == previous["sinks"]);
+    CHECK(restored["branchId"] == previous["branchId"]);
+    CHECK(restored["hold"]["active"].get<bool>());
+    CHECK(restored["hold"]["reason"] == "SessionLoad");
     CHECK(imported != original);
     CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(original) == PLV_OK);
@@ -295,7 +301,10 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     const auto exported = read_text(handle, true);
     std::uint64_t imported = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
-    CHECK(json::parse(read_text(imported)) == snapshot);
+    auto importedSnapshot = json::parse(read_text(imported));
+    CHECK(importedSnapshot["hold"]["reason"] == "SessionLoad");
+    importedSnapshot["hold"] = snapshot["hold"];
+    CHECK(importedSnapshot == snapshot);
     CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(handle) == PLV_OK);
 }
@@ -406,6 +415,32 @@ TEST_CASE("H02 focus loss enters native hold until an explicit fresh neutral Con
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("H02 imported flowing session requires fresh neutral input before Continue") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("3", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); poll(handle);
+    const auto exported = read_text(handle, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    auto snapshot = json::parse(read_text(imported));
+    CHECK(snapshot["hold"]["reason"] == "SessionLoad");
+    submit(imported, command("4", "Continue"));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    const std::string neutral = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
+    submit(imported, command("5", "Continue"));
+    CHECK(poll(imported)["accepted"].get<bool>());
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("T02 long live pour emits ordered allocated events without filling the native queue") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
@@ -479,6 +514,12 @@ TEST_CASE("S01 product ABI publishes current pinned IPhreeqc acid observation") 
                             {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.00001}},
                            {{"acid", "0"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto pending = json::parse(read_text(handle));
+    for (const auto& observation : pending.at("observations")) {
+        if (observation.at("vesselId") != "acid") continue;
+        CHECK(observation.at("freshness") == "Pending");
+        CHECK(observation.at("computationState") == "Pending");
+    }
     bool current = false;
     for (int attempt = 0; attempt < 200 && !current; ++attempt) {
         REQUIRE(plv_step(handle, 0.0, 1000000000ULL) == PLV_OK);
