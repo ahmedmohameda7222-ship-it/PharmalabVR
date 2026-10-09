@@ -44,11 +44,12 @@ namespace PharmaLabVR.Input
             if (!inputEnabled || labFrame == null || leftController == null || rightController == null || registeredTool == null)
                 return System.Array.Empty<LabInputSample>();
             var selected = grabInteractable != null && grabInteractable.isSelected;
-            var actuator = selected ? Actuator(SelectingController()) : 0f;
+            var owner = selected ? SelectingController() : null;
+            var actuator = selected ? Actuator(owner) : 0f;
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
-                    !selected || Tracked(leftActionController) || Tracked(rightActionController),
+                    !selected || Tracked(owner),
                     captureTarget != null ? captureTarget.Estimate(registeredTool) : null)
             };
         }
@@ -79,10 +80,14 @@ namespace PharmaLabVR.Input
         {
             if (controller == null || !controller.gameObject.activeInHierarchy) return false;
             var action = controller.isTrackedAction.action;
-            return action == null || !action.enabled || action.ReadValue<float>() > 0.5f;
+            return action != null && action.enabled && action.ReadValue<float>() > 0.5f;
         }
 
-        public void ResetBaselines() { sequence = 0; }
+        public void ResetBaselines() { }
+        public void AdvanceSequence(string id, ulong watermark)
+        {
+            if (id == toolId && sequence < watermark) sequence = watermark;
+        }
         public void SetEnabled(bool value) { inputEnabled = value; }
     }
 }

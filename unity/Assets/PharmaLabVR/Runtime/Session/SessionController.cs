@@ -38,7 +38,7 @@ namespace PharmaLabVR.Session
             try
             {
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
-                imported = saves.Load(path);
+                imported = saves.Load(path, driver.ScientificDatabasePath);
                 driver.ReplaceSession(imported);
                 imported = null;
                 LastError = null;

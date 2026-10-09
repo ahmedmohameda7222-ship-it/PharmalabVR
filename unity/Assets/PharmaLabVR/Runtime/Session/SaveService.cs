@@ -22,11 +22,12 @@ namespace PharmaLabVR.Session
             return target;
         }
 
-        public CoreSession Load(string path)
+        public CoreSession Load(string path, string expectedScientificDatabasePath)
         {
             var info = new FileInfo(path ?? throw new ArgumentNullException(nameof(path)));
             if (!info.Exists || info.Length <= 0 || info.Length > MaxSaveBytes) throw new InvalidDataException("Save is missing, empty, or oversized.");
-            return CoreSession.ImportSession(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8));
+            if (string.IsNullOrEmpty(expectedScientificDatabasePath)) throw new InvalidOperationException("Scientific package is not ready.");
+            return CoreSession.ImportSession(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8), expectedScientificDatabasePath);
         }
 
         private static void ValidateName(string name)

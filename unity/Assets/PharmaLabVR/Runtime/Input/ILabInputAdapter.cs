@@ -31,6 +31,7 @@ namespace PharmaLabVR.Input
     {
         LabInputSample[] SampleInputs(ulong nowNs);
         void ResetBaselines();
+        void AdvanceSequence(string toolId, ulong watermark);
         void SetEnabled(bool value);
     }
 }

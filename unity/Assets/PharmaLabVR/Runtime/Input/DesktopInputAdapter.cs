@@ -66,6 +66,9 @@ namespace PharmaLabVR.Input
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
             RefreshRegisteredToolId();
+            if (awaitingFocusContinue && registeredTool != null)
+                return new[] { LabGeometryAdapter.BuildSample(heldToolId, ++sequence, nowNs, labFrame,
+                    registeredTool, 0f, geometryProfileHash, true) };
             HandlePickOrPlace();
             if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { inputEnabled = false; awaitingFocusContinue = true; actuator = 0f; return System.Array.Empty<LabInputSample>(); }
@@ -80,7 +83,12 @@ namespace PharmaLabVR.Input
                 geometryProfileHash, true, captureTarget != null ? captureTarget.Estimate(sampledTool) : null) };
         }
 
-        public void ResetBaselines() { actuator = 0f; sequence = 0; }
+        public void ResetBaselines() { actuator = 0f; }
+        public void AdvanceSequence(string toolId, ulong watermark)
+        {
+            RefreshRegisteredToolId();
+            if (toolId == heldToolId && sequence < watermark) sequence = watermark;
+        }
         public void SetEnabled(bool value) { inputEnabled = value && !awaitingFocusContinue; if (!value) actuator = 0f; }
 
         private static bool ShouldAdjustActuator(bool pointerOverUi, bool leftButtonPressed) => leftButtonPressed && !pointerOverUi;

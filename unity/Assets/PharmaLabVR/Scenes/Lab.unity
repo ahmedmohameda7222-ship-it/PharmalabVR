@@ -304,39 +304,63 @@ MonoBehaviour:
   m_PositionInput:
     m_UseReference: 0
     m_Action:
-      m_Name: Position
+      m_Name: Head Position
       m_Type: 0
       m_ExpectedControlType: Vector3
-      m_Id: 4e7a7b5a-1ae9-4f4f-8fd9-1d79d7c0168e
+      m_Id: e1c26fbd-fd88-4f2f-8e22-cee20d698973
       m_Processors:
       m_Interactions:
-      m_SingletonActionBindings: []
+      m_SingletonActionBindings:
+      - m_Name:
+        m_Id: 70c95114-6832-4963-8869-c5e2bdc7b32e
+        m_Path: <XRHMD>/devicePosition
+        m_Interactions:
+        m_Processors:
+        m_Groups:
+        m_Action: Head Position
+        m_Flags: 0
       m_Flags: 0
       m_Priority: 0
     m_Reference: {fileID: 0}
   m_RotationInput:
     m_UseReference: 0
     m_Action:
-      m_Name: Rotation
+      m_Name: Head Rotation
       m_Type: 0
       m_ExpectedControlType: Quaternion
-      m_Id: 2b07b24a-7b6e-4604-9985-2b3b4c95c1a6
+      m_Id: d6f40eb3-ba3d-4f60-9f52-605d9f38d990
       m_Processors:
       m_Interactions:
-      m_SingletonActionBindings: []
+      m_SingletonActionBindings:
+      - m_Name:
+        m_Id: 7b0c5321-d5a7-45b2-97e6-168bf8653f29
+        m_Path: <XRHMD>/deviceRotation
+        m_Interactions:
+        m_Processors:
+        m_Groups:
+        m_Action: Head Rotation
+        m_Flags: 0
       m_Flags: 0
       m_Priority: 0
     m_Reference: {fileID: 0}
   m_TrackingStateInput:
     m_UseReference: 0
     m_Action:
-      m_Name: Tracking State
+      m_Name: Head Tracking State
       m_Type: 0
       m_ExpectedControlType: Integer
-      m_Id: 898fdfdb-9714-408c-9bda-2755218bfb02
+      m_Id: 662bf7ff-5d25-4915-8402-d7fe28369f76
       m_Processors:
       m_Interactions:
-      m_SingletonActionBindings: []
+      m_SingletonActionBindings:
+      - m_Name:
+        m_Id: 5fefc5a5-ccd9-49ef-889c-1752b148ab38
+        m_Path: <XRHMD>/trackingState
+        m_Interactions:
+        m_Processors:
+        m_Groups:
+        m_Action: Head Tracking State
+        m_Flags: 0
       m_Flags: 0
       m_Priority: 0
     m_Reference: {fileID: 0}
@@ -2442,7 +2466,10 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: PharmaLabVR.Runtime::PharmaLabVR.Input.LabCaptureTarget
   inventoryId: receiver
-  captureRadiusMetres: 0.08
+  captureRadiusMetres: 0.05
+  apertureHeightMetres: 0.04
+  buretteOutletLocalMetres: {x: 0, y: -0.02, z: 0}
+  maxFallMetres: 0.15
 --- !u!23 &1678543951
 MeshRenderer:
   m_ObjectHideFlags: 0

@@ -11,8 +11,11 @@ namespace PharmaLabVR.Core
         [SerializeField] private string branchId = "local-session";
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
         public event Action<string> SnapshotChanged;
+        public event Action<string> NativeEventReceived;
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
+        public string StartupError { get; private set; }
+        public string ScientificDatabasePath { get; private set; }
         public bool IsTimeHeld { get; private set; }
         private double accumulator;
         private const double TickSeconds = 0.020;
@@ -21,13 +24,59 @@ namespace PharmaLabVR.Core
 
         private void OnEnable()
         {
+            if (Application.platform == RuntimePlatform.Android)
+            {
+                StartCoroutine(ScientificPackage.PrepareAndroid(InitializeCore, FailStartup));
+                return;
+            }
+            try
+            {
+                InitializeCore(ScientificPackage.PrepareLocal(Application.streamingAssetsPath));
+            }
+            catch (Exception exception) { FailStartup(exception); }
+        }
+
+        private void InitializeCore(string databasePath)
+        {
             try
             {
                 var initialMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ? "VR" : "Desktop";
-                Session = new CoreSession(branchId, initialMode);
+                Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256);
+                ScientificDatabasePath = databasePath;
                 BootstrapResearchSession();
+                gameObject.AddComponent<NativeLabVisuals>().Configure(this);
+                StartupError = null;
+                PublishSnapshot();
             }
-            catch (Exception exception) { Debug.LogError($"Native core unavailable: {exception.Message}"); enabled = false; }
+            catch (Exception exception) { FailStartup(exception); }
+        }
+
+        private void FailStartup(Exception exception)
+        {
+            StartupError = exception.Message;
+            Debug.LogError($"Native scientific core unavailable: {StartupError}");
+            Session?.Dispose();
+            Session = null;
+            ScientificDatabasePath = null;
+            enabled = false;
+        }
+
+        private void OnApplicationFocus(bool focused)
+        {
+            if (!focused && Session != null) BeginInputHold("FocusLoss");
+        }
+
+        public bool BeginInputHold(string reason)
+        {
+            if (Session == null || (reason != "FocusLoss" && reason != "TrackingLoss")) return false;
+            var outcome = JsonUtility.FromJson<CommandOutcome>(
+                Session.SubmitOrdered("BeginInputHold", $"{{\"reason\":\"{reason}\"}}"));
+            if (outcome == null || !outcome.accepted) return false;
+            IsTimeHeld = true;
+            accumulator = 0.0;
+            HoldChanged?.Invoke(true);
+            PublishSnapshot();
+            return true;
         }
 
         private void Update()
@@ -59,6 +108,13 @@ namespace PharmaLabVR.Core
             {
                 var nowNs = NowNs();
                 Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
+                if (IsTimeHeld)
+                {
+                    Session.Step(0.0, nowNs);
+                    accumulator = 0.0;
+                    PublishSnapshot();
+                    break;
+                }
                 Session.Step(TickSeconds, nowNs);
                 accumulator -= TickSeconds;
                 PublishSnapshot();
@@ -67,6 +123,10 @@ namespace PharmaLabVR.Core
 
         public bool ResumeAfterTimeHold()
         {
+            if (Session == null) return false;
+            var nowNs = NowNs();
+            Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
+            Session.Step(0.0, nowNs);
             var outcomeJson = Session.SubmitOrdered("Continue");
             var outcome = JsonUtility.FromJson<CommandOutcome>(outcomeJson);
             if (outcome == null || !outcome.accepted) return false;
@@ -121,9 +181,21 @@ namespace PharmaLabVR.Core
             var previous = Session;
             Session = replacement;
             accumulator = 0.0;
-            IsTimeHeld = false;
             previous?.Dispose();
-            SnapshotChanged?.Invoke(Session.ReadSnapshot());
+            SynchronizeInputSequences();
+            PublishSnapshot();
+        }
+
+        public void SynchronizeInputSequences()
+        {
+            if (Session == null || inputAdapterBehaviours == null) return;
+            var state = JsonUtility.FromJson<SnapshotEnvelope>(Session.ReadSnapshot());
+            if (state?.inputWatermarks == null) return;
+            foreach (var behaviour in inputAdapterBehaviours)
+                if (behaviour is ILabInputAdapter adapter)
+                    foreach (var watermark in state.inputWatermarks)
+                        if (ulong.TryParse(watermark.sampleSequence, out var sequence))
+                            adapter.AdvanceSequence(watermark.toolId, sequence);
         }
 
         private void BootstrapResearchSession()
@@ -154,11 +226,15 @@ namespace PharmaLabVR.Core
                 foreach (var behaviour in inputAdapterBehaviours)
                     if (behaviour != null && behaviour.isActiveAndEnabled && behaviour is ILabInputAdapter adapter)
                         samples.AddRange(adapter.SampleInputs(nowNs));
+            if (!IsTimeHeld && samples.Exists(sample => !sample.trackingValid))
+                BeginInputHold("TrackingLoss");
             return samples;
         }
 
         private void PublishSnapshot()
         {
+            foreach (var nativeEvent in Session.PollEvents())
+                NativeEventReceived?.Invoke(nativeEvent);
             var snapshot = Session.ReadSnapshot();
             var state = JsonUtility.FromJson<SnapshotEnvelope>(snapshot);
             var held = state?.hold != null && state.hold.active;
@@ -184,6 +260,14 @@ namespace PharmaLabVR.Core
         private sealed class SnapshotEnvelope
         {
             public HoldEnvelope hold;
+            public InputWatermark[] inputWatermarks;
+        }
+
+        [Serializable]
+        private sealed class InputWatermark
+        {
+            public string toolId;
+            public string sampleSequence;
         }
 
         [Serializable]

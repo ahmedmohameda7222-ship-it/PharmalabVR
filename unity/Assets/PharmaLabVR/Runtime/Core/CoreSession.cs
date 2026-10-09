@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using UnityEngine;
 
@@ -13,11 +14,11 @@ namespace PharmaLabVR.Core
         private readonly Queue<string> pendingEvents = new();
         public bool IsOpen => handle != null && !handle.IsInvalid && !handle.IsClosed;
 
-        public CoreSession(string branchId, string initialMode = "Desktop")
+        public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "")
         {
             if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
-            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\"}}");
+            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\"}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
             this.branchId = branchId;
             nextCommandSequence = 1;
@@ -30,9 +31,17 @@ namespace PharmaLabVR.Core
             nextCommandSequence = importedNextSequence;
         }
 
-        public static CoreSession ImportSession(string json)
+        public static CoreSession ImportSession(string json, string expectedScientificDatabasePath = null)
         {
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
+            if (expectedScientificDatabasePath != null)
+            {
+                var package = JsonUtility.FromJson<ScientificPackageEnvelope>(json)?.scientificPackage;
+                if (package == null || package.path != expectedScientificDatabasePath ||
+                    package.identity != ScientificPackage.DatabaseSha256)
+                    throw new InvalidDataException("Save scientific package does not match this installation.");
+                ScientificPackage.Verify(File.ReadAllBytes(expectedScientificDatabasePath));
+            }
             var bytes = Utf8(json);
             Ensure(NativeMethods.Import(bytes, (uint)bytes.Length, out var imported), "import");
             var envelope = JsonUtility.FromJson<SessionEnvelope>(json);
@@ -125,6 +134,19 @@ namespace PharmaLabVR.Core
         {
             public string branchId;
             public string nextCommandSequence;
+        }
+
+        [Serializable]
+        private sealed class ScientificPackageEnvelope
+        {
+            public ScientificPackageRecord scientificPackage;
+        }
+
+        [Serializable]
+        private sealed class ScientificPackageRecord
+        {
+            public string path;
+            public string identity;
         }
 
         [Serializable]

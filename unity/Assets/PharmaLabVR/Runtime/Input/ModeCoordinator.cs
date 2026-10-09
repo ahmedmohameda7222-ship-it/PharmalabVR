@@ -30,6 +30,7 @@ namespace PharmaLabVR.Input
             if (Application.isPlaying && mode != Mode && coreDriver != null && !coreDriver.BeginModeChange(mode))
                 throw new InvalidOperationException("Native core rejected the mode change.");
             Apply(mode);
+            coreDriver?.SynchronizeInputSequences();
         }
 
         private void Apply(ApplicationMode mode)

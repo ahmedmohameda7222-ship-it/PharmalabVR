@@ -22,6 +22,26 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void G02_CaptureUsesDownwardOutletAndReceiverApertureInsteadOfToolRootDistance()
+        {
+            var receiver = new GameObject("receiver");
+            var target = receiver.AddComponent<LabCaptureTarget>();
+            target.Configure("receiver", 0.05f);
+            var tool = new GameObject("burette");
+            tool.transform.position = receiver.transform.position;
+            Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "Tool root inside receiver is not a valid outlet.");
+            tool.transform.position = new Vector3(0f, 0.10f, 0f);
+            Assert.That(target.Estimate(tool.transform).Length, Is.EqualTo(1));
+            tool.transform.position = new Vector3(0.10f, 0.10f, 0f);
+            Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "Outlet misses the aperture.");
+            tool.transform.position = new Vector3(0f, 0.10f, 0f);
+            tool.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "Sideways outlet cannot land in aperture.");
+            Object.DestroyImmediate(tool);
+            Object.DestroyImmediate(receiver);
+        }
+
+        [Test]
         public void Q02_ResearchOrUnsupportedObservationCannotEnableCertifiedScore()
         {
             var protocol = new ProtocolDefinition { certifiedScoring = true, requiredObservables = new[] { "pH", "indicatorColor" } };

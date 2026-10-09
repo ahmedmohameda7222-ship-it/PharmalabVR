@@ -75,7 +75,10 @@ namespace PharmaLabVR.Editor
             xrCameraObject.transform.SetParent(cameraOffset.transform, false);
             var xrCamera = xrCameraObject.AddComponent<Camera>();
             xrCameraObject.AddComponent<AudioListener>();
-            xrCameraObject.AddComponent<TrackedPoseDriver>();
+            var headPose = xrCameraObject.AddComponent<TrackedPoseDriver>();
+            headPose.positionInput = Action("Head Position", InputActionType.Value, "Vector3", "<XRHMD>/devicePosition");
+            headPose.rotationInput = Action("Head Rotation", InputActionType.Value, "Quaternion", "<XRHMD>/deviceRotation");
+            headPose.trackingStateInput = Action("Head Tracking State", InputActionType.Value, "Integer", "<XRHMD>/trackingState");
             xrOrigin.CameraFloorOffsetObject = cameraOffset;
             xrOrigin.Camera = xrCamera;
             xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
@@ -119,7 +122,7 @@ namespace PharmaLabVR.Editor
             receiver.transform.localPosition = new Vector3(0.25f, 0.53f, 0.2f);
             receiver.transform.localScale = new Vector3(0.10f, 0.08f, 0.10f);
             var captureTarget = receiver.AddComponent<LabCaptureTarget>();
-            captureTarget.Configure("receiver", 0.08f);
+            captureTarget.Configure("receiver", 0.05f, 0.04f);
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
                 researchTool.transform, captureTarget, "burette-50ml-research-v1", coreDriver);
             xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,
