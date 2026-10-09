@@ -291,6 +291,22 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator K01_LabSceneRecorderSamplesActualFrameDurations()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return new WaitForSecondsRealtime(0.05f);
+            var recorder = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                .First(item => item.name == "PerformanceRecorder").GetComponent<PlayerPerformanceRecorder>();
+            Assert.That(recorder, Is.Not.Null);
+            Assert.That(recorder.SampleCount, Is.GreaterThan(0));
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
         public IEnumerator X03_SelectedHandTrackingLossCannotBeMaskedByOtherHand()
         {
 #if UNITY_EDITOR

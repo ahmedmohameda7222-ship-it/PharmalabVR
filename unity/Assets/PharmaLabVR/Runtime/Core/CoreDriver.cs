@@ -50,6 +50,10 @@ namespace PharmaLabVR.Core
                 BootstrapResearchSession();
                 Measurement = gameObject.AddComponent<MeasurementView>();
                 gameObject.AddComponent<NativeLabVisuals>().Configure(this);
+                foreach (var root in gameObject.scene.GetRootGameObjects())
+                    foreach (var transform in root.GetComponentsInChildren<Transform>(true))
+                        if (transform.name == "PerformanceRecorder")
+                            transform.gameObject.AddComponent<PlayerPerformanceRecorder>().Configure(this);
                 StartupError = null;
                 PublishSnapshot();
             }
