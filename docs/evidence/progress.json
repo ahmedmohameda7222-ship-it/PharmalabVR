@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "authority": "docs/implementation-package-v3/05-EXACT-TASKS.md",
   "branch": "feat/foundation-vr-first",
-  "codeRevision": "161f4cd (Oct9 implementation code; evidence document commit follows)",
+  "codeRevision": "10d6dae (Oct9 implementation code; evidence document commit follows)",
   "tasks": {
     "P00": "Passed — local environment and original authority verified; current toolchain present",
     "P01": "Partial — C++17 ABI input watermarks, fresh load/focus holds, event consumption and importable admission verified; complete durable identity and lifecycle limits remain open",
@@ -12,22 +12,22 @@
     "P05": "Partial — production worker/scheduler and compute admission are connected; blocked-engine diagnostics, complete precision/bulk matrix and measured bounds remain open",
     "P06": "Partial — Unity session, package verification, Native event drain, Save/Load and MeasurementView are exercised; complete lifecycle/error UX remains open",
     "P07": "Partial — injected HMD pose moves the scene camera and selected-hand tracking loss is held; complete simulator, ray UI, two-hand and headset journeys remain open",
-    "P08": "Partial — source and receiver liquid visuals, bench, basic graduations and outlet follow committed Native transfer; calibrated full lab, meniscus and stereo evidence remain open",
+    "P08": "Partial — source and receiver liquid visuals follow committed Native transfer and Cylinder mesh height is verified at full/half/empty; bench and basic graduations exist, but the visual lab remains rudimentary and calibrated meniscus/stereo evidence is open",
     "P09": "Partial — research indicator and explicit unsupported local-mixing gates verified; optical/tracer validation missing",
     "P10": "Partial — Desktop HUD, camera, focus and Save/Load controls now exercised in scene; complete Desktop and VR journeys remain open",
     "P11": "Partial — Save/Load forces fresh SessionLoad hold, confirmed backup recovery and temporary-write failure are tested; durable journal/index/history and Review remain open",
     "P12": "Partial — two research protocol definitions/capability gates are tested; complete walkthrough/counterbalancing absent",
-    "P13": "Partial — Windows Desktop, Windows VR and Android VR Player builds passed on 161f4cd; Desktop boot/lab/Save/Load/Continue journey passed, complete VR and Android target journeys remain open",
+    "P13": "Partial — Windows Desktop, Windows VR and Android VR Player builds passed on 10d6dae; Desktop boot/lab/Save/Load/Continue journey passed, complete VR and Android target journeys remain open",
     "P14": "EvidenceMissing for publication performance — Player recorder samples real frames, but required workload/three 30-minute target/device captures do not exist",
     "P15": "Partial — current evidence pack, logs, screenshots, hashes and 95-case status catalog produced; hardware/experimental evidence absent",
     "P16": "Partial — implementation and local evidence are delivered on the open, unmerged PR; hardware, performance-publication, human-factors and experimental gates remain explicitly incomplete"
   },
   "verification": {
-    "native": "60/60 cases; 8833/8833 assertions; CTest 1/1 on 161f4cd",
+    "native": "60/60 cases; 8833/8833 assertions; CTest 1/1 on unchanged native source at 10d6dae",
     "python": "6/6",
     "idealReference": "40/40; independent numerical reference only",
-    "unity": "EditMode 21/21; PlayMode 14/14 on 161f4cd",
-    "players": "WindowsDesktop, WindowsVR and AndroidVR Player builds passed on 161f4cd; Desktop Player boot, lab, Save/Load and Continue have visual/log evidence; no physical XR or Android run"
+    "unity": "EditMode 22/22; PlayMode 14/14 on 10d6dae",
+    "players": "WindowsDesktop, WindowsVR and AndroidVR Player builds passed on 10d6dae; Desktop Player boot, lab, Save/Load and Continue have final-code visual/log evidence; no physical XR or Android run"
   },
   "remainingBlockers": [
     "No physical VR headset/controller run",

@@ -4,7 +4,7 @@
   "branch": "feat/foundation-vr-first",
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
-  "testedCodeCommitSha": "161f4cd",
+  "testedCodeCommitSha": "10d6dae",
   "evidenceCommitNote": "Evidence documentation is committed after the tested code commit; no later product code is included.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
@@ -34,12 +34,12 @@
       "path": "artifacts/test-results/ideal-reference.txt"
     },
     "unityEditMode": {
-      "result": "21/21",
-      "path": "artifacts/test-results/EditMode-161f4cd.xml"
+      "result": "22/22",
+      "path": "artifacts/test-results/EditMode-cylinder-fixed-v2.xml"
     },
     "unityPlayMode": {
       "result": "14/14",
-      "path": "artifacts/test-results/PlayMode-visual-layout.xml"
+      "path": "artifacts/test-results/PlayMode-cylinder-fixed.xml"
     }
   },
   "unityEditor": "6000.3.25f1",
@@ -48,14 +48,14 @@
       "build": "Passed at testedCodeCommitSha",
       "actualPlayer": "Boot, Lab, Save, Load, SessionLoad hold and Continue visually exercised",
       "fullStudentJourney": "Partial",
-      "buildLog": "artifacts/logs/unity-WindowsDesktop-161f4cd.log",
-      "runLogs": ["artifacts/logs/windows-desktop-161f4cd.log", "artifacts/logs/windows-desktop-load-continue-161f4cd.log"]
+      "buildLog": "artifacts/logs/unity-WindowsDesktop-10d6dae.log",
+      "runLogs": ["artifacts/logs/windows-desktop-10d6dae.log"]
     },
     "WindowsVR": {
       "build": "Passed at testedCodeCommitSha",
       "physicalVrJourney": "EvidenceMissing",
       "simulatorEndToEnd": "Partial",
-      "buildLog": "artifacts/logs/unity-WindowsVR-161f4cd.log"
+      "buildLog": "artifacts/logs/unity-WindowsVR-10d6dae.log"
     },
     "AndroidVR": {
       "build": "Passed at testedCodeCommitSha",
@@ -64,7 +64,7 @@
       "apkEntriesVerified": ["lib/arm64-v8a/libil2cpp.so", "lib/arm64-v8a/libpharmalab_core.so", "lib/arm64-v8a/libunity.so", "assets/science/minteq.v4.dat"],
       "physicalInstall": "EvidenceMissing",
       "thermalPower": "EvidenceMissing",
-      "buildLog": "artifacts/logs/unity-AndroidVR-161f4cd.log",
+      "buildLog": "artifacts/logs/unity-AndroidVR-10d6dae.log",
       "apk": "artifacts/AndroidVR/PharmaLabVR-research.apk"
     }
   },
@@ -76,18 +76,17 @@
   "performance": {
     "instrumentation": "Raw frame, hold and memory trace written by actual Windows Desktop Player",
     "shortTrace": "artifacts/performance/windows-desktop-short-a9f2268.json",
-    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json",
-    "loadContinueTrace": "artifacts/performance/windows-desktop-load-continue-161f4cd.json",
+    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json (historical code)",
+    "loadContinueTrace": "artifacts/performance/windows-desktop-load-continue-10d6dae.json",
     "publicationCriteria": "EvidenceMissing: no controlled 1/4/10 vessel workload or three 30-minute target/device runs; raw traces are not benchmark results"
   },
   "screenshots": [
-    "artifacts/screenshots/windows-desktop-161f4cd-boot.png",
-    "artifacts/screenshots/windows-desktop-161f4cd-lab.png",
-    "artifacts/screenshots/windows-desktop-161f4cd-saved.png",
-    "artifacts/screenshots/windows-desktop-161f4cd-loaded-held.png",
-    "artifacts/screenshots/windows-desktop-161f4cd-reopened-loaded-continued.png"
+    "artifacts/screenshots/windows-desktop-10d6dae-boot.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-lab.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-loaded-held.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-loaded-continued.png"
   ],
-  "savedPlayerSession": "artifacts/sessions/autosave-161f4cd.plv.json",
+  "savedPlayerSession": "artifacts/sessions/autosave-10d6dae.plv.json",
   "artifactManifest": "docs/evidence/artifact-manifest.json",
   "hardwareProfile": "docs/evidence/environment.json",
   "independentSoftwareWorkStillOpen": [

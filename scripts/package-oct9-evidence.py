@@ -8,7 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "docs/evidence/artifact-manifest.json"
-ARCHIVE = ROOT / "artifacts/PharmaLabVR-Oct9-Implementation-Evidence-161f4cd.zip"
+ARCHIVE = ROOT / "artifacts/PharmaLabVR-Oct9-Implementation-Evidence-10d6dae.zip"
 DOCS = [
     "docs/evidence/acceptance-95.json",
     "docs/evidence/progress.json",
