@@ -1,115 +1,110 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "repository": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR",
   "branch": "feat/foundation-vr-first",
-  "commitSha": "5ffb18ea4fd517a9aef9e0843b50d7fdba7cd05f",
-  "commitScope": "Historical functional builds and Player journeys are identified per artifact; Oct9 classification audit is not a new Player build",
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
-  "packageVerification": "Passed",
-  "environmentReady": true,
-  "implementedTaskIds": [
-    "P00"
-  ],
+  "testedCodeCommitSha": "161f4cd",
+  "evidenceCommitNote": "Evidence documentation is committed after the tested code commit; no later product code is included.",
+  "productMaturity": "Research",
+  "completionStatus": "Partial",
+  "implementedTaskIds": ["P00"],
   "taskStatusEvidence": "docs/evidence/progress.json",
   "acceptanceSummary": {
     "catalog": "docs/evidence/acceptance-95.json",
+    "total": 95,
     "Passed": 19,
     "Partial": 72,
     "EvidenceMissing": 4,
-    "scope": "Self-assigned evidence classifications after Oct9 audit; not independently certified 95-case acceptance"
+    "scope": "Self-assigned status with cited test or artifact per criterion; no independent certification or physical acceptance claim."
   },
   "testResults": {
     "native": {
-      "status": "Passed",
-      "cases": 52,
-      "assertions": 565,
+      "result": "60/60 cases; 8833/8833 assertions",
       "ctest": "1/1",
-      "paths": [
-        "artifacts/test-results/native-release.txt",
-        "artifacts/test-results/ctest-release.txt"
-      ]
+      "paths": ["artifacts/test-results/native-final-current.txt", "artifacts/test-results/ctest-final-current.txt"]
     },
     "pythonTooling": {
-      "status": "Passed",
-      "cases": 6,
-      "path": "artifacts/test-results/python-tooling.txt"
+      "result": "6/6",
+      "path": "artifacts/test-results/python-tooling-oct9-current.txt"
     },
     "idealReference": {
-      "status": "Passed",
-      "cases": 40,
-      "maxExpectedPHError": 0.0,
-      "maxChargeResidualMolPerL": 5.204170427930421e-17,
-      "scope": "independent ideal numeric reference only",
+      "result": "40 cases",
+      "scope": "Independent ideal numerical reference only; not experimental validation",
       "path": "artifacts/test-results/ideal-reference.txt"
     },
     "unityEditMode": {
-      "status": "Passed",
-      "result": "18/18",
-      "path": "artifacts/test-results/unity-editmode-final.xml"
+      "result": "21/21",
+      "path": "artifacts/test-results/EditMode-161f4cd.xml"
     },
     "unityPlayMode": {
-      "status": "Passed",
-      "result": "3/3",
-      "path": "artifacts/test-results/unity-playmode-final.xml"
+      "result": "14/14",
+      "path": "artifacts/test-results/PlayMode-visual-layout.xml"
     }
   },
-  "unityEditor": {
-    "version": "6000.3.25f1"
-  },
+  "unityEditor": "6000.3.25f1",
   "players": {
     "WindowsDesktop": {
-      "build": "Passed on 83d8627",
-      "actualStart": "Passed on b679ccc",
-      "actualLabEntry": "Passed on b679ccc",
-      "criticalRuntimeErrors": 0,
-      "openXrRuntimeErrors": 0,
-      "buildLog": "artifacts/logs/unity-build-WindowsDesktop-postreview.log",
-      "runLog": "artifacts/logs/windows-desktop-lab-player-final.log"
+      "build": "Passed at testedCodeCommitSha",
+      "actualPlayer": "Boot, Lab, Save, Load, SessionLoad hold and Continue visually exercised",
+      "fullStudentJourney": "Partial",
+      "buildLog": "artifacts/logs/unity-WindowsDesktop-161f4cd.log",
+      "runLogs": ["artifacts/logs/windows-desktop-161f4cd.log", "artifacts/logs/windows-desktop-load-continue-161f4cd.log"]
     },
     "WindowsVR": {
-      "build": "Passed on 83d8627",
-      "noRuntimeStart": "Passed on b679ccc",
-      "expectedNoRuntimeDiagnostic": "XR_ERROR_RUNTIME_UNAVAILABLE",
-      "physicalVr": "EvidenceMissing",
-      "buildLog": "artifacts/logs/unity-build-WindowsVR-postreview.log",
-      "runLog": "artifacts/logs/windows-vr-no-runtime-player.log"
+      "build": "Passed at testedCodeCommitSha",
+      "physicalVrJourney": "EvidenceMissing",
+      "simulatorEndToEnd": "Partial",
+      "buildLog": "artifacts/logs/unity-WindowsVR-161f4cd.log"
     },
     "AndroidVR": {
-      "build": "Passed on 83d8627",
+      "build": "Passed at testedCodeCommitSha",
       "architecture": "ARM64",
       "backend": "IL2CPP",
-      "minSdk": 25,
+      "apkEntriesVerified": ["lib/arm64-v8a/libil2cpp.so", "lib/arm64-v8a/libpharmalab_core.so", "lib/arm64-v8a/libunity.so", "assets/science/minteq.v4.dat"],
       "physicalInstall": "EvidenceMissing",
-      "thermal": "EvidenceMissing",
-      "buildLog": "artifacts/logs/unity-build-AndroidVR-postreview.log"
+      "thermalPower": "EvidenceMissing",
+      "buildLog": "artifacts/logs/unity-AndroidVR-161f4cd.log",
+      "apk": "artifacts/AndroidVR/PharmaLabVR-research.apk"
     }
   },
-  "screenshots": [
-    "artifacts/screenshots/windows-desktop-boot.png",
-    "artifacts/screenshots/windows-desktop-lab.png",
-    "artifacts/screenshots/windows-vr-no-runtime.png"
-  ],
-  "artifactManifest": "docs/evidence/artifact-manifest.json",
-  "hardwareProfile": "docs/evidence/environment.json",
   "scientificCoverage": {
-    "softwareReference": "Passed for the independent 40-case ideal fixture only",
-    "productionAdapter": "Partial — standalone IPhreeqc tests; no product session observations or packaged Player database solve",
+    "productAdapter": "Pinned minteq database and IPhreeqc worker execute through the native product session and Unity Player; current pH and provenance states are visible in Player",
+    "unsupportedScope": "Unsupported observations remain explicit; full stock/support/provenance matrix remains partial",
     "experimentalValidation": "EvidenceMissing"
   },
-  "missingPrerequisites": [
-    "physical VR headset/controller run",
-    "Android device install and thermal/power run",
-    "official XR Device Simulator end-to-end journey",
-    "three 30-minute publication performance captures",
-    "measured calibration, optical, tracer/mixing and experimental validation",
-    "participant human-factors study"
+  "performance": {
+    "instrumentation": "Raw frame, hold and memory trace written by actual Windows Desktop Player",
+    "shortTrace": "artifacts/performance/windows-desktop-short-a9f2268.json",
+    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json",
+    "loadContinueTrace": "artifacts/performance/windows-desktop-load-continue-161f4cd.json",
+    "publicationCriteria": "EvidenceMissing: no controlled 1/4/10 vessel workload or three 30-minute target/device runs; raw traces are not benchmark results"
+  },
+  "screenshots": [
+    "artifacts/screenshots/windows-desktop-161f4cd-boot.png",
+    "artifacts/screenshots/windows-desktop-161f4cd-lab.png",
+    "artifacts/screenshots/windows-desktop-161f4cd-saved.png",
+    "artifacts/screenshots/windows-desktop-161f4cd-loaded-held.png",
+    "artifacts/screenshots/windows-desktop-161f4cd-reopened-loaded-continued.png"
   ],
-  "deviations": [
-    "WindowsVR was started without an available OpenXR runtime or headset and is not reported as a physical pass",
-    "Android APK structure was inspected but the APK was not installed on a device",
-    "performance acceptance remains unpublished because the required long target captures do not exist"
+  "savedPlayerSession": "artifacts/sessions/autosave-161f4cd.plv.json",
+  "artifactManifest": "docs/evidence/artifact-manifest.json",
+  "hardwareProfile": "docs/evidence/environment.json",
+  "independentSoftwareWorkStillOpen": [
+    "Native retained tip, residual, in-flight, drop, rinse and contamination transport and geometry enforcement",
+    "Complete observation provenance, scheduler budget/failure matrix and scientific support coverage",
+    "Spatial VR setup/ray UI and body/valve/receiver ownership with full simulator journey",
+    "Complete calibrated visible lab and all-material Open Lab/Desktop journeys",
+    "Durable bounded journal/index/history, Review and recorded-versus-recompute branches with crash cases",
+    "Arabic/English and accessibility protocol/student journeys",
+    "Controlled target workload and long Player instrumentation campaigns"
   ],
-  "notes": "Oct9 review found runtime integration gaps. Historical test/build evidence remains valid only for its cited revision and narrow scope. P00-P16 are not all implemented or accepted; see progress.json. Research scientific and device gates remain open.",
-  "implementedTaskIdsScope": "Only P00 is marked fully complete in the Oct9 audit; partial source/build foundations are listed in docs/evidence/progress.json. This file will be refreshed after implementation."
+  "externalEvidenceGatesStillOpen": [
+    "Physical VR headset/controller run",
+    "Android device install, frame, thermal and power run",
+    "Measured burette calibration, optical and tracer/mixing validation",
+    "Experimental scientific validation",
+    "Participant human-factors study"
+  ],
+  "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }
