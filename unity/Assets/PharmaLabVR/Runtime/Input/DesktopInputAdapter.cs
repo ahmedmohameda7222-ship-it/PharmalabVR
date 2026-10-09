@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using PharmaLabVR.Core;
+using PharmaLabVR.Session;
 
 namespace PharmaLabVR.Input
 {
@@ -56,13 +57,6 @@ namespace PharmaLabVR.Input
             return true;
         }
 
-        private void OnGUI()
-        {
-            if (!awaitingFocusContinue || !Application.isFocused) return;
-            GUI.Box(new Rect(20f, 20f, 330f, 92f), "Input paused after focus loss");
-            if (GUI.Button(new Rect(45f, 60f, 280f, 36f), "Continue lab input")) ContinueAfterFocusRecovery();
-        }
-
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
             RefreshRegisteredToolId();
@@ -72,7 +66,8 @@ namespace PharmaLabVR.Input
             HandlePickOrPlace();
             if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { inputEnabled = false; awaitingFocusContinue = true; actuator = 0f; return System.Array.Empty<LabInputSample>(); }
-            var pointerOverUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            var pointerOverUi = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
             if (Mouse.current != null && ShouldAdjustActuator(pointerOverUi, Mouse.current.leftButton.isPressed))
                 actuator = Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f);
             ManipulateHeldTool();
@@ -83,7 +78,12 @@ namespace PharmaLabVR.Input
                 geometryProfileHash, true, captureTarget != null ? captureTarget.Estimate(sampledTool) : null) };
         }
 
-        public void ResetBaselines() { actuator = 0f; }
+        public void ResetBaselines()
+        {
+            actuator = 0f;
+            awaitingFocusContinue = false;
+            inputEnabled = gameObject.activeInHierarchy;
+        }
         public void AdvanceSequence(string toolId, ulong watermark)
         {
             RefreshRegisteredToolId();
@@ -102,7 +102,8 @@ namespace PharmaLabVR.Input
         private void HandlePickOrPlace()
         {
             if (!inputEnabled || Keyboard.current == null || !Keyboard.current.fKey.wasPressedThisFrame) return;
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()))) return;
             actuator = 0f;
             if (heldTool != null)
             {

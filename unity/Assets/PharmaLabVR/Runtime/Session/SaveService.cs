@@ -24,11 +24,31 @@ namespace PharmaLabVR.Session
 
         public CoreSession Load(string path, string expectedScientificDatabasePath)
         {
-            var info = new FileInfo(path ?? throw new ArgumentNullException(nameof(path)));
-            if (!info.Exists || info.Length <= 0 || info.Length > MaxSaveBytes) throw new InvalidDataException("Save is missing, empty, or oversized.");
+            if (path == null) throw new ArgumentNullException(nameof(path));
             if (string.IsNullOrEmpty(expectedScientificDatabasePath)) throw new InvalidOperationException("Scientific package is not ready.");
+            try { return LoadOne(path, expectedScientificDatabasePath); }
+            catch (Exception primary) when (IsRecoverableReadFailure(primary))
+            {
+                try { return LoadOne(path + ".bak", expectedScientificDatabasePath); }
+                catch (Exception backup) when (IsRecoverableReadFailure(backup))
+                {
+                    throw new InvalidDataException("Neither the last save nor its confirmed backup can be loaded.",
+                        new AggregateException(primary, backup));
+                }
+            }
+        }
+
+        private static CoreSession LoadOne(string path, string expectedScientificDatabasePath)
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length <= 0 || info.Length > MaxSaveBytes)
+                throw new InvalidDataException("Save is missing, empty, or oversized.");
             return CoreSession.ImportSession(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8), expectedScientificDatabasePath);
         }
+
+        private static bool IsRecoverableReadFailure(Exception error) =>
+            error is InvalidDataException || error is InvalidOperationException ||
+            error is ArgumentException || error is IOException;
 
         private static void ValidateName(string name)
         {

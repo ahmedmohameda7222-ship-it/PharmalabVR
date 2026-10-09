@@ -96,7 +96,8 @@ namespace PharmaLabVR.Editor
             camera.AddComponent<Camera>();
             camera.AddComponent<DesktopCameraController>();
             camera.transform.SetParent(desktopRig.transform);
-            camera.transform.localPosition = new Vector3(0f, 1.55f, -1.2f);
+            camera.transform.localPosition = new Vector3(0f, 1.25f, -0.8f);
+            camera.transform.localRotation = Quaternion.Euler(30f, 0f, 0f);
             var holdAnchor = new GameObject("DesktopToolHoldAnchor");
             holdAnchor.transform.SetParent(desktopRig.transform, false);
             holdAnchor.AddComponent<DesktopHoldAnchorFollower>().Configure(

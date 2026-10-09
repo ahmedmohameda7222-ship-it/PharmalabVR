@@ -5,6 +5,8 @@ using NUnit.Framework;
 using PharmaLabVR.Core;
 using PharmaLabVR.Input;
 using PharmaLabVR.Tools;
+using PharmaLabVR.UI;
+using PharmaLabVR.Session;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.SceneManagement;
@@ -39,6 +41,25 @@ namespace PharmaLabVR.Tests.PlayMode
             Object.Destroy(root);
             yield return null;
             Assert.That(driver == null || driver.Session == null, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator O06_CoreDriverPresentsLiveSolverStatusThroughMeasurementView()
+        {
+            var root = new GameObject("NativeMeasurementIntegration");
+            var driver = root.AddComponent<CoreDriver>();
+            for (var attempt = 0; attempt < 200 && (driver.Measurement == null ||
+                driver.Measurement.Availability != MeasurementAvailability.Current); attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement, Is.Not.Null);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
+                driver.Session.ReadSnapshot());
+            Assert.That(float.TryParse(driver.Measurement.DisplayValue,
+                System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture,
+                out var value), Is.True);
+            Assert.That(value, Is.InRange(0f, 14f));
+            Object.Destroy(root);
+            yield return null;
         }
 
         [Test]
@@ -183,9 +204,89 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
                 "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                 "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
-            yield return null;
+            for (var attempt = 0; attempt < 20 &&
+                System.Math.Abs(sourceLiquid.CommittedVolumeM3 - 24e-6) > 1e-12; attempt++)
+                yield return new WaitForSecondsRealtime(0.02f);
             Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(24e-6).Within(1e-12));
             Assert.That(receiverLiquid.CommittedVolumeM3, Is.EqualTo(1e-6).Within(1e-12));
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator D01_ColdDesktopLabShowsToolAndReceiverInCameraFrustum()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var children = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+            var camera = children.First(item => item.name == "DesktopCamera").GetComponent<Camera>();
+            foreach (var name in new[] { "DesktopResearchTool", "ReceiverVessel" })
+            {
+                var target = children.First(item => item.name == name);
+                var viewport = camera.WorldToViewportPoint(target.position + Vector3.up * 0.12f);
+                Assert.That(viewport.z, Is.GreaterThan(0f), name);
+                Assert.That(viewport.x, Is.InRange(0.1f, 0.9f), name);
+                Assert.That(viewport.y, Is.InRange(0.1f, 0.9f), name);
+            }
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator J02_SceneSaveLoadRestoresMaterialAndRequiresContinue()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            var sessions = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).First();
+            sessions.Configure(driver, "playmode-" + System.Guid.NewGuid().ToString("N"));
+            Assert.That(sessions.Save(), Is.True, sessions.LastError);
+            var savePath = sessions.LastDurableSavePath;
+            try
+            {
+                Assert.That(driver.Session.SubmitOrdered("TransferFixed",
+                    "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                    "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
+                Assert.That(sessions.ContinueFrom(savePath), Is.True, sessions.LastError);
+                var snapshot = driver.Session.ReadSnapshot();
+                StringAssert.Contains("\"reason\":\"SessionLoad\"", snapshot);
+                StringAssert.Contains("\"researchAdditiveVolumeM3\":2.5e-05", snapshot);
+                Assert.That(sessions.ContinueHeldSession(), Is.True, sessions.LastError);
+            }
+            finally
+            {
+                if (File.Exists(savePath)) File.Delete(savePath);
+                if (File.Exists(savePath + ".bak")) File.Delete(savePath + ".bak");
+                if (File.Exists(savePath + ".tmp")) File.Delete(savePath + ".tmp");
+            }
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator D04_FocusRecoveryContinueRestoresDesktopInputThroughSceneControl()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            var adapter = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<DesktopInputAdapter>(true)).First();
+            var sessions = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).First();
+            driver.SendMessage("OnApplicationFocus", false);
+            adapter.SendMessage("OnApplicationFocus", false);
+            Assert.That(driver.IsTimeHeld, Is.True);
+            Assert.That(adapter.AwaitingFocusContinue, Is.True);
+            Assert.That(sessions.ContinueHeldSession(), Is.True, sessions.LastError);
+            Assert.That(driver.IsTimeHeld, Is.False);
+            Assert.That(adapter.AwaitingFocusContinue, Is.False);
             yield return SceneManager.UnloadSceneAsync(scene);
         }
 

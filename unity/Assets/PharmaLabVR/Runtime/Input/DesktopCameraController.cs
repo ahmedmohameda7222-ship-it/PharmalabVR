@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using PharmaLabVR.Session;
 
 namespace PharmaLabVR.Input
 {
@@ -10,6 +11,8 @@ namespace PharmaLabVR.Input
         [SerializeField] private float lookSensitivity = 0.12f;
         [SerializeField] private float pitchLimit = 85f;
         private float pitch;
+
+        private void Awake() => pitch = Mathf.DeltaAngle(0f, transform.eulerAngles.x);
 
         private void Update()
         {
@@ -23,7 +26,9 @@ namespace PharmaLabVR.Input
             if (Keyboard.current.eKey.isPressed) movement += Vector3.up;
             transform.Translate(movement.normalized * (moveSpeed * Time.unscaledDeltaTime), Space.Self);
 
-            if (!Mouse.current.rightButton.isPressed || (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())) return;
+            if (!Mouse.current.rightButton.isPressed ||
+                (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue())) return;
             var delta = Mouse.current.delta.ReadValue() * lookSensitivity;
             pitch = Mathf.Clamp(pitch - delta.y, -pitchLimit, pitchLimit);
             transform.rotation = Quaternion.Euler(pitch, transform.eulerAngles.y + delta.x, 0f);

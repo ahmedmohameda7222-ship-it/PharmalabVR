@@ -5,6 +5,10 @@ using PharmaLabVR.Core;
 using UnityEngine;
 using PharmaLabVR.Tools;
 using PharmaLabVR.UI;
+using PharmaLabVR.Session;
+using System;
+using System.IO;
+using Object = UnityEngine.Object;
 
 namespace PharmaLabVR.Tests
 {
@@ -134,6 +138,52 @@ namespace PharmaLabVR.Tests
             Assert.That(view.DisplayValue, Is.EqualTo("--"));
             Assert.That(view.Availability, Is.EqualTo(MeasurementAvailability.Unsupported));
             Object.DestroyImmediate(root);
+        }
+
+        [Test]
+        public void R03_CorruptLatestSaveRecoversLastConfirmedBackupWithoutReadingPartialTemporaryFile()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "plv-save-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var package = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                using var session = new CoreSession("save-fault", "Desktop", package, ScientificPackage.DatabaseSha256);
+                var saves = new SaveService();
+                var path = saves.Save(session, directory, "student");
+                Assert.That(session.SubmitOrdered("CreateVessel", "{\"id\":\"later\",\"capacityM3\":0.00001}"),
+                    Does.Contain("\"accepted\":true"));
+                saves.Save(session, directory, "student");
+                Assert.That(File.Exists(path + ".bak"), Is.True);
+                File.WriteAllText(path + ".tmp", "partial crash tail");
+                File.WriteAllText(path, "corrupt primary");
+                using var recovered = saves.Load(path, package);
+                StringAssert.DoesNotContain("\"id\":\"later\"", recovered.ReadSnapshot());
+                File.WriteAllText(path + ".bak", "corrupt backup");
+                Assert.Throws<InvalidDataException>(() => saves.Load(path, package));
+            }
+            finally { Directory.Delete(directory, true); }
+        }
+
+        [Test]
+        public void R04_FailedTemporaryWritePreservesTheLastConfirmedSave()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "plv-save-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var package = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                using var session = new CoreSession("write-fault", "Desktop", package, ScientificPackage.DatabaseSha256);
+                var saves = new SaveService();
+                var path = saves.Save(session, directory, "student");
+                var confirmed = File.ReadAllBytes(path);
+                Directory.CreateDirectory(path + ".tmp");
+                Assert.Catch<UnauthorizedAccessException>(() => saves.Save(session, directory, "student"));
+                CollectionAssert.AreEqual(confirmed, File.ReadAllBytes(path));
+                using var recovered = saves.Load(path, package);
+                Assert.That(recovered.IsOpen, Is.True);
+            }
+            finally { Directory.Delete(directory, true); }
         }
     }
 }

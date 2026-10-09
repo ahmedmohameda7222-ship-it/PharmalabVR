@@ -11,13 +11,15 @@ namespace PharmaLabVR.UI
         [SerializeField] private TMP_Text statusLabel;
         public MeasurementAvailability Availability { get; private set; }
         public string DisplayValue { get; private set; } = "--";
+        public string Explanation { get; private set; } = string.Empty;
 
         public void Present(MeasurementAvailability availability, string value, string explanation)
         {
             Availability = availability;
             DisplayValue = availability == MeasurementAvailability.Current ? value : "--";
+            Explanation = explanation ?? string.Empty;
             if (valueLabel != null) valueLabel.text = DisplayValue;
-            if (statusLabel != null) statusLabel.text = explanation ?? string.Empty;
+            if (statusLabel != null) statusLabel.text = Explanation;
         }
     }
 }

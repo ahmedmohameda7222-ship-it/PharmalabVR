@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using PharmaLabVR.Input;
 using PharmaLabVR.UI;
 using UnityEngine;
@@ -16,6 +17,9 @@ namespace PharmaLabVR.Core
         public CoreSession Session { get; private set; }
         public string StartupError { get; private set; }
         public string ScientificDatabasePath { get; private set; }
+        public MeasurementView Measurement { get; private set; }
+        public string CurrentMode { get; private set; } = "Desktop";
+        public string HoldReason { get; private set; } = string.Empty;
         public bool IsTimeHeld { get; private set; }
         private double accumulator;
         private const double TickSeconds = 0.020;
@@ -44,6 +48,7 @@ namespace PharmaLabVR.Core
                 Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256);
                 ScientificDatabasePath = databasePath;
                 BootstrapResearchSession();
+                Measurement = gameObject.AddComponent<MeasurementView>();
                 gameObject.AddComponent<NativeLabVisuals>().Configure(this);
                 StartupError = null;
                 PublishSnapshot();
@@ -83,23 +88,26 @@ namespace PharmaLabVR.Core
         {
             if (Session == null) return;
             accumulator += Time.unscaledDeltaTime;
-            if (accumulator > TickSeconds * 2.0)
-            {
-                var nowNs = NowNs();
-                Session.Step(accumulator, nowNs);
-                accumulator = 0.0;
-                IsTimeHeld = true;
-                HoldChanged?.Invoke(true);
-                Debug.LogWarning("TimeDiscontinuityHold: more than two transport ticks accumulated.");
-                PublishSnapshot();
-                return;
-            }
             if (IsTimeHeld)
             {
                 if (accumulator < TickSeconds) return;
                 var heldNowNs = NowNs();
                 Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(heldNowNs)));
                 Session.Step(0.0, heldNowNs);
+                accumulator = 0.0;
+                PublishSnapshot();
+                return;
+            }
+            if (accumulator > TickSeconds * 2.0)
+            {
+                var nowNs = NowNs();
+                Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
+                if (IsTimeHeld) Session.Step(0.0, nowNs);
+                else
+                {
+                    Session.Step(accumulator, nowNs);
+                    Debug.LogWarning("TimeDiscontinuityHold: more than two transport ticks accumulated.");
+                }
                 accumulator = 0.0;
                 PublishSnapshot();
                 return;
@@ -237,6 +245,22 @@ namespace PharmaLabVR.Core
                 NativeEventReceived?.Invoke(nativeEvent);
             var snapshot = Session.ReadSnapshot();
             var state = JsonUtility.FromJson<SnapshotEnvelope>(snapshot);
+            if (state != null) CurrentMode = state.mode;
+            HoldReason = state?.hold?.reason ?? string.Empty;
+            if (state?.observations != null && Measurement != null)
+                foreach (var observation in state.observations)
+                    if (observation.vesselId == "source" && observation.observableId == "pH")
+                    {
+                        var availability = observation.support != "Supported" ? MeasurementAvailability.Unsupported :
+                            observation.computationState == "Failed" ? MeasurementAvailability.Failed :
+                            observation.freshness == "Stale" ? MeasurementAvailability.Stale :
+                            observation.freshness == "Current" && observation.computationState == "Ready" ?
+                                MeasurementAvailability.Current : MeasurementAvailability.Pending;
+                        Measurement.Present(availability,
+                            observation.value.ToString("0.00", CultureInfo.InvariantCulture),
+                            $"pH {availability} · {observation.maturity} · {observation.modelId}");
+                        break;
+                    }
             var held = state?.hold != null && state.hold.active;
             if (held != IsTimeHeld)
             {
@@ -260,7 +284,22 @@ namespace PharmaLabVR.Core
         private sealed class SnapshotEnvelope
         {
             public HoldEnvelope hold;
+            public string mode;
             public InputWatermark[] inputWatermarks;
+            public ObservationEnvelope[] observations;
+        }
+
+        [Serializable]
+        private sealed class ObservationEnvelope
+        {
+            public string vesselId;
+            public string observableId;
+            public string support;
+            public string freshness;
+            public string computationState;
+            public string maturity;
+            public string modelId;
+            public double value;
         }
 
         [Serializable]
@@ -274,6 +313,7 @@ namespace PharmaLabVR.Core
         private sealed class HoldEnvelope
         {
             public bool active;
+            public string reason;
         }
 
         private void OnDisable()
