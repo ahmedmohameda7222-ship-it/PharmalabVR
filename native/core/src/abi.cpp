@@ -2,6 +2,9 @@
 
 #include "plv/state_executor.hpp"
 #include "plv/tool_models.hpp"
+#include "plv/scheduler.hpp"
+#include "plv/solver_worker.hpp"
+#include "plv/solver.hpp"
 #include "json.hpp"
 
 #include <algorithm>
@@ -54,8 +57,24 @@ struct Context {
         std::string mode;
     };
 
-    explicit Context(std::string branch) : executor(std::move(branch)) {}
+    explicit Context(std::string branch, std::string databasePath = {}, std::string databaseIdentity = {})
+        : executor(std::move(branch)), scheduler({5e-8, 100'000'000ULL, 16U}),
+          databasePath(std::move(databasePath)), databaseIdentity(std::move(databaseIdentity)) {
+        if (!this->databasePath.empty()) {
+            worker = std::make_unique<plv::SolverWorker>(16U,
+                [path = this->databasePath, identity = this->databaseIdentity,
+                 engine = std::shared_ptr<plv::IPhreeqcAdapter>{}](const plv::SolveRequest& request) mutable {
+                    if (!engine) engine = std::make_shared<plv::IPhreeqcAdapter>(path, identity);
+                    return engine->solve(request);
+                });
+        }
+    }
     plv::StateExecutor executor;
+    plv::ObservationScheduler scheduler;
+    std::unique_ptr<plv::SolverWorker> worker;
+    std::string databasePath;
+    std::string databaseIdentity;
+    std::unordered_map<std::string, plv::SolveResult> scienceResults;
     std::deque<std::string> events;
     std::unordered_map<std::uint64_t, std::pair<std::string, std::string>> receipts;
     std::unordered_map<std::string, std::uint64_t> inputSequences;
@@ -69,10 +88,59 @@ struct Context {
     std::mutex mutex;
 };
 
+void dispatchScience(Context& context) {
+    if (!context.worker) return;
+    while (context.worker->outstanding() < 16U) {
+        auto request = context.scheduler.takeNext();
+        if (!request) break;
+        const auto snapshot = context.executor.snapshot();
+        const auto vessel = snapshot.vessels.find(request->vesselId);
+        if (vessel == snapshot.vessels.end() || vessel->second.inventory.referenceVolumeM3 <= 0.0) continue;
+        const auto& material = vessel->second.inventory;
+        const auto accepted = context.worker->submit({*request,
+            {material.solventWaterKg, material.referenceVolumeM3, material.sodiumMol,
+             material.chlorideMol, material.acetateMol, 25.0}});
+        if (!accepted.accepted) break;
+    }
+}
+
+void offerChangedScience(Context& context, const plv::SessionSnapshot& before, std::uint64_t simulationNowNs) {
+    if (!context.worker) return;
+    const auto after = context.executor.snapshot();
+    for (const auto& [id, vessel] : after.vessels) {
+        const auto old = before.vessels.find(id);
+        if (old != before.vessels.end() && old->second.materialRevision == vessel.materialRevision) continue;
+        context.scheduler.markMaterialRevision(id, vessel.materialRevision, simulationNowNs);
+        if (vessel.inventory.referenceVolumeM3 > 0.0) {
+            context.scheduler.offer({id, "pH", vessel.materialRevision, simulationNowNs, 0.0});
+        }
+    }
+    dispatchScience(context);
+}
+
+void collectScience(Context& context, std::uint64_t simulationNowNs) {
+    if (!context.worker) return;
+    while (const auto completion = context.worker->poll()) {
+        const auto& request = completion->observation;
+        const auto& result = completion->result;
+        context.scheduler.complete(request, {plv::ObservationSupport::Supported,
+            plv::ObservationMaturity::Research, result.succeeded, result.pH});
+        const auto* record = context.scheduler.observation(request.vesselId, request.observable);
+        if (record != nullptr && record->solvedRevision == request.materialRevision) {
+            context.scienceResults.insert_or_assign(request.vesselId, result);
+            if (record->freshness == plv::ObservationFreshness::Current) {
+                context.scheduler.markSolved(request.vesselId, request.materialRevision, simulationNowNs);
+            }
+        }
+    }
+    dispatchScience(context);
+}
+
 std::mutex registryMutex;
 std::unordered_map<std::uint64_t, std::shared_ptr<Context>> contexts;
 std::uint64_t nextHandle = 1;
 constexpr std::uint32_t maxInputSize = 16U * 1024U * 1024U;
+constexpr std::size_t exportMutationReserve = 64U * 1024U;
 constexpr std::size_t maxTools = 64U;
 constexpr std::uint64_t inputStaleCutoffNs = 100'000'000ULL;
 constexpr double transportTickS = 0.020;
@@ -183,7 +251,8 @@ json snapshotJson(const plv::SessionSnapshot& snapshot) {
 }
 
 json contextSnapshotJson(const Context& context) {
-    auto result = snapshotJson(context.executor.snapshot());
+    const auto authoritative = context.executor.snapshot();
+    auto result = snapshotJson(authoritative);
     result["mode"] = context.mode;
     result["hold"] = {
         {"active", context.holdActive},
@@ -198,11 +267,53 @@ json contextSnapshotJson(const Context& context) {
     for (const auto& id : toolIds) {
         result["tools"].push_back(toolJson(id, context.tools.at(id)));
     }
+    result["inputWatermarks"] = json::array();
+    for (const auto& id : toolIds) {
+        const auto found = context.inputSequences.find(id);
+        result["inputWatermarks"].push_back({
+            {"toolId", id}, {"sampleSequence", std::to_string(found == context.inputSequences.end() ? 0U : found->second)}
+        });
+    }
+    result["observations"] = json::array();
+    std::vector<std::string> vesselIds;
+    for (const auto& item : authoritative.vessels) vesselIds.push_back(item.first);
+    std::sort(vesselIds.begin(), vesselIds.end());
+    for (const auto& id : vesselIds) {
+        const auto& vessel = authoritative.vessels.at(id);
+        const auto* record = context.scheduler.observation(id, "pH");
+        const auto solved = context.scienceResults.find(id);
+        json observation = {
+            {"vesselId", id}, {"observableId", "pH"}, {"unit", "pH"},
+            {"maturity", "Research"}, {"modelId", "IPhreeqc-minteq-v4-research"},
+            {"databaseIdentity", context.databaseIdentity},
+            {"asOfMaterialRevision", record ? std::to_string(record->solvedRevision) : "0"},
+            {"support", vessel.inventory.referenceVolumeM3 <= 0.0 ? "Unsupported" : "Supported"},
+            {"freshness", "Absent"}, {"computationState", "Pending"}
+        };
+        if (vessel.inventory.referenceVolumeM3 <= 0.0) {
+            observation["computationState"] = "Absent";
+        } else if (!context.worker) {
+            observation["computationState"] = "Failed";
+            observation["error"] = "ScientificDatabaseUnavailable";
+        } else if (record != nullptr) {
+            observation["freshness"] = record->freshness == plv::ObservationFreshness::Current ? "Current" :
+                record->freshness == plv::ObservationFreshness::Stale ? "Stale" : "Pending";
+            observation["computationState"] = record->succeeded ? "Ready" : "Failed";
+            if (record->succeeded && std::isfinite(record->value)) observation["value"] = record->value;
+            if (solved != context.scienceResults.end()) {
+                observation["engineVersion"] = solved->second.engineVersion;
+                observation["databaseIdentity"] = solved->second.databaseIdentity;
+                if (!solved->second.error.empty()) observation["error"] = solved->second.error;
+            }
+        }
+        result["observations"].push_back(std::move(observation));
+    }
     return result;
 }
 
 json exportJson(const Context& context) {
     auto result = contextSnapshotJson(context);
+    result["scientificPackage"] = {{"path", context.databasePath}, {"identity", context.databaseIdentity}};
     result["nextCommandSequence"] = std::to_string(context.nextCommandSequence);
     result["commandReceipts"] = json::array();
     std::vector<std::uint64_t> sequences;
@@ -342,7 +453,12 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
             return PLV_UNSUPPORTED_VERSION;
         }
         const auto branch = parsed.at("branchId").get<std::string>();
-        auto context = std::make_shared<Context>(branch);
+        const auto databasePath = parsed.value("databasePath", std::string{});
+        const auto databaseIdentity = parsed.value("databaseIdentity", std::string{});
+        if ((!databasePath.empty() && databaseIdentity.empty()) ||
+            (databasePath.empty() && !databaseIdentity.empty()) ||
+            databasePath.size() > 1024U || databaseIdentity.size() > 128U) return PLV_INVALID_ARGUMENT;
+        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity);
         const auto initialMode = parsed.value("initialMode", "Desktop");
         if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
         context->mode = initialMode;
@@ -405,6 +521,15 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             return PLV_OK;
         }
 
+        // A command identity is durable only if the resulting session can be imported.
+        // Reserve room for its receipt and the bounded state mutation before dispatch.
+        const auto serializedSize = exportJson(*context).dump().size();
+        if (canonical.size() > maxInputSize - exportMutationReserve ||
+            serializedSize > maxInputSize - exportMutationReserve - canonical.size()) {
+            return PLV_BUSY;
+        }
+
+        const auto beforeCommand = context->executor.snapshot();
         const auto& payload = parsed.at("payload");
         const auto& revisions = parsed.at("expectedMaterialRevisions");
         plv::CommandOutcome outcome;
@@ -571,6 +696,17 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             context->recoveryReady = false;
             for (auto& item : context->tools) item.second.latestInput.reset();
             outcome = {true, "Accepted", ""};
+        } else if (type == "BeginInputHold") {
+            const auto reason = payload.at("reason").get<std::string>();
+            if (reason != "FocusLoss" && reason != "TrackingLoss") {
+                outcome = {false, "InvalidHoldReason", "unsupported input hold reason"};
+            } else {
+                context->holdActive = true;
+                context->holdReason = reason;
+                context->recoveryReady = false;
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                outcome = {true, "Accepted", ""};
+            }
         } else if (type == "Pause") {
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
@@ -587,6 +723,11 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             }
         } else {
             outcome = {false, "UnsupportedCommand", "command type is not implemented"};
+        }
+        if (outcome.accepted) {
+            const auto nowNs = static_cast<std::uint64_t>(
+                std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
+            offerChangedScience(*context, beforeCommand, nowNs);
         }
         const auto serializedOutcome = outcomeJson(parsed, outcome).dump();
         context->receipts.emplace(*sequence, std::make_pair(canonical, serializedOutcome));
@@ -673,6 +814,7 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
         }
         context->inputSequences = std::move(proposedSequences);
         context->tools = std::move(proposedTools);
+        if (context->holdActive) context->recoveryReady = context->tools.empty();
         return PLV_OK;
     } catch (...) {
         return PLV_INVALID_ARGUMENT;
@@ -686,6 +828,9 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     }
     if (!std::isfinite(delta_s) || delta_s < 0.0) return PLV_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(context->mutex);
+    const auto simulationNowNs = static_cast<std::uint64_t>(
+        std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
+    collectScience(*context, simulationNowNs);
     if (context->holdActive) {
         bool ready = true;
         for (const auto& item : context->tools) {
@@ -695,6 +840,16 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
                 monotonic_now_ns - input->captureMonotonicNs > inputStaleCutoffNs) {
                 ready = false;
                 break;
+            }
+        }
+        if (context->holdReason == "Compute" && context->worker) {
+            const auto snapshot = context->executor.snapshot();
+            for (const auto& [id, vessel] : snapshot.vessels) {
+                if (vessel.inventory.referenceVolumeM3 <= 0.0) continue;
+                const auto* observation = context->scheduler.observation(id, "pH");
+                if (observation == nullptr ||
+                    observation->freshness != plv::ObservationFreshness::Current ||
+                    observation->solvedRevision != vessel.materialRevision) ready = false;
             }
         }
         context->recoveryReady = ready;
@@ -747,6 +902,25 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             transportTickS);
         if (requestedVolumeM3 <= 0.0) continue;
 
+        if (context->worker) {
+            const auto proposedTimeNs = simulationNowNs + static_cast<std::uint64_t>(delta_s * 1'000'000'000.0);
+            bool admitted = context->scheduler.admitTransport(tool.sourceInventoryId, requestedVolumeM3, proposedTimeNs).accepted;
+            for (const auto& capture : tool.latestInput->captures) {
+                const auto& receiver = snapshot.vessels.at(capture.destinationInventoryId);
+                if (receiver.inventory.referenceVolumeM3 > 0.0) {
+                    admitted = admitted && context->scheduler.admitTransport(
+                        capture.destinationInventoryId, requestedVolumeM3 * capture.fraction, proposedTimeNs).accepted;
+                }
+            }
+            if (!admitted) {
+                context->holdActive = true;
+                context->holdReason = "Compute";
+                context->recoveryReady = false;
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                return PLV_OK;
+            }
+        }
+
         std::unordered_map<std::string, std::uint64_t> revisions;
         revisions.emplace(tool.sourceInventoryId, source->second.materialRevision);
         for (const auto& capture : tool.latestInput->captures) {
@@ -762,12 +936,43 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
              tool.overflowSinkId},
             revisions);
         if (!outcome.accepted) return PLV_INTERNAL_ERROR;
+        const auto committed = context->executor.snapshot();
+        if (context->worker) {
+            context->scheduler.recordGrossTransport(tool.sourceInventoryId, requestedVolumeM3, simulationNowNs);
+            for (const auto& capture : tool.latestInput->captures) {
+                const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
+                const auto& after = committed.vessels.at(capture.destinationInventoryId);
+                context->scheduler.recordGrossTransport(capture.destinationInventoryId,
+                    after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3, simulationNowNs);
+            }
+            offerChangedScience(*context, snapshot, simulationNowNs);
+        }
+        json captured = json::array();
+        for (const auto& capture : tool.latestInput->captures) {
+            const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
+            const auto& after = committed.vessels.at(capture.destinationInventoryId);
+            captured.push_back({
+                {"destinationInventoryId", capture.destinationInventoryId},
+                {"quantityM3", after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3},
+                {"materialRevision", std::to_string(after.materialRevision)}
+            });
+        }
+        const double spilledQuantityM3 =
+            committed.sinks.at(tool.overflowSinkId).referenceVolumeM3 -
+            snapshot.sinks.at(tool.overflowSinkId).referenceVolumeM3;
         context->events.push_back(json({
             {"schemaVersion", 1},
             {"type", "LiveTransferCommitted"},
+            {"branchId", committed.branchId},
+            {"eventSequence", std::to_string(committed.eventSequence)},
             {"toolId", toolId},
             {"sampleSequence", std::to_string(tool.latestInput->sampleSequence)},
-            {"quantityM3", requestedVolumeM3}
+            {"quantityM3", requestedVolumeM3},
+            {"sourceInventoryId", tool.sourceInventoryId},
+            {"sourceMaterialRevision", std::to_string(committed.vessels.at(tool.sourceInventoryId).materialRevision)},
+            {"captured", std::move(captured)},
+            {"overflowSinkId", tool.overflowSinkId},
+            {"spilledQuantityM3", spilledQuantityM3}
         }).dump());
     }
     context->executor.advanceTime(delta_s);
@@ -828,7 +1033,17 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
         *new_handle = 0U;
         const auto parsed = json::parse(input, input + size);
         const auto snapshot = parseSnapshot(parsed);
-        auto context = std::make_shared<Context>(snapshot.branchId);
+        std::string databasePath;
+        std::string databaseIdentity;
+        if (parsed.contains("scientificPackage")) {
+            const auto& package = parsed.at("scientificPackage");
+            databasePath = package.at("path").get<std::string>();
+            databaseIdentity = package.at("identity").get<std::string>();
+            if ((!databasePath.empty() && databaseIdentity.empty()) ||
+                (databasePath.empty() && !databaseIdentity.empty()) ||
+                databasePath.size() > 1024U || databaseIdentity.size() > 128U) return PLV_INVALID_ARGUMENT;
+        }
+        auto context = std::make_shared<Context>(snapshot.branchId, databasePath, databaseIdentity);
         const auto outcome = context->executor.restore(snapshot);
         if (!outcome.accepted) return PLV_INVALID_ARGUMENT;
         const auto parseTools = [](const json& tools, const plv::SessionSnapshot& ownerSnapshot) {
@@ -918,6 +1133,10 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
             }
         }
         context->nextCommandSequence = *nextSequence;
+        if (context->worker) {
+            const plv::SessionSnapshot empty;
+            offerChangedScience(*context, empty, 0U);
+        }
         std::lock_guard<std::mutex> lock(registryMutex);
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));

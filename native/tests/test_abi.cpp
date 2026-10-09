@@ -5,6 +5,8 @@
 #include <array>
 #include <cstdint>
 #include <string>
+#include <chrono>
+#include <thread>
 
 namespace {
 using json = nlohmann::json;
@@ -350,6 +352,246 @@ TEST_CASE("H02 held session requires neutral fresh baseline and explicit Continu
     CHECK_FALSE(after["hold"]["active"].get<bool>());
     CHECK(after["vessels"] == before["vessels"]);
     CHECK(after["simulationTimeS"].get<double>() == doctest::Approx(0.02));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("H02 replacement open sample invalidates held recovery readiness before Continue") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("3", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); poll(handle);
+    REQUIRE(plv_step(handle, 0.061, 1000000000) == PLV_OK);
+    auto sample = json::parse(R"({"toolId":"burette-1","sampleSequence":"50","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]})");
+    auto batch = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1020000000) == PLV_OK);
+    REQUIRE(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    CHECK(json::parse(read_text(handle))["inputWatermarks"][0]["sampleSequence"] == "50");
+    sample["sampleSequence"] = "51";
+    sample["actuator01"] = 1.0;
+    batch = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
+    submit(handle, command("4", "Continue"));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("H02 focus loss enters native hold until an explicit fresh neutral Continue") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("3", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); poll(handle);
+    submit(handle, command("4", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["hold"]["reason"] == "FocusLoss");
+    submit(handle, command("5", "Continue"));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    const std::string neutral = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(handle, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1020000000) == PLV_OK);
+    submit(handle, command("6", "Continue"));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    CHECK_FALSE(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("T02 long live pour emits ordered allocated events without filling the native queue") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 0.00005}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 0.00005}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 0.00004}},
+                           {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); poll(handle);
+    auto sample = json::parse(R"({"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":1.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":0.75}]})");
+    std::uint64_t priorEventSequence = 0;
+    double allocatedM3 = 0.0;
+    for (std::uint64_t tick = 0; tick < 1001; ++tick) {
+        sample["sampleSequence"] = std::to_string(tick + 1);
+        sample["captureMonotonicNs"] = std::to_string(1000000000ULL + tick * 20000000ULL);
+        const auto batch = json::array({sample}).dump();
+        REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
+        REQUIRE(plv_step(handle, 0.02, 1000000000ULL + tick * 20000000ULL) == PLV_OK);
+        const auto event = poll(handle);
+        REQUIRE(event["type"] == "LiveTransferCommitted");
+        CHECK(event["branchId"] == "branch-1");
+        const auto eventSequence = std::stoull(event["eventSequence"].get<std::string>());
+        CHECK(eventSequence > priorEventSequence);
+        priorEventSequence = eventSequence;
+        const double captured = event["captured"][0]["quantityM3"].get<double>();
+        const double spilled = event["spilledQuantityM3"].get<double>();
+        CHECK(captured + spilled == doctest::Approx(event["quantityM3"].get<double>()).epsilon(1e-9));
+        allocatedM3 += captured + spilled;
+    }
+    CHECK(allocatedM3 > 0.0);
+    CHECK_FALSE(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("L02 accepted command history remains importable at the session size boundary") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    const json payload = {{"note", std::string(6U * 1024U * 1024U, 'x')}};
+    for (int sequence = 1; sequence <= 2; ++sequence) {
+        const auto value = command(std::to_string(sequence), "Pause", payload).dump();
+        REQUIRE(plv_submit(handle, value.data(), static_cast<std::uint32_t>(value.size())) == PLV_OK);
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+    }
+    const auto value = command("3", "Pause", payload).dump();
+    CHECK(plv_submit(handle, value.data(), static_cast<std::uint32_t>(value.size())) == PLV_BUSY);
+    const auto exported = read_text(handle, true);
+    CHECK(exported.size() <= 16U * 1024U * 1024U);
+    CHECK(json::parse(exported)["nextCommandSequence"] == "3");
+    std::uint64_t imported = 0;
+    CHECK(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    if (imported != 0) CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("S01 product ABI publishes current pinned IPhreeqc acid observation") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE}, {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "acid"}, {"capacityM3", 0.00002}})); poll(handle);
+    submit(handle, command("2", "PrepareStock",
+                           {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.00001}},
+                           {{"acid", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    bool current = false;
+    for (int attempt = 0; attempt < 200 && !current; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1000000000ULL) == PLV_OK);
+        const auto snapshot = json::parse(read_text(handle));
+        for (const auto& observation : snapshot.at("observations")) {
+            if (observation.at("vesselId") != "acid" || observation.at("observableId") != "pH" ||
+                observation.at("freshness") != "Current") continue;
+            CHECK(observation.at("support") == "Supported");
+            CHECK(observation.at("maturity") == "Research");
+            CHECK(observation.at("asOfMaterialRevision") == "1");
+            CHECK(observation.at("databaseIdentity") == "minteq.v4.dat-pinned-package-bytes");
+            CHECK(observation.at("value").get<double>() == doctest::Approx(1.0).epsilon(0.2));
+            current = true;
+        }
+        if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(current);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("S01 imported product session resumes pinned chemistry instead of losing its solver") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE}, {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "acid"}, {"capacityM3", 0.00002}})); poll(handle);
+    submit(handle, command("2", "PrepareStock",
+                           {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.00001}},
+                           {{"acid", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto exported = read_text(handle, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+    bool current = false;
+    std::string lastObservation;
+    for (int attempt = 0; attempt < 200 && !current; ++attempt) {
+        REQUIRE(plv_step(imported, 0.0, 1000000000ULL) == PLV_OK);
+        const auto snapshot = json::parse(read_text(imported));
+        lastObservation = snapshot.at("observations").dump();
+        for (const auto& observation : snapshot.at("observations")) {
+            if (observation.at("vesselId") != "acid" || observation.at("freshness") != "Current") continue;
+            CHECK(observation.at("databaseIdentity") == "minteq.v4.dat-pinned-package-bytes");
+            CHECK(observation.at("value").get<double>() == doctest::Approx(1.0).epsilon(0.2));
+            current = true;
+        }
+        if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    INFO(lastObservation);
+    CHECK(current);
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("S01 product session solves acid base acetate and mixed inventories from their materials") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE}, {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    const std::array<std::pair<std::string, std::string>, 4> stocks{{
+        {"acid", "HydrochloricAcid"}, {"base", "SodiumHydroxide"},
+        {"acetate", "SodiumAcetate"}, {"mixed", "AceticAcid"}}};
+    std::uint64_t sequence = 1;
+    for (const auto& [id, kind] : stocks) {
+        submit(handle, command(std::to_string(sequence++), "CreateVessel", {{"id", id}, {"capacityM3", 0.00002}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        submit(handle, command(std::to_string(sequence++), "PrepareStock",
+                               {{"vesselId", id}, {"stockKind", kind},
+                                {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.00001}},
+                               {{id, "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+    }
+    std::unordered_map<std::string, double> current;
+    for (int attempt = 0; attempt < 300 && current.size() < stocks.size(); ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1000000000ULL) == PLV_OK);
+        const auto snapshot = json::parse(read_text(handle));
+        for (const auto& observation : snapshot.at("observations")) {
+            if (observation.at("freshness") != "Current") continue;
+            REQUIRE(observation.at("asOfMaterialRevision") == "1");
+            REQUIRE(observation.at("databaseIdentity") == "minteq.v4.dat-pinned-package-bytes");
+            current[observation.at("vesselId").get<std::string>()] = observation.at("value").get<double>();
+        }
+        if (current.size() < stocks.size()) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(current.size() == stocks.size());
+    CHECK(current.at("acid") < current.at("mixed"));
+    CHECK(current.at("mixed") < current.at("acetate"));
+    CHECK(current.at("acetate") < current.at("base"));
+    submit(handle, command(std::to_string(sequence++), "CreateSink", {{"id", "spill"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command(std::to_string(sequence++), "TransferFixed",
+                           {{"sourceInventoryId", "mixed"}, {"sourceRegion", "Homogeneous"},
+                            {"selection", "HomogeneousAqueousLiquid"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 5e-6}}},
+                            {"captureFractions", {{{"destinationInventoryId", "acetate"}, {"fraction", 1.0}}}},
+                            {"overflowSinkId", "spill"}},
+                           {{"mixed", "1"}, {"acetate", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    bool mixedCurrent = false;
+    for (int attempt = 0; attempt < 300 && !mixedCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1000000000ULL) == PLV_OK);
+        const auto snapshot = json::parse(read_text(handle));
+        for (const auto& observation : snapshot.at("observations")) {
+            if (observation.at("vesselId") != "acetate" || observation.at("freshness") != "Current" ||
+                observation.at("asOfMaterialRevision") != "2") continue;
+            CHECK(observation.at("value").get<double>() < current.at("acetate"));
+            mixedCurrent = true;
+        }
+        if (!mixedCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(mixedCurrent);
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
