@@ -4,7 +4,7 @@
   "branch": "feat/foundation-vr-first",
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
-  "testedCodeCommitSha": "10d6dae",
+  "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
   "evidenceCommitNote": "Evidence documentation is committed after the tested code commit; no later product code is included.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
@@ -35,7 +35,9 @@
     },
     "unityEditMode": {
       "result": "22/22",
-      "path": "artifacts/test-results/EditMode-cylinder-fixed-v2.xml"
+      "path": "artifacts/test-results/EditMode-cylinder-fixed-v2.xml",
+      "regressionRedPath": "artifacts/test-results/EditMode-red-cylinder.xml",
+      "regressionRedResult": "21/22 before the production fix"
     },
     "unityPlayMode": {
       "result": "14/14",
@@ -76,7 +78,8 @@
   "performance": {
     "instrumentation": "Raw frame, hold and memory trace written by actual Windows Desktop Player",
     "shortTrace": "artifacts/performance/windows-desktop-short-a9f2268.json",
-    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json (historical code)",
+    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json",
+    "uncontrolledTraceScope": "Historical 161f4cd code and uncontrolled duration; no performance acceptance claim",
     "loadContinueTrace": "artifacts/performance/windows-desktop-load-continue-10d6dae.json",
     "publicationCriteria": "EvidenceMissing: no controlled 1/4/10 vessel workload or three 30-minute target/device runs; raw traces are not benchmark results"
   },

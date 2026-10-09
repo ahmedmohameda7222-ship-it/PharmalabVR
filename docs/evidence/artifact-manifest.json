@@ -72,6 +72,11 @@
       "sha256": "E7F7A2627F3FBF52B01998800A6CCA50AA16A44743C4902C3FDBC7A1946EA186"
     },
     {
+      "path": "artifacts/test-results/EditMode-red-cylinder.xml",
+      "bytes": 21685,
+      "sha256": "5B7133166DB84B75A909EB8B203823136B37267F0446516C7D7FC8F8C78909B9"
+    },
+    {
       "path": "artifacts/test-results/PlayMode-cylinder-fixed.xml",
       "bytes": 15253,
       "sha256": "7F83B9DF3915DD45F29A84ABEC9F2C49CEBA78E22EEC17B1AAE9398DD15882C3"

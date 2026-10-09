@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import argparse
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,7 @@ FILES = [
     "artifacts/test-results/ctest-final-current.txt",
     "artifacts/test-results/python-tooling-oct9-current.txt",
     "artifacts/test-results/EditMode-cylinder-fixed-v2.xml",
+    "artifacts/test-results/EditMode-red-cylinder.xml",
     "artifacts/test-results/PlayMode-cylinder-fixed.xml",
     "artifacts/logs/unity-WindowsDesktop-10d6dae.log",
     "artifacts/logs/unity-WindowsVR-10d6dae.log",
@@ -56,10 +58,17 @@ def tree_record(relative: str) -> dict:
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tested-code-commit", required=True, help="Full Git commit SHA of tested product code")
+    args = parser.parse_args()
     missing = [relative for relative in FILES if not (ROOT / relative).is_file()]
     if missing:
         raise SystemExit(f"Missing evidence files: {missing}")
-    revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+    revision = subprocess.check_output(
+        ["git", "rev-parse", "--verify", f"{args.tested_code_commit}^{{commit}}"], cwd=ROOT, text=True
+    ).strip()
+    if len(args.tested_code_commit) != 40 or revision.lower() != args.tested_code_commit.lower():
+        raise SystemExit("Pass the full SHA of an existing tested code commit")
     records = [tree_record(name) for name in ("artifacts/WindowsDesktop", "artifacts/WindowsVR")]
     records.extend(
         {"path": relative, "bytes": (ROOT / relative).stat().st_size, "sha256": digest(ROOT / relative)}
