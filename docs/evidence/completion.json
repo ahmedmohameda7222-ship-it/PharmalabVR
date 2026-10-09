@@ -2,33 +2,114 @@
   "schemaVersion": 2,
   "repository": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR",
   "branch": "feat/foundation-vr-first",
-  "commitSha": "83d862780e7fe043a3026c1c3930999fcc09c9ee",
-  "commitScope": "functional code revision used to produce the recorded builds; the later evidence-only delivery SHA is reported externally",
+  "commitSha": "5ffb18ea4fd517a9aef9e0843b50d7fdba7cd05f",
+  "commitScope": "Historical functional builds and Player journeys are identified per artifact; Oct9 classification audit is not a new Player build",
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
   "packageVerification": "Passed",
   "environmentReady": true,
-  "implementedTaskIds": ["P00","P01","P02","P03","P04","P05","P06","P07","P08","P09","P10","P11","P12","P13","P14","P15","P16"],
+  "implementedTaskIds": [
+    "P00"
+  ],
   "taskStatusEvidence": "docs/evidence/progress.json",
-  "acceptanceSummary": {"Passed":42,"Partial":49,"EvidenceMissing":4,"catalog":"docs/evidence/acceptance-95.json"},
+  "acceptanceSummary": {
+    "catalog": "docs/evidence/acceptance-95.json",
+    "Passed": 19,
+    "Partial": 72,
+    "EvidenceMissing": 4,
+    "scope": "Self-assigned evidence classifications after Oct9 audit; not independently certified 95-case acceptance"
+  },
   "testResults": {
-    "native":{"status":"Passed","cases":52,"assertions":565,"ctest":"1/1","paths":["artifacts/test-results/native-release.txt","artifacts/test-results/ctest-release.txt"]},
-    "pythonTooling":{"status":"Passed","cases":6,"path":"artifacts/test-results/python-tooling.txt"},
-    "idealReference":{"status":"Passed","cases":40,"maxExpectedPHError":0.0,"maxChargeResidualMolPerL":5.204170427930421e-17,"scope":"independent ideal numeric reference only","path":"artifacts/test-results/ideal-reference.txt"},
-    "unityEditMode":{"status":"Passed","result":"18/18","path":"artifacts/test-results/unity-editmode-final.xml"},
-    "unityPlayMode":{"status":"Passed","result":"3/3","path":"artifacts/test-results/unity-playmode-final.xml"}
+    "native": {
+      "status": "Passed",
+      "cases": 52,
+      "assertions": 565,
+      "ctest": "1/1",
+      "paths": [
+        "artifacts/test-results/native-release.txt",
+        "artifacts/test-results/ctest-release.txt"
+      ]
+    },
+    "pythonTooling": {
+      "status": "Passed",
+      "cases": 6,
+      "path": "artifacts/test-results/python-tooling.txt"
+    },
+    "idealReference": {
+      "status": "Passed",
+      "cases": 40,
+      "maxExpectedPHError": 0.0,
+      "maxChargeResidualMolPerL": 5.204170427930421e-17,
+      "scope": "independent ideal numeric reference only",
+      "path": "artifacts/test-results/ideal-reference.txt"
+    },
+    "unityEditMode": {
+      "status": "Passed",
+      "result": "18/18",
+      "path": "artifacts/test-results/unity-editmode-final.xml"
+    },
+    "unityPlayMode": {
+      "status": "Passed",
+      "result": "3/3",
+      "path": "artifacts/test-results/unity-playmode-final.xml"
+    }
   },
-  "unityEditor": {"version":"6000.3.25f1"},
+  "unityEditor": {
+    "version": "6000.3.25f1"
+  },
   "players": {
-    "WindowsDesktop":{"build":"Passed on 83d8627","actualStart":"Passed on b679ccc","actualLabEntry":"Passed on b679ccc","criticalRuntimeErrors":0,"openXrRuntimeErrors":0,"buildLog":"artifacts/logs/unity-build-WindowsDesktop-postreview.log","runLog":"artifacts/logs/windows-desktop-lab-player-final.log"},
-    "WindowsVR":{"build":"Passed on 83d8627","noRuntimeStart":"Passed on b679ccc","expectedNoRuntimeDiagnostic":"XR_ERROR_RUNTIME_UNAVAILABLE","physicalVr":"EvidenceMissing","buildLog":"artifacts/logs/unity-build-WindowsVR-postreview.log","runLog":"artifacts/logs/windows-vr-no-runtime-player.log"},
-    "AndroidVR":{"build":"Passed on 83d8627","architecture":"ARM64","backend":"IL2CPP","minSdk":25,"physicalInstall":"EvidenceMissing","thermal":"EvidenceMissing","buildLog":"artifacts/logs/unity-build-AndroidVR-postreview.log"}
+    "WindowsDesktop": {
+      "build": "Passed on 83d8627",
+      "actualStart": "Passed on b679ccc",
+      "actualLabEntry": "Passed on b679ccc",
+      "criticalRuntimeErrors": 0,
+      "openXrRuntimeErrors": 0,
+      "buildLog": "artifacts/logs/unity-build-WindowsDesktop-postreview.log",
+      "runLog": "artifacts/logs/windows-desktop-lab-player-final.log"
+    },
+    "WindowsVR": {
+      "build": "Passed on 83d8627",
+      "noRuntimeStart": "Passed on b679ccc",
+      "expectedNoRuntimeDiagnostic": "XR_ERROR_RUNTIME_UNAVAILABLE",
+      "physicalVr": "EvidenceMissing",
+      "buildLog": "artifacts/logs/unity-build-WindowsVR-postreview.log",
+      "runLog": "artifacts/logs/windows-vr-no-runtime-player.log"
+    },
+    "AndroidVR": {
+      "build": "Passed on 83d8627",
+      "architecture": "ARM64",
+      "backend": "IL2CPP",
+      "minSdk": 25,
+      "physicalInstall": "EvidenceMissing",
+      "thermal": "EvidenceMissing",
+      "buildLog": "artifacts/logs/unity-build-AndroidVR-postreview.log"
+    }
   },
-  "screenshots": ["artifacts/screenshots/windows-desktop-boot.png","artifacts/screenshots/windows-desktop-lab.png","artifacts/screenshots/windows-vr-no-runtime.png"],
-  "artifactManifest":"docs/evidence/artifact-manifest.json",
-  "hardwareProfile":"docs/evidence/environment.json",
-  "scientificCoverage":{"softwareReference":"Passed","productionAdapter":"Passed for tested aqueous research scope","experimentalValidation":"EvidenceMissing"},
-  "missingPrerequisites":["physical VR headset/controller run","Android device install and thermal/power run","official XR Device Simulator end-to-end journey","three 30-minute publication performance captures","measured calibration, optical, tracer/mixing and experimental validation","participant human-factors study"],
-  "deviations":["WindowsVR was started without an available OpenXR runtime or headset and is not reported as a physical pass","Android APK structure was inspected but the APK was not installed on a device","performance acceptance remains unpublished because the required long target captures do not exist"],
-  "notes":"Software build/test evidence is local and real. Physical-headset, device install/thermal, human-factors, optical, calibration, tracer/mixing, and experimental scientific validation are not claimed. The final delivery SHA is reported externally because embedding a commit's own SHA is self-referential."
+  "screenshots": [
+    "artifacts/screenshots/windows-desktop-boot.png",
+    "artifacts/screenshots/windows-desktop-lab.png",
+    "artifacts/screenshots/windows-vr-no-runtime.png"
+  ],
+  "artifactManifest": "docs/evidence/artifact-manifest.json",
+  "hardwareProfile": "docs/evidence/environment.json",
+  "scientificCoverage": {
+    "softwareReference": "Passed for the independent 40-case ideal fixture only",
+    "productionAdapter": "Partial — standalone IPhreeqc tests; no product session observations or packaged Player database solve",
+    "experimentalValidation": "EvidenceMissing"
+  },
+  "missingPrerequisites": [
+    "physical VR headset/controller run",
+    "Android device install and thermal/power run",
+    "official XR Device Simulator end-to-end journey",
+    "three 30-minute publication performance captures",
+    "measured calibration, optical, tracer/mixing and experimental validation",
+    "participant human-factors study"
+  ],
+  "deviations": [
+    "WindowsVR was started without an available OpenXR runtime or headset and is not reported as a physical pass",
+    "Android APK structure was inspected but the APK was not installed on a device",
+    "performance acceptance remains unpublished because the required long target captures do not exist"
+  ],
+  "notes": "Oct9 review found runtime integration gaps. Historical test/build evidence remains valid only for its cited revision and narrow scope. P00-P16 are not all implemented or accepted; see progress.json. Research scientific and device gates remain open.",
+  "implementedTaskIdsScope": "Only P00 is marked fully complete in the Oct9 audit; partial source/build foundations are listed in docs/evidence/progress.json. This file will be refreshed after implementation."
 }
