@@ -130,6 +130,26 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void V01_CylinderLiquidRenderedBoundsMatchFullHalfAndEmptyVolume()
+        {
+            var root = new GameObject("vessel");
+            var visual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            visual.transform.SetParent(root.transform, false);
+            var presenter = root.AddComponent<LiquidPresenter>();
+            presenter.Configure(visual.transform, 1e-5, 0.2f, -0.1f);
+
+            presenter.SetCommittedVolume(1e-5);
+            Assert.That(visual.GetComponent<Renderer>().bounds.size.y, Is.EqualTo(0.2f).Within(1e-5f));
+            Assert.That(visual.GetComponent<Renderer>().bounds.min.y, Is.EqualTo(-0.1f).Within(1e-5f));
+            presenter.SetCommittedVolume(5e-6);
+            Assert.That(visual.GetComponent<Renderer>().bounds.size.y, Is.EqualTo(0.1f).Within(1e-5f));
+            Assert.That(visual.GetComponent<Renderer>().bounds.min.y, Is.EqualTo(-0.1f).Within(1e-5f));
+            presenter.SetCommittedVolume(0);
+            Assert.That(visual.activeSelf, Is.False);
+            Object.DestroyImmediate(root);
+        }
+
+        [Test]
         public void J03_UnsupportedObservationNeverDisplaysAValue()
         {
             var root = new GameObject("measurement");

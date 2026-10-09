@@ -32,7 +32,10 @@ namespace PharmaLabVR.Tools
             if (liquidVisual == null) return;
             var height = maximumVisualHeight * Fill01;
             var scale = liquidVisual.localScale;
-            scale.y = height;
+            var filter = liquidVisual.GetComponent<MeshFilter>();
+            var mesh = filter != null ? filter.sharedMesh : null;
+            var meshHeight = mesh != null ? mesh.bounds.size.y : 1f;
+            scale.y = height / (meshHeight > 0f ? meshHeight : 1f);
             liquidVisual.localScale = scale;
             var position = liquidVisual.localPosition;
             position.y = baseLocalY + height * 0.5f;
