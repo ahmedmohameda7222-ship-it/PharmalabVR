@@ -1,1 +1,5 @@
-{"schemaVersion":1,"target":"SimulatedXR","status":"BuildNotVerified","reason":"Pinned Unity Editor unavailable on implementation host","physicalVrTested":false,"comfortTested":false,"opticalCalibrationTested":false}
+{
+  "schemaVersion":2,"target":"SimulatedXR","status":"Partial",
+  "evidence":"Unity scene/XRI structural tests and native VR session PlayMode test passed; a complete official XR Device Simulator journey was not executed",
+  "editMode":"18/18 Passed","playMode":"3/3 Passed","physicalVrTested":false,"comfortTested":false,"opticalCalibrationTested":false
+}

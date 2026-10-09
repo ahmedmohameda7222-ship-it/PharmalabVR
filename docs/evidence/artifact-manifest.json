@@ -1,0 +1,22 @@
+{
+  "schemaVersion":2,"codeRevision":"83d862780e7fe043a3026c1c3930999fcc09c9ee","gitTreeSha1":"7f2b8d5a9a74449f9cc23ccaf94c5f020859c95c","hashAlgorithm":"SHA-256",
+  "treeDigestAlgorithm":"SHA-256 of UTF-8 sorted lines '<lowercase file sha256>  <forward-slash relative path>\\n'",
+  "artifacts":[
+    {"path":"artifacts/WindowsDesktop","files":185,"bytes":98987871,"treeSha256":"A5F40418006A32E724C215EA826404CF17C2D298846CA3573CB4D5C6095C424F"},
+    {"path":"artifacts/WindowsDesktop/PharmaLabVR.exe","bytes":667136,"sha256":"3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653"},
+    {"path":"artifacts/WindowsVR","files":187,"bytes":102260139,"treeSha256":"5F024AC9A4C4B9C4B68948E14C9A9C5D24ECC3C7FDAAAFD8D8E4EDAC6963526E"},
+    {"path":"artifacts/WindowsVR/PharmaLabVR.exe","bytes":667136,"sha256":"3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653"},
+    {"path":"artifacts/WindowsVR/PharmaLabVR_Data/Plugins/x86_64/openxr_loader.dll","bytes":2373632,"sha256":"F7384429C16288D9C2C123ACFCA1E040C9CEC6C5484A3F5A5107D6AA32BA57E8"},
+    {"path":"artifacts/AndroidVR/PharmaLabVR-research.apk","bytes":34925738,"sha256":"9B34893D0D40A7944DE5623DE1AD8E707DF6653B228438955F9C4BB9047DFCFD"},
+    {"path":"unity/Assets/Plugins/x86_64/pharmalab_core.dll","bytes":339968,"sha256":"A9F58AA825E1F1CE3E39860EED2DD78196195B9C2F31991FDF9EFBCE094F56CE"},
+    {"path":"unity/Assets/Plugins/Android/arm64-v8a/libpharmalab_core.so","bytes":8046352,"sha256":"E45A80A77D974ED7CFE8D5EF16A79AABF7B03EE627DF4E43994263B8922ADA45"},
+    {"path":"artifacts/screenshots/windows-desktop-boot.png","bytes":100504,"sha256":"8F5FEDF0C2C22C4183E1DE5A8B2342A2A9C094E9AC12061E3E8BE07FDB3786B5"},
+    {"path":"artifacts/screenshots/windows-desktop-lab.png","bytes":79696,"sha256":"7F36B4E0A176D76E4DFBAB802C6551EA9BFDEF171BFCC196D248A02824F411A9"},
+    {"path":"artifacts/screenshots/windows-vr-no-runtime.png","bytes":103838,"sha256":"E2AC1B31EDDFA320D96EE105C50615BB0791EB781297AE4DD9A2FC77B77DE65F"},
+    {"path":"unity/Packages/manifest.json","bytes":325,"sha256":"B06C09114CEBAFA789DAB7DB4B03FBBFDF9EC0A6E288D0A15D6C9BC5F490895B","role":"Unity package manifest"},
+    {"path":"unity/Packages/packages-lock.json","bytes":7881,"sha256":"0C6EE23A0CC52355EE18AB0062719153B7D4B5137C848E469AD5C5C81787DF74","role":"resolved Unity package lock"},
+    {"path":"science/packages/aqueous-six-research-v1/manifest.json","bytes":459,"sha256":"05CD9FC8E863DE9E5EC128B527EC2FAD99901E9EB38C35B37B62D1EA15A6E6D4","role":"scientific package manifest"},
+    {"path":"third_party/iphreeqc-source/database/minteq.v4.dat","bytes":334121,"sha256":"AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7","role":"pinned thermodynamic database"},
+    {"path":"native/core/src/iphreeqc_adapter.cpp","bytes":7752,"sha256":"C312FF280249EC52612E111F076A8EAA3997B124CA8CE9D426F2B1634960AD95","role":"production scientific adapter source"}
+  ]
+}

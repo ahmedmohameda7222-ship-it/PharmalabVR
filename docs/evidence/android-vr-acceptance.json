@@ -1,1 +1,7 @@
-{"schemaVersion":1,"target":"AndroidVR","status":"EvidenceMissing","reason":"No Unity Android modules or physical headset","physicalInstallTested":false,"thermalTested":false}
+{
+  "schemaVersion":2,"target":"AndroidVR","buildStatus":"Passed","buildRevision":"83d8627","buildLog":"artifacts/logs/unity-build-AndroidVR-postreview.log",
+  "artifact":"artifacts/AndroidVR/PharmaLabVR-research.apk","applicationId":"com.pharmalabvr.lab","version":"0.1.0-research",
+  "minSdk":25,"architectures":["arm64-v8a"],"backend":"IL2CPP","controllerProfilesConfigured":true,
+  "verifiedLibraries":["libpharmalab_core.so","libil2cpp.so","libopenxr_loader.so","libUnityOpenXR.so"],
+  "physicalInstallTested":false,"thermalTested":false,"deviceStatus":"EvidenceMissing"
+}

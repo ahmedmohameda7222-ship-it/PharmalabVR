@@ -1,1 +1,6 @@
-{"schemaVersion":1,"target":"WindowsVR","status":"EvidenceMissing","reason":"No Unity Editor or physical headset","physicalVrTested":false}
+{
+  "schemaVersion":2,"target":"WindowsVR","buildStatus":"Passed","buildRevision":"83d8627","buildLog":"artifacts/logs/unity-build-WindowsVR-postreview.log",
+  "openXrLoaderPackaged":true,"controllerProfilesConfigured":true,"noRuntimeStart":"Passed with expected XR_ERROR_RUNTIME_UNAVAILABLE diagnostics","noRuntimeStartRevision":"b679ccc",
+  "noRuntimePlayerLog":"artifacts/logs/windows-vr-no-runtime-player.log","screenshot":"artifacts/screenshots/windows-vr-no-runtime.png",
+  "physicalVrTested":false,"physicalVrStatus":"EvidenceMissing","performanceAcceptance":"EvidenceMissing"
+}

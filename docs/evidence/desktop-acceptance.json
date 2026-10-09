@@ -1,1 +1,7 @@
-{"schemaVersion":1,"target":"WindowsDesktop","status":"BuildNotVerified","reason":"Pinned Unity Editor and MSVC toolchain unavailable on implementation host","headsetRequired":false,"actualPlayerRun":false}
+{
+  "schemaVersion":2,"target":"WindowsDesktop","status":"Passed","headsetRequired":false,
+  "buildLog":"artifacts/logs/unity-build-WindowsDesktop-postreview.log","buildRevision":"83d8627","actualPlayerRun":true,"actualLabEntry":true,"actualPlayerRunRevision":"b679ccc",
+  "criticalRuntimeErrors":0,"openXrRuntimeErrors":0,"playerLog":"artifacts/logs/windows-desktop-lab-player-final.log",
+  "screenshots":["artifacts/screenshots/windows-desktop-boot.png","artifacts/screenshots/windows-desktop-lab.png"],
+  "performanceAcceptance":"EvidenceMissing"
+}
