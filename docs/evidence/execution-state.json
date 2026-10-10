@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P01.03",
+  "nextTask": "P02.01",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -233,13 +233,23 @@
           "dependencies": [
             "P01.02"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "24638ad35c2ce47fdce9c36d674755638273939d",
+          "evidence": [
+            "docs/evidence/p01-03-recovery.md",
+            "native/tests/test_abi.cpp:P01_03 expiry/SetActuator and held rinse regressions",
+            "Native Release 68/68, 9201/9201; CTest 1/1",
+            "Unity PlayMode 14/14"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "docs/evidence/p01-03-recovery.md",
+            "native/tests/test_abi.cpp:P01_03 expiry/SetActuator and held rinse regressions",
+            "Native Release 68/68, 9201/9201; CTest 1/1",
+            "Unity PlayMode 14/14"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Native ABI boundary and Unity PlayMode Continue action; physical VR/complete spatial recovery UI separate.",
           "blocker": null
         }
       ],
@@ -2037,16 +2047,17 @@
       "G-R1"
     ]
   },
-  "actualHead": "e5c6b69c8cf89a20b8e41bf0b17fb362c385118d",
-  "functionalCodeSha": "e5c6b69c8cf89a20b8e41bf0b17fb362c385118d",
-  "currentTask": "P01.03",
-  "lastVerifiedTask": "P01.02",
+  "actualHead": "24638ad35c2ce47fdce9c36d674755638273939d",
+  "functionalCodeSha": "24638ad35c2ce47fdce9c36d674755638273939d",
+  "currentTask": "P02.01",
+  "lastVerifiedTask": "P01.03",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
   "executionNotes": [
     "Imported v2 template once; no prior execution-state existed. Existing P00 foundation evidence remains in progress.json and will be reconciled before granting any new task VerifiedLocal.",
     "G-R1 remains Open; P18-P22 are gated.",
-    "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix."
+    "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix.",
+    "P02.01 is the six-stock preparation catalog and removal of forced NaCl demo per v2 phase file; checkpoint science rollback remains O10-N1 for a later science task, not P02.01."
   ]
 }
