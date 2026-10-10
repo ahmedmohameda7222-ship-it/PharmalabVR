@@ -785,12 +785,17 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
         } else if (type == "Continue") {
-            const auto clock = payload.contains("monotonicNowNs") && payload.at("monotonicNowNs").is_string()
-                                   ? decimalSequence(payload.at("monotonicNowNs").get<std::string>())
-                                   : std::nullopt;
-            if (context->holdActive && (!context->recoveryReady ||
-                (!context->tools.empty() && (!clock || *clock < context->lastMonotonicNowNs ||
-                                              !freshNeutralInputs(*context, *clock))))) {
+            bool neutralAtBoundary = context->tools.empty();
+            if (context->holdActive && !neutralAtBoundary &&
+                payload.contains("monotonicNowNs") && payload.at("monotonicNowNs").is_string()) {
+                const auto submittedNowNs = decimalSequence(payload.at("monotonicNowNs").get<std::string>());
+                if (submittedNowNs.has_value()) {
+                    const auto nowNs = submittedNowNs.value();
+                    neutralAtBoundary = nowNs >= context->lastMonotonicNowNs &&
+                                        freshNeutralInputs(*context, nowNs);
+                }
+            }
+            if (context->holdActive && (!context->recoveryReady || !neutralAtBoundary)) {
                 outcome = {false, "RecoveryNotReady", "neutral fresh tracked baselines are required"};
             } else {
                 context->holdActive = false;
