@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PharmaLabVR capability package manifest",
+  "type": "object",
+  "required": [
+    "id",
+    "version",
+    "providerKind",
+    "coverage",
+    "sources",
+    "validation",
+    "maturity"
+  ],
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "string"
+    },
+    "providerKind": {
+      "enum": [
+        "Equilibrium",
+        "Kinetic",
+        "Multiphase",
+        "InstrumentForwardModel",
+        "RecordedDataset",
+        "TechniqueTraining",
+        "ReferenceOnly"
+      ]
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "materials",
+        "combinations",
+        "conditions",
+        "observables",
+        "equipment",
+        "assumptions"
+      ],
+      "properties": {
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "combinations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "equipment": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uri"
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": [
+        "status",
+        "evidencePaths"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "DataPending",
+            "ImplementedUnvalidated",
+            "NumericallyChecked",
+            "ExperimentallyValidated"
+          ]
+        },
+        "evidencePaths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "maturity": {
+      "enum": [
+        "ReferenceOnly",
+        "Approximate",
+        "Research",
+        "PublishedWithinCoverage"
+      ]
+    },
+    "hash": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "parameterSchema": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

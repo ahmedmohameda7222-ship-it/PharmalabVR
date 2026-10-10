@@ -1,0 +1,2030 @@
+{
+  "schemaVersion": 1,
+  "planId": "pharmalabvr-premium-platform-2026-10-10",
+  "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
+  "branch": "feat/foundation-vr-first",
+  "nextTask": "P01.01",
+  "executionOrder": [
+    "P00.01",
+    "P00.02",
+    "P01.01",
+    "P01.02",
+    "P01.03",
+    "P02.01",
+    "P02.02",
+    "P02.03",
+    "P04.01",
+    "P04.02",
+    "P04.03",
+    "P05.01",
+    "P05.02",
+    "P05.03",
+    "P06.01",
+    "P06.02",
+    "P08.01",
+    "P08.02",
+    "P07.01",
+    "P07.02",
+    "P07.03",
+    "P03.01",
+    "P03.02",
+    "P03.03",
+    "P08.03",
+    "P08.04",
+    "P09.01",
+    "P09.02",
+    "P10.01",
+    "P10.02",
+    "P10.03",
+    "P11.01",
+    "P11.02",
+    "P11.03",
+    "P12.01",
+    "P12.02",
+    "P12.03",
+    "P13.01",
+    "P13.02",
+    "P14.01",
+    "P14.02",
+    "P15.01",
+    "P15.02",
+    "P16.01",
+    "P16.02",
+    "P17.01",
+    "P17.02",
+    "P17.03",
+    "P23.01",
+    "P23.02",
+    "P23.03",
+    "P23.04",
+    "P18.01",
+    "P18.02",
+    "P18.03",
+    "P19.01",
+    "P19.02",
+    "P20.01",
+    "P20.02",
+    "P20.03",
+    "P21.01",
+    "P21.02",
+    "P22.01",
+    "P22.02",
+    "P24.01",
+    "P24.02"
+  ],
+  "phases": [
+    {
+      "id": "P00",
+      "title": "Baseline and durable execution control",
+      "arabicTitle": "تثبيت الأساس ومكان الاستكمال",
+      "baseline": "EnvironmentVerified",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P00.01",
+          "title": "Resume actual checkout",
+          "decision": "Read AGENTS, current HEAD/worktree/PR and package; preserve local work; import this plan once under docs/premium-master without publicly copying private originals.",
+          "acceptance": "Record actual HEAD/toolchain and a justified disposition for every current finding; no reset to the old snapshot.",
+          "files": [
+            "scripts/doctor.ps1",
+            "docs/evidence",
+            "docs/premium-master"
+          ],
+          "dependencies": [],
+          "status": "VerifiedLocal",
+          "codeCommit": null,
+          "evidence": [
+            "docs/evidence/oct10-finding-disposition.md",
+            "docs/evidence/environment.json",
+            "artifacts/handoff-v2/verify-package.py:69/69",
+            "C:/plv-v3-oct10/PharmaLabVR-Implementation-Package-v3-RECOVERED/RECOVERY-REPORT.json"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/oct10-finding-disposition.md",
+            "docs/evidence/environment.json",
+            "artifacts/handoff-v2/verify-package.py:69/69",
+            "C:/plv-v3-oct10/PharmaLabVR-Implementation-Package-v3-RECOVERED/RECOVERY-REPORT.json"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "intake checkout, toolchain, package integrity and all Oct10 finding dispositions",
+          "blocker": null
+        },
+        {
+          "id": "P00.02",
+          "title": "Persistent task ledger",
+          "decision": "Install execution-state JSON schema and NEXT.md with next eligible task; reconcile existing implementations against the original95 cases rather than redoing passed foundations.",
+          "acceptance": "A new turn with only continue resumes from disk and finds first eligible incomplete task; never depends on chat memory.",
+          "files": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md"
+          ],
+          "dependencies": [
+            "P00.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": null,
+          "evidence": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md",
+            "scripts/next-task.py",
+            "python -m unittest scripts/test_next_task.py:1 passed"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md",
+            "scripts/next-task.py",
+            "python -m unittest scripts/test_next_task.py:1 passed"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "durable dependency ledger and continuation selector",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P01",
+      "title": "Native ABI and runtime correctness",
+      "arabicTitle": "صحة المحرك والواجهة الأصلية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P01.01",
+          "title": "Atomic multi-tool tick",
+          "decision": "Reproduce O10-N3, preflight full accepted tick and reserve queue/science/material resources before mutation; reject or admit entire tick.",
+          "acceptance": "Ten accepted tools cannot partially commit at simulationTime0; denied tick preserves all inventories/time/events; admitted tick advances once.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/transport.cpp",
+            "native/tests/test_abi.cpp"
+          ],
+          "dependencies": [
+            "P00.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P01.02",
+          "title": "Lifecycle, ownership and bounded limits",
+          "decision": "Enforce declared one-live-session, owner mutation thread, ABI lifetime/queue/buffer limits; keep all engine context lifecycle on SolverWorker.",
+          "acceptance": "Real repeated create/import/destroy and one-over-limit tests; no double free, race or silent success; actual engine teardown bounded or honestly blocked.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/solver_worker.cpp",
+            "native/tests/test_abi.cpp",
+            "native/tests/test_solver_lifecycle.cpp"
+          ],
+          "dependencies": [
+            "P01.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P01.03",
+          "title": "Complete boundary recovery",
+          "decision": "Continue rechecks fresh neutral input at the boundary, including command invalidation and readiness expiry; preserve fixed monotone sequence/event polling behavior.",
+          "acceptance": "Expiry or SetActuator/Rinse after readiness cannot permit stale Continue; all hold reasons preserve material.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/tests/test_abi.cpp"
+          ],
+          "dependencies": [
+            "P01.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P02",
+      "title": "Materials, preparations and revisions",
+      "arabicTitle": "المواد والتحضير وتوازن الكميات",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P02.01",
+          "title": "Six-stock preparation catalog",
+          "decision": "Use aqueous-six-research-v1 stock data and 0.01/0.05/0.1M supported test points; create real initially empty apparatus; stock selection prepares through commands, never pH assignment.",
+          "acceptance": "Select each stock and verify pools, water, reference volume and preparation identity; no25ml NaCl forced demo as normal Open Lab.",
+          "files": [
+            "science/packages/aqueous-six-research-v1/stocks.json",
+            "native/core/src/material.cpp",
+            "Runtime/Core/CoreDriver.cs"
+          ],
+          "dependencies": [
+            "P01.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P02.02",
+          "title": "Shared command facade",
+          "decision": "UI operations are domain intents through CoreSession.SubmitOrdered; every mutation uses touched revisions and receipts; no UI-side inventory/chemistry copies.",
+          "acceptance": "Identical/rejected/conflicting identities and unrelated-vessel revisions retain original semantics; views update only from committed snapshots/outcomes.",
+          "files": [
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Lab/LabCommandService.cs [new]",
+            "native/core/src/commands.cpp"
+          ],
+          "dependencies": [
+            "P02.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P02.03",
+          "title": "Full ledger",
+          "decision": "Account stock/tool body/tip/residual/in-flight/receiver/waste/spill separately; disposal is a sink transfer.",
+          "acceptance": "M02/M05 whole-lab conservation including empty/overflow/rinse states within original tolerances.",
+          "files": [
+            "native/core/src/material.cpp",
+            "native/core/src/abi.cpp",
+            "native/tests/test_material.cpp"
+          ],
+          "dependencies": [
+            "P02.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P03",
+      "title": "Tools, parcels and capture geometry",
+      "arabicTitle": "الأدوات والقطرات والالتقاط والتلوث",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P03.01",
+          "title": "Burette parcels and final drop",
+          "decision": "Wire retained tip/hanging/in-flight/residual state into real authority; visual drop IDs follow committed parcels; valve close stops new flow only.",
+          "acceptance": "Close during flow then final drop lands or spills once; actual runtime not standalone helper tests; T04/T05/T08.",
+          "files": [
+            "native/core/src/tool_models.cpp",
+            "native/core/src/abi.cpp",
+            "Runtime/Tools/ToolPresenter.cs",
+            "Runtime/Tools/DropPresenter.cs [new]"
+          ],
+          "dependencies": [
+            "P07.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P03.02",
+          "title": "Distinct bottle and pipette",
+          "decision": "Implement separate research profiles/actuators/residuals for bottle,25ml graduated pipette and50ml burette; contamination affects receiving inventory; rinse removes represented residual to waste.",
+          "acceptance": "User fills/transfers/rinses/refills each tool; identical animation or fresh-water-to-waste alone does not pass; T04/M05.",
+          "files": [
+            "science/packages/aqueous-six-research-v1/instruments.json",
+            "native/core/src/tool_models.cpp",
+            "Runtime/Tools/PipetteActuator.cs [new]"
+          ],
+          "dependencies": [
+            "P03.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P03.03",
+          "title": "Calibrated outlet and placement",
+          "decision": "Use serialized profile outlet and receiver aperture geometry in LabGeometryAdapter for both modes; mount/place/dock invalid paths preserve state.",
+          "acceptance": "Actual asset tip and native profile agree; tilt/outside aperture/overflow/moving target/multiple captures and invalid bench placement tested.",
+          "files": [
+            "Runtime/Input/LabGeometryAdapter.cs",
+            "Runtime/Input/LabCaptureTarget.cs",
+            "native/core/include/plv/geometry_sample.hpp",
+            "native/tests/test_transport.cpp"
+          ],
+          "dependencies": [
+            "P03.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P04",
+      "title": "Scientific models and provenance",
+      "arabicTitle": "الحسابات العلمية ومصدر النتائج",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P04.01",
+          "title": "Checkpoint science generations",
+          "decision": "Reproduce O10-N1; restored state gets branch/dependency generation, observations invalidated and old in-flight completions excluded.",
+          "acceptance": "With real IPhreeqc, restored revision becomes eligible Current for restored state; newer-state pH never relabelled; Pending exits correctly.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/scheduler.cpp",
+            "native/tests/test_science.cpp"
+          ],
+          "dependencies": [
+            "P02.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P04.02",
+          "title": "Verified package and contextual observations",
+          "decision": "Hash actual loaded package on cold start/import; preserve recorded-only review for missing/mismatched model; select receiving sample for inspection.",
+          "acceptance": "Receiver pH changes after acid/base delivery; wrong package never silently recomputes Current; source/receiver identities distinct.",
+          "files": [
+            "Runtime/Core/ScientificPackage.cs",
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Core/CoreDriver.cs",
+            "native/solver/src/iphreeqc_adapter.cpp"
+          ],
+          "dependencies": [
+            "P04.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P04.03",
+          "title": "Scientific evidence matrix",
+          "decision": "Finish real clean-context/prior-cell equivalence, pool/charge diagnostics, unsupported composition and lifecycle tests; keep independent ideal reference separate.",
+          "acceptance": "S01-S07 evidence distinguishes matching assumptions, Research scope and experimental validation; no universal chemistry claim.",
+          "files": [
+            "native/tests/test_science.cpp",
+            "native/tests/test_solver_lifecycle.cpp",
+            "science/packages/aqueous-six-research-v1/coverage.json"
+          ],
+          "dependencies": [
+            "P04.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P05",
+      "title": "Scheduling, budgets and safe holds",
+      "arabicTitle": "الجدولة والميزانيات والتعافي",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P05.01",
+          "title": "All-transport scientific admission",
+          "decision": "Reproduce O10-N2; one admission path covers live/fixed/rinse/disposal using actual gross ingress/egress and complete proposed tick; implement explicit Precision/Bulk modes.",
+          "acceptance": "Precision100ms/0.05ml and Bulk200ms/0.5ml both respected precommit; fixed10ml cannot bypass; no net-zero circulation exemption.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/scheduler.cpp",
+            "native/tests/test_scheduler.cpp"
+          ],
+          "dependencies": [
+            "P04.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P05.02",
+          "title": "Fair bounded worker",
+          "decision": "One in-flight and one pending replaceable equilibrium request per vessel, fairness and observations scoped to actual dependency; no idle stale-by-wall-time.",
+          "acceptance": "O01-O07 continuous multi-vessel scene tests with real science plus controlled delay tests; preserve all committed events.",
+          "files": [
+            "native/core/src/scheduler.cpp",
+            "native/core/src/solver_worker.cpp",
+            "native/tests/test_scheduler.cpp"
+          ],
+          "dependencies": [
+            "P05.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P05.03",
+          "title": "Stall and holds",
+          "decision": "2s wall diagnostic, no fake Continue on blocked engine, no detached used context/unbounded replacement workers; head/UI/save stay responsive.",
+          "acceptance": "Blocked injection tests orchestration; real engine convergence/shutdown evidence separately; H01-H05.",
+          "files": [
+            "native/core/src/solver_worker.cpp",
+            "Runtime/UI/HoldPanel.cs",
+            "Tests/PlayMode/HoldJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P05.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P06",
+      "title": "Unity authority integration",
+      "arabicTitle": "ربط Unity بالمحرك",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P06.01",
+          "title": "Scene lifecycle and view models",
+          "decision": "One active gameplay adapter and session; domain views consume snapshots/events; unload/dispose cleanly; actual package/plugin failure prevents live lab.",
+          "acceptance": "U01/U02 real scenes/player error path; no placeholder result, orphan session or duplicate subscriptions.",
+          "files": [
+            "Runtime/Core/CoreDriver.cs",
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Lab/LabViewModel.cs [new]",
+            "Scenes/Boot.unity",
+            "Scenes/Lab.unity"
+          ],
+          "dependencies": [
+            "P05.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P06.02",
+          "title": "Shared panel state machine",
+          "decision": "Implement ScreenId/PanelState and immutable view models defined in03-UI-UX; one coordinator routes input and native hold/locale/save state to both presentation roots.",
+          "acceptance": "Boot/Setup/Lab/Inspect/Measure/Pause/Hold/Review state transitions action-driven; no duplicated chemistry or private IMGUI flow.",
+          "files": [
+            "Runtime/UI/LabPanelController.cs [new]",
+            "Runtime/UI/ScreenRouter.cs [new]",
+            "Runtime/Session/SessionController.cs",
+            "Tests/PlayMode/PanelStateTests.cs [new]"
+          ],
+          "dependencies": [
+            "P06.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P07",
+      "title": "Operational VR and two-hand interaction",
+      "arabicTitle": "تشغيل VR كامل وتفاعل اليدين",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P07.01",
+          "title": "Spatial Boot/setup/runtime gating",
+          "decision": "Use world-space uGUI/TMP XRI3.3.2 UI, tracked raycaster/EventSystem and explicit mode XR initialization; Android enters VR setup; PC runtime failure returns safely.",
+          "acceptance": "Coldstart with controllers can choose/start/setup lab; no-headset PC availability honest; UI press works without mouse.",
+          "files": [
+            "Runtime/UI/BootMenu.cs",
+            "Runtime/Input/ModeCoordinator.cs",
+            "Runtime/Input/XRSettingsController.cs [new]",
+            "Editor/BuildPipelineEntry.cs"
+          ],
+          "dependencies": [
+            "P08.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P07.02",
+          "title": "Body, valve and receiver ownership",
+          "decision": "Separate direct grip body and captured stopcock actuation, mounted body lock, independent receiver hand and UI trigger consumption; no initial liquid-tool throw.",
+          "acceptance": "X01/X02/X05 actual input actions through scene, two hands, UI click while near valve, mount/release; not manual method calls alone.",
+          "files": [
+            "Runtime/Input/XRInputAdapter.cs",
+            "Runtime/Tools/ValveActuator.cs",
+            "Runtime/Tools/ToolMount.cs [new]",
+            "Prefabs",
+            "Tests/PlayMode/XRInteractionTests.cs [new]"
+          ],
+          "dependencies": [
+            "P07.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P07.03",
+          "title": "Comfort and recovery",
+          "decision": "Seated/standing left/right/bench positioning height0.65-1.05m, reach tray, snap turn30deg if needed; explicit parked tool/dock/regrab after hold/recenter/load.",
+          "acceptance": "X03/X04/H02/H03 simulated XR full journey; calibrated instruments never resized; production excludes simulator.",
+          "files": [
+            "Runtime/UI/SetupPanel.cs [new]",
+            "Runtime/Input/RecoveryAlignment.cs [new]",
+            "Tests/PlayMode/XRJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P07.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P08",
+      "title": "Premium laboratory and spatial UI",
+      "arabicTitle": "المعمل Premium والواجهات المكانية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P08.01",
+          "title": "Persistent premium lab shell",
+          "decision": "Author floor/walls/ceiling/task lights/cabinets/bench from03/04 design decisions, serialized prefabs/materials/profiles; replace NativeLabVisuals runtime decoration with inspectable assets.",
+          "acceptance": "Real rendered bench at720p/1080p and simulated VR eye; no brown void, cubes-only room, apparatus occlusion or baked concept background.",
+          "files": [
+            "Editor/BuildLabAssets.cs [new]",
+            "Runtime/Tools/InstrumentMeshBuilder.cs [new]",
+            "Prefabs/Environment",
+            "Scenes/Lab.unity"
+          ],
+          "dependencies": [
+            "P06.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.02",
+          "title": "Readable scientific apparatus",
+          "decision": "Analytic profile meshes for stand/clamp/burette/tip/stopcock/pipette/flask;0-50ml numbered downward and correct meniscus, separate measuring vs capacity.",
+          "acceptance": "V01/V02/V05 model-driven levels, full/half/empty/tilted asset probes plus rendered close-ups; clear stocks clear; no numeric reading cheats.",
+          "files": [
+            "Prefabs/Tools",
+            "Prefabs/Vessels",
+            "Runtime/Tools/LiquidPresenter.cs",
+            "Runtime/Tools/MeniscusPresenter.cs [new]",
+            "Materials",
+            "Shaders"
+          ],
+          "dependencies": [
+            "P08.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.03",
+          "title": "Shared premium UI system and first-bay screens",
+          "decision": "Build shared tokens, SDF/type/icon/button/card/segmented/list/dialog/status/detail primitives and all screens in03; world-space VR + responsive Desktop.",
+          "acceptance": "Home/Setup/Lab/Prepare/Inspect/Measure/Pause/Hold/Settings are operational for the first bay. Other screen components have truthful unavailable states and remain functionally open under P11/P12/P17/P23; no placeholder counts as their completion.",
+          "files": [
+            "Runtime/UI",
+            "Prefabs/UI",
+            "Content/Localization",
+            "Tests/PlayMode/PanelStateTests.cs [new]"
+          ],
+          "dependencies": [
+            "P03.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.04",
+          "title": "Visible operating lab milestone",
+          "decision": "Record actual action-driven simulated XR plus Desktop Boot→Setup→stock/prep→mount/place→open/close→receiver measurement→hold/recovery→Save/Load.",
+          "acceptance": "M1 evidence with recording/screenshots + event/material reconciliation. Direct SubmitOrdered tests cannot substitute for interaction. Physical V03 remains separate.",
+          "files": [
+            "Tests/PlayMode/OperationalLabJourneyTests.cs [new]",
+            "artifacts/screenshots",
+            "docs/evidence/milestones/M1.json"
+          ],
+          "dependencies": [
+            "P08.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P09",
+      "title": "Indicators, mixing and support states",
+      "arabicTitle": "المؤشرات والخلط وحدود النموذج",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P09.01",
+          "title": "Truthful observables",
+          "decision": "Implement separate pH/color/mixing providers and validity/freshness/maturity; optical/mixing capabilities stay Unsupported/Approximate until independently sourced.",
+          "acceptance": "I01-I03 validpH does not authorize certified color/mixing; no last-added-color override or swirl-as-science.",
+          "files": [
+            "native/solver/src/indicator_model.cpp",
+            "native/solver/src/mixing_model.cpp",
+            "Runtime/Science/ScientificObservationPresenter.cs [new]"
+          ],
+          "dependencies": [
+            "P08.04"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P09.02",
+          "title": "Student-facing model boundaries",
+          "decision": "Contextual capability card explains unsupported phenomenon and supported next actions; errors/compute holds different from unavailable models.",
+          "acceptance": "J03 panel-state evidence for Failed/Pending/Stale/Unsupported; no auto-correct overshoot, fabricated endpoint or system fault penalty.",
+          "files": [
+            "Runtime/UI/InspectPanel.cs [new]",
+            "Runtime/UI/HoldPanel.cs",
+            "Content/Localization"
+          ],
+          "dependencies": [
+            "P09.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P10",
+      "title": "Desktop, Arabic and learning journeys",
+      "arabicTitle": "Desktop والعربية وتجربة التعلم",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P10.01",
+          "title": "Exact Desktop interaction and Esc",
+          "decision": "Implement mouse select/drag plane, held wheel height/empty wheel zoom, Q/E tool tilt, right-drag camera, exclusive valve control and valid Place; Esc is real Pause.",
+          "acceptance": "D01-D06 camera/UI focus changes preserve lab-world pose/material; injectedEsc and realPlayer control journey; no stuck disabled adapter.",
+          "files": [
+            "Runtime/Input/DesktopInputAdapter.cs",
+            "Runtime/Input/DesktopCameraController.cs",
+            "Runtime/UI/DesktopToolbar.cs [new]",
+            "Tests/PlayMode/DesktopJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P09.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P10.02",
+          "title": "Orientation/accessibility/settings",
+          "decision": "Optional short water practice then mount/scale/pause, Skip/replay, exact control help/remap/toggle hold, captions/status icons, text scale and audio settings.",
+          "acceptance": "J01/J02/J04 action-driven setup/replay/seated/left-handed; options change actual runtime behavior and persist.",
+          "files": [
+            "Runtime/UI/OrientationFlow.cs [new]",
+            "Runtime/UI/SettingsPanel.cs [new]",
+            "Runtime/UI/AccessibleStatus.cs [new]"
+          ],
+          "dependencies": [
+            "P10.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P10.03",
+          "title": "Arabic and English production",
+          "decision": "Pinned licensed Arabic-capable font/SDF plus tested shaping/bidi; use supplied copy starter, fill every real UI key; isolate formulas/units LTR.",
+          "acceptance": "J05 real Arabic/mixedNaOH0.1mol/L and negatives/decimals, RTLlayout, truncation/textscale/locale switch preserving session; no string reversal.",
+          "files": [
+            "Runtime/UI/LocalizationService.cs",
+            "Runtime/UI/LocalizedLabel.cs",
+            "Assets/ThirdParty/RTLTMPro",
+            "Content/Localization",
+            "Tests/PlayMode/LocalizationTests.cs [new]"
+          ],
+          "dependencies": [
+            "P10.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P11",
+      "title": "Durable sessions, notebook and Review",
+      "arabicTitle": "الجلسات الدائمة والملاحظات والمراجعة",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P11.01",
+          "title": "Durable journal/index/checkpoints",
+          "decision": "Ordered checksummed journal, atomic flush checkpoints earlier dirty30simulation/30wall sec; disk identity history +<=4096 working receipts; truthful save completion.",
+          "acceptance": "R01-R05 interruptedwrite/truncation/fullstorage/pauseddirtyflush/importmismatch/rejectedidentity survive actual disk fault tests.",
+          "files": [
+            "native/core/src/journal.cpp [new or complete]",
+            "native/core/src/identity_index.cpp",
+            "native/core/src/checkpoint.cpp",
+            "Runtime/Session/SaveService.cs"
+          ],
+          "dependencies": [
+            "P10.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P11.02",
+          "title": "Review and branches",
+          "decision": "Real Review event list with vessel/time/branch/revision/model/assistance; recorded vs recompute distinct, checkpoint fork preserves original; lab notebook notes reference events.",
+          "acceptance": "R06-R08 record/load/fork/review navigation; missing model offers recorded-only review; no empty scene or silent migration.",
+          "files": [
+            "Runtime/Session/ReviewController.cs [new]",
+            "Runtime/Session/NotebookService.cs [new]",
+            "Scenes/Review.unity",
+            "Tests/PlayMode/SessionJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P11.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P11.03",
+          "title": "Export and comparison foundation",
+          "decision": "Versioned CSV/JSON session/results/units/provenance and selected-run side-by-side compare; no export of transient current labels without actual dependencies.",
+          "acceptance": "Round-trip export schema and compare two known runs, missing/stale observables visibly unavailable; no hidden fabrication.",
+          "files": [
+            "Runtime/Session/SessionExportService.cs [new]",
+            "Runtime/UI/ComparisonPanel.cs [new]",
+            "Tests/EditMode/ExportTests.cs [new]"
+          ],
+          "dependencies": [
+            "P11.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P12",
+      "title": "Guided research lessons and deep understanding",
+      "arabicTitle": "التجارب التعليمية والفهم العميق",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P12.01",
+          "title": "Two genuine research lessons",
+          "decision": "Wire strong-acid and mixed-acid content to native semantic events; no outcome writes, no magic first endpoint==HCl; free lab independent.",
+          "acceptance": "Q01-Q04 real procedure select→perform→review; no forced color-dependent certified completion.",
+          "files": [
+            "Runtime/Protocols/ProtocolDefinition.cs",
+            "Runtime/Protocols/ProtocolRunner.cs [new]",
+            "Content/Protocols"
+          ],
+          "dependencies": [
+            "P11.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P12.02",
+          "title": "Predict, observe, explain, compare",
+          "decision": "Before experiment store student hypothesis; prompt observation after relevant event, explain model-supported mechanism with source and assumptions; hint tiers record assistance.",
+          "acceptance": "Prediction never changes chemistry; stale data cannot justify explanation; explanations for dilution/buffer/conservation tested against fixture and current snapshot.",
+          "files": [
+            "Runtime/Learning/LearningSession.cs [new]",
+            "Runtime/Learning/ExplanationProvider.cs [new]",
+            "Content/Learning",
+            "Tests/PlayMode/ResearchLessonTests.cs [new]"
+          ],
+          "dependencies": [
+            "P12.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P12.03",
+          "title": "Concept inspection",
+          "decision": "On-demand species/conservation/curve/cumulative-vs-reading views for learning/research; hide numerical reading answers in measurement-skill mode; label theoretical/counterfactual curves.",
+          "acceptance": "Same actual experiment drives notebook and plots; no curve generated from scripted endpoint; teaching overlays optional and recorded.",
+          "files": [
+            "Runtime/Learning/ConceptViewModel.cs [new]",
+            "Runtime/UI/ConceptPanel.cs [new]",
+            "Tests/EditMode/LearningEvidenceTests.cs [new]"
+          ],
+          "dependencies": [
+            "P12.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P13",
+      "title": "Reproducible builds and CI",
+      "arabicTitle": "البناء المتكرر والتحقق الآلي",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P13.01",
+          "title": "Three exact-commit builds",
+          "decision": "Build WindowsDesktop/WindowsVR/AndroidARM64IL2CPP with native/database/package identity; development simulator excluded; cleancheckout path licensed correctly.",
+          "acceptance": "B01-B04 verify packagedbytes and launch availablePlayer; record buildSHA vs finaldocsSHA; required unavailableCI notfakePassed.",
+          "files": [
+            "scripts/build-native.ps1",
+            "scripts/build-unity.ps1",
+            "scripts/test-unity.ps1",
+            ".github/workflows",
+            "Editor/BuildPipelineEntry.cs"
+          ],
+          "dependencies": [
+            "P12.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P13.02",
+          "title": "Licensed artifact manifest",
+          "decision": "Manifest source/model/fonts/notices/asset ownership/build/test hashes and versions; generated concept not a marketed screenshot.",
+          "acceptance": "Rebuild reproducible availabletargets; catalog/data licenses preserved; no sources-private docs/credentials/Library/playerbins committed.",
+          "files": [
+            "scripts/package-artifacts.ps1",
+            "docs/evidence/artifact-manifest.json",
+            "THIRD_PARTY_NOTICES"
+          ],
+          "dependencies": [
+            "P13.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P14",
+      "title": "Performance and device evidence",
+      "arabicTitle": "الأداء وإثبات التشغيل على الأجهزة",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P14.01",
+          "title": "Complete telemetry/workloads",
+          "decision": "Record frameCPU/GPU,solverlatency/age/grossbudget,queues/holds/native+managedmemory/storage;1/4/10vessel controlled traces at acceptedscience/renderprofiles.",
+          "acceptance": "K01/K04 actual workload admission, no ring overwrite hiding earlier faults, no calibratedflow change toboostFPS.",
+          "files": [
+            "Runtime/Diagnostics/PerformanceRecorder.cs",
+            "Runtime/Core/PlayerPerformanceRecorder.cs",
+            "Content/Traces",
+            "scripts/analyze-performance.py"
+          ],
+          "dependencies": [
+            "P13.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P14.02",
+          "title": "Long measured runs",
+          "decision": "5minwarmup then three30min measured runs on available publication target; provisionalDesktop60FPS and headset>=72Hz preferred90 only if viable.",
+          "acceptance": "K02/K03 actualp95/p99/droppedframes/sciencefairness/holds/memory; absentphysicalheadset/Androidthermal exactEvidenceMissing.",
+          "files": [
+            "docs/evidence/desktop-acceptance.json",
+            "docs/evidence/simulated-xr-acceptance.json",
+            "docs/evidence/windows-vr-acceptance.json",
+            "docs/evidence/android-vr-acceptance.json"
+          ],
+          "dependencies": [
+            "P14.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P15",
+      "title": "Whole-app quality and final planner review",
+      "arabicTitle": "جودة التطبيق والمراجعة النهائية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P15.01",
+          "title": "Audit95 and premium scorecard",
+          "decision": "Map every original acceptance case and new task to exact evidence scope; all core user journeys and premium asset/screen states audited; fix code blockers before declaration.",
+          "acceptance": "No item Passed from helper/build alone; requirements not removed; M1/M2 visiblejourneys and screenshot matrix all current.",
+          "files": [
+            "docs/evidence/acceptance-95.json",
+            "docs/evidence/final-review.md",
+            "docs/evidence/completion.json"
+          ],
+          "dependencies": [
+            "P13.02",
+            "P14.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P15.02",
+          "title": "Independent final review request",
+          "decision": "Provide source diff/buildSHA/evidence and specific open risks to planner; implementation self-verification is separate from planner acceptance.",
+          "acceptance": "Planner review may request fixes; never mark AcceptedPlanner unless explicit review received; no force/merge.",
+          "files": [
+            "docs/evidence/planner-handoff.md",
+            "docs/evidence/execution-state.json"
+          ],
+          "dependencies": [
+            "P15.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P16",
+      "title": "Push, release handoff and continuation",
+      "arabicTitle": "رفع العمل وتسليمه والاستكمال",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P16.01",
+          "title": "Same-branch handoff",
+          "decision": "Commit reviewable milestones, push samebranch/PR afterappropriatechecks; PRtitle/body current, exactHEAD CI; attachPRwhenavailable.",
+          "acceptance": "RemoteHEAD and CI verified; cleanworktreeorclearexplanation; no newPRduplication/merge/force.",
+          "files": [
+            "README.md",
+            "docs/evidence/NEXT.md",
+            "PR#1"
+          ],
+          "dependencies": [
+            "P15.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P16.02",
+          "title": "Resume transition",
+          "decision": "Freeze R1 supportedlab milestone truthfully, carry still-open tasks onward; continue routes to expandedplatform phases, not implicit projectcomplete.",
+          "acceptance": "A fresh continue selects eligibleP17+ oncecoredependenciesverified; hardwaregate never deletes remainingsoftwarebacklog.",
+          "files": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/release-matrix.json"
+          ],
+          "dependencies": [
+            "P16.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P17",
+      "title": "Compound library and model capability registry",
+      "arabicTitle": "مكتبة المركبات وسجل قدرات النماذج",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P17.01",
+          "title": "Verified expandable catalog",
+          "decision": "Separate Compound identity, MaterialPreparation mixture and model coverage; offline searchArabic/English/name/formula/CID, familyfilter, reference vs usable simulation badge. Import sourced starter catalog then scale in versioned packs.",
+          "acceptance": "UnknowncompoundcanbeReferenceOnly, cannot enter live solver under unsupported profile; salts/hydrates/stereochemistry/mixtures distinct; all fields source/date/license.",
+          "files": [
+            "Content/Catalog",
+            "Runtime/Catalog/CompoundCatalog.cs [new]",
+            "Runtime/UI/CompoundLibraryPanel.cs [new]",
+            "tools/import-pubchem.py [new]"
+          ],
+          "dependencies": [
+            "P06.02",
+            "P08.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P17.02",
+          "title": "Capability package contract",
+          "decision": "Use schemas in07; coverage by compoundset/concentrations/T/P/phase/observable/equipment/modelidentity/evidencematurity; provider dispatch before preparation and every mutation.",
+          "acceptance": "Catalog breadth does not extend aqueoussix coverage; unsupported multicomponent combination rejects/clearlyreference only, no nearest-name substitution.",
+          "files": [
+            "science/packages",
+            "native/solver/include/plv/model_provider.hpp [new]",
+            "Runtime/Catalog/CapabilityRegistry.cs [new]"
+          ],
+          "dependencies": [
+            "P17.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P17.03",
+          "title": "Expandable station hub",
+          "decision": "Modular lab stations analytic/physical/organic/formulation/bio; tiles show exactAvailableResearch/ReferenceOnly/DataPending states and progress; unsupportedstations have informative preview notfake instruments.",
+          "acceptance": "Allstationnavigationworks; current sixstock benchremainsusable; disabledsimulations explain why; no unwired buttons countedfunctional.",
+          "files": [
+            "Runtime/Lab/StationRouter.cs [new]",
+            "Content/Stations",
+            "Prefabs/UI/StationHub"
+          ],
+          "dependencies": [
+            "P17.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P18",
+      "title": "Analytical and physical pharmacy",
+      "arabicTitle": "الكيمياء التحليلية والصيدلة الفيزيائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P18.01",
+          "title": "Analytical experiment packs",
+          "decision": "Deliver aqueousacidbase/buffers/dilution first, then sourcedmodelsforconductometry/UVVisible/calibrationcurves and chromatographydatasets. Eachmodality declares forwardmodel and validateddata domain.",
+          "acceptance": "Knownstandards/blank/calibration/unknownsample andheldoutfixtures; instrumentnoiseidentifiedsourcedorlabelledsynthetic; detectoroutputnotcomputedfromdrugname alone.",
+          "files": [
+            "science/packages/analytical-*",
+            "native/solver/providers",
+            "Runtime/Instruments",
+            "Content/Protocols/Analytical"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P18.02",
+          "title": "Physical pharmacy packs",
+          "decision": "Implement solubility/partition/kinetics/dissolution as separate sourced research providers, explicit temperature/solvent/phase/particle assumptions; equipmentmodel linked.",
+          "acceptance": "Reference curves/massbalances andlimits pass; changeparameterchangesmodeltruthfully; no pretending equilibriumworker handleskinetics.",
+          "files": [
+            "science/packages/physical-*",
+            "native/solver/providers",
+            "Content/Protocols/Physical"
+          ],
+          "dependencies": [
+            "P18.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P18.03",
+          "title": "Instrument technique and interpretation",
+          "decision": "Balance/calibration/sampleprep/cuvette handling or measured datasetworkflow withappropriate teachingpanels; curves/units/LODassumptions noted when supported.",
+          "acceptance": "Fullperform→observe→interpret→review inVR/Desktop for eachclaimedinstrument; decorativeHPLCdoesnotcountchromatographysimulation.",
+          "files": [
+            "Runtime/Instruments",
+            "Runtime/Learning",
+            "Tests/PlayMode/AnalyticalJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P18.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P19",
+      "title": "Organic and medicinal chemistry",
+      "arabicTitle": "الكيمياء العضوية والدوائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P19.01",
+          "title": "Structure and property learning",
+          "decision": "Sourced2D/3Dmolecularinspection,functionalgroups,stereochemistry andstructure-property comparisons; renderactualatom/bondgraph; donotderiveclinicaleffectfromappearance.",
+          "acceptance": "Identity/stereochemicalfixtures andinteractionlearnability; measuredproperty vs predictionclearlylabelled; rolespecificannotation.",
+          "files": [
+            "Runtime/Molecules",
+            "Content/Catalog",
+            "Runtime/Learning/StructureLessonProvider.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P19.02",
+          "title": "Bounded preparation and purification",
+          "decision": "Finite approved experimentpacks for techniquee.g.extraction/recrystallization/TLC with documentedpartition/solubility/reference datasets. Reactions require stoichiometry,condition/rate/yieldreferences; arbitrarymixingnotgeneralreactionpredictor.",
+          "acceptance": "Supportedpackreproducesholdout/massbalance/conditions andfullprocedure; unavailabledata staysDataPending, not randomproduct/yield.",
+          "files": [
+            "science/packages/organic-*",
+            "native/solver/providers",
+            "Content/Protocols/Organic"
+          ],
+          "dependencies": [
+            "P19.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P20",
+      "title": "Pharmaceutics and formulation",
+      "arabicTitle": "الصيدلانيات والتركيبات",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P20.01",
+          "title": "Formulation material properties",
+          "decision": "CuratedAPI/excipient identities, compatible evidence andboundedphysicalmodels; distinguishcomposition from validatedproductquality; sachets/powders/emulsions needphase-specificauthority.",
+          "acceptance": "Mass/unit/preparationandphaseledger; referencematerialnotusableunlesscovered; no assumeduniversalcompatibility.",
+          "files": [
+            "Content/Catalog/Pharmaceutics",
+            "native/core/formulation",
+            "science/packages/formulation-*"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P20.02",
+          "title": "Representative formulation workflows",
+          "decision": "Separate documentedsolution/suspension/emulsion/semi-solid researchpacks andtablet/dissolutiondatasetworkflow; weighing/mixing/order/temperature/stability model-specific.",
+          "acceptance": "Atleastonecomplete supportedjourneyperclaimedpack withsources,observationanderrorconsequences; labelscontainactualcomposition/modelscope.",
+          "files": [
+            "Runtime/Lab/FormulationStation.cs [new]",
+            "Content/Protocols/Formulation",
+            "Runtime/Learning"
+          ],
+          "dependencies": [
+            "P20.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P20.03",
+          "title": "Quality control comparisons",
+          "decision": "Comparebatchcomposition,uniformity/dissolution/assayonlywheremodelorlicensedmeasureddataexists; theoreticalexample vs certifiedpharmacopoeialtestingdistinct.",
+          "acceptance": "Knownbatchdataset andlimits reviewed; reference standardprovenance,methodversionanduncertaintyexported; no manufacturedpasscertificate.",
+          "files": [
+            "Runtime/Research/BatchComparison.cs [new]",
+            "Content/Datasets",
+            "Runtime/UI/ResearchPanel.cs [new]"
+          ],
+          "dependencies": [
+            "P20.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P21",
+      "title": "Pharmacognosy and biochemical methods",
+      "arabicTitle": "العقاقير والطرق الحيوكيميائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P21.01",
+          "title": "Natural product identification learning",
+          "decision": "Sourcedplant/extract/constituent identity andmicroscopy/referenceimages withlicenses; extractiontechnique usesboundedmixturemodelsorrecordeddatasets.",
+          "acceptance": "Plant/extractnotreducedtosingleCID; mixedcompositionunknownnotinvented; image/specimen IDs retained.",
+          "files": [
+            "Content/Catalog/Pharmacognosy",
+            "Content/Datasets/Microscopy",
+            "Runtime/UI/SpecimenPanel.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P21.02",
+          "title": "Biochemical assay packs",
+          "decision": "Provider-specificstandardcurves/enzymeassayreference datasets withdocumentedconditions; distinguishhypotheticalmechanismteachingfrompredictivebiologymodel.",
+          "acceptance": "Controls/blank/calibrationandholdoutinterpretation; sourceparameters/version recorded; no unvalidatedbiologicaloutcomes.",
+          "files": [
+            "science/packages/biochemical-*",
+            "Runtime/Instruments",
+            "Content/Protocols/Biochemistry"
+          ],
+          "dependencies": [
+            "P21.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P22",
+      "title": "Microbiology and aseptic technique",
+      "arabicTitle": "الميكروبيولوجي وتقنيات العمل المعقم",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P22.01",
+          "title": "Technique station",
+          "decision": "Buildvirtualaseptic-handling/cleanworkspace/instrument-transfer/contamination eventmodel andobservationteaching withdocumentedtrainingobjectives.",
+          "acceptance": "Techniqueerror events auditable andexplained; visualcleanlinessnotproofmicrobiologicalsterility; instructorcriteriareviewable.",
+          "files": [
+            "Runtime/Lab/AsepticStation.cs [new]",
+            "Content/Protocols/Technique",
+            "Runtime/Learning"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P22.02",
+          "title": "Evidence-based microbiology lessons",
+          "decision": "Dataset/referenceimage drivenmicrobialidentification/growth/assayexercises; dynamicgrowthonlywithinvalidatedmodelconditions.",
+          "acceptance": "Predictionsmatchdeclaredreference; organisms/media/condition coverageexplicit; no bioscience simulatorclaimfromproceduralanimations.",
+          "files": [
+            "Content/Datasets/Microbiology",
+            "science/packages/microbiology-*",
+            "Runtime/Instruments"
+          ],
+          "dependencies": [
+            "P22.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P23",
+      "title": "Student, instructor, expert and research workspaces",
+      "arabicTitle": "مساحات الطالب والمدرس والخبير والباحث",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P23.01",
+          "title": "Four role workspaces",
+          "decision": "Studentguided/expertopen/instructorauthor/researchcompare presets affectguidanceandlayoutonly; samecore/nohiddenauthoritativeprivileges; usersswitchguidancewithassistance recorded.",
+          "acceptance": "Sameactionledger/science acrossroles; novicehelpsavailableandexpertminimal; no universalclinicalrecommendations added.",
+          "files": [
+            "Runtime/Workspaces",
+            "Content/WorkspacePresets",
+            "Runtime/UI/WorkspaceHome.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03",
+            "P12.03",
+            "P11.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.02",
+          "title": "Instructor course and lesson authoring",
+          "decision": "Localcourse/template builder: objective,capability,equipment,preparation,instructions,predictquestions,hinttiers,rubric,review; export/import assignments withoutrequiringcloudaccounts.",
+          "acceptance": "Teachercreatesvalidtask,studentperforms,teacherreviewsactualeventsandnotes; invalidmissingcapabilityblocksgradebutallowsresearchpreview.",
+          "files": [
+            "Runtime/Teaching",
+            "Content/Courses",
+            "Runtime/UI/LessonBuilderPanel.cs [new]",
+            "Tests/PlayMode/InstructorJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P23.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.03",
+          "title": "Research notebook and compare",
+          "decision": "Projects/runs/hypotheses/parameters/repeats/annotations/plots/provenance exports; explicit experimental vs simulateddatalabel andcounterfactualbranches.",
+          "acceptance": "Two actualruns compared withmodel/version/units/assistance/uncertainty; recomputewithchangedmodelseparateversion; reproducibleexport.",
+          "files": [
+            "Runtime/Research",
+            "Runtime/Session/NotebookService.cs",
+            "Runtime/Session/SessionExportService.cs"
+          ],
+          "dependencies": [
+            "P23.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.04",
+          "title": "University pilot workflow",
+          "decision": "Coursepackversioning,localanonymouslearnerIDs,consentedfeedbackrubricsandaggregateofflineexports; trialinstructor/studentworkflow, collectformativeevidence honestly.",
+          "acceptance": "Realavailablepilotresults separate fromsoftwaretests; no fabricated participants/universityapproval; cloudmultiuser/LMS integration remainsseparatefuturedecision.",
+          "files": [
+            "Content/Courses",
+            "Runtime/Teaching/CoursePackService.cs [new]",
+            "docs/evidence/university-pilot.json"
+          ],
+          "dependencies": [
+            "P23.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P24",
+      "title": "Expanded platform release and coverage audit",
+      "arabicTitle": "إصدار المنصة الموسعة ومراجعة التغطية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P24.01",
+          "title": "Per-pack delivery and coverage",
+          "decision": "Audit every declaredcompound/preparation/equipment/experiment/role/observable againstsources,numerical/interaction/evidence; releaseonlyworkingpacks, catalogreference entries truthful.",
+          "acceptance": "No allchemistry claim; visible coverage matrix andremainingdata/devicegates; each advertised feature opens andworks for claimed domain.",
+          "files": [
+            "docs/evidence/platform-coverage.json",
+            "docs/evidence/release-matrix.json"
+          ],
+          "dependencies": [
+            "P18.03",
+            "P19.02",
+            "P20.03",
+            "P21.02",
+            "P22.02",
+            "P23.04",
+            "P13.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P24.02",
+          "title": "Premium institutional demo and planner handoff",
+          "decision": "CaptureactualEnglishArabicVRDesktopstudent/instructor/researchjourneys andsupportedstations; consistentdesign/performance/stability, installation/licensingnotices/exportdocumentation.",
+          "acceptance": "A prospectiveuniversitycantryactualsupportedproduct; marketingusesrenderedapp andtruthfulscope; plannerreceivesexactHEAD/fullremainingbacklog; no automaticmerge.",
+          "files": [
+            "docs/evidence/platform-final-review.md",
+            "artifacts/demo",
+            "README.md",
+            "docs/evidence/planner-handoff.md"
+          ],
+          "dependencies": [
+            "P24.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "ExpandedPlatformFinalAudit"
+    }
+  ],
+  "milestones": {
+    "M1-OperatingPremiumLab": "NotVerified",
+    "M2-CoreLearningLab": "NotVerified",
+    "M3-TeachingResearchWorkspace": "NotVerified",
+    "M4-ExpandedPlatform": "NotVerified"
+  },
+  "resumeRule": "Read NEXT/git status, scan executionOrder for first unfinished task whose task AND releaseGateDependencies are VerifiedLocal. Do not reinitialize this ledger. G-R1 evidence is required before new science pack development; true external device/participant gates remain separate.",
+  "releaseGates": [
+    {
+      "id": "G-R1",
+      "title": "First usable learner/instructor/expert release evidence",
+      "status": "Open",
+      "requiredTasks": [
+        "P00.01",
+        "P00.02",
+        "P01.01",
+        "P01.02",
+        "P01.03",
+        "P02.01",
+        "P02.02",
+        "P02.03",
+        "P03.01",
+        "P03.02",
+        "P03.03",
+        "P04.01",
+        "P04.02",
+        "P04.03",
+        "P05.01",
+        "P05.02",
+        "P05.03",
+        "P06.01",
+        "P06.02",
+        "P07.01",
+        "P07.02",
+        "P07.03",
+        "P08.01",
+        "P08.02",
+        "P08.03",
+        "P08.04",
+        "P09.01",
+        "P09.02",
+        "P10.01",
+        "P10.02",
+        "P10.03",
+        "P11.01",
+        "P11.02",
+        "P11.03",
+        "P12.01",
+        "P12.02",
+        "P12.03",
+        "P13.01",
+        "P13.02",
+        "P14.01",
+        "P14.02",
+        "P15.01",
+        "P15.02",
+        "P16.01",
+        "P16.02",
+        "P17.01",
+        "P17.02",
+        "P17.03",
+        "P23.01",
+        "P23.02",
+        "P23.03"
+      ],
+      "requiredJourneyEvidence": [
+        "Learner complete supported laboratory journey",
+        "Instructor author/import/review journey",
+        "Expert compare/export journey"
+      ],
+      "evidence": [],
+      "codeCommit": null,
+      "plannerStatus": "NotReviewed",
+      "externalEvidenceSeparate": [
+        "Physical headset/Android acceptance",
+        "Independent scientific calibration",
+        "Actual formative participants/customer validation"
+      ]
+    }
+  ],
+  "scopeRevision": "v2: first usable release before expanded scientific providers",
+  "gateDependencies": {
+    "P18.01": [
+      "G-R1"
+    ],
+    "P19.01": [
+      "G-R1"
+    ],
+    "P20.01": [
+      "G-R1"
+    ],
+    "P21.01": [
+      "G-R1"
+    ],
+    "P22.01": [
+      "G-R1"
+    ]
+  },
+  "actualHead": "f712fc0f3c308454098919b5b26f107d219e441b",
+  "functionalCodeSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
+  "currentTask": "P01.01",
+  "lastVerifiedTask": "P00.02",
+  "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
+  "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
+  "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
+  "executionNotes": [
+    "Imported v2 template once; no prior execution-state existed. Existing P00 foundation evidence remains in progress.json and will be reconciled before granting any new task VerifiedLocal.",
+    "G-R1 remains Open; P18-P22 are gated.",
+    "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix."
+  ]
+}

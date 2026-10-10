@@ -1,0 +1,60 @@
+{
+  "colors": {
+    "bench": "#D9E0E3",
+    "panel": "#F4F7F8",
+    "text": "#132D3D",
+    "secondary": "#516574",
+    "teal": "#168D96",
+    "warning": "#9B621B",
+    "error": "#A63737",
+    "graphite": "#25343C",
+    "border": "#CDD8DD"
+  },
+  "desktop": {
+    "baseWidth": 1920,
+    "panelWidth": 360,
+    "bodyPx": 18,
+    "metadataPx": 14,
+    "titlePx": 24,
+    "minTargetPx": 44,
+    "spacingPx": [
+      4,
+      8,
+      12,
+      16,
+      24,
+      32
+    ],
+    "radiiPx": [
+      8,
+      12,
+      16
+    ]
+  },
+  "vrPrototype": {
+    "panelWidthM": 0.42,
+    "distanceM": 1.0,
+    "menuTextHeightM": 0.032,
+    "buttonHeightM": 0.045,
+    "acceptance": "Validate actual angular legibility and controller hits; prototype values not universal ergonomics"
+  },
+  "environment": {
+    "benchWidthM": 1.8,
+    "benchDepthM": 0.75,
+    "benchDefaultHeightM": 0.8,
+    "benchHeightRangeM": [
+      0.65,
+      1.05
+    ]
+  },
+  "motion": {
+    "hoverMs": 100,
+    "panelMs": 150,
+    "reducedMotionRequired": true
+  },
+  "fonts": {
+    "latin": "Noto Sans or existing pinned OFL equivalent",
+    "arabic": "Noto Sans Arabic or existing pinned OFL equivalent",
+    "shaping": "tested bidi/shaping adapter, never string reversal"
+  }
+}

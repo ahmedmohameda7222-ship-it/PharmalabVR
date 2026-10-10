@@ -1,0 +1,45 @@
+# Premium UI/UX specification
+
+## Design direction
+Use a credible modern scientific laboratory: pale neutral surfaces, graphite fittings, satin metal, precise opaque labels and restrained teal interaction. Preserve the original neutral/teal identity. Premium quality comes from physical scale, readable instruments, coherent materials/light/type/spacing, reliable feedback and easy operation.
+Clear solutions remain clear. No permanent floating pH or volume answers; no neon HUD, giant dashboard, mandatory heavy refraction, camera shake or decorative chemical effects. The laboratory occupies most of the view; panels support the task from beside the bench.
+
+## Tokens and typography
+Use design/design-tokens.json as the common theme. Desktop baseline: 18px body, 14px metadata, 24px title, 44px minimum targets, 360px detail panel at1080p; adapt to720p/high-DPI. Spacing4/8/12/16/24/32px, radii8/12/16px for controls/cards/panels. These presentation defaults do not scale instrument geometry.
+VR prototype: stable world-space panel width0.42m at roughly1m, default menu text height0.032m and button height0.045m. These are original prototype starting dimensions, requiring angular readability/controller-hit/device validation. Paginate detail rather than shrinking text. Keep meniscus/outlet/receiver sightlines clear. Panel/tray reach can mirror for the dominant hand while scientific geometry is preserved.
+Use a pinned licensed Noto Sans/Noto Sans Arabic pair or an existing equivalent with complete coverage. Test shaping/bidi and SDF assets in Unity; browser Arabic is not TMP acceptance. Scientific formula/unit spans remain LTR inside surrounding RTL text. Never reverse strings.
+At most one primary action per panel. Use icons plus text, visible selected/disabled/focus states and a reason for unavailable controls. Prototype hover100ms and panel150ms transitions; reduced motion removes them. Native confirmed events can trigger small audio/haptics where supported. Animation durations never influence scientific time.
+
+## Shared navigation and implementation contracts
+ScreenId: Home, Setup, Stations, Lab, CompoundLibrary, Prepare, Inspect, Measure, Learn, Notebook, Review, Compare, Pause, Hold, Settings, LessonBuilder, ResearchProject.
+Physical dock: Lab / Library / Notebook / Help; dedicated Pause input is always available. Context actions follow actual selected object and coverage. Hover never automatically grabs an object.
+Both VR world-space uGUI/TMP and responsive Desktop panels consume shared immutable view models. Fields: screenId, mode, workspace, selectedEntityId, nativeRevision, modelIdentity, observationValidity, observationFreshness, maturity, saveState, dirty, holdReason and supportedActions. These are presentation metadata; Native retains liquid/scientific authority.
+`ScreenRouter.Show(ScreenId id, string entityId=null)` changes presentation. `LabCommandService.SubmitIntent(LabIntent intent)` maps a documented domain intent to CoreSession.SubmitOrdered and publishes the real terminal outcome. It does not authorize material changes itself. Preserve existing ABI/schema versions unless a documented migration is necessary. Native observable enum names are authoritative; cached values cannot be relabelled Current.
+
+## Screen decisions
+**Home:** Quiet immersive room behind an opaque light panel. PharmaLabVR title, workspace selector Student/Instructor/Researcher/Expert, primary EnterVR, secondary Desktop, eligible local Continue, Review and Settings. Offline/Research is discreet. PC explains absent XR and keeps Desktop usable; Android enters VR setup. OpenLab/guided practice comes after mode/setup; no competing XR initialization paths.
+**Setup:** Three steps: posture/dominant hand; bench position/height/recenter; text/audio/captions/controls. Back preserves choices, Confirm verifies reach. Optional orientation can be skipped and replayed.
+**Stations:** Card title, learning purpose, SupportedResearch/ReferenceOnly/DataPending badge and model details. Unsupported live experiments have no misleading start button. Return to the usable analytical bay remains possible.
+**CompoundLibrary:** Search English/Arabic/name/formula/source ID; family and current-pack filters. Detail tabs Identity/Preparation/Properties/Sources/Coverage. Distinguish compound identity from a mixture. Unsupported material opens a reference view, not an invented solver.
+**Lab:** Quiet physical bench, real labelled stocks/equipment, minimal dock and precise context highlight/action hints. Tool and receiving vessel selection are explicit. No permanent numeric answers.
+**Prepare:** Supported stock/preparation identity, concentration convention and approved test points, target vessel, volume and capacity. Actual fill/transfer follows the tool workflow. No automatic10ml titration or receiver alignment. Validate the exact constraint and show actual receipts.
+**Inspect:** Selected entity title/ID, contents, preparation, approximations, model support and observation state. Receiver is the default measured sample during titration; source only when selected. Numerics are contextual; reading-skill mode hides the correct instrument answer.
+**Measure:** Magnified physical instrument region preserving graduation/meniscus/parallax. Student records a reading; no auto-filled correct volume. pH or another instrument value appears only when supported, with units/dependencies/freshness/model maturity.
+**Learn:** Current objective, hypothesis before action, optional hint tiers, observation and explanation after actual events. Species/conservation/curve views are optional. A panel does not interrupt active pouring; open it while paused or stably beside the task.
+**Notebook:** Project/run notes, hypothesis, linked event, observation, conclusion and assistance. Notes never mutate chemistry. Durable autosave visibly distinguishes Saving/Saved/Failed.
+**Review:** Session list, semantic event timeline, selected event detail, recorded observation, model identity, mode/assistance and branch. Recorded review and explicit Recompute are separate actions. Continuous motion replay is not promised.
+**Compare:** Two actual runs, parameter differences, valid aligned plots, raw tables and export. Missing/stale data is a visible gap. Counterfactual runs are explicitly labelled.
+**Pause:** Continue, Save, Recenter, Settings, Restart checkpoint and Exit. Authority freezes material/time. Save success only after durable completion. Confirmation is used for destructive unsaved exit/branch restart, not routine manipulation.
+**Hold:** Distinct Tracking/Focus/Time/Calculation/Storage reason, preserved-state explanation, real recovery steps and available actions. Head/rays remain responsive. Dock/re-grab/neutral alignment precede Continue. A blocked engine never offers a fake Continue.
+**Settings:** Language/text scale, captions/audio, posture/handedness, remap/toggle hold and render presets. Every setting affects actual runtime; graphics cannot change chemistry/calibrated geometry.
+**LessonBuilder:** Objective → capability/station → equipment/preparation → steps/questions/hints → rubric → student preview → versioned export. Instructions cannot create chemical outcomes.
+**ResearchProject:** Hypothesis, variables, fixed conditions, model coverage, repeat plan, runs, notes, compare/export. Parameters must pass provider support checks.
+
+## Interaction rules
+Grip selects tool body; trigger actuates the captured valve component. Mounted bodies cannot drag; the second hand independently owns the receiver. Preserve original stopcock baseline mapping0.10m→90degrees and configurable gains. UI consumes trigger events, never leaks to valve actuation. Initial liquid-tool throwing is disabled. Invalid placement retains tool and inventory.
+Desktop uses mouse selection/drag plane, wheel held-height or empty-camera zoom, Q/E tool tilt, right-drag camera, exclusive valve manipulation and explicit valid Place. Camera movement never moves the lab-held tool. Esc establishes a real native Pause.
+Use configured world-space Canvas, tracked-device graphic raycaster and EventSystem/XR input module. Test occlusion and exactly one active gameplay adapter/input module. Recenter/load/hold return requires visible alignment and fresh neutral baselines.
+
+## Localization/accessibility and evidence
+Starter bilingual copy is in design/copy-starter.json; add every production key in both languages. Test Arabic mixed formulas/decimals/units, truncation/scaling and session-preserving language changes. Captions, text/icon states, reduced motion, seated reach and actual input-profile Help are required. Assistance modifies assessment context truthfully.
+Capture actual Home/Setup/Stations/Library/Prepare/Lab/Inspect/Measure/Learn/Notebook/Review/Compare/Pause/eachHold/Settings/LessonBuilder/ResearchProject in English/Arabic, Desktop720p/1080p and simulated VR. Include front/side/instrument close-ups, clear liquids, two-hand operation and settings. Mockups/generated art are design references only; Desktop preview cannot prove Unity Arabic rendering or VR comfort.

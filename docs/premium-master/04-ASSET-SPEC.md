@@ -1,0 +1,15 @@
+# Laboratory and asset production specification
+
+Use metres and original bench1.8mwide×0.75mdeep×0.80mhigh, height adjustment0.65–1.05m without scaling instruments. Worksurface x−0.9…0.9,z0.25…1.0 inregistered lab frame. Standx−0.35,receiver−0.05,stocktray0.45,rinse/wasterightrear0.70, retrievalfrontright. Translate/rotate the whole bench in setup; save placement profile and pose alignment properly. Follow original geometry contracts over image composition.
+
+Room: complete visible floor/walls/ceiling, diffuse ambient/task light, pale gray cabinets, muted graphite hardware, modest window/baked lighting optional. Distinct modular station bays share the environment kit. No giant empty void or floor-less bench. Desktop camera supports full bench view and close inspection; VR reach correct for seated/standing use. Ambient room decorations do not carry inventory or pretend to be functional devices.
+
+Assets: Bench.prefab; BuretteStand.prefab withheavybase0.18×0.14m andclamps; ResearchBurette50ml.prefab withbody/scale0–50downwards/stopcock/tip; GraduatedPipette25ml.prefab; ConicalReceiver250ml.prefab; StockBottle.prefab; RinseBottle.prefab; WasteVessel.prefab; RetrievalTray.prefab; instrumentmagnifier/UIpanelprefabs. Bottlecaps,labelposition/toolorientationrealistic. Initialsynthetic50mlburette12mminternaldiameter≈0.442mcolumn; generationfromprofileisresearchgeometry/calibrationpending. Materialscapacityvsgraduationdistinguished.
+
+Meshgeneration: analyticsegments/rings/cones/necks/roundedbases inEditor InstrumentMeshBuilder/BuildLabAssets; persistentinspectablemeshes/prefabs/materials/profiles/metaGUIDs. No runtime-onlyprimitivegeneratorasfinalassets. Stocklabelsandnumberedgraduationsgeneratedfromdata; numericorderingcheckedinEditModeandactualrender. Transparentglass boundedoverdraw; clearliquid notinvisibleemptyobject: subtlephysicalinterface/meniscusrender withneutralappearance, notbluefill. Liquidheadfromnativevolumeandshape; dropletvisualidmustmatchparcel.
+
+MobileURP-safevariant: forward, bakedenvironment+limitedrealtimekey, conservativeglass, no mandatoryscreen-spacerefraction/bloom/motionblur. OriginalAndroid2xMSAA/PC4x, renderScale0.8–1.0prototype; measureactualdevice. Profile-specificrenderbudgetssetfromtelemetry, notinventedtrianglecounts. LOD/shaderchoicecannoterasegraduationsorchangesize/chemistry. Include fonts/shaders/sourceassetnoticesandlicenses.
+
+premium-lab-concept.png is AI-generated designreference, notactualapporequipmentcalibration. Inspect numbers/shape/label/cap/meniscus beforeimplementation. Do notcopygeneratedflaskgraduationsormissingburettetop; useprofiles. Placement/focallengthinimageisnotcanonicalVRcamera. Exactscreenlabelscomefrom03/copytables, notimagepixels. No marketingassetclaim untilactualrenderedbuildexists.
+
+Premium scorecard: recognizableapparatus, correctsize/calibratednumbering, unobstructedsightline, coherentmaterials/light/type/spacing, clearnative-drivenstates, accuratebilingualtext, no deadcontrols, no hovergrab/clickthrough, stableframebehavior. Anyblockingfailurekeepsphase partialevenifbeautyshotlooksconvincing.
