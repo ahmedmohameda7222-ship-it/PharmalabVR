@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P02.02",
+  "nextTask": "P02.03",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -307,13 +307,21 @@
           "dependencies": [
             "P02.01"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "a62c3fc5d242e23ed94bbf357f4ab4d5799e2dea",
+          "evidence": [
+            "docs/evidence/p02-02-command-facade.md",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P02_02 live Native revision, replay and identity conflict integration",
+            "Unity PlayMode 16/16; WindowsDesktop build Success"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "docs/evidence/p02-02-command-facade.md",
+            "PlayMode P02_02 accepted unrelated revision, replayed identical identity, rejected conflicting identity and stale touched revision",
+            "WindowsDesktop runtime assembly SHA-256 EFAB81D19B9EDFD4912E7D6C9F1BDF9DA7049E652FDBF092E3824ED162D4E44B"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Native-backed Unity PlayMode command facade and WindowsDesktop compilation; rendered UI control and full material ledger remain open.",
           "blocker": null
         },
         {
@@ -2055,10 +2063,10 @@
       "G-R1"
     ]
   },
-  "actualHead": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
-  "functionalCodeSha": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
-  "currentTask": "P02.02",
-  "lastVerifiedTask": "P02.01",
+  "actualHead": "a62c3fc5d242e23ed94bbf357f4ab4d5799e2dea",
+  "functionalCodeSha": "a62c3fc5d242e23ed94bbf357f4ab4d5799e2dea",
+  "currentTask": "P02.03",
+  "lastVerifiedTask": "P02.02",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
@@ -2066,6 +2074,7 @@
     "Imported v2 template once; no prior execution-state existed. Existing P00 foundation evidence remains in progress.json and will be reconciled before granting any new task VerifiedLocal.",
     "G-R1 remains Open; P18-P22 are gated.",
     "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix.",
-    "P02.01 verified through Unity PlayMode selection over real Native sessions; WindowsDesktop Player built and Boot screenshot captured, while stock HUD click/render remains separate UI evidence. Checkpoint science rollback O10-N1 is still open for a later science task."
+    "P02.01 verified through Unity PlayMode selection over real Native sessions; WindowsDesktop Player built and Boot screenshot captured, while stock HUD click/render remains separate UI evidence. Checkpoint science rollback O10-N1 is still open for a later science task.",
+    "P02.02 verified through a native-backed Unity facade test for unrelated touched revisions, identical command replay, identity conflict and stale revision. P02.03 whole-lab ledger remains next."
   ]
 }
