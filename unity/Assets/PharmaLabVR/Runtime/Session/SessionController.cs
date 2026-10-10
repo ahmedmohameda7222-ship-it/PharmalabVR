@@ -13,7 +13,8 @@ namespace PharmaLabVR.Session
         public string LastDurableSavePath { get; private set; }
         public string LastError { get; private set; }
         private readonly SaveService saves = new();
-        private static readonly Rect DesktopHudRect = new(12f, 12f, 350f, 328f);
+        private static readonly Rect DesktopHudRect = new(12f, 12f, 370f, 620f);
+        private int selectedConcentrationIndex = 2;
 
         public void Configure(CoreDriver coreDriver, string sessionName = null)
         {
@@ -37,6 +38,25 @@ namespace PharmaLabVR.Session
                 GUILayout.EndArea();
                 return;
             }
+            if (driver.SourceNeedsPreparation)
+            {
+                GUILayout.Label("Prepare the source stock · Research aqueous profile");
+                var concentrations = driver.ResearchConcentrations;
+                if (concentrations.Count > 0)
+                {
+                    selectedConcentrationIndex = Mathf.Clamp(selectedConcentrationIndex, 0, concentrations.Count - 1);
+                    GUILayout.BeginHorizontal();
+                    for (var index = 0; index < concentrations.Count; index++)
+                        if (GUILayout.Toggle(selectedConcentrationIndex == index,
+                            concentrations[index].ToString("0.00") + " mol/L", GUI.skin.button))
+                            selectedConcentrationIndex = index;
+                    GUILayout.EndHorizontal();
+                }
+                foreach (var stockId in driver.AvailableStockIds)
+                    if (GUILayout.Button("Prepare " + stockId, GUILayout.Height(28f)))
+                        SelectStock(stockId, stockId == "water" ? 0.0 : concentrations[selectedConcentrationIndex]);
+                GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
+            }
             var measurement = driver.Measurement;
             GUILayout.Label(measurement == null ? "pH: pending" :
                 $"pH: {measurement.DisplayValue} ({measurement.Availability})");
@@ -54,6 +74,22 @@ namespace PharmaLabVR.Session
             if (GUILayout.Button("Restart checkpoint", GUILayout.Height(30f))) RestartCheckpoint();
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndArea();
+        }
+
+        public bool SelectStock(string stockId, double concentrationMolPerL)
+        {
+            try
+            {
+                if (driver == null || !driver.TryPrepareSourceStock(stockId, concentrationMolPerL))
+                    throw new InvalidOperationException("Stock selection was rejected by the native session or Research catalog.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = exception.Message;
+                return false;
+            }
         }
 
         public bool Save()

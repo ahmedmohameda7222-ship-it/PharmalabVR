@@ -23,6 +23,74 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        [System.Serializable] private sealed class StockInventory
+        {
+            public double solventWaterKg;
+            public double sodiumMol;
+            public double chlorideMol;
+            public double acetateMol;
+            public double researchAdditiveVolumeM3;
+            public string preparationId;
+            public string provenanceId;
+        }
+        [System.Serializable] private sealed class StockVessel
+        {
+            public string id;
+            public StockInventory inventory;
+        }
+        [System.Serializable] private sealed class StockState
+        {
+            public bool paused;
+            public StockVessel[] vessels;
+        }
+
+        [UnityTest]
+        public IEnumerator P02_01_SelectedStocksPrepareNativePoolsFromAnEmptyLab()
+        {
+            var stockFactors = new[] {
+                (id: "water", sodium: 0d, chloride: 0d, acetate: 0d),
+                (id: "hcl", sodium: 0d, chloride: 1d, acetate: 0d),
+                (id: "naoh", sodium: 1d, chloride: 0d, acetate: 0d),
+                (id: "nacl", sodium: 1d, chloride: 1d, acetate: 0d),
+                (id: "acetic-acid", sodium: 0d, chloride: 0d, acetate: 1d),
+                (id: "sodium-acetate", sodium: 1d, chloride: 0d, acetate: 1d)
+            };
+            foreach (var (id, sodiumFactor, chlorideFactor, acetateFactor) in stockFactors)
+            foreach (var concentration in id == "water" ? new[] { 0d } : new[] { 0.01d, 0.05d, 0.1d })
+            {
+                var sodium = sodiumFactor * concentration * 0.025d;
+                var chloride = chlorideFactor * concentration * 0.025d;
+                var acetate = acetateFactor * concentration * 0.025d;
+                var root = new GameObject("StockSelection-" + id);
+                var driver = root.AddComponent<CoreDriver>();
+                var controller = root.AddComponent<SessionController>();
+                controller.Configure(driver);
+                yield return null;
+                var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(before.paused, Is.True, id);
+                Assert.That(before.vessels.Single(v => v.id == "source").inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(0d), id);
+                Assert.That(before.vessels.Single(v => v.id == "receiver").inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(0d), id);
+                Assert.That(controller.SelectStock(id, concentration), Is.True, controller.LastError);
+                var after = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                var prepared = after.vessels.Single(v => v.id == "source").inventory;
+                Assert.That(after.paused, Is.False, id);
+                Assert.That(prepared.researchAdditiveVolumeM3, Is.EqualTo(2.5e-5).Within(1e-12), id);
+                Assert.That(prepared.solventWaterKg, Is.EqualTo(0.025).Within(1e-9), id);
+                Assert.That(prepared.sodiumMol, Is.EqualTo(sodium).Within(1e-9), id);
+                Assert.That(prepared.chlorideMol, Is.EqualTo(chloride).Within(1e-9), id);
+                Assert.That(prepared.acetateMol, Is.EqualTo(acetate).Within(1e-9), id);
+                Assert.That(prepared.preparationId, Is.EqualTo("source"), id);
+                Assert.That(prepared.provenanceId, Is.EqualTo("aqueous-six-research-v1"), id);
+                Object.Destroy(root);
+                yield return null;
+                for (var attempt = 0; attempt < 200 && CoreSession.PendingRetirements > 0; attempt++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(CoreSession.PendingRetirements, Is.Zero, "The previous real solver context did not retire.");
+            }
+        }
+
         [UnityTest]
         public IEnumerator B02_PlayerLifecycleBootstrapsAndDisposesTheNativeAuthority()
         {
@@ -48,6 +116,7 @@ namespace PharmaLabVR.Tests.PlayMode
         {
             var root = new GameObject("NativeMeasurementIntegration");
             var driver = root.AddComponent<CoreDriver>();
+            Assert.That(driver.TryPrepareSourceStock("hcl", 0.05), Is.True);
             for (var attempt = 0; attempt < 200 && (driver.Measurement == null ||
                 driver.Measurement.Availability != MeasurementAvailability.Current); attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
@@ -199,6 +268,8 @@ namespace PharmaLabVR.Tests.PlayMode
             var receiverLiquid = receiver.GetComponent<LiquidPresenter>();
             Assert.That(sourceLiquid, Is.Not.Null);
             Assert.That(receiverLiquid, Is.Not.Null);
+            Assert.That(driver.TryPrepareSourceStock("nacl", 0.1), Is.True);
+            yield return null;
             Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
             Assert.That(receiverLiquid.CommittedVolumeM3, Is.Zero);
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
@@ -246,6 +317,7 @@ namespace PharmaLabVR.Tests.PlayMode
             var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
             var sessions = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).First();
             sessions.Configure(driver, "playmode-" + System.Guid.NewGuid().ToString("N"));
+            Assert.That(sessions.SelectStock("nacl", 0.1), Is.True, sessions.LastError);
             Assert.That(sessions.Save(), Is.True, sessions.LastError);
             var savePath = sessions.LastDurableSavePath;
             try

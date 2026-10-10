@@ -21,6 +21,11 @@ namespace PharmaLabVR.Core
         public string CurrentMode { get; private set; } = "Desktop";
         public string HoldReason { get; private set; } = string.Empty;
         public bool IsTimeHeld { get; private set; }
+        public bool SourceNeedsPreparation { get; private set; }
+        public IReadOnlyList<string> AvailableStockIds => stockIds;
+        public IReadOnlyList<double> ResearchConcentrations => stockCatalog?.researchMatrixMolPerL ?? Array.Empty<double>();
+        private readonly List<string> stockIds = new();
+        private StockCatalogEnvelope stockCatalog;
         private double accumulator;
         private const double TickSeconds = 0.020;
 
@@ -44,6 +49,13 @@ namespace PharmaLabVR.Core
         {
             try
             {
+                var catalogAsset = Resources.Load<TextAsset>("aqueous-six-research-v1-stocks");
+                stockCatalog = catalogAsset == null ? null : JsonUtility.FromJson<StockCatalogEnvelope>(catalogAsset.text);
+                if (stockCatalog == null || stockCatalog.schemaVersion != 1 || stockCatalog.stocks == null ||
+                    stockCatalog.stocks.Length != 6 || stockCatalog.researchMatrixMolPerL == null)
+                    throw new InvalidOperationException("The six-stock Research catalog is missing or invalid.");
+                stockIds.Clear();
+                foreach (var stock in stockCatalog.stocks) stockIds.Add(stock.id);
                 var initialMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ? "VR" : "Desktop";
                 Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256);
                 ScientificDatabasePath = databasePath;
@@ -217,12 +229,35 @@ namespace PharmaLabVR.Core
             RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
             RequireAccepted(Session.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
             RequireAccepted(Session.SubmitOrdered(
-                "PrepareStock",
-                "{\"vesselId\":\"source\",\"stockKind\":\"SodiumChloride\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000025}",
-                "{\"source\":\"0\"}"));
-            RequireAccepted(Session.SubmitOrdered(
                 "PlaceTool",
                 "{\"toolId\":\"research-tool\",\"sourceInventoryId\":\"source\",\"overflowSinkId\":\"spill\",\"coordinateFrame\":\"lab\",\"geometryProfileHash\":\"burette-50ml-research-v1\",\"profileRevision\":\"1\"}"));
+            RequireAccepted(Session.SubmitOrdered("Pause"));
+        }
+
+        public bool TryPrepareSourceStock(string stockId, double concentrationMolPerL)
+        {
+            if (Session == null || stockCatalog?.stocks == null || !SourceNeedsPreparation) return false;
+            StockChoice choice = null;
+            foreach (var stock in stockCatalog.stocks)
+                if (stock.id == stockId) { choice = stock; break; }
+            if (choice == null) return false;
+            if (choice.kind == "Water")
+            {
+                if (concentrationMolPerL != 0.0) return false;
+            }
+            else
+            {
+                var supported = false;
+                foreach (var value in stockCatalog.researchMatrixMolPerL)
+                    if (Math.Abs(value - concentrationMolPerL) < 1e-12) supported = true;
+                if (!supported) return false;
+            }
+            var payload = $"{{\"vesselId\":\"source\",\"stockKind\":\"{EscapeJson(choice.kind)}\",\"concentrationMolPerL\":{concentrationMolPerL.ToString("R", CultureInfo.InvariantCulture)},\"referenceVolumeM3\":0.000025}}";
+            var prepared = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("PrepareStock", payload, "{\"source\":\"0\"}"));
+            if (prepared == null || !prepared.accepted) return false;
+            RequireAccepted(Session.SubmitOrdered("Continue"));
+            PublishSnapshot();
+            return true;
         }
 
         private static void RequireAccepted(string outcomeJson)
@@ -251,6 +286,11 @@ namespace PharmaLabVR.Core
             var snapshot = Session.ReadSnapshot();
             var state = JsonUtility.FromJson<SnapshotEnvelope>(snapshot);
             if (state != null) CurrentMode = state.mode;
+            SourceNeedsPreparation = false;
+            if (state?.vessels != null)
+                foreach (var vessel in state.vessels)
+                    if (vessel.id == "source" && vessel.materialRevision == "0" && state.paused)
+                        SourceNeedsPreparation = true;
             HoldReason = state?.hold?.reason ?? string.Empty;
             if (state?.observations != null && Measurement != null)
                 foreach (var observation in state.observations)
@@ -290,8 +330,29 @@ namespace PharmaLabVR.Core
         {
             public HoldEnvelope hold;
             public string mode;
+            public bool paused;
+            public VesselEnvelope[] vessels;
             public InputWatermark[] inputWatermarks;
             public ObservationEnvelope[] observations;
+        }
+
+        [Serializable] private sealed class VesselEnvelope
+        {
+            public string id;
+            public string materialRevision;
+        }
+
+        [Serializable] private sealed class StockCatalogEnvelope
+        {
+            public int schemaVersion;
+            public double[] researchMatrixMolPerL;
+            public StockChoice[] stocks;
+        }
+
+        [Serializable] private sealed class StockChoice
+        {
+            public string id;
+            public string kind;
         }
 
         [Serializable]

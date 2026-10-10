@@ -13,6 +13,7 @@ namespace PharmaLabVR.Core
         private ulong nextCommandSequence;
         private readonly Queue<string> pendingEvents = new();
         public bool IsOpen => handle != null && !handle.IsInvalid && !handle.IsClosed;
+        public static int PendingRetirements => CoreSafeHandle.PendingRetirements;
 
         public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "")
         {
