@@ -254,6 +254,9 @@ TEST_CASE("P02_03 rinse transfers contaminated tip parcel into waste and retains
     const auto serialized = saved.dump();
     std::uint64_t imported = 0;
     REQUIRE(plv_import(serialized.data(), static_cast<std::uint32_t>(serialized.size()), &imported) == PLV_OK);
+    const auto ledgerBefore = json::parse(read_text(imported))["materialLedger"];
+    CHECK(std::abs(ledgerBefore["chlorideMol"].get<double>() - 0.001) < 1e-12);
+    CHECK(std::abs(ledgerBefore["researchAdditiveVolumeM3"].get<double>() - 20e-6) < 1e-12);
     const std::string neutral = R"([{"toolId":"tool","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
     REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
     REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
@@ -264,6 +267,8 @@ TEST_CASE("P02_03 rinse transfers contaminated tip parcel into waste and retains
         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}}}, {{"rinse", "1"}}));
     REQUIRE(poll(imported)["accepted"]);
     const auto after = json::parse(read_text(imported));
+    CHECK(std::abs(after["materialLedger"]["chlorideMol"].get<double>() - 0.001) < 1e-12);
+    CHECK(std::abs(after["materialLedger"]["solventWaterKg"].get<double>() - 0.020) < 1e-12);
     const auto retained = after["tools"][0]["tipInventory"];
     CHECK(std::abs(retained["researchAdditiveVolumeM3"].get<double>() - 5e-8) < 1e-12);
     double chlorideTotal = retained["chlorideMol"].get<double>();

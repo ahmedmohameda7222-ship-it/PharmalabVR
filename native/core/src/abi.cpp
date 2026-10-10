@@ -284,6 +284,14 @@ json contextSnapshotJson(const Context& context) {
     for (const auto& id : toolIds) {
         result["tools"].push_back(toolJson(id, context.tools.at(id)));
     }
+    auto ledger = context.executor.totalLedger();
+    for (const auto& id : toolIds) {
+        const auto& tool = context.tools.at(id);
+        ledger.add(tool.tipInventory);
+        ledger.add(tool.residualInventory);
+        ledger.add(tool.inFlightInventory);
+    }
+    result["materialLedger"] = materialJson(ledger);
     result["inputWatermarks"] = json::array();
     for (const auto& id : toolIds) {
         const auto found = context.inputSequences.find(id);
