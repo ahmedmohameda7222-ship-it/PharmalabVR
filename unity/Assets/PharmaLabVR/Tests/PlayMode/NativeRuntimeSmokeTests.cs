@@ -304,6 +304,12 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(receiverLiquid, Is.Not.Null);
             Assert.That(driver.TryPrepareSourceStock("nacl", 0.1), Is.True);
             yield return null;
+            for (var recoveryAttempt = 0; driver.IsTimeHeld && recoveryAttempt < 100; recoveryAttempt++)
+            {
+                driver.ResumeAfterTimeHold();
+                yield return new WaitForSecondsRealtime(0.01f);
+            }
+            Assert.That(driver.IsTimeHeld, Is.False, "A fresh neutral baseline is required before transfer.");
             Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
             Assert.That(receiverLiquid.CommittedVolumeM3, Is.Zero);
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
