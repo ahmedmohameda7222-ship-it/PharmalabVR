@@ -64,6 +64,10 @@ def _version(path: str | None, arguments: list[str]) -> str | None:
     return output[0].strip() if output else None
 
 
+def is_unity_editor_path(path: str | None) -> bool:
+    return bool(path and path.replace("\\", "/").lower().endswith("/editor/unity.exe"))
+
+
 def discover_tools() -> list[ToolCheck]:
     git = _command_path("git", os.environ.get("PLV_GIT"))
     cmake = _command_path("cmake", os.environ.get("PLV_CMAKE"))
@@ -74,9 +78,12 @@ def discover_tools() -> list[ToolCheck]:
     )
     unity_override = os.environ.get("PLV_UNITY")
     unity = _command_path("Unity", unity_override)
+    if not is_unity_editor_path(unity):
+        unity = None
     if not unity and os.name == "nt":
         unity = _first_existing(
             [
+                Path("C:/Program Files/Unity " + PINNED_UNITY + "/Editor/Unity.exe"),
                 Path("C:/Program Files/Unity/Hub/Editor") / PINNED_UNITY / "Editor/Unity.exe",
                 Path("C:/Program Files/Unity Hub/Editor") / PINNED_UNITY / "Editor/Unity.exe",
             ]

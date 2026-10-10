@@ -9,12 +9,21 @@ SolverWorker::SolverWorker(std::size_t capacity, SolveFunction solve)
     : capacity_(capacity), solve_(std::move(solve)), thread_(&SolverWorker::run, this) {}
 
 SolverWorker::~SolverWorker() {
-    {
-        std::lock_guard<std::mutex> lock(mutex_);
-        stopping_ = true;
-    }
-    available_.notify_one();
+    requestStop();
     if (thread_.joinable()) thread_.join();
+}
+
+bool SolverWorker::requestStop() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    stopping_ = true;
+    pending_.clear();
+    available_.notify_one();
+    return !solving_;
+}
+
+bool SolverWorker::stalled(std::chrono::milliseconds threshold) const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return solving_ && std::chrono::steady_clock::now() - solveStarted_ > threshold;
 }
 
 CommandOutcome SolverWorker::submit(SolverJob job) {
@@ -49,9 +58,16 @@ void SolverWorker::run() {
         {
             std::unique_lock<std::mutex> lock(mutex_);
             available_.wait(lock, [this] { return stopping_ || !pending_.empty(); });
-            if (stopping_ && pending_.empty()) return;
+            if (stopping_ && pending_.empty()) {
+                // The callback owns the IPhreeqc adapter and its global registry
+                // context. Release it on the sole solver thread after all calls.
+                solve_ = {};
+                return;
+            }
             job = std::move(pending_.front());
             pending_.pop_front();
+            solving_ = true;
+            solveStarted_ = std::chrono::steady_clock::now();
         }
 
         SolveResult result;
@@ -66,6 +82,7 @@ void SolverWorker::run() {
         {
             std::lock_guard<std::mutex> lock(mutex_);
             completed_.push_back({std::move(job.observation), std::move(result)});
+            solving_ = false;
         }
     }
 }

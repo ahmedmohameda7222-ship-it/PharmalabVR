@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <cstring>
 #include <deque>
@@ -19,6 +20,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -85,6 +87,8 @@ struct Context {
     bool holdActive = false;
     std::string holdReason;
     bool recoveryReady = false;
+    std::thread::id ownerThread = std::this_thread::get_id();
+    std::atomic<bool> active{true};
     std::mutex mutex;
 };
 
@@ -142,6 +146,8 @@ std::uint64_t nextHandle = 1;
 constexpr std::uint32_t maxInputSize = 16U * 1024U * 1024U;
 constexpr std::size_t exportMutationReserve = 64U * 1024U;
 constexpr std::size_t maxTools = 64U;
+// One active session plus at most three contexts retiring a live solver call.
+constexpr std::size_t maxSessionContexts = 4U;
 constexpr std::uint64_t inputStaleCutoffNs = 100'000'000ULL;
 constexpr double transportTickS = 0.020;
 
@@ -459,11 +465,14 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
         if ((!databasePath.empty() && databaseIdentity.empty()) ||
             (databasePath.empty() && !databaseIdentity.empty()) ||
             databasePath.size() > 1024U || databaseIdentity.size() > 128U) return PLV_INVALID_ARGUMENT;
-        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity);
         const auto initialMode = parsed.value("initialMode", "Desktop");
         if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
-        context->mode = initialMode;
         std::lock_guard<std::mutex> lock(registryMutex);
+        if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
+        for (const auto& [existingHandle, existing] : contexts)
+            if (existing->active.load()) return PLV_BUSY;
+        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity);
+        context->mode = initialMode;
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
         *handle = assigned;
@@ -478,8 +487,22 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
 }
 
 std::int32_t plv_destroy(std::uint64_t handle) {
-    std::lock_guard<std::mutex> lock(registryMutex);
-    return contexts.erase(handle) == 1U ? PLV_OK : PLV_INVALID_HANDLE;
+    std::shared_ptr<Context> retired;
+    {
+        std::lock_guard<std::mutex> lock(registryMutex);
+        const auto found = contexts.find(handle);
+        if (found == contexts.end()) return PLV_INVALID_HANDLE;
+        std::lock_guard<std::mutex> sessionLock(found->second->mutex);
+        if (found->second->worker && !found->second->worker->requestStop()) {
+            found->second->active.store(false);
+            return PLV_BUSY;
+        }
+        retired = std::move(found->second);
+        contexts.erase(found);
+    }
+    // Join only after the current engine call has returned, outside registry locks.
+    retired.reset();
+    return PLV_OK;
 }
 
 std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t size) {
@@ -487,6 +510,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
     if (!validInput(command, size)) {
         return PLV_INVALID_ARGUMENT;
     }
@@ -496,6 +520,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             return PLV_UNSUPPORTED_VERSION;
         }
         std::lock_guard<std::mutex> lock(context->mutex);
+        if (!context->active.load()) return PLV_BUSY;
         if (parsed.at("branchId").get<std::string>() != context->executor.snapshot().branchId) {
             return PLV_INVALID_ARGUMENT;
         }
@@ -749,6 +774,7 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
     if (!validInput(samples, size)) {
         return PLV_INVALID_ARGUMENT;
     }
@@ -756,6 +782,7 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
         const auto parsed = json::parse(samples, samples + size);
         if (!parsed.is_array() || parsed.size() > 128U) return PLV_INVALID_ARGUMENT;
         std::lock_guard<std::mutex> lock(context->mutex);
+        if (!context->active.load()) return PLV_BUSY;
         auto proposedSequences = context->inputSequences;
         auto proposedTools = context->tools;
         const auto snapshot = context->executor.snapshot();
@@ -827,8 +854,10 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
     if (!std::isfinite(delta_s) || delta_s < 0.0) return PLV_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(context->mutex);
+    if (!context->active.load()) return PLV_BUSY;
     const auto simulationNowNs = static_cast<std::uint64_t>(
         std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
     collectScience(*context, simulationNowNs);
@@ -1146,6 +1175,14 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
             offerChangedScience(*context, empty, 0U);
         }
         std::lock_guard<std::mutex> lock(registryMutex);
+        if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
+        for (const auto& [existingHandle, existing] : contexts) {
+            if (existing->active.load() && existing->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
+        }
+        for (const auto& [existingHandle, existing] : contexts) {
+            if (existing->active.load() && existing->worker) existing->worker->requestStop();
+            existing->active.store(false);
+        }
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
         *new_handle = assigned;

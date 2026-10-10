@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using Microsoft.Win32.SafeHandles;
+using UnityEngine;
 
 namespace PharmaLabVR.Core
 {
@@ -18,8 +20,59 @@ namespace PharmaLabVR.Core
 
     internal sealed class CoreSafeHandle : SafeHandleZeroOrMinusOneIsInvalid
     {
+        private static readonly ConcurrentQueue<ulong> Retired = new();
         private CoreSafeHandle() : base(true) { }
-        protected override bool ReleaseHandle() => NativeMethods.DestroyRaw((ulong)handle.ToInt64()) == NativeStatus.Ok;
+        protected override bool ReleaseHandle()
+        {
+            var raw = (ulong)handle.ToInt64();
+            var status = NativeMethods.DestroyRaw(raw);
+            if (status == NativeStatus.Busy)
+            {
+                // Native retains the context and its engine until the in-flight
+                // solve returns. Keep the handle for bounded later retries.
+                Retired.Enqueue(raw);
+                return true;
+            }
+            return status == NativeStatus.Ok || status == NativeStatus.InvalidHandle;
+        }
+
+        internal static int PendingRetirements => Retired.Count;
+
+        internal static void RetryRetirements()
+        {
+            var count = Retired.Count;
+            for (var index = 0; index < count; index++)
+            {
+                if (!Retired.TryDequeue(out var raw)) break;
+                var status = NativeMethods.DestroyRaw(raw);
+                if (status == NativeStatus.Busy) Retired.Enqueue(raw);
+                else if (status != NativeStatus.Ok && status != NativeStatus.InvalidHandle)
+                    Debug.LogError($"Native session retirement failed: {status}");
+            }
+        }
+    }
+
+    internal sealed class NativeRetirementPump : MonoBehaviour
+    {
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void Install()
+        {
+            var objectName = "PharmaLabVR Native Retirement";
+            var existing = GameObject.Find(objectName);
+            if (existing != null) return;
+            var pump = new GameObject(objectName);
+            DontDestroyOnLoad(pump);
+            pump.AddComponent<NativeRetirementPump>();
+        }
+
+        private void Update() => CoreSafeHandle.RetryRetirements();
+
+        private void OnApplicationQuit()
+        {
+            CoreSafeHandle.RetryRetirements();
+            if (CoreSafeHandle.PendingRetirements > 0)
+                Debug.LogWarning("A native scientific solve did not finish before application exit; restart is required.");
+        }
     }
 
     internal static class NativeMethods

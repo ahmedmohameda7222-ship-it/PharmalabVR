@@ -7,6 +7,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <atomic>
 
 namespace {
 using json = nlohmann::json;
@@ -59,6 +60,91 @@ TEST_CASE("A01 unsupported schema does not create a handle") {
     const std::string config = R"({"schemaVersion":2,"branchId":"branch-1"})";
     CHECK(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_UNSUPPORTED_VERSION);
     CHECK(handle == 0U);
+}
+
+TEST_CASE("P01_02 only one mutable session and its owner thread may submit") {
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t original = 0;
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    std::uint64_t second = 0;
+    CHECK(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &second) == PLV_BUSY);
+    CHECK(second == 0U);
+    const auto create = command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}}).dump();
+    std::atomic<int> foreignResult{PLV_OK};
+    std::atomic<int> foreignStep{PLV_OK};
+    std::atomic<int> foreignInput{PLV_OK};
+    std::thread foreign([&] {
+        foreignResult = plv_submit(original, create.data(), static_cast<std::uint32_t>(create.size()));
+        foreignStep = plv_step(original, 0.02, 1'000'000'000ULL);
+        const std::string emptyBatch = "[]";
+        foreignInput = plv_input_batch(original, emptyBatch.data(), static_cast<std::uint32_t>(emptyBatch.size()));
+    });
+    foreign.join();
+    CHECK(foreignResult == PLV_BUSY);
+    CHECK(foreignStep == PLV_BUSY);
+    CHECK(foreignInput == PLV_BUSY);
+    CHECK(json::parse(read_text(original))["vessels"].empty());
+    const auto exported = read_text(original, true);
+    std::uint64_t replacement = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &replacement) == PLV_OK);
+    CHECK(plv_submit(original, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_BUSY);
+    CHECK(plv_submit(replacement, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_OK);
+    CHECK(poll(replacement)["accepted"].get<bool>());
+    std::uint64_t third = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &third) == PLV_OK);
+    std::uint64_t fourth = 0;
+    REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &fourth) == PLV_OK);
+    std::uint64_t fifth = 0;
+    CHECK(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &fifth) == PLV_BUSY);
+    CHECK(fifth == 0U);
+    CHECK(plv_submit(third, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_BUSY);
+    CHECK(plv_submit(fourth, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_OK);
+    CHECK(poll(fourth)["accepted"].get<bool>());
+    CHECK(plv_destroy(fourth) == PLV_OK);
+    CHECK(plv_destroy(third) == PLV_OK);
+    CHECK(plv_destroy(replacement) == PLV_OK);
+    if (second != 0U) CHECK(plv_destroy(second) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
+}
+
+TEST_CASE("P01_02 repeated real engine create import and destroy releases handles") {
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE}, {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    for (int cycle = 0; cycle < 3; ++cycle) {
+        std::uint64_t original = 0;
+        REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &original) == PLV_OK);
+        submit(original, command("1", "CreateVessel", {{"id", "acid"}, {"capacityM3", 2e-5}}));
+        REQUIRE(poll(original)["accepted"].get<bool>());
+        submit(original, command("2", "PrepareStock",
+                                 {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
+                                  {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}, {{"acid", "0"}}));
+        REQUIRE(poll(original)["accepted"].get<bool>());
+        bool current = false;
+        for (int attempt = 0; attempt < 200 && !current; ++attempt) {
+            REQUIRE(plv_step(original, 0.0, 1'000'000'000ULL) == PLV_OK);
+            const auto snapshot = json::parse(read_text(original));
+            for (const auto& observation : snapshot["observations"])
+                current |= observation.value("vesselId", "") == "acid" && observation.value("freshness", "") == "Current";
+            if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        REQUIRE(current);
+        const auto exported = read_text(original, true);
+        std::uint64_t imported = 0;
+        REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+        CHECK(plv_destroy(original) == PLV_OK);
+        bool importedCurrent = false;
+        for (int attempt = 0; attempt < 200 && !importedCurrent; ++attempt) {
+            REQUIRE(plv_step(imported, 0.0, 1'000'000'000ULL) == PLV_OK);
+            const auto snapshot = json::parse(read_text(imported));
+            for (const auto& observation : snapshot["observations"])
+                importedCurrent |= observation.value("vesselId", "") == "acid" && observation.value("freshness", "") == "Current";
+            if (!importedCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(importedCurrent);
+        CHECK(plv_destroy(imported) == PLV_OK);
+        CHECK(plv_destroy(imported) == PLV_INVALID_HANDLE);
+    }
 }
 
 TEST_CASE("A03 snapshot sizing includes NUL and poll sizing is non-consuming") {

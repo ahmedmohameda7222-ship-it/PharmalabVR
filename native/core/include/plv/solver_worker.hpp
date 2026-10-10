@@ -5,6 +5,7 @@
 #include "plv/types.hpp"
 
 #include <condition_variable>
+#include <chrono>
 #include <cstddef>
 #include <deque>
 #include <functional>
@@ -36,6 +37,10 @@ public:
     CommandOutcome submit(SolverJob job);
     std::optional<SolverCompletion> poll();
     std::size_t outstanding() const;
+    bool stalled(std::chrono::milliseconds threshold = std::chrono::seconds(2)) const;
+    // Returns false while an engine call is still using the worker context.
+    // A later call can complete shutdown after that call returns.
+    bool requestStop();
 
 private:
     void run();
@@ -48,6 +53,8 @@ private:
     std::deque<SolverCompletion> completed_;
     std::size_t outstanding_ = 0;
     bool stopping_ = false;
+    bool solving_ = false;
+    std::chrono::steady_clock::time_point solveStarted_{};
     std::thread thread_;
 };
 

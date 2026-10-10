@@ -17,6 +17,11 @@ def load_doctor():
 
 
 class DoctorTests(unittest.TestCase):
+    def test_C00_unity_cli_is_not_mistaken_for_editor(self):
+        doctor = load_doctor()
+        self.assertFalse(doctor.is_unity_editor_path("C:/Users/Ahmee/AppData/Local/Unity/bin/Unity.exe"))
+        self.assertTrue(doctor.is_unity_editor_path("C:/Program Files/Unity 6000.3.25f1/Editor/Unity.exe"))
+
     def test_C00_missing_required_native_tool_fails(self):
         doctor = load_doctor()
         checks = [
