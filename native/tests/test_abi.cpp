@@ -540,6 +540,99 @@ TEST_CASE("S01 product ABI publishes current pinned IPhreeqc acid observation") 
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("P01_01 ten tool science denial is an atomic transport tick") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE}, {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 5e-5}},
+                           {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    bool current = false;
+    for (int attempt = 0; attempt < 200 && !current; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto snapshot = json::parse(read_text(handle));
+        for (const auto& observation : snapshot["observations"])
+            current |= observation.value("vesselId", "") == "source" && observation.value("freshness", "") == "Current";
+        if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(current);
+    json samples = json::array();
+    for (int i = 0; i < 10; ++i) {
+        const auto id = "tool-" + std::to_string(i);
+        submit(handle, command(std::to_string(4 + i), "PlaceTool",
+                               {{"toolId", id}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                                {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                                {"profileRevision", "1"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        samples.push_back({{"toolId", id}, {"sampleSequence", "1"}, {"captureMonotonicNs", "1000000000"},
+                           {"positionMetres", {0, 1, 0}}, {"rotation", {0, 0, 0, 1}},
+                           {"trackingValid", true}, {"actuator01", 1.0}, {"coordinateFrame", "lab"},
+                           {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"},
+                           {"toolRevision", "1"}, {"captureFractions", json::array()}});
+    }
+    const auto input = samples.dump();
+    REQUIRE(plv_input_batch(handle, input.data(), static_cast<std::uint32_t>(input.size())) == PLV_OK);
+    const auto before = json::parse(read_text(handle));
+    REQUIRE(plv_step(handle, 0.02, 1'010'000'000ULL) == PLV_OK);
+    const auto after = json::parse(read_text(handle));
+    REQUIRE(after["hold"]["reason"] == "Compute");
+    CHECK(after["simulationTimeS"] == before["simulationTimeS"]);
+    CHECK(after["eventSequence"] == before["eventSequence"]);
+    CHECK(after["vessels"] == before["vessels"]);
+    CHECK(after["sinks"] == before["sinks"]);
+    std::uint32_t required = 0;
+    CHECK(plv_poll(handle, nullptr, 0, &required) == PLV_NO_EVENT);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P01_01 admitted disjoint tools advance simulation once") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateSink", {{"id", "spill"}})); REQUIRE(poll(handle)["accepted"].get<bool>());
+    json samples = json::array();
+    for (int i = 0; i < 2; ++i) {
+        const auto id = "source-" + std::to_string(i);
+        const auto tool = "tool-" + std::to_string(i);
+        submit(handle, command(std::to_string(2 + i * 3), "CreateVessel", {{"id", id}, {"capacityM3", 5e-5}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        submit(handle, command(std::to_string(3 + i * 3), "PrepareStock",
+                               {{"vesselId", id}, {"stockKind", "SodiumChloride"},
+                                {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 5e-5}}, {{id, "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        submit(handle, command(std::to_string(4 + i * 3), "PlaceTool",
+                               {{"toolId", tool}, {"sourceInventoryId", id}, {"overflowSinkId", "spill"},
+                                {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                                {"profileRevision", "1"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        samples.push_back({{"toolId", tool}, {"sampleSequence", "1"}, {"captureMonotonicNs", "1000000000"},
+                           {"positionMetres", {0, 1, 0}}, {"rotation", {0, 0, 0, 1}},
+                           {"trackingValid", true}, {"actuator01", 1.0}, {"coordinateFrame", "lab"},
+                           {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"},
+                           {"toolRevision", "1"}, {"captureFractions", json::array()}});
+    }
+    const auto input = samples.dump();
+    REQUIRE(plv_input_batch(handle, input.data(), static_cast<std::uint32_t>(input.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'010'000'000ULL) == PLV_OK);
+    const auto after = json::parse(read_text(handle));
+    CHECK(after["simulationTimeS"].get<double>() == doctest::Approx(0.02));
+    CHECK(after["eventSequence"] == "7");
+    CHECK(after["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
+    CHECK(poll(handle)["type"] == "LiveTransferCommitted");
+    CHECK(poll(handle)["type"] == "LiveTransferCommitted");
+    std::uint32_t required = 0;
+    CHECK(plv_poll(handle, nullptr, 0, &required) == PLV_NO_EVENT);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("S01 imported product session resumes pinned chemistry instead of losing its solver") {
     std::uint64_t handle = 0;
     const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},

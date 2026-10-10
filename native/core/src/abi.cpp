@@ -887,12 +887,19 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     }
     if (context->events.size() + activeToolCount > 256U) return PLV_BUSY;
 
+    // Stage the complete tick so a later tool or science budget cannot leave
+    // earlier transfers committed at an unchanged simulation time.
+    const auto beforeTick = context->executor.snapshot();
+    auto stagedExecutor = context->executor;
+    std::unordered_map<std::string, double> grossByVessel;
+    std::vector<std::string> stagedEvents;
+    stagedEvents.reserve(activeToolCount);
     for (const auto& toolId : toolIds) {
         const auto& tool = context->tools.at(toolId);
         if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0 || delta_s == 0.0) {
             continue;
         }
-        const auto snapshot = context->executor.snapshot();
+        const auto snapshot = stagedExecutor.snapshot();
         const auto source = snapshot.vessels.find(tool.sourceInventoryId);
         if (source == snapshot.vessels.end() || source->second.inventory.referenceVolumeM3 <= 0.0) continue;
         const double requestedVolumeM3 = plv::simulateBuretteDelivery(
@@ -903,25 +910,6 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             transportTickS);
         if (requestedVolumeM3 <= 0.0) continue;
 
-        if (context->worker) {
-            const auto proposedTimeNs = simulationNowNs + static_cast<std::uint64_t>(delta_s * 1'000'000'000.0);
-            bool admitted = context->scheduler.admitTransport(tool.sourceInventoryId, requestedVolumeM3, proposedTimeNs).accepted;
-            for (const auto& capture : tool.latestInput->captures) {
-                const auto& receiver = snapshot.vessels.at(capture.destinationInventoryId);
-                if (receiver.inventory.referenceVolumeM3 > 0.0) {
-                    admitted = admitted && context->scheduler.admitTransport(
-                        capture.destinationInventoryId, requestedVolumeM3 * capture.fraction, proposedTimeNs).accepted;
-                }
-            }
-            if (!admitted) {
-                context->holdActive = true;
-                context->holdReason = "Compute";
-                context->recoveryReady = false;
-                for (auto& item : context->tools) item.second.latestInput.reset();
-                return PLV_OK;
-            }
-        }
-
         std::unordered_map<std::string, std::uint64_t> revisions;
         revisions.emplace(tool.sourceInventoryId, source->second.materialRevision);
         for (const auto& capture : tool.latestInput->captures) {
@@ -929,7 +917,7 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             if (destination == snapshot.vessels.end()) return PLV_INTERNAL_ERROR;
             revisions.emplace(capture.destinationInventoryId, destination->second.materialRevision);
         }
-        const auto outcome = context->executor.transferFixed(
+        const auto outcome = stagedExecutor.transferFixed(
             {tool.sourceInventoryId,
              plv::TransferQuantityBasis::LiquidVolumeM3,
              requestedVolumeM3,
@@ -937,16 +925,13 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
              tool.overflowSinkId},
             revisions);
         if (!outcome.accepted) return PLV_INTERNAL_ERROR;
-        const auto committed = context->executor.snapshot();
-        if (context->worker) {
-            context->scheduler.recordGrossTransport(tool.sourceInventoryId, requestedVolumeM3, simulationNowNs);
-            for (const auto& capture : tool.latestInput->captures) {
-                const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
-                const auto& after = committed.vessels.at(capture.destinationInventoryId);
-                context->scheduler.recordGrossTransport(capture.destinationInventoryId,
-                    after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3, simulationNowNs);
-            }
-            offerChangedScience(*context, snapshot, simulationNowNs);
+        const auto committed = stagedExecutor.snapshot();
+        grossByVessel[tool.sourceInventoryId] += requestedVolumeM3;
+        for (const auto& capture : tool.latestInput->captures) {
+            const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
+            const auto& after = committed.vessels.at(capture.destinationInventoryId);
+            grossByVessel[capture.destinationInventoryId] +=
+                std::max(0.0, after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3);
         }
         json captured = json::array();
         for (const auto& capture : tool.latestInput->captures) {
@@ -961,7 +946,7 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         const double spilledQuantityM3 =
             committed.sinks.at(tool.overflowSinkId).referenceVolumeM3 -
             snapshot.sinks.at(tool.overflowSinkId).referenceVolumeM3;
-        context->events.push_back(json({
+        stagedEvents.push_back(json({
             {"schemaVersion", 1},
             {"type", "LiveTransferCommitted"},
             {"branchId", committed.branchId},
@@ -976,7 +961,29 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             {"spilledQuantityM3", spilledQuantityM3}
         }).dump());
     }
-    context->executor.advanceTime(delta_s);
+    const auto proposedTimeNs = simulationNowNs + static_cast<std::uint64_t>(delta_s * 1'000'000'000.0);
+    if (context->worker) {
+        for (const auto& [vesselId, grossVolume] : grossByVessel) {
+            if (grossVolume <= 0.0) continue;
+            const auto before = beforeTick.vessels.find(vesselId);
+            if (before != beforeTick.vessels.end() && before->second.inventory.referenceVolumeM3 <= 0.0) continue;
+            if (!context->scheduler.admitTransport(vesselId, grossVolume, proposedTimeNs).accepted) {
+                context->holdActive = true;
+                context->holdReason = "Compute";
+                context->recoveryReady = false;
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                return PLV_OK;
+            }
+        }
+    }
+    stagedExecutor.advanceTime(delta_s);
+    context->executor = std::move(stagedExecutor);
+    if (context->worker) {
+        for (const auto& [vesselId, grossVolume] : grossByVessel)
+            context->scheduler.recordGrossTransport(vesselId, grossVolume, simulationNowNs);
+        offerChangedScience(*context, beforeTick, proposedTimeNs);
+    }
+    for (auto& event : stagedEvents) context->events.push_back(std::move(event));
     return PLV_OK;
 }
 
