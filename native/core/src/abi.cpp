@@ -680,14 +680,38 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 outcome = {false, "StaleInventoryRevision", "tool rinse inventory revision changed"};
             } else if (!basis) {
                 outcome = {false, "InvalidRinse", "unsupported rinse quantity basis"};
+            } else if (found->second.inFlightInventory.referenceVolumeM3 > 0.0) {
+                outcome = {false, "InFlightOutstanding", "land the in-flight parcel before rinsing"};
             } else {
-                outcome = context->executor.transferFixed(
+                auto staged = context->executor;
+                const auto beforeRinse = staged.snapshot();
+                outcome = staged.transferFixed(
                     {sourceId, *basis, payload.at("quantity").at("value").get<double>(), {}, sinkId},
                     {{sourceId, revision(revisions, sourceId)}});
                 if (outcome.accepted) {
-                    ++found->second.inventoryRevision;
-                    found->second.actuator01 = 0.0;
-                    found->second.latestInput.reset();
+                    auto afterRinse = staged.snapshot();
+                    const auto& sourceBefore = beforeRinse.vessels.at(sourceId).inventory;
+                    const auto& sourceAfter = afterRinse.vessels.at(sourceId).inventory;
+                    const auto rinseVolumeM3 = sourceBefore.referenceVolumeM3 - sourceAfter.referenceVolumeM3;
+                    auto combined = sourceBefore.fraction(rinseVolumeM3);
+                    combined.add(found->second.tipInventory);
+                    combined.add(found->second.residualInventory);
+                    const auto retained = combined.fraction(std::min(
+                        plv::BuretteProfile::researchDefault().dropReferenceVolumeM3,
+                        combined.referenceVolumeM3));
+                    auto& waste = afterRinse.sinks.at(sinkId);
+                    waste.add(found->second.tipInventory);
+                    waste.add(found->second.residualInventory);
+                    if (!waste.subtract(retained) || !staged.restore(afterRinse).accepted) {
+                        outcome = {false, "RinseLedgerError", "rinse cannot preserve the represented material ledger"};
+                    } else {
+                        context->executor = std::move(staged);
+                        found->second.tipInventory = retained;
+                        found->second.residualInventory = {};
+                        ++found->second.inventoryRevision;
+                        found->second.actuator01 = 0.0;
+                        found->second.latestInput.reset();
+                    }
                 }
             }
         } else if (type == "CreateCheckpoint") {

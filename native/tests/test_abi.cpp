@@ -8,6 +8,7 @@
 #include <chrono>
 #include <thread>
 #include <atomic>
+#include <cmath>
 
 namespace {
 using json = nlohmann::json;
@@ -218,6 +219,72 @@ TEST_CASE("A02 discrete ABI commands mutate the native authority and duplicate s
     submit(handle, conflict);
     CHECK(poll(handle)["code"] == "CommandIdentityConflict");
     CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P02_03 rinse transfers contaminated tip parcel into waste and retains modeled residual") {
+    std::uint64_t original = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    submit(original, command("1", "CreateVessel", {{"id", "acid"}, {"capacityM3", 2e-5}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("2", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 2e-5}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("3", "CreateSink", {{"id", "waste"}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("4", "PrepareStock", {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
+        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}, {{"acid", "0"}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("5", "PrepareStock", {{"vesselId", "rinse"}, {"stockKind", "Water"},
+        {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 1e-5}}, {{"rinse", "0"}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("6", "PlaceTool", {{"toolId", "tool"}, {"sourceInventoryId", "acid"},
+        {"overflowSinkId", "waste"}, {"coordinateFrame", "lab"},
+        {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}})); REQUIRE(poll(original)["accepted"]);
+
+    // A controlled, ledger-balanced imported parcel exercises the rinse path while
+    // live tip filling is implemented separately. Import must never create matter.
+    auto saved = json::parse(read_text(original, true));
+    for (auto& vessel : saved["vessels"]) {
+        if (vessel["id"] != "acid") continue;
+        vessel["inventory"]["solventWaterKg"] = 0.009;
+        vessel["inventory"]["chlorideMol"] = 0.0009;
+        vessel["inventory"]["researchAdditiveVolumeM3"] = 9e-6;
+    }
+    auto& tip = saved["tools"][0]["tipInventory"];
+    tip["solventWaterKg"] = 0.001;
+    tip["chlorideMol"] = 0.0001;
+    tip["researchAdditiveVolumeM3"] = 1e-6;
+    tip["preparationId"] = "acid";
+    tip["provenanceId"] = "aqueous-six-research-v1";
+    const auto serialized = saved.dump();
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(serialized.data(), static_cast<std::uint32_t>(serialized.size()), &imported) == PLV_OK);
+    const std::string neutral = R"([{"toolId":"tool","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
+    submit(imported, command("7", "Continue", {{"monotonicNowNs", "1020000000"}}));
+    REQUIRE(poll(imported)["accepted"]);
+    submit(imported, command("8", "RinseTool", {{"toolId", "tool"}, {"rinseSourceInventoryId", "rinse"},
+        {"wasteSinkId", "waste"}, {"expectedInventoryRevision", "0"},
+        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}}}, {{"rinse", "1"}}));
+    REQUIRE(poll(imported)["accepted"]);
+    const auto after = json::parse(read_text(imported));
+    const auto retained = after["tools"][0]["tipInventory"];
+    CHECK(std::abs(retained["researchAdditiveVolumeM3"].get<double>() - 5e-8) < 1e-12);
+    double chlorideTotal = retained["chlorideMol"].get<double>();
+    double waterTotal = retained["solventWaterKg"].get<double>();
+    double volumeTotal = retained["researchAdditiveVolumeM3"].get<double>();
+    for (const auto& vessel : after["vessels"]) {
+        chlorideTotal += vessel["inventory"]["chlorideMol"].get<double>();
+        waterTotal += vessel["inventory"]["solventWaterKg"].get<double>();
+        volumeTotal += vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    }
+    for (const auto& sink : after["sinks"]) {
+        chlorideTotal += sink["inventory"]["chlorideMol"].get<double>();
+        waterTotal += sink["inventory"]["solventWaterKg"].get<double>();
+        volumeTotal += sink["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    }
+    CHECK(std::abs(chlorideTotal - 0.001) < 1e-12);
+    CHECK(std::abs(waterTotal - 0.020) < 1e-12);
+    CHECK(std::abs(volumeTotal - 20e-6) < 1e-12);
+    CHECK(after["sinks"][0]["inventory"]["chlorideMol"].get<double>() > 0.0);
+    CHECK(plv_destroy(imported) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
 }
 
 TEST_CASE("R01 ABI export imports complete state into a fresh validated context") {
