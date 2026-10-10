@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using PharmaLabVR.Input;
+using PharmaLabVR.Lab;
 using PharmaLabVR.UI;
 using UnityEngine;
 
@@ -253,8 +254,9 @@ namespace PharmaLabVR.Core
                 if (!supported) return false;
             }
             var payload = $"{{\"vesselId\":\"source\",\"stockKind\":\"{EscapeJson(choice.kind)}\",\"concentrationMolPerL\":{concentrationMolPerL.ToString("R", CultureInfo.InvariantCulture)},\"referenceVolumeM3\":0.000025}}";
-            var prepared = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("PrepareStock", payload, "{\"source\":\"0\"}"));
-            if (prepared == null || !prepared.accepted) return false;
+            var commands = new LabCommandService(Session);
+            var prepared = commands.Submit("PrepareStock", payload, commands.CaptureTouchedRevisions("source"));
+            if (!prepared.Accepted) return false;
             RequireAccepted(Session.SubmitOrdered("Continue"));
             PublishSnapshot();
             return true;

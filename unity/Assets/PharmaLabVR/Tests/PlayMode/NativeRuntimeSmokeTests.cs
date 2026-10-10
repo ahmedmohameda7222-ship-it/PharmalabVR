@@ -7,6 +7,7 @@ using PharmaLabVR.Input;
 using PharmaLabVR.Tools;
 using PharmaLabVR.UI;
 using PharmaLabVR.Session;
+using PharmaLabVR.Lab;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.SceneManagement;
@@ -89,6 +90,39 @@ namespace PharmaLabVR.Tests.PlayMode
                     yield return new WaitForSecondsRealtime(0.01f);
                 Assert.That(CoreSession.PendingRetirements, Is.Zero, "The previous real solver context did not retire.");
             }
+        }
+
+        [UnityTest]
+        public IEnumerator P02_02_TouchedRevisionFacadeRejectsStaleAndIgnoresUnrelatedVessel()
+        {
+            var root = new GameObject("CommandFacadeIntegration");
+            var driver = root.AddComponent<CoreDriver>();
+            yield return null;
+            var commands = new LabCommandService(driver.Session);
+            var sourceAtZero = commands.CaptureTouchedRevisions("source");
+            Assert.That(driver.Session.SubmitOrdered("CreateVessel",
+                "{\"id\":\"unrelated\",\"capacityM3\":0.00005}"), Does.Contain("\"accepted\":true"));
+            var unrelatedAtZero = commands.CaptureTouchedRevisions("unrelated");
+            Assert.That(commands.Submit("PrepareStock",
+                "{\"vesselId\":\"unrelated\",\"stockKind\":\"Water\",\"concentrationMolPerL\":0.0,\"referenceVolumeM3\":0.000001}",
+                unrelatedAtZero).Accepted, Is.True);
+            var sourcePayload = "{\"vesselId\":\"source\",\"stockKind\":\"SodiumChloride\",\"concentrationMolPerL\":0.05,\"referenceVolumeM3\":0.000025}";
+            var committed = commands.Submit("PrepareStock", sourcePayload, sourceAtZero);
+            Assert.That(committed.Accepted, Is.True,
+                "An unrelated vessel revision must not invalidate the source intent.");
+            var identity = "{\"schemaVersion\":1,\"branchId\":\"local-session\",\"commandSequence\":\"" +
+                committed.CommandSequence + "\",\"type\":\"PrepareStock\",\"expectedMaterialRevisions\":{\"source\":\"0\"},\"payload\":" + sourcePayload + "}";
+            driver.Session.Submit(identity);
+            Assert.That(driver.Session.PollEvents().Any(e => e.Contains("\"commandSequence\":\"" + committed.CommandSequence + "\"") &&
+                e.Contains("\"code\":\"Accepted\"")), Is.True, "Identical command identity should replay the accepted receipt.");
+            driver.Session.Submit(identity.Replace("\"concentrationMolPerL\":0.05", "\"concentrationMolPerL\":0.1"));
+            Assert.That(driver.Session.PollEvents().Any(e => e.Contains("\"commandSequence\":\"" + committed.CommandSequence + "\"") &&
+                e.Contains("\"code\":\"CommandIdentityConflict\"")), Is.True);
+            var rejected = commands.Submit("PrepareStock", sourcePayload, sourceAtZero);
+            Assert.That(rejected.Accepted, Is.False);
+            Assert.That(rejected.Code, Is.EqualTo("StaleRevision"));
+            Object.Destroy(root);
+            yield return null;
         }
 
         [UnityTest]
