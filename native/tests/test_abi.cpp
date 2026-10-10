@@ -88,7 +88,8 @@ TEST_CASE("P01_02 only one mutable session and its owner thread may submit") {
     std::uint64_t replacement = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &replacement) == PLV_OK);
     CHECK(plv_submit(original, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_BUSY);
-    CHECK(plv_submit(replacement, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_OK);
+    const auto pause = command("1", "Pause").dump();
+    CHECK(plv_submit(replacement, pause.data(), static_cast<std::uint32_t>(pause.size())) == PLV_OK);
     CHECK(poll(replacement)["accepted"].get<bool>());
     std::uint64_t third = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &third) == PLV_OK);
@@ -98,7 +99,7 @@ TEST_CASE("P01_02 only one mutable session and its owner thread may submit") {
     CHECK(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &fifth) == PLV_BUSY);
     CHECK(fifth == 0U);
     CHECK(plv_submit(third, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_BUSY);
-    CHECK(plv_submit(fourth, create.data(), static_cast<std::uint32_t>(create.size())) == PLV_OK);
+    CHECK(plv_submit(fourth, pause.data(), static_cast<std::uint32_t>(pause.size())) == PLV_OK);
     CHECK(poll(fourth)["accepted"].get<bool>());
     CHECK(plv_destroy(fourth) == PLV_OK);
     CHECK(plv_destroy(third) == PLV_OK);
@@ -439,7 +440,7 @@ TEST_CASE("H02 held session requires neutral fresh baseline and explicit Continu
     REQUIRE(plv_input_batch(handle, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
     REQUIRE(plv_step(handle, 0.0, 1020000000) == PLV_OK);
     CHECK(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
-    submit(handle, command("7", "Continue"));
+    submit(handle, command("7", "Continue", {{"monotonicNowNs", "1020000000"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
     const auto before = json::parse(read_text(handle));
     REQUIRE(plv_step(handle, 0.02, 1040000000) == PLV_OK);
@@ -447,6 +448,77 @@ TEST_CASE("H02 held session requires neutral fresh baseline and explicit Continu
     CHECK_FALSE(after["hold"]["active"].get<bool>());
     CHECK(after["vessels"] == before["vessels"]);
     CHECK(after["simulationTimeS"].get<double>() == doctest::Approx(0.02));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P01_03 Continue expires readiness and SetActuator invalidates it") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("3", "PlaceTool",
+                           {{"toolId", "tool"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("4", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto sample = json::parse(R"({"toolId":"tool","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]})");
+    auto input = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, input.data(), static_cast<std::uint32_t>(input.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1'010'000'000ULL) == PLV_OK);
+    REQUIRE(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    submit(handle, command("5", "Continue", {{"monotonicNowNs", "1200000000"}}));
+    REQUIRE_FALSE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    sample["sampleSequence"] = "2";
+    sample["captureMonotonicNs"] = "1200000000";
+    input = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, input.data(), static_cast<std::uint32_t>(input.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1'210'000'000ULL) == PLV_OK);
+    REQUIRE(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    submit(handle, command("6", "SetActuator",
+                           {{"toolId", "tool"}, {"actuator01", 0.0}, {"expectedActuatorRevision", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("7", "Continue", {{"monotonicNowNs", "1210000000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P01_03 rinse attempt during hold cannot change material or reuse readiness") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateSink", {{"id", "waste"}})); poll(handle);
+    submit(handle, command("3", "PrepareStock",
+                           {{"vesselId", "rinse"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}}, {{"rinse", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("4", "PlaceTool",
+                           {{"toolId", "tool"}, {"sourceInventoryId", "rinse"}, {"overflowSinkId", "waste"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}})); REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const std::string neutral = R"([{"toolId":"tool","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(handle, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1'010'000'000ULL) == PLV_OK);
+    REQUIRE(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    const auto before = json::parse(read_text(handle));
+    submit(handle, command("6", "RinseTool",
+                           {{"toolId", "tool"}, {"rinseSourceInventoryId", "rinse"}, {"wasteSinkId", "waste"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+                            {"expectedInventoryRevision", "0"}}, {{"rinse", "1"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    const auto after = json::parse(read_text(handle));
+    CHECK(after["vessels"] == before["vessels"]);
+    CHECK(after["sinks"] == before["sinks"]);
+    CHECK(after["simulationTimeS"] == before["simulationTimeS"]);
+    submit(handle, command("7", "Continue", {{"monotonicNowNs", "1010000000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
@@ -495,7 +567,7 @@ TEST_CASE("H02 focus loss enters native hold until an explicit fresh neutral Con
     const std::string neutral = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
     REQUIRE(plv_input_batch(handle, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
     REQUIRE(plv_step(handle, 0.0, 1020000000) == PLV_OK);
-    submit(handle, command("6", "Continue"));
+    submit(handle, command("6", "Continue", {{"monotonicNowNs", "1020000000"}}));
     CHECK(poll(handle)["accepted"].get<bool>());
     CHECK_FALSE(json::parse(read_text(handle))["hold"]["active"].get<bool>());
     CHECK(plv_destroy(handle) == PLV_OK);
@@ -521,7 +593,7 @@ TEST_CASE("H02 imported flowing session requires fresh neutral input before Cont
     const std::string neutral = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
     REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
     REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
-    submit(imported, command("5", "Continue"));
+    submit(imported, command("5", "Continue", {{"monotonicNowNs", "1020000000"}}));
     CHECK(poll(imported)["accepted"].get<bool>());
     CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(handle) == PLV_OK);
@@ -861,7 +933,12 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
     CHECK(restoredSource["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(4e-6));
     CHECK(std::stoull(snapshot["eventSequence"].get<std::string>()) > disposedEventSequence);
 
-    submit(handle, command("11", "RinseTool",
+    const std::string neutralAfterRestart = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(handle, neutralAfterRestart.data(), static_cast<std::uint32_t>(neutralAfterRestart.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.0, 1'010'000'000ULL) == PLV_OK);
+    submit(handle, command("11", "Continue", {{"monotonicNowNs", "1010000000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("12", "RinseTool",
                            {{"toolId", "burette-1"}, {"rinseSourceInventoryId", "rinse"},
                             {"wasteSinkId", "waste"},
                             {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
@@ -874,7 +951,7 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
     CHECK(snapshot["tools"][0]["toolRevision"] == "1");
     CHECK(snapshot["tools"][0]["inventoryRevision"] == "1");
 
-    submit(handle, command("12", "BeginModeChange", {{"mode", "VR"}}));
+    submit(handle, command("13", "BeginModeChange", {{"mode", "VR"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
     snapshot = json::parse(read_text(handle));
     CHECK(snapshot["mode"] == "VR");
@@ -884,7 +961,7 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
     const auto exported = read_text(handle, true);
     std::uint64_t imported = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
-    submit(imported, command("13", "RestartCheckpoint", {{"checkpointId", "before-disposal"}}));
+    submit(imported, command("14", "RestartCheckpoint", {{"checkpointId", "before-disposal"}}));
     REQUIRE(poll(imported)["accepted"].get<bool>());
     const auto importedSnapshot = json::parse(read_text(imported));
     const auto importedSource = importedSnapshot["vessels"][0]["id"] == "source"

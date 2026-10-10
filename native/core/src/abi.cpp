@@ -87,6 +87,7 @@ struct Context {
     bool holdActive = false;
     std::string holdReason;
     bool recoveryReady = false;
+    std::uint64_t lastMonotonicNowNs = 0;
     std::thread::id ownerThread = std::this_thread::get_id();
     std::atomic<bool> active{true};
     std::mutex mutex;
@@ -150,6 +151,16 @@ constexpr std::size_t maxTools = 64U;
 constexpr std::size_t maxSessionContexts = 4U;
 constexpr std::uint64_t inputStaleCutoffNs = 100'000'000ULL;
 constexpr double transportTickS = 0.020;
+
+bool freshNeutralInputs(const Context& context, std::uint64_t nowNs) {
+    for (const auto& [toolId, tool] : context.tools) {
+        const auto& input = tool.latestInput;
+        if (!input || !input->trackingValid || input->actuator01 > 1e-9 ||
+            input->captureMonotonicNs > nowNs ||
+            nowNs - input->captureMonotonicNs > inputStaleCutoffNs) return false;
+    }
+    return true;
+}
 
 std::shared_ptr<Context> getContext(std::uint64_t handle) {
     std::lock_guard<std::mutex> lock(registryMutex);
@@ -559,7 +570,12 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         const auto& payload = parsed.at("payload");
         const auto& revisions = parsed.at("expectedMaterialRevisions");
         plv::CommandOutcome outcome;
-        if (type == "CreateVessel") {
+        if (context->holdActive &&
+            (type == "CreateVessel" || type == "CreateSink" || type == "PrepareStock" ||
+             type == "TransferFixed" || type == "DisposeContents" || type == "RinseTool")) {
+            context->recoveryReady = false;
+            outcome = {false, "SessionHeld", "material operations require explicit recovery"};
+        } else if (type == "CreateVessel") {
             outcome = context->executor.createVessel(payload.at("id").get<std::string>(), payload.at("capacityM3").get<double>());
         } else if (type == "CreateSink") {
             outcome = context->executor.createSink(payload.at("id").get<std::string>());
@@ -737,7 +753,12 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
         } else if (type == "Continue") {
-            if (context->holdActive && !context->recoveryReady) {
+            const auto clock = payload.contains("monotonicNowNs") && payload.at("monotonicNowNs").is_string()
+                                   ? decimalSequence(payload.at("monotonicNowNs").get<std::string>())
+                                   : std::nullopt;
+            if (context->holdActive && (!context->recoveryReady ||
+                (!context->tools.empty() && (!clock || *clock < context->lastMonotonicNowNs ||
+                                              !freshNeutralInputs(*context, *clock))))) {
                 outcome = {false, "RecoveryNotReady", "neutral fresh tracked baselines are required"};
             } else {
                 context->holdActive = false;
@@ -750,6 +771,10 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         } else {
             outcome = {false, "UnsupportedCommand", "command type is not implemented"};
         }
+        if (outcome.accepted && context->holdActive &&
+            (type == "CreateVessel" || type == "PrepareStock" || type == "TransferFixed" ||
+             type == "PlaceTool" || type == "SetActuator" || type == "DisposeContents" ||
+             type == "RinseTool")) context->recoveryReady = false;
         if (outcome.accepted) {
             const auto nowNs = static_cast<std::uint64_t>(
                 std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
@@ -858,20 +883,19 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     if (!std::isfinite(delta_s) || delta_s < 0.0) return PLV_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(context->mutex);
     if (!context->active.load()) return PLV_BUSY;
+    if (monotonic_now_ns < context->lastMonotonicNowNs) {
+        context->holdActive = true;
+        context->holdReason = "TimeDiscontinuity";
+        context->recoveryReady = false;
+        for (auto& item : context->tools) item.second.latestInput.reset();
+        return PLV_OK;
+    }
+    context->lastMonotonicNowNs = monotonic_now_ns;
     const auto simulationNowNs = static_cast<std::uint64_t>(
         std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
     collectScience(*context, simulationNowNs);
     if (context->holdActive) {
-        bool ready = true;
-        for (const auto& item : context->tools) {
-            const auto& input = item.second.latestInput;
-            if (!input || !input->trackingValid || input->actuator01 > 1e-9 ||
-                input->captureMonotonicNs > monotonic_now_ns ||
-                monotonic_now_ns - input->captureMonotonicNs > inputStaleCutoffNs) {
-                ready = false;
-                break;
-            }
-        }
+        bool ready = freshNeutralInputs(*context, monotonic_now_ns);
         if (context->holdReason == "Compute" && context->worker) {
             const auto snapshot = context->executor.snapshot();
             for (const auto& [id, vessel] : snapshot.vessels) {

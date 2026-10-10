@@ -139,7 +139,8 @@ namespace PharmaLabVR.Core
             var nowNs = NowNs();
             Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
             Session.Step(0.0, nowNs);
-            var outcomeJson = Session.SubmitOrdered("Continue");
+            var continueNowNs = NowNs();
+            var outcomeJson = Session.SubmitOrdered("Continue", $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
             var outcome = JsonUtility.FromJson<CommandOutcome>(outcomeJson);
             if (outcome == null || !outcome.accepted) return false;
             if (inputAdapterBehaviours != null)
