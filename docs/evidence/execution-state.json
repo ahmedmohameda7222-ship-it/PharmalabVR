@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P02.01",
+  "nextTask": "P02.02",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -277,13 +277,21 @@
           "dependencies": [
             "P01.03"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
+          "evidence": [
+            "docs/evidence/p02-01-stocks.md",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P02_01 six stocks x supported concentration matrix through real CoreSession",
+            "Unity PlayMode 15/15, EditMode 22/22; WindowsDesktop Player build Success"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "docs/evidence/p02-01-stocks.md",
+            "PlayMode P02_01 selected all six supported stocks across 16 cases and verified native pools, water, reference volume and provenance",
+            "WindowsDesktop Player build Success at functional SHA c9a58ea8af18b721b825af65c0fd1d578e085d0f"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Unity PlayMode action through SessionController and real Native/IPhreeqc context plus WindowsDesktop build and Boot screenshot. Rendered stock-selection HUD click, VR and physical science validation remain open in later UI/VR tasks.",
           "blocker": null
         },
         {
@@ -2047,10 +2055,10 @@
       "G-R1"
     ]
   },
-  "actualHead": "24638ad35c2ce47fdce9c36d674755638273939d",
-  "functionalCodeSha": "24638ad35c2ce47fdce9c36d674755638273939d",
-  "currentTask": "P02.01",
-  "lastVerifiedTask": "P01.03",
+  "actualHead": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
+  "functionalCodeSha": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
+  "currentTask": "P02.02",
+  "lastVerifiedTask": "P02.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
@@ -2058,6 +2066,6 @@
     "Imported v2 template once; no prior execution-state existed. Existing P00 foundation evidence remains in progress.json and will be reconciled before granting any new task VerifiedLocal.",
     "G-R1 remains Open; P18-P22 are gated.",
     "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix.",
-    "P02.01 is the six-stock preparation catalog and removal of forced NaCl demo per v2 phase file; checkpoint science rollback remains O10-N1 for a later science task, not P02.01."
+    "P02.01 verified through Unity PlayMode selection over real Native sessions; WindowsDesktop Player built and Boot screenshot captured, while stock HUD click/render remains separate UI evidence. Checkpoint science rollback O10-N1 is still open for a later science task."
   ]
 }
