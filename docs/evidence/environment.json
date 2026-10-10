@@ -1,0 +1,84 @@
+{
+  "allowedMissing": [],
+  "capturedAtUtc": "2026-10-10T12:45:30.593730+00:00",
+  "claims": {
+    "experimentalAccuracyEstablished": false,
+    "physicalVrTested": false,
+    "productBuilt": false
+  },
+  "host": {
+    "machine": "AMD64",
+    "release": "11",
+    "system": "Windows"
+  },
+  "missingRequired": [],
+  "ready": true,
+  "schemaVersion": 1,
+  "scope": "environment-discovery",
+  "tools": [
+    {
+      "available": true,
+      "detail": null,
+      "name": "git",
+      "path": "C:\\Program Files\\Git\\cmd\\git.EXE",
+      "required": true,
+      "version": "git version 2.55.0.windows.5"
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "python",
+      "path": "C:\\Users\\Ahmee\\AppData\\Local\\Programs\\Python\\Python314\\python.exe",
+      "required": true,
+      "version": "3.14.7"
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "cmake",
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin\\cmake.exe",
+      "required": true,
+      "version": "cmake version 3.31.6-msvc6"
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "cxx",
+      "path": "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Tools\\MSVC\\14.44.35207\\bin\\Hostx64\\x64\\cl.exe",
+      "required": true,
+      "version": "Microsoft (R) C/C++ Optimizing Compiler Version 19.44.35229 for x64"
+    },
+    {
+      "available": true,
+      "detail": "Pinned editor path detected; import/build remains the compatibility gate.",
+      "name": "unity",
+      "path": "C:\\Program Files\\Unity 6000.3.25f1\\Editor\\Unity.exe",
+      "required": true,
+      "version": "6000.3.25f1"
+    },
+    {
+      "available": true,
+      "detail": null,
+      "name": "github-cli",
+      "path": "C:\\Program Files\\GitHub CLI\\gh.EXE",
+      "required": false,
+      "version": "gh version 2.102.0 (2026-09-30)"
+    },
+    {
+      "available": true,
+      "detail": "Authenticated",
+      "name": "github-auth",
+      "path": null,
+      "required": false,
+      "version": null
+    },
+    {
+      "available": false,
+      "detail": "EvidenceMissing by assignment context.",
+      "name": "physical-vr-headset",
+      "path": null,
+      "required": false,
+      "version": null
+    }
+  ]
+}

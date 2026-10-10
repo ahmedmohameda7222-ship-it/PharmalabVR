@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 3,
+  "repository": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR",
+  "branch": "feat/foundation-vr-first",
+  "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
+  "pullRequestMerged": false,
+  "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
+  "evidenceCommitNote": "Evidence documentation is committed after the tested code commit; no later product code is included.",
+  "productMaturity": "Research",
+  "completionStatus": "Partial",
+  "implementedTaskIds": ["P00"],
+  "taskStatusEvidence": "docs/evidence/progress.json",
+  "acceptanceSummary": {
+    "catalog": "docs/evidence/acceptance-95.json",
+    "total": 95,
+    "Passed": 19,
+    "Partial": 72,
+    "EvidenceMissing": 4,
+    "scope": "Self-assigned status with cited test or artifact per criterion; no independent certification or physical acceptance claim."
+  },
+  "testResults": {
+    "native": {
+      "result": "60/60 cases; 8833/8833 assertions",
+      "ctest": "1/1",
+      "paths": ["artifacts/test-results/native-final-current.txt", "artifacts/test-results/ctest-final-current.txt"]
+    },
+    "pythonTooling": {
+      "result": "6/6",
+      "path": "artifacts/test-results/python-tooling-oct9-current.txt"
+    },
+    "idealReference": {
+      "result": "40 cases",
+      "scope": "Independent ideal numerical reference only; not experimental validation",
+      "path": "artifacts/test-results/ideal-reference.txt"
+    },
+    "unityEditMode": {
+      "result": "22/22",
+      "path": "artifacts/test-results/EditMode-cylinder-fixed-v2.xml",
+      "regressionRedPath": "artifacts/test-results/EditMode-red-cylinder.xml",
+      "regressionRedResult": "21/22 before the production fix"
+    },
+    "unityPlayMode": {
+      "result": "14/14",
+      "path": "artifacts/test-results/PlayMode-cylinder-fixed.xml"
+    }
+  },
+  "unityEditor": "6000.3.25f1",
+  "players": {
+    "WindowsDesktop": {
+      "build": "Passed at testedCodeCommitSha",
+      "actualPlayer": "Boot, Lab, Save, Load, SessionLoad hold and Continue visually exercised",
+      "fullStudentJourney": "Partial",
+      "buildLog": "artifacts/logs/unity-WindowsDesktop-10d6dae.log",
+      "runLogs": ["artifacts/logs/windows-desktop-10d6dae.log"]
+    },
+    "WindowsVR": {
+      "build": "Passed at testedCodeCommitSha",
+      "physicalVrJourney": "EvidenceMissing",
+      "simulatorEndToEnd": "Partial",
+      "buildLog": "artifacts/logs/unity-WindowsVR-10d6dae.log"
+    },
+    "AndroidVR": {
+      "build": "Passed at testedCodeCommitSha",
+      "architecture": "ARM64",
+      "backend": "IL2CPP",
+      "apkEntriesVerified": ["lib/arm64-v8a/libil2cpp.so", "lib/arm64-v8a/libpharmalab_core.so", "lib/arm64-v8a/libunity.so", "assets/science/minteq.v4.dat"],
+      "physicalInstall": "EvidenceMissing",
+      "thermalPower": "EvidenceMissing",
+      "buildLog": "artifacts/logs/unity-AndroidVR-10d6dae.log",
+      "apk": "artifacts/AndroidVR/PharmaLabVR-research.apk"
+    }
+  },
+  "scientificCoverage": {
+    "productAdapter": "Pinned minteq database and IPhreeqc worker execute through the native product session and Unity Player; current pH and provenance states are visible in Player",
+    "unsupportedScope": "Unsupported observations remain explicit; full stock/support/provenance matrix remains partial",
+    "experimentalValidation": "EvidenceMissing"
+  },
+  "performance": {
+    "instrumentation": "Raw frame, hold and memory trace written by actual Windows Desktop Player",
+    "shortTrace": "artifacts/performance/windows-desktop-short-a9f2268.json",
+    "uncontrolledTrace": "artifacts/performance/windows-desktop-uncontrolled-161f4cd.json",
+    "uncontrolledTraceScope": "Historical 161f4cd code and uncontrolled duration; no performance acceptance claim",
+    "loadContinueTrace": "artifacts/performance/windows-desktop-load-continue-10d6dae.json",
+    "publicationCriteria": "EvidenceMissing: no controlled 1/4/10 vessel workload or three 30-minute target/device runs; raw traces are not benchmark results"
+  },
+  "screenshots": [
+    "artifacts/screenshots/windows-desktop-10d6dae-boot.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-lab.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-loaded-held.png",
+    "artifacts/screenshots/windows-desktop-10d6dae-loaded-continued.png"
+  ],
+  "savedPlayerSession": "artifacts/sessions/autosave-10d6dae.plv.json",
+  "artifactManifest": "docs/evidence/artifact-manifest.json",
+  "hardwareProfile": "docs/evidence/environment.json",
+  "independentSoftwareWorkStillOpen": [
+    "Native retained tip, residual, in-flight, drop, rinse and contamination transport and geometry enforcement",
+    "Complete observation provenance, scheduler budget/failure matrix and scientific support coverage",
+    "Spatial VR setup/ray UI and body/valve/receiver ownership with full simulator journey",
+    "Complete calibrated visible lab and all-material Open Lab/Desktop journeys",
+    "Durable bounded journal/index/history, Review and recorded-versus-recompute branches with crash cases",
+    "Arabic/English and accessibility protocol/student journeys",
+    "Controlled target workload and long Player instrumentation campaigns"
+  ],
+  "externalEvidenceGatesStillOpen": [
+    "Physical VR headset/controller run",
+    "Android device install, frame, thermal and power run",
+    "Measured burette calibration, optical and tracer/mixing validation",
+    "Experimental scientific validation",
+    "Participant human-factors study"
+  ],
+  "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
+}

@@ -1,0 +1,40 @@
+name: Native
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure
+        run: cmake -S . -B build/native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/native --config Release --parallel 2
+      - name: Upload compiled native build
+        uses: actions/upload-artifact@v6
+        with:
+          name: pharmalabvr-native-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            build/native/**/*.dll
+            build/native/**/*.so
+            build/native/**/*.dylib
+            build/native/**/minteq.v4.dat
+            build/native/**/plv_tests*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Test
+        run: ctest --test-dir build/native -C Release --output-on-failure
+      - name: Verify independent ideal fixtures
+        run: python science/reference/verify_ideal_fixtures.py
+      - name: Verify repository tooling
+        run: python -m unittest discover -s scripts/tests -v

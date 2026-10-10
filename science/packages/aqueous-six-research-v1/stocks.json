@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "concentrationConvention": "mol-per-litre-prepared-reference-volume",
+  "researchMatrixMolPerL": [0.01, 0.05, 0.1],
+  "stocks": [
+    {"id":"water","kind":"Water","pools":{}},
+    {"id":"hcl","kind":"HydrochloricAcid","pools":{"chloride":1}},
+    {"id":"naoh","kind":"SodiumHydroxide","pools":{"sodium":1}},
+    {"id":"nacl","kind":"SodiumChloride","pools":{"sodium":1,"chloride":1}},
+    {"id":"acetic-acid","kind":"AceticAcid","pools":{"acetate":1}},
+    {"id":"sodium-acetate","kind":"SodiumAcetate","pools":{"sodium":1,"acetate":1}}
+  ]
+}

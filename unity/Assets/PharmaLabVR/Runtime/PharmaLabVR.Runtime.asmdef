@@ -1,0 +1,6 @@
+{
+  "name": "PharmaLabVR.Runtime",
+  "rootNamespace": "PharmaLabVR",
+  "references": ["Unity.InputSystem", "Unity.XR.Interaction.Toolkit", "Unity.XR.CoreUtils", "Unity.TextMeshPro", "RTLTMPro"],
+  "autoReferenced": true
+}

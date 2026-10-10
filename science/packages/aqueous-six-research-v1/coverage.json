@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "observables": {
+    "pH": {"support":"Approximate","computation":"Ready","model":"ideal-aqueous-reference-v1"},
+    "indicatorColor": {"support":"Unsupported","reason":"No validated preparation or optical calibration supplied"},
+    "localMixing": {"support":"Unsupported","reason":"No tracer calibration supplied"},
+    "volume": {"support":"Approximate","reason":"Additive reference convention, not measured solution density"}
+  }
+}

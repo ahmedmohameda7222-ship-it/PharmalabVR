@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "strong-acid-titration-research",
+  "maturity": "Research",
+  "certifiedScoring": false,
+  "requiredObservables": ["pH", "volume"],
+  "optionalUnsupportedObservables": ["indicatorColor"],
+  "steps": ["Rinse the burette and preserve rinse material in waste.", "Transfer the configured sample with the pipette.", "Add titrant while reading the burette scale.", "Record observations and their freshness."],
+  "limitations": ["No validated persistent phenolphthalein endpoint color is supplied.", "No hardcoded endpoint volume or automatic stop is used."]
+}
