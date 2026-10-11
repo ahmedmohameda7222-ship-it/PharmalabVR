@@ -78,6 +78,31 @@ TEST_CASE("O03 each vessel has one replaceable pending slot without starving pee
     CHECK(coalescedA->materialRevision == 3);
 }
 
+TEST_CASE("P04_01 restored generation ignores prior in-flight completion even at the same revision") {
+    ObservationScheduler scheduler({2e-7, 500000000ULL, 8});
+    REQUIRE(scheduler.offer({"A", "pH", 1, 0, 0.0}).accepted);
+    const auto oldRequest = scheduler.takeNext();
+    REQUIRE(oldRequest.has_value());
+    CHECK(oldRequest->dependencyGeneration == 1);
+    scheduler.resetForRestoredState();
+    CHECK(scheduler.dependencyGeneration() == 2);
+    REQUIRE(scheduler.offer({"A", "pH", 1, 0, 0.0}).accepted);
+    const auto restoredRequest = scheduler.takeNext();
+    REQUIRE(restoredRequest.has_value());
+    CHECK(restoredRequest->dependencyGeneration == 2);
+    CHECK_FALSE(scheduler.complete(*oldRequest,
+        {ObservationSupport::Supported, ObservationMaturity::Research, true, 12.0}));
+    const auto* pending = scheduler.observation("A", "pH");
+    REQUIRE(pending != nullptr);
+    CHECK(pending->freshness == ObservationFreshness::Pending);
+    CHECK(scheduler.complete(*restoredRequest,
+        {ObservationSupport::Supported, ObservationMaturity::Research, true, 1.0}));
+    const auto* current = scheduler.observation("A", "pH");
+    REQUIRE(current != nullptr);
+    CHECK(current->freshness == ObservationFreshness::Current);
+    CHECK(current->value == doctest::Approx(1.0));
+}
+
 TEST_CASE("O04 O05 precommit budgets count gross circulation and hold before violation") {
     ObservationScheduler scheduler({2e-7, 500000000ULL, 8});
     scheduler.markSolved("A", 4, 1000000000ULL);

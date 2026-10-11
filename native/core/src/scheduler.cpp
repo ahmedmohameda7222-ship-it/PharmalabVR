@@ -2,6 +2,7 @@
 #include "plv/state_executor.hpp"
 
 #include <cmath>
+#include <limits>
 #include <utility>
 
 namespace plv {
@@ -28,6 +29,7 @@ CommandOutcome ObservationScheduler::offer(ObservationRequest request) {
         return reject("ObservationQueueFull", "pending observation queue is full");
     }
     markMaterialRevision(vesselId, request.materialRevision, request.submittedNs);
+    request.dependencyGeneration = dependencyGeneration_;
     pendingByVessel_.insert_or_assign(vesselId, std::move(request));
     if (inFlightVessels_.count(vesselId) == 0 && queuedVessels_.insert(vesselId).second) {
         readyVessels_.push_back(vesselId);
@@ -51,14 +53,15 @@ std::optional<ObservationRequest> ObservationScheduler::takeNext() {
     return request;
 }
 
-void ObservationScheduler::complete(const ObservationRequest& request, const ObservationResultInput& result) {
+bool ObservationScheduler::complete(const ObservationRequest& request, const ObservationResultInput& result) {
+    if (request.dependencyGeneration != dependencyGeneration_) return false;
     inFlightVessels_.erase(request.vesselId);
     if (pendingByVessel_.count(request.vesselId) != 0 && queuedVessels_.insert(request.vesselId).second) {
         readyVessels_.push_back(request.vesselId);
     }
     auto& record = observations_[key(request.vesselId, request.observable)];
     if (request.materialRevision < record.solvedRevision) {
-        return;
+        return false;
     }
     record.support = result.support;
     record.maturity = result.maturity;
@@ -71,7 +74,22 @@ void ObservationScheduler::complete(const ObservationRequest& request, const Obs
     record.freshness = result.succeeded && matchesAuthoritative
                            ? ObservationFreshness::Current
                            : ObservationFreshness::Stale;
+    return true;
 }
+
+void ObservationScheduler::resetForRestoredState() {
+    dependencyGeneration_ = dependencyGeneration_ == std::numeric_limits<std::uint64_t>::max()
+                                ? 1U : dependencyGeneration_ + 1U;
+    readyVessels_.clear();
+    pendingByVessel_.clear();
+    queuedVessels_.clear();
+    inFlightVessels_.clear();
+    observations_.clear();
+    authoritativeRevisions_.clear();
+    budgets_.clear();
+}
+
+std::uint64_t ObservationScheduler::dependencyGeneration() const { return dependencyGeneration_; }
 
 const ObservationRecord* ObservationScheduler::observation(
     const std::string& vesselId,

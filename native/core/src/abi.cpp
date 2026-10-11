@@ -129,8 +129,8 @@ void collectScience(Context& context, std::uint64_t simulationNowNs) {
     while (const auto completion = context.worker->poll()) {
         const auto& request = completion->observation;
         const auto& result = completion->result;
-        context.scheduler.complete(request, {plv::ObservationSupport::Supported,
-            plv::ObservationMaturity::Research, result.succeeded, result.pH});
+        if (!context.scheduler.complete(request, {plv::ObservationSupport::Supported,
+            plv::ObservationMaturity::Research, result.succeeded, result.pH})) continue;
         const auto* record = context.scheduler.observation(request.vesselId, request.observable);
         if (record != nullptr && record->solvedRevision == request.materialRevision) {
             context.scienceResults.insert_or_assign(request.vesselId, result);
@@ -284,6 +284,7 @@ json contextSnapshotJson(const Context& context) {
         {"recoveryReady", context.recoveryReady}
     };
     result["tools"] = json::array();
+    result["scienceDependencyGeneration"] = std::to_string(context.scheduler.dependencyGeneration());
     std::vector<std::string> toolIds;
     toolIds.reserve(context.tools.size());
     for (const auto& item : context.tools) toolIds.push_back(item.first);
@@ -757,6 +758,11 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     context->holdActive = true;
                     context->holdReason = "CheckpointRestart";
                     context->recoveryReady = context->tools.empty();
+                    context->scheduler.resetForRestoredState();
+                    context->scienceResults.clear();
+                    const plv::SessionSnapshot empty;
+                    offerChangedScience(*context, empty, static_cast<std::uint64_t>(
+                        std::max(0.0, restartSnapshot.simulationTimeS) * 1'000'000'000.0));
                 }
             }
         } else if (type == "BeginModeChange") {
@@ -819,7 +825,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             (type == "CreateVessel" || type == "PrepareStock" || type == "TransferFixed" ||
              type == "PlaceTool" || type == "SetActuator" || type == "DisposeContents" ||
              type == "RinseTool")) context->recoveryReady = false;
-        if (outcome.accepted) {
+        if (outcome.accepted && type != "RestartCheckpoint") {
             const auto nowNs = static_cast<std::uint64_t>(
                 std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
             offerChangedScience(*context, beforeCommand, nowNs);

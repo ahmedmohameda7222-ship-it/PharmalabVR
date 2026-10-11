@@ -884,6 +884,89 @@ TEST_CASE("S01 product ABI publishes current pinned IPhreeqc acid observation") 
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored dependency") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE},
+                         {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "acid"}, {"capacityM3", 2e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "base"}, {"capacityM3", 2e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-6}},
+                           {{"acid", "0"}})); poll(handle);
+    submit(handle, command("5", "PrepareStock",
+                           {{"vesselId", "base"}, {"stockKind", "SodiumHydroxide"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 9e-6}},
+                           {{"base", "0"}})); poll(handle);
+    const auto observation = [](const json& snapshot) {
+        for (const auto& item : snapshot.at("observations"))
+            if (item.at("vesselId") == "acid") return item;
+        return json();
+    };
+    const auto waitCurrent = [&]() {
+        json state;
+        for (int attempt = 0; attempt < 250; ++attempt) {
+            REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+            state = observation(json::parse(read_text(handle)));
+            if (state.value("freshness", "") == "Current" && state.value("computationState", "") == "Ready")
+                return state;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        return state;
+    };
+    const auto before = waitCurrent();
+    REQUIRE(before["freshness"] == "Current");
+    REQUIRE(before["asOfMaterialRevision"] == "1");
+    const double acidPH = before["value"].get<double>();
+    submit(handle, command("6", "CreateCheckpoint", {{"checkpointId", "acid-state"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("7", "TransferFixed",
+                           {{"sourceInventoryId", "base"}, {"sourceRegion", "Homogeneous"},
+                            {"selection", "HomogeneousAqueousLiquid"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 9e-6}}},
+                            {"captureFractions", json::array({{{"destinationInventoryId", "acid"}, {"fraction", 1.0}}})},
+                            {"overflowSinkId", "spill"}},
+                           {{"base", "1"}, {"acid", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto changed = waitCurrent();
+    REQUIRE(changed["asOfMaterialRevision"] == "2");
+    REQUIRE(changed["value"].get<double>() > acidPH + 5.0);
+    submit(handle, command("8", "RestartCheckpoint", {{"checkpointId", "acid-state"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto restored = observation(json::parse(read_text(handle)));
+    CHECK_FALSE((restored.value("freshness", "") == "Current" &&
+                 restored.value("asOfMaterialRevision", "") != "1"));
+    CHECK(json::parse(read_text(handle))["scienceDependencyGeneration"] == "2");
+    const auto recomputed = waitCurrent();
+    CHECK(recomputed["asOfMaterialRevision"] == "1");
+    CHECK(recomputed["freshness"] == "Current");
+    CHECK(recomputed["value"].get<double>() == doctest::Approx(acidPH).epsilon(1e-7));
+    submit(handle, command("9", "Continue"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("10", "TransferFixed",
+                           {{"sourceInventoryId", "base"}, {"sourceRegion", "Homogeneous"},
+                            {"selection", "HomogeneousAqueousLiquid"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 9e-6}}},
+                            {"captureFractions", json::array({{{"destinationInventoryId", "acid"}, {"fraction", 1.0}}})},
+                            {"overflowSinkId", "spill"}},
+                           {{"base", "1"}, {"acid", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("11", "RestartCheckpoint", {{"checkpointId", "acid-state"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto pendingRestore = json::parse(read_text(handle));
+    CHECK(pendingRestore["scienceDependencyGeneration"] == "3");
+    const auto pendingAcid = observation(pendingRestore);
+    CHECK(pendingAcid.value("freshness", "") != "Current");
+    const auto afterOldCompletion = waitCurrent();
+    CHECK(afterOldCompletion["asOfMaterialRevision"] == "1");
+    CHECK(afterOldCompletion["value"].get<double>() == doctest::Approx(acidPH).epsilon(1e-7));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("P01_01 ten tool science denial is an atomic transport tick") {
     std::uint64_t handle = 0;
     const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},

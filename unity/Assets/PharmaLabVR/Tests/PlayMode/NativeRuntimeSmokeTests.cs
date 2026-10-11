@@ -371,6 +371,46 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator P04_01_SceneCheckpointRestoresScientificMeasurementGeneration()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            Assert.That(driver.TryPrepareSourceStock("hcl", 0.1), Is.True);
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
+            var acidValue = driver.Measurement.DisplayValue;
+            Assert.That(driver.Session.SubmitOrdered("CreateVessel", "{\"id\":\"base\",\"capacityM3\":0.00005}"),
+                Does.Contain("\"accepted\":true"));
+            Assert.That(driver.Session.SubmitOrdered("PrepareStock",
+                "{\"vesselId\":\"base\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000025}",
+                "{\"base\":\"0\"}"), Does.Contain("\"accepted\":true"));
+            Assert.That(driver.CreateCheckpoint("acid-state"), Is.True);
+            Assert.That(driver.Session.SubmitOrdered("TransferFixed",
+                "{\"sourceInventoryId\":\"base\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000025},\"captureFractions\":[{\"destinationInventoryId\":\"source\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"base\":\"1\",\"source\":\"1\"}"), Does.Contain("\"accepted\":true"));
+            for (var attempt = 0; attempt < 200 && driver.Measurement.DisplayValue == acidValue; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
+                driver.Session.ReadSnapshot());
+            Assert.That(driver.Measurement.DisplayValue, Is.Not.EqualTo(acidValue));
+            Assert.That(driver.RestartCheckpoint("acid-state"), Is.True);
+            Assert.That(driver.Measurement.DisplayValue, Is.EqualTo("--"),
+                "A newer-state pH must disappear as soon as the checkpoint is restored.");
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
+                driver.Session.ReadSnapshot());
+            Assert.That(driver.Measurement.DisplayValue, Is.EqualTo(acidValue));
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
         public IEnumerator V01_LabLiquidVisualsFollowCommittedNativeTransfer()
         {
 #if UNITY_EDITOR

@@ -9,6 +9,7 @@
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 
 namespace plv {
 
@@ -17,11 +18,17 @@ enum class ObservationMaturity { Research, Published };
 enum class ObservationFreshness { Current, Stale, Pending };
 
 struct ObservationRequest {
+    ObservationRequest() = default;
+    ObservationRequest(std::string vessel, std::string observableId, std::uint64_t revision,
+                       std::uint64_t submitted, double grossVolume)
+        : vesselId(std::move(vessel)), observable(std::move(observableId)),
+          materialRevision(revision), submittedNs(submitted), grossVolumeSinceSolveM3(grossVolume) {}
     std::string vesselId;
     std::string observable;
     std::uint64_t materialRevision = 0;
     std::uint64_t submittedNs = 0;
     double grossVolumeSinceSolveM3 = 0.0;
+    std::uint64_t dependencyGeneration = 0;
 };
 
 struct ObservationResultInput {
@@ -52,7 +59,9 @@ public:
 
     CommandOutcome offer(ObservationRequest request);
     std::optional<ObservationRequest> takeNext();
-    void complete(const ObservationRequest& request, const ObservationResultInput& result);
+    bool complete(const ObservationRequest& request, const ObservationResultInput& result);
+    void resetForRestoredState();
+    std::uint64_t dependencyGeneration() const;
     const ObservationRecord* observation(const std::string& vesselId, const std::string& observable) const;
     void markMaterialRevision(const std::string& vesselId, std::uint64_t revision, std::uint64_t nowNs);
     void markSolved(const std::string& vesselId, std::uint64_t revision, std::uint64_t nowNs);
@@ -77,6 +86,7 @@ private:
     std::unordered_map<std::string, ObservationRecord> observations_;
     std::unordered_map<std::string, std::uint64_t> authoritativeRevisions_;
     std::unordered_map<std::string, BudgetState> budgets_;
+    std::uint64_t dependencyGeneration_ = 1;
 };
 
 enum class HoldCause { None, Compute, Tracking, Focus, TimeDiscontinuity, StaleInput };
