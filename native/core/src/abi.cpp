@@ -50,6 +50,7 @@ struct Context {
         plv::MaterialState tipInventory;
         plv::MaterialState residualInventory;
         plv::MaterialState inFlightInventory;
+        std::vector<plv::CaptureFraction> inFlightCaptures;
         std::optional<ToolInput> latestInput;
     };
 
@@ -197,6 +198,11 @@ json materialJson(const plv::MaterialState& material) {
 }
 
 json toolJson(const std::string& id, const Context::ToolState& tool) {
+    json flightCaptures = json::array();
+    for (const auto& capture : tool.inFlightCaptures) {
+        flightCaptures.push_back({{"destinationInventoryId", capture.destinationInventoryId},
+                                  {"fraction", capture.fraction}});
+    }
     return {
         {"id", id},
         {"sourceInventoryId", tool.sourceInventoryId},
@@ -210,7 +216,8 @@ json toolJson(const std::string& id, const Context::ToolState& tool) {
         {"actuator01", tool.actuator01},
         {"tipInventory", materialJson(tool.tipInventory)},
         {"residualInventory", materialJson(tool.residualInventory)},
-        {"inFlightInventory", materialJson(tool.inFlightInventory)}
+        {"inFlightInventory", materialJson(tool.inFlightInventory)},
+        {"inFlightCaptures", std::move(flightCaptures)}
     };
 }
 
@@ -642,7 +649,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 outcome = {false, "ToolLimitReached", "tool inventory limit reached"};
             } else {
                 context->tools.emplace(toolId, Context::ToolState{
-                    sourceId, sinkId, frame, profile, *profileRevision, 1U, 0U, 0U, 0.0, {}, {}, {}, std::nullopt});
+                    sourceId, sinkId, frame, profile, *profileRevision, 1U, 0U, 0U, 0.0, {}, {}, {}, {}, std::nullopt});
                 outcome = {true, "Accepted", ""};
             }
         } else if (type == "SetActuator") {
@@ -975,23 +982,68 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         }
         ++activeToolCount;
     }
-    if (context->events.size() + activeToolCount > 256U) return PLV_BUSY;
+    std::size_t landingCount = 0U;
+    if (delta_s > 0.0) {
+        for (const auto& toolId : toolIds)
+            if (context->tools.at(toolId).inFlightInventory.referenceVolumeM3 > 0.0) ++landingCount;
+    }
+    if (context->events.size() + activeToolCount + landingCount > 256U) return PLV_BUSY;
 
     // Stage the complete tick so a later tool or science budget cannot leave
     // earlier transfers committed at an unchanged simulation time.
     const auto beforeTick = context->executor.snapshot();
     auto stagedExecutor = context->executor;
+    auto stagedTools = context->tools;
     std::unordered_map<std::string, double> grossByVessel;
     std::vector<std::string> stagedEvents;
     stagedEvents.reserve(activeToolCount);
     for (const auto& toolId : toolIds) {
-        const auto& tool = context->tools.at(toolId);
-        if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0 || delta_s == 0.0) {
-            continue;
+        auto& tool = stagedTools.at(toolId);
+        if (delta_s == 0.0) continue;
+        const auto allocate = [&](plv::SessionSnapshot& state, const plv::MaterialState& parcel,
+                                  const std::vector<plv::CaptureFraction>& captures,
+                                  json& captured, double& spilled) -> bool {
+            auto remaining = parcel;
+            for (const auto& capture : captures) {
+                auto found = state.vessels.find(capture.destinationInventoryId);
+                if (found == state.vessels.end()) return false;
+                auto& destination = found->second;
+                const double free = std::max(0.0, destination.capacityM3 - destination.inventory.referenceVolumeM3);
+                const auto share = parcel.fraction(std::min(parcel.referenceVolumeM3 * capture.fraction, free));
+                if (!remaining.subtract(share)) return false;
+                destination.inventory.add(share);
+                if (share.referenceVolumeM3 > 0.0) {
+                    ++destination.materialRevision;
+                    grossByVessel[capture.destinationInventoryId] += share.referenceVolumeM3;
+                }
+                captured.push_back({{"destinationInventoryId", capture.destinationInventoryId},
+                                    {"quantityM3", share.referenceVolumeM3},
+                                    {"materialRevision", std::to_string(destination.materialRevision)}});
+            }
+            spilled = remaining.referenceVolumeM3;
+            state.sinks.at(tool.overflowSinkId).add(remaining);
+            ++state.eventSequence;
+            return true;
+        };
+        if (tool.inFlightInventory.referenceVolumeM3 > 0.0) {
+            auto state = stagedExecutor.snapshot();
+            json landedCaptures = json::array();
+            double landedSpill = 0.0;
+            const auto landedVolume = tool.inFlightInventory.referenceVolumeM3;
+            if (!allocate(state, tool.inFlightInventory, tool.inFlightCaptures, landedCaptures, landedSpill) ||
+                !stagedExecutor.restore(state).accepted) return PLV_INTERNAL_ERROR;
+            tool.inFlightInventory = {};
+            tool.inFlightCaptures.clear();
+            ++tool.inventoryRevision;
+            stagedEvents.push_back(json({{"schemaVersion", 1}, {"type", "InFlightLanded"},
+                {"branchId", state.branchId}, {"eventSequence", std::to_string(state.eventSequence)},
+                {"toolId", toolId}, {"quantityM3", landedVolume},
+                {"captured", std::move(landedCaptures)}, {"spilledQuantityM3", landedSpill}}).dump());
         }
-        const auto snapshot = stagedExecutor.snapshot();
-        const auto source = snapshot.vessels.find(tool.sourceInventoryId);
-        if (source == snapshot.vessels.end() || source->second.inventory.referenceVolumeM3 <= 0.0) continue;
+        if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0) continue;
+        auto state = stagedExecutor.snapshot();
+        const auto source = state.vessels.find(tool.sourceInventoryId);
+        if (source == state.vessels.end() || source->second.inventory.referenceVolumeM3 <= 0.0) continue;
         const double requestedVolumeM3 = plv::simulateBuretteDelivery(
             plv::BuretteProfile::researchDefault(),
             source->second.inventory.referenceVolumeM3,
@@ -1000,52 +1052,40 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             transportTickS);
         if (requestedVolumeM3 <= 0.0) continue;
 
-        std::unordered_map<std::string, std::uint64_t> revisions;
-        revisions.emplace(tool.sourceInventoryId, source->second.materialRevision);
-        for (const auto& capture : tool.latestInput->captures) {
-            const auto destination = snapshot.vessels.find(capture.destinationInventoryId);
-            if (destination == snapshot.vessels.end()) return PLV_INTERNAL_ERROR;
-            revisions.emplace(capture.destinationInventoryId, destination->second.materialRevision);
-        }
-        const auto outcome = stagedExecutor.transferFixed(
-            {tool.sourceInventoryId,
-             plv::TransferQuantityBasis::LiquidVolumeM3,
-             requestedVolumeM3,
-             tool.latestInput->captures,
-             tool.overflowSinkId},
-            revisions);
-        if (!outcome.accepted) return PLV_INTERNAL_ERROR;
-        const auto committed = stagedExecutor.snapshot();
+        const auto sourceParcel = source->second.inventory.fraction(requestedVolumeM3);
+        if (!source->second.inventory.subtract(sourceParcel)) return PLV_INTERNAL_ERROR;
+        ++source->second.materialRevision;
         grossByVessel[tool.sourceInventoryId] += requestedVolumeM3;
-        for (const auto& capture : tool.latestInput->captures) {
-            const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
-            const auto& after = committed.vessels.at(capture.destinationInventoryId);
-            grossByVessel[capture.destinationInventoryId] +=
-                std::max(0.0, after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3);
-        }
+        const double tipCapacity = plv::BuretteProfile::researchDefault().dropReferenceVolumeM3;
+        const double tipFill = std::min(std::max(0.0, tipCapacity - tool.tipInventory.referenceVolumeM3),
+                                        requestedVolumeM3 * 0.25);
+        const auto tipParcel = sourceParcel.fraction(tipFill);
+        auto delivery = sourceParcel;
+        if (!delivery.subtract(tipParcel)) return PLV_INTERNAL_ERROR;
+        tool.tipInventory.add(tipParcel);
+        const double flightVolume = std::min(tipCapacity, delivery.referenceVolumeM3 * 0.5);
+        const auto flightParcel = delivery.fraction(flightVolume);
+        if (!delivery.subtract(flightParcel)) return PLV_INTERNAL_ERROR;
+        tool.inFlightInventory = flightParcel;
+        tool.inFlightCaptures = tool.latestInput->captures;
+        ++tool.inventoryRevision;
         json captured = json::array();
-        for (const auto& capture : tool.latestInput->captures) {
-            const auto& before = snapshot.vessels.at(capture.destinationInventoryId);
-            const auto& after = committed.vessels.at(capture.destinationInventoryId);
-            captured.push_back({
-                {"destinationInventoryId", capture.destinationInventoryId},
-                {"quantityM3", after.inventory.referenceVolumeM3 - before.inventory.referenceVolumeM3},
-                {"materialRevision", std::to_string(after.materialRevision)}
-            });
-        }
-        const double spilledQuantityM3 =
-            committed.sinks.at(tool.overflowSinkId).referenceVolumeM3 -
-            snapshot.sinks.at(tool.overflowSinkId).referenceVolumeM3;
+        double spilledQuantityM3 = 0.0;
+        if (!allocate(state, delivery, tool.latestInput->captures, captured, spilledQuantityM3) ||
+            !stagedExecutor.restore(state).accepted) return PLV_INTERNAL_ERROR;
         stagedEvents.push_back(json({
             {"schemaVersion", 1},
             {"type", "LiveTransferCommitted"},
-            {"branchId", committed.branchId},
-            {"eventSequence", std::to_string(committed.eventSequence)},
+            {"branchId", state.branchId},
+            {"eventSequence", std::to_string(state.eventSequence)},
             {"toolId", toolId},
             {"sampleSequence", std::to_string(tool.latestInput->sampleSequence)},
-            {"quantityM3", requestedVolumeM3},
+            {"quantityM3", delivery.referenceVolumeM3},
+            {"sourceDebitM3", requestedVolumeM3},
+            {"tipRetainedM3", tipFill},
+            {"inFlightReservedM3", flightVolume},
             {"sourceInventoryId", tool.sourceInventoryId},
-            {"sourceMaterialRevision", std::to_string(committed.vessels.at(tool.sourceInventoryId).materialRevision)},
+            {"sourceMaterialRevision", std::to_string(state.vessels.at(tool.sourceInventoryId).materialRevision)},
             {"captured", std::move(captured)},
             {"overflowSinkId", tool.overflowSinkId},
             {"spilledQuantityM3", spilledQuantityM3}
@@ -1068,6 +1108,7 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     }
     stagedExecutor.advanceTime(delta_s);
     context->executor = std::move(stagedExecutor);
+    context->tools = std::move(stagedTools);
     if (context->worker) {
         for (const auto& [vesselId, grossVolume] : grossByVessel)
             context->scheduler.recordGrossTransport(vesselId, grossVolume, simulationNowNs);
@@ -1161,6 +1202,25 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                 const auto tip = parseMaterial(item.at("tipInventory"));
                 const auto residual = parseMaterial(item.at("residualInventory"));
                 const auto inFlight = parseMaterial(item.at("inFlightInventory"));
+                std::vector<plv::CaptureFraction> flightCaptures;
+                if (item.contains("inFlightCaptures")) {
+                    const auto& captures = item.at("inFlightCaptures");
+                    if (!captures.is_array() || captures.size() > plv::kMaxVesselInventories)
+                        throw std::invalid_argument("invalid in-flight captures");
+                    std::unordered_set<std::string> seen;
+                    double fractionSum = 0.0;
+                    for (const auto& capture : captures) {
+                        const auto destinationId = capture.at("destinationInventoryId").get<std::string>();
+                        const double fraction = capture.at("fraction").get<double>();
+                        if (ownerSnapshot.vessels.count(destinationId) == 0U ||
+                            destinationId == sourceId || !seen.insert(destinationId).second ||
+                            !std::isfinite(fraction) || fraction < 0.0 || fraction > 1.0)
+                            throw std::invalid_argument("invalid in-flight capture");
+                        fractionSum += fraction;
+                        flightCaptures.push_back({destinationId, fraction});
+                    }
+                    if (fractionSum > 1.0 + 1e-12) throw std::invalid_argument("invalid in-flight sum");
+                }
                 if (!plv::isValidId(id) || !profileRevision || !toolRevision || *profileRevision == 0U ||
                     !actuatorRevision || !inventoryRevision || *toolRevision == 0U ||
                     !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
@@ -1170,7 +1230,7 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     !result.emplace(id, Context::ToolState{
                         sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,
                         *inventoryRevision, actuator,
-                        tip, residual, inFlight, std::nullopt}).second) {
+                        tip, residual, inFlight, std::move(flightCaptures), std::nullopt}).second) {
                     throw std::invalid_argument("invalid tool");
                 }
             }

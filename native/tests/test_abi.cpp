@@ -455,9 +455,60 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     CHECK(sourceVolume >= 0.0);
     CHECK(receiverVolume > 0.0);
     CHECK(spillVolume > 0.0);
-    CHECK(sourceVolume + receiverVolume + spillVolume == doctest::Approx(4e-6).epsilon(1e-12));
+    const auto& tool = snapshot["tools"][0];
+    const double tipVolume = tool["tipInventory"]["researchAdditiveVolumeM3"].get<double>();
+    const double flightVolume = tool["inFlightInventory"]["researchAdditiveVolumeM3"].get<double>();
+    CHECK(tipVolume > 0.0);
+    CHECK(flightVolume > 0.0);
+    CHECK(sourceVolume + receiverVolume + spillVolume + tipVolume + flightVolume ==
+          doctest::Approx(4e-6).epsilon(1e-12));
+    CHECK(snapshot["materialLedger"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(4e-6));
     CHECK(snapshot["hold"]["active"].get<bool>() == false);
     const auto exported = read_text(handle, true);
+    const std::string closed = R"([{"toolId":"burette-1","sampleSequence":"2","captureMonotonicNs":"1020000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(handle, closed.data(), static_cast<std::uint32_t>(closed.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1030000000) == PLV_OK);
+    const auto closedSnapshot = json::parse(read_text(handle));
+    CHECK(closedSnapshot["tools"][0]["inFlightInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(0.0));
+    CHECK(closedSnapshot["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(tipVolume));
+    const auto eventAfterLand = closedSnapshot["eventSequence"];
+    const auto sinkAfterLand = closedSnapshot["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    CHECK(sinkAfterLand > spillVolume);
+    const auto closedReceiver = closedSnapshot["vessels"][0]["id"] == "receiver"
+                                    ? closedSnapshot["vessels"][0] : closedSnapshot["vessels"][1];
+    CHECK(closedReceiver["inventory"]["researchAdditiveVolumeM3"].get<double>() > receiverVolume);
+    REQUIRE(plv_step(handle, 0.02, 1050000000) == PLV_OK);
+    const auto repeated = json::parse(read_text(handle));
+    CHECK(repeated["eventSequence"] == eventAfterLand);
+    CHECK(repeated["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(sinkAfterLand));
+    CHECK(poll(handle)["type"] == "LiveTransferCommitted");
+    CHECK(poll(handle)["type"] == "InFlightLanded");
+    submit(handle, command("6", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 2e-6}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("7", "PrepareStock",
+                           {{"vesselId", "rinse"}, {"stockKind", "Water"},
+                            {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 1e-6}},
+                           {{"rinse", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto beforeRinse = json::parse(read_text(handle));
+    submit(handle, command("8", "RinseTool",
+                           {{"toolId", "burette-1"}, {"rinseSourceInventoryId", "rinse"},
+                            {"wasteSinkId", "spill"},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+                            {"expectedInventoryRevision", repeated["tools"][0]["inventoryRevision"]}},
+                           {{"rinse", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto afterRinse = json::parse(read_text(handle));
+    CHECK(afterRinse["sinks"][0]["inventory"]["chlorideMol"].get<double>() >
+          beforeRinse["sinks"][0]["inventory"]["chlorideMol"].get<double>());
+    CHECK(afterRinse["materialLedger"]["chlorideMol"].get<double>() ==
+          doctest::Approx(beforeRinse["materialLedger"]["chlorideMol"].get<double>()));
+    CHECK(afterRinse["materialLedger"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(beforeRinse["materialLedger"]["researchAdditiveVolumeM3"].get<double>()));
+    CHECK(plv_destroy(handle) == PLV_OK);
     std::uint64_t imported = 0;
     REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
     auto importedSnapshot = json::parse(read_text(imported));
@@ -465,7 +516,6 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     importedSnapshot["hold"] = snapshot["hold"];
     CHECK(importedSnapshot == snapshot);
     CHECK(plv_destroy(imported) == PLV_OK);
-    CHECK(plv_destroy(handle) == PLV_OK);
 }
 
 TEST_CASE("H05 transport backlog enters time-discontinuity hold without catch-up pour") {
@@ -695,6 +745,18 @@ TEST_CASE("T02 long live pour emits ordered allocated events without filling the
         const auto batch = json::array({sample}).dump();
         REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
         REQUIRE(plv_step(handle, 0.02, 1000000000ULL + tick * 20000000ULL) == PLV_OK);
+        if (tick > 0) {
+            const auto landed = poll(handle);
+            REQUIRE(landed["type"] == "InFlightLanded");
+            const auto landingSequence = std::stoull(landed["eventSequence"].get<std::string>());
+            CHECK(landingSequence > priorEventSequence);
+            priorEventSequence = landingSequence;
+            const double landedCaptured = landed["captured"][0]["quantityM3"].get<double>();
+            const double landedSpilled = landed["spilledQuantityM3"].get<double>();
+            CHECK(landedCaptured + landedSpilled ==
+                  doctest::Approx(landed["quantityM3"].get<double>()).epsilon(1e-9));
+            allocatedM3 += landedCaptured + landedSpilled;
+        }
         const auto event = poll(handle);
         REQUIRE(event["type"] == "LiveTransferCommitted");
         CHECK(event["branchId"] == "branch-1");
@@ -704,6 +766,10 @@ TEST_CASE("T02 long live pour emits ordered allocated events without filling the
         const double captured = event["captured"][0]["quantityM3"].get<double>();
         const double spilled = event["spilledQuantityM3"].get<double>();
         CHECK(captured + spilled == doctest::Approx(event["quantityM3"].get<double>()).epsilon(1e-9));
+        CHECK(event["sourceDebitM3"].get<double>() ==
+              doctest::Approx(event["quantityM3"].get<double>() +
+                              event["tipRetainedM3"].get<double>() +
+                              event["inFlightReservedM3"].get<double>()).epsilon(1e-9));
         allocatedM3 += captured + spilled;
     }
     CHECK(allocatedM3 > 0.0);
