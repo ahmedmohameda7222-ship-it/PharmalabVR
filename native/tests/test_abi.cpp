@@ -970,6 +970,13 @@ TEST_CASE("P01_01 admitted disjoint tools advance simulation once") {
     CHECK(after["simulationTimeS"].get<double>() == doctest::Approx(0.02));
     CHECK(after["eventSequence"] == "7");
     CHECK(after["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
+    CHECK(after["materialLedger"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(1e-4));
+    CHECK(after["materialLedger"]["sodiumMol"].get<double>() == doctest::Approx(0.01));
+    CHECK(after["materialLedger"]["chlorideMol"].get<double>() == doctest::Approx(0.01));
+    for (const auto& tool : after["tools"]) {
+        CHECK(tool["tipInventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
+        CHECK(tool["inFlightInventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
+    }
     CHECK(poll(handle)["type"] == "LiveTransferCommitted");
     CHECK(poll(handle)["type"] == "LiveTransferCommitted");
     std::uint32_t required = 0;

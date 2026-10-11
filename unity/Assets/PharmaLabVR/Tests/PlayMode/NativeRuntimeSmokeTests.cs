@@ -39,10 +39,38 @@ namespace PharmaLabVR.Tests.PlayMode
             public string id;
             public StockInventory inventory;
         }
+        [System.Serializable] private sealed class StockTool
+        {
+            public StockInventory tipInventory;
+            public StockInventory inFlightInventory;
+        }
         [System.Serializable] private sealed class StockState
         {
             public bool paused;
             public StockVessel[] vessels;
+            public StockVessel[] sinks;
+            public StockTool[] tools;
+            public StockInventory materialLedger;
+        }
+
+        private sealed class LivePourAdapter : MonoBehaviour, ILabInputAdapter
+        {
+            public Transform Tool;
+            public Transform Frame;
+            public LabCaptureTarget Target;
+            public float Actuator;
+            private ulong sequence;
+            private bool enabledInput = true;
+
+            public LabInputSample[] SampleInputs(ulong nowNs) => !enabledInput ? System.Array.Empty<LabInputSample>() :
+                new[] { LabGeometryAdapter.BuildSample("research-tool", ++sequence, nowNs, Frame, Tool,
+                    Actuator, "burette-50ml-research-v1", true, Target.Estimate(Tool)) };
+            public void ResetBaselines() => Actuator = 0f;
+            public void AdvanceSequence(string toolId, ulong watermark)
+            {
+                if (toolId == "research-tool" && sequence < watermark) sequence = watermark;
+            }
+            public void SetEnabled(bool value) => enabledInput = value;
         }
 
         [UnityTest]
@@ -281,6 +309,64 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(camera.transform.localPosition.y, Is.EqualTo(1.6f).Within(0.03f));
             Assert.That(Quaternion.Angle(camera.transform.localRotation, Quaternion.Euler(0f, 35f, 0f)), Is.LessThan(3f));
             InputSystem.RemoveDevice(hmd);
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator P02_03_SceneAdapterPourRendersNativeReceiverAndRetainsToolMaterial()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var children = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+            var driver = children.Select(item => item.GetComponent<CoreDriver>()).First(item => item != null);
+            var tool = children.First(item => item.name == "DesktopResearchTool");
+            var receiver = children.First(item => item.name == "ReceiverVessel");
+            var target = receiver.GetComponent<LabCaptureTarget>();
+            var liquid = receiver.GetComponent<LiquidPresenter>();
+            Assert.That(target, Is.Not.Null);
+            Assert.That(liquid, Is.Not.Null);
+            var input = new GameObject("LivePourActionInjection");
+            SceneManager.MoveGameObjectToScene(input, scene);
+            var adapter = input.AddComponent<LivePourAdapter>();
+            adapter.Tool = tool;
+            adapter.Frame = tool.parent;
+            adapter.Target = target;
+            driver.ConfigureInputs(adapter);
+            Assert.That(driver.TryPrepareSourceStock("nacl", 0.1), Is.True);
+            for (var attempt = 0; driver.IsTimeHeld && attempt < 100; attempt++)
+            {
+                driver.ResumeAfterTimeHold();
+                yield return new WaitForSecondsRealtime(0.01f);
+            }
+            Assert.That(driver.IsTimeHeld, Is.False);
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
+                "The first pour needs an eligible science budget boundary.");
+            tool.position = receiver.position + Vector3.up * 0.08f;
+            Assert.That(target.Estimate(tool).Length, Is.EqualTo(1), "The scene outlet must aim into its real capture aperture.");
+            adapter.Actuator = 1f;
+            for (var attempt = 0; attempt < 30 && liquid.CommittedVolumeM3 <= 0d; attempt++)
+                yield return new WaitForSecondsRealtime(0.02f);
+            Assert.That(liquid.CommittedVolumeM3, Is.GreaterThan(0d), driver.Session.ReadSnapshot());
+            var flowing = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+            Assert.That(flowing.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
+            Assert.That(flowing.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
+            adapter.Actuator = 0f;
+            for (var attempt = 0; attempt < 30; attempt++)
+            {
+                yield return new WaitForSecondsRealtime(0.02f);
+                var latest = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                if (latest.tools[0].inFlightInventory.researchAdditiveVolumeM3 == 0d) break;
+            }
+            var landed = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+            Assert.That(landed.tools[0].inFlightInventory.researchAdditiveVolumeM3, Is.Zero);
+            Assert.That(landed.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
+            Assert.That(landed.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
             yield return SceneManager.UnloadSceneAsync(scene);
         }
 
