@@ -102,7 +102,7 @@
     "artifacts/screenshots/windows-desktop-10d6dae-loaded-continued.png"
   ],
   "savedPlayerSession": "artifacts/sessions/autosave-10d6dae.plv.json",
-  "artifactManifest": "docs/evidence/artifact-manifest-p04-02.json",
+  "artifactManifest": "docs/evidence/artifact-manifest-p04-03.json",
   "hardwareProfile": "docs/evidence/environment.json",
   "independentSoftwareWorkStillOpen": [
     "Full native empty/overflow/multi-tool parcel matrix and stable parcel IDs; action-driven Unity drop/rinse journey, convergence and geometry enforcement",
@@ -121,25 +121,27 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
-    "testedHeadBeforeEvidenceCommit": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
+    "functionalCodeSha": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+    "testedHeadBeforeEvidenceCommit": "ea79eb3aff52bb951c114f6c1b219901be420f17",
     "plan": "docs/evidence/execution-state.json",
-    "currentTask": "P04.03 InProgress",
-    "lastVerifiedLocalTask": "P04.02",
-    "nativeRelease": "73/73 cases, 15480/15480 assertions; CTest 1/1",
-    "nativeEvidence": "artifacts/evidence-p04-02/native-p04-02.txt; SHA-256 0EC21929E657EB848A7E4F55D146F1728534DCE510AFF019CE1F2745B96638D9",
-    "unityPlayMode": "21/21, including actual Lab receiver observation and model-mismatch recorded-only scene tests; artifacts/evidence-p04-02/PlayMode.xml SHA-256 5B872086A0620739F239E728AB04A98BE80D04BE9C9C3A811521D2B2F137F459",
+    "currentTask": "P05.01 Open",
+    "lastVerifiedLocalTask": "P04.03 bounded Research matrix",
+    "nativeRelease": "80/80 cases, 15770/15770 assertions; CTest 1/1 plus three repeat passes for retryable BUSY teardown",
+    "nativeEvidence": "artifacts/evidence-p04-03/native-p04-03.txt; SHA-256 19923CE56DA30FCDCE3E06923614DB05720BA64EE8F1917018764CBFA9FA9CA4",
+    "unityPlayMode": "21/21, real Lab scene with native plugin; artifacts/evidence-p04-03/PlayMode.xml SHA-256 ABFB154E207D51CCCDED0A29F1ED55F0AA364F56FD50FC0DB4AD344ADEE2DC37",
     "pythonTooling": "9/9 repository tooling tests, including both minteq package bytes and Git attributes",
-    "windowsDesktopBuild": "Success; copied log SHA-256 BDA790149D2841AB34546437746B046BBDA72ED792887957928EE0609045A8C3; native plugin SHA-256 652D63A853242F10D5BE53275847A6C3C2E51C27303B3B2A8764345916F9F7FB",
-    "windowsVrBuild": "Success at this functional tree; copied log SHA-256 A261DE904BC17BA4CB9A9867888902BB4472D3F937F923275575538263BD050A; no headset run",
-    "androidVrBuild": "Success at this functional tree; APK SHA-256 907DF9262886C5DC3A722A940160CC5C9DD62BBD1F66507AA594B8AAA1463F14; no device install",
-    "currentPlayerJourney": "Not verified. A real Player Boot screen was observed, but Computer Use mouse injection failed; scene PlayMode and builds do not substitute for a full Player journey.",
+    "windowsDesktopBuild": "Success; copied log SHA-256 8A566D2C9C5EE9223ABE479CB16E744A4B5DA61848890B95A087D23A57665AA8; native plugin SHA-256 70F33439FE4B690396A9F04FF8C26DA5F12846991DA5E10AE487388A1472CACE",
+    "windowsVrBuild": "Success at this functional tree; copied log SHA-256 AE24FB8007B2CF79F90358C9E1BFBD0033864D837C7CEE88C1DAA9EF42F61BA7; no headset run",
+    "androidVrBuild": "Success at this functional tree; APK SHA-256 16921F3AFFCDC58F554C3F12F970B9E974CF36EC5DC5B88ACB884C8E46E7A747; no device install",
+    "currentPlayerJourney": "Not verified. Three current-code builds and Unity scene PlayMode do not substitute for a full student/instructor/expert Player run.",
     "currentScreenshots": "No saved current-functional-SHA lab journey screenshots; historical screenshots remain labeled by their earlier SHA.",
-    "acceptance95": "18 Passed, 73 Partial, 4 EvidenceMissing in historical scoped catalog; no global reacceptance on this head",
-    "externalGates": "G-R1 Open; physical VR/Android, calibration, scientific experiment, controlled long performance, and human-factors evidence missing",
-    "nextTaskAfterP04_03": "P05.01",
-    "unityEditMode": "22/22; artifacts/evidence-p04-02/EditMode.xml SHA-256 30876BABD5FD247DD70E8CEFBFBDE4DDCBC48D8E602AB79766F86949F83D0247",
-    "ci": "Native CI at functional SHA 3322c29 succeeded on Windows and Ubuntu: runs 38152086601 and 38152082596. Earlier 5cab84d Ubuntu failure was Git newline conversion; later final-head CI must be checked."
+    "acceptance95": "18 Passed, 73 Partial, 4 EvidenceMissing in historical scoped catalog; S01-S07 not globally reaccepted at this SHA",
+    "externalGates": "G-R1 Open; S07 actual nonconvergence/hard latency, physical VR/Android, calibration, experimental science, controlled long performance and human-factors evidence missing",
+    "unityEditMode": "22/22; artifacts/evidence-p04-03/EditMode.xml SHA-256 DE56A61322A8B87C619AACED0D834B13DF72FB4C008BF770DB684244D0BEDF71",
+    "ci": "Native CI at functional SHA ea79eb3 succeeded on Windows and Ubuntu: runs 38153387912 and 38153384287; final evidence HEAD CI must be checked",
+    "nextTaskAfterP05_01": "P05.02",
+    "idealReference": "40 independent ideal numeric fixtures; experimentalAccuracyEstablished=false; artifacts/evidence-p04-03/ideal-p04-03.txt SHA-256 157F6351E5F34EE977B50521A56C5C4D521F7BC16637D4F72DBAA6F03E090DE3",
+    "scientificMatrix": "docs/evidence/p04-03-scientific-matrix.md: S02 matched direct PHREEQC delta 1.7e-13, ideal/minteq difference 0.10723 at 0.1M, six stock pool/charge gates, eight-context raw lifecycle; S04 old-row-after-engine-failure and S07 nonconvergence/hard latency remain open"
   },
   "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }

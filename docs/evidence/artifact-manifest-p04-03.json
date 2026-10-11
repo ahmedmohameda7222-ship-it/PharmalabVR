@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+  "scope": "P04.03 Research scientific software matrix. S07 nonconvergence/hard latency, experimental accuracy, physical VR, Android install and long controlled performance remain open.",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p04-03/native-p04-03.txt",
+      "sha256": "19923CE56DA30FCDCE3E06923614DB05720BA64EE8F1917018764CBFA9FA9CA4",
+      "bytes": 726,
+      "result": "Native Release 80/80 and 15770/15770 assertions; includes S01-S07 bounded Research matrix and raw lifecycle diagnostics"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/ctest-p04-03.txt",
+      "sha256": "CCA85AE56041286E57454E049138F8029E75A9F700A555F2E504587D562F3222",
+      "bytes": 456,
+      "result": "CTest 1/1; three additional repeated CTest runs passed but were not saved as separate immutable logs"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/ideal-p04-03.txt",
+      "sha256": "157F6351E5F34EE977B50521A56C5C4D521F7BC16637D4F72DBAA6F03E090DE3",
+      "bytes": 239,
+      "result": "40 independent ideal numerical reference fixtures; productEngineTested=false and experimentalAccuracyEstablished=false"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/PlayMode.xml",
+      "sha256": "ABFB154E207D51CCCDED0A29F1ED55F0AA364F56FD50FC0DB4AD344ADEE2DC37",
+      "bytes": 21059,
+      "result": "Unity Lab scene PlayMode 21/21 with real native plugin"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/EditMode.xml",
+      "sha256": "DE56A61322A8B87C619AACED0D834B13DF72FB4C008BF770DB684244D0BEDF71",
+      "bytes": 20521,
+      "result": "Unity EditMode 22/22"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/unity-WindowsDesktop.log",
+      "sha256": "8A566D2C9C5EE9223ABE479CB16E744A4B5DA61848890B95A087D23A57665AA8",
+      "bytes": 393981,
+      "result": "WindowsDesktop Player build Success"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/unity-WindowsVR.log",
+      "sha256": "AE24FB8007B2CF79F90358C9E1BFBD0033864D837C7CEE88C1DAA9EF42F61BA7",
+      "bytes": 426748,
+      "result": "WindowsVR Player build Success; no headset run"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/unity-AndroidVR.log",
+      "sha256": "F1BCBE877CBEDCFEAC537ADC5F225161A05DE51D397E842F958EEDD8C2ADC485",
+      "bytes": 378776,
+      "result": "AndroidVR IL2CPP build Success; no device install"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/pharmalab_core.dll",
+      "sha256": "70F33439FE4B690396A9F04FF8C26DA5F12846991DA5E10AE487388A1472CACE",
+      "bytes": 2279424,
+      "result": "Windows native Player plugin"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/PharmaLabVR.Runtime.dll",
+      "sha256": "FC8E01FB39FF734FC308FCC72E82344FF7649AA082E9451CF002D9BED2B59C09",
+      "bytes": 69120,
+      "result": "Windows managed Player runtime"
+    },
+    {
+      "path": "artifacts/evidence-p04-03/PharmaLabVR-research.apk",
+      "sha256": "16921F3AFFCDC58F554C3F12F970B9E974CF36EC5DC5B88ACB884C8E46E7A747",
+      "bytes": 43604034,
+      "result": "AndroidVR APK with ARM64 native plugin and pinned minteq"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P04.03",
+  "nextTask": "P05.01",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -526,13 +526,22 @@
           "dependencies": [
             "P04.02"
           ],
-          "status": "InProgress",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+          "evidence": [
+            "docs/evidence/p04-03-scientific-matrix.md",
+            "docs/evidence/artifact-manifest-p04-03.json",
+            "native/tests/test_science.cpp:P04_03 direct same-assumption IPhreeqc, six pools, clean context, assumptions distinction, domain rejection",
+            "native/tests/test_solver_lifecycle.cpp:P04_03 eight real contexts and raw resident memory/latency",
+            "Native 80/80 (15770 assertions), CTest 1/1 plus three repeat passes, ideal fixtures 40, Unity PlayMode 21/21, EditMode 22/22, three Player builds Success"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "ea79eb3 rejects unsupported 37 C, overflow and above-1-mol/kgw pools before IPhreeqc; Research coverage manifest now describes actual product solver",
+            "ea79eb3 retries documented BUSY at P04.01 test teardown and collects real IPhreeqc lifecycle diagnostics"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Task-scoped Research scientific software evidence matrix S01-S07, with S04 engine-failure replay and S07 actual nonconvergence/hard latency still open. No experimental validation or physical/device journey; AcceptedPlanner not assigned.",
           "blocker": null
         }
       ],
@@ -2093,10 +2102,10 @@
       "G-R1"
     ]
   },
-  "actualHead": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
-  "functionalCodeSha": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
-  "currentTask": "P04.03",
-  "lastVerifiedTask": "P04.02",
+  "actualHead": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+  "functionalCodeSha": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+  "currentTask": "P05.01",
+  "lastVerifiedTask": "P04.03",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
@@ -2108,6 +2117,7 @@
     "P02.02 verified through a native-backed Unity facade test for unrelated touched revisions, identical command replay, identity conflict and stale revision. P02.03 whole-lab ledger remains next.",
     "P02.03 VerifiedLocal with bounded Research ledger evidence: 697a311 live parcels, 72c1b49 full receiver/empty source, 2fd4613 disjoint two-tool pools and Unity Lab scene adapter pour. Native 70/70 (15461 assertions), CTest 1/1, PlayMode 17/17, WindowsDesktop build Success. P03 visual drop IDs, distinct profiles, geometry and convergence remain open; T04/M05 catalog remains Partial.",
     "P04.01 VerifiedLocal at 3271fdf: O10-N1 red real IPhreeqc pH 12.7877 stuck at restored acid revision, then green generation reset and recomputation to pH 1.10723; prior in-flight completion excluded. Native 72/72 (15559 assertions), CTest 1/1, Unity Lab scene PlayMode 18/18 and WindowsDesktop build Success.",
-    "P04.02 VerifiedLocal at 3322c29: red Native pinned-byte mismatch, same-byte IPhreeqc load, cross-platform binary minteq checkout; Unity Lab receiver Current pH after acid transfer, package mismatch recorded-only review, and three Player builds. Native 73/73, PlayMode 21/21, EditMode 22/22. Actual Player click-through and physical/device/experimental gates remain open. Next P04.03."
+    "P04.02 VerifiedLocal at 3322c29: red Native pinned-byte mismatch, same-byte IPhreeqc load, cross-platform binary minteq checkout; Unity Lab receiver Current pH after acid transfer, package mismatch recorded-only review, and three Player builds. Native 73/73, PlayMode 21/21, EditMode 22/22. Actual Player click-through and physical/device/experimental gates remain open. Next P04.03.",
+    "P04.03 VerifiedLocal at ea79eb3 for a bounded Research S01-S07 evidence matrix: direct same-assumption PHREEQC delta 1.7e-13, ideal-versus-minteq 0.10723 pH difference at 0.1 M, six pool/charge cases, clean-context reuse, domain bounds, eight-context raw lifecycle. Native 80/80, PlayMode 21/21, EditMode 22/22, three Player builds. S07 actual nonconvergence/hard latency and experimental validation remain Open; next P05.01."
   ]
 }
