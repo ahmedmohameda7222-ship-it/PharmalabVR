@@ -8,7 +8,9 @@
   "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records the newer October 11 implementation without promoting historical journeys to current acceptance.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
-  "implementedTaskIds": ["P00"],
+  "implementedTaskIds": [
+    "P00"
+  ],
   "taskStatusEvidence": "docs/evidence/progress.json",
   "acceptanceSummary": {
     "catalog": "docs/evidence/acceptance-95.json",
@@ -22,7 +24,10 @@
     "native": {
       "result": "60/60 cases; 8833/8833 assertions",
       "ctest": "1/1",
-      "paths": ["artifacts/test-results/native-final-current.txt", "artifacts/test-results/ctest-final-current.txt"]
+      "paths": [
+        "artifacts/test-results/native-final-current.txt",
+        "artifacts/test-results/ctest-final-current.txt"
+      ]
     },
     "pythonTooling": {
       "result": "6/6",
@@ -51,7 +56,9 @@
       "actualPlayer": "Boot, Lab, Save, Load, SessionLoad hold and Continue visually exercised",
       "fullStudentJourney": "Partial",
       "buildLog": "artifacts/logs/unity-WindowsDesktop-10d6dae.log",
-      "runLogs": ["artifacts/logs/windows-desktop-10d6dae.log"]
+      "runLogs": [
+        "artifacts/logs/windows-desktop-10d6dae.log"
+      ]
     },
     "WindowsVR": {
       "build": "Passed at testedCodeCommitSha",
@@ -63,7 +70,12 @@
       "build": "Passed at testedCodeCommitSha",
       "architecture": "ARM64",
       "backend": "IL2CPP",
-      "apkEntriesVerified": ["lib/arm64-v8a/libil2cpp.so", "lib/arm64-v8a/libpharmalab_core.so", "lib/arm64-v8a/libunity.so", "assets/science/minteq.v4.dat"],
+      "apkEntriesVerified": [
+        "lib/arm64-v8a/libil2cpp.so",
+        "lib/arm64-v8a/libpharmalab_core.so",
+        "lib/arm64-v8a/libunity.so",
+        "assets/science/minteq.v4.dat"
+      ],
       "physicalInstall": "EvidenceMissing",
       "thermalPower": "EvidenceMissing",
       "buildLog": "artifacts/logs/unity-AndroidVR-10d6dae.log",
@@ -90,7 +102,7 @@
     "artifacts/screenshots/windows-desktop-10d6dae-loaded-continued.png"
   ],
   "savedPlayerSession": "artifacts/sessions/autosave-10d6dae.plv.json",
-  "artifactManifest": "docs/evidence/artifact-manifest-oct11-science.json",
+  "artifactManifest": "docs/evidence/artifact-manifest-p04-02.json",
   "hardwareProfile": "docs/evidence/environment.json",
   "independentSoftwareWorkStillOpen": [
     "Full native empty/overflow/multi-tool parcel matrix and stable parcel IDs; action-driven Unity drop/rinse journey, convergence and geometry enforcement",
@@ -109,23 +121,25 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
-    "testedHeadBeforeEvidenceCommit": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+    "functionalCodeSha": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
+    "testedHeadBeforeEvidenceCommit": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
     "plan": "docs/evidence/execution-state.json",
-    "currentTask": "P04.02 Open",
-    "nextTaskAfterP04_02": "P04.03",
-    "lastVerifiedLocalTask": "P04.01",
-    "nativeRelease": "72/72 cases, 15559/15559 assertions; CTest 1/1",
-    "nativeEvidence": "artifacts/evidence-p04-01/native-oct11-science-generation.txt; SHA-256 05003A7C21D41203806F76A5F3CD5264E5E3C191764635344F9EC7A19E67307A",
-    "unityPlayMode": "18/18 including Unity Lab checkpoint MeasurementView rollback; artifacts/evidence-p04-01/PlayMode.xml SHA-256 89A7E32EA74C6D907598C8B0E5D585048094F363EE78291BED54913247E85F22",
-    "pythonTooling": "8/8 doctor, performance and continuation tests",
-    "windowsDesktopBuild": "Success at 3271fdf; saved log SHA-256 440438EFA55DDCA3D83E544C56B0E71D90C32B7444494C8E6FFF599605FFB6C8; runtime assembly SHA-256 EFAB81D19B9EDFD4912E7D6C9F1BDF9DA7049E652FDBF092E3824ED162D4E44B; native DLL SHA-256 69BAEC40647BB26D9F2952D832CC71ED814122AE9FB9146B69EFEAF6CC3915BE",
-    "windowsVrBuild": "Earlier Success at 696bd9a; runtime assembly SHA-256 104C03E24C0A047407AF3DB90D9F078D27748063F66544F02269985D717D7D75; not rebuilt or headset-tested at 697a311",
-    "androidVrBuild": "Earlier Success at 696bd9a; APK SHA-256 D936005D840D80A6B956E1A4DE51DE8480EFE88F668A67BE835CB6D1BCD03482; not rebuilt or device-installed at 697a311",
-    "currentPlayerJourney": "Not verified. Current-code build and PlayMode do not substitute for a full student/instructor/expert Player run.",
-    "currentScreenshots": "No current functional-SHA lab journey screenshots. The p02-01-player-boot.png local image is a real earlier Player Boot screen only.",
-    "acceptance95": "18 Passed, 73 Partial, 4 EvidenceMissing in the historical scoped catalog after correcting T04; no global reacceptance on this head",
-    "externalGates": "G-R1 Open; physical VR/Android, calibration, scientific experiment, controlled long performance, and human-factors evidence missing"
+    "currentTask": "P04.03 InProgress",
+    "lastVerifiedLocalTask": "P04.02",
+    "nativeRelease": "73/73 cases, 15480/15480 assertions; CTest 1/1",
+    "nativeEvidence": "artifacts/evidence-p04-02/native-p04-02.txt; SHA-256 0EC21929E657EB848A7E4F55D146F1728534DCE510AFF019CE1F2745B96638D9",
+    "unityPlayMode": "21/21, including actual Lab receiver observation and model-mismatch recorded-only scene tests; artifacts/evidence-p04-02/PlayMode.xml SHA-256 5B872086A0620739F239E728AB04A98BE80D04BE9C9C3A811521D2B2F137F459",
+    "pythonTooling": "9/9 repository tooling tests, including both minteq package bytes and Git attributes",
+    "windowsDesktopBuild": "Success; copied log SHA-256 BDA790149D2841AB34546437746B046BBDA72ED792887957928EE0609045A8C3; native plugin SHA-256 652D63A853242F10D5BE53275847A6C3C2E51C27303B3B2A8764345916F9F7FB",
+    "windowsVrBuild": "Success at this functional tree; copied log SHA-256 A261DE904BC17BA4CB9A9867888902BB4472D3F937F923275575538263BD050A; no headset run",
+    "androidVrBuild": "Success at this functional tree; APK SHA-256 907DF9262886C5DC3A722A940160CC5C9DD62BBD1F66507AA594B8AAA1463F14; no device install",
+    "currentPlayerJourney": "Not verified. A real Player Boot screen was observed, but Computer Use mouse injection failed; scene PlayMode and builds do not substitute for a full Player journey.",
+    "currentScreenshots": "No saved current-functional-SHA lab journey screenshots; historical screenshots remain labeled by their earlier SHA.",
+    "acceptance95": "18 Passed, 73 Partial, 4 EvidenceMissing in historical scoped catalog; no global reacceptance on this head",
+    "externalGates": "G-R1 Open; physical VR/Android, calibration, scientific experiment, controlled long performance, and human-factors evidence missing",
+    "nextTaskAfterP04_03": "P05.01",
+    "unityEditMode": "22/22; artifacts/evidence-p04-02/EditMode.xml SHA-256 30876BABD5FD247DD70E8CEFBFBDE4DDCBC48D8E602AB79766F86949F83D0247",
+    "ci": "Native CI at functional SHA 3322c29 succeeded on Windows and Ubuntu: runs 38152086601 and 38152082596. Earlier 5cab84d Ubuntu failure was Git newline conversion; later final-head CI must be checked."
   },
   "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }
