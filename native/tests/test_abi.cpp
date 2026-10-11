@@ -518,6 +518,54 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     CHECK(plv_destroy(imported) == PLV_OK);
 }
 
+TEST_CASE("P02_03 full receiver and exhausted source preserve the live tool ledger") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-10}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock",
+                           {{"vesselId", "source"}, {"stockKind", "SodiumChloride"},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}},
+                           {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PlaceTool",
+                           {{"toolId", "burette-1"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+                            {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+                            {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const std::string sample = R"([{"toolId":"burette-1","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":1.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
+    REQUIRE(plv_input_batch(handle, sample.data(), static_cast<std::uint32_t>(sample.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'010'000'000ULL) == PLV_OK);
+    const auto afterPour = json::parse(read_text(handle));
+    const auto receiver = afterPour["vessels"][0]["id"] == "receiver"
+                              ? afterPour["vessels"][0] : afterPour["vessels"][1];
+    const auto source = afterPour["vessels"][0]["id"] == "source"
+                            ? afterPour["vessels"][0] : afterPour["vessels"][1];
+    CHECK(receiver["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(1e-10));
+    CHECK(afterPour["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
+    CHECK(afterPour["materialLedger"]["chlorideMol"].get<double>() == doctest::Approx(4e-4));
+    CHECK(poll(handle)["type"] == "LiveTransferCommitted");
+    submit(handle, command("6", "DisposeContents",
+                           {{"sourceInventoryId", "source"}, {"sinkInventoryId", "spill"}},
+                           {{"source", source["materialRevision"]}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto empty = json::parse(read_text(handle));
+    REQUIRE(plv_step(handle, 0.02, 1'030'000'000ULL) == PLV_OK);
+    const auto afterLanding = json::parse(read_text(handle));
+    const auto landedSource = afterLanding["vessels"][0]["id"] == "source"
+                                  ? afterLanding["vessels"][0] : afterLanding["vessels"][1];
+    CHECK(landedSource["inventory"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(0.0));
+    CHECK(afterLanding["tools"][0]["inFlightInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(0.0));
+    CHECK(afterLanding["materialLedger"]["chlorideMol"].get<double>() ==
+          doctest::Approx(empty["materialLedger"]["chlorideMol"].get<double>()));
+    CHECK(afterLanding["materialLedger"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(empty["materialLedger"]["researchAdditiveVolumeM3"].get<double>()));
+    CHECK(poll(handle)["type"] == "InFlightLanded");
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("H05 transport backlog enters time-discontinuity hold without catch-up pour") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
