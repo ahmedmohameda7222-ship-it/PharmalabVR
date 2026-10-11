@@ -10,7 +10,7 @@ The v2 handoff ZIP SHA-256 is `1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C3
 
 | Finding | Current disposition | Required closure/evidence |
 |---|---|---|
-| O10-N1 checkpoint scientific rollback | Open, reproduced in review | P02 checkpoint generation and real worker rollback test; old revision result may not relabel restored state. |
+| O10-N1 checkpoint scientific rollback | Fixed locally at functional `3271fdf`; P04.01 VerifiedLocal | Real IPhreeqc completed/in-flight rollback regression and Unity scene MeasurementView recompute; see `p04-01-checkpoint-science.md`. Broader model import/review remains P04.02/P11. |
 | O10-N2 discrete commands bypass science budget | Open | P02 common precommit admission for TransferFixed, rinse and disposal with actual gross amounts. |
 | O10-N3 partial multi-tool tick | Fixed in current working change; focused red/green proof | `P01_01` ABI test failed before fix: 5 live commits/eventSequence 3→8 and spill 4.9942511601926056e-8 m³ at simulationTime 0. Staged full tick now denies without inventory/time/event mutation; focused test and CTest pass. Commit SHA pending. |
 | Worker stall/context teardown | Open | P01.02/P02 lifecycle and blocked-worker diagnostics, worker-owned IPhreeqc destruction. |

@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+  "scope": "P04.01 Windows Native, Unity PlayMode and WindowsDesktop build. The listed artifacts were copied to ignored artifacts/evidence-p04-01 so later builds cannot overwrite them.",
+  "artifacts": [
+    {"path":"artifacts/evidence-p04-01/native-oct11-science-generation.txt","sha256":"05003A7C21D41203806F76A5F3CD5264E5E3C191764635344F9EC7A19E67307A","result":"Native Release 72/72, 15559 assertions"},
+    {"path":"artifacts/evidence-p04-01/ctest-oct11-science-generation.txt","sha256":"CB1765F120A9527DDC421F79DC2DD7294390A82E1FDB0991AAFEED8E7304C411","result":"CTest 1/1"},
+    {"path":"artifacts/evidence-p04-01/PlayMode.xml","sha256":"89A7E32EA74C6D907598C8B0E5D585048094F363EE78291BED54913247E85F22","result":"Unity PlayMode 18/18 with scene checkpoint measurement"},
+    {"path":"artifacts/evidence-p04-01/unity-WindowsDesktop.log","sha256":"440438EFA55DDCA3D83E544C56B0E71D90C32B7444494C8E6FFF599605FFB6C8","result":"WindowsDesktop build Success"},
+    {"path":"artifacts/evidence-p04-01/pharmalab_core.dll","sha256":"69BAEC40647BB26D9F2952D832CC71ED814122AE9FB9146B69EFEAF6CC3915BE","result":"Native Windows Player plugin"},
+    {"path":"artifacts/evidence-p04-01/PharmaLabVR.Runtime.dll","sha256":"EFAB81D19B9EDFD4912E7D6C9F1BDF9DA7049E652FDBF092E3824ED162D4E44B","result":"Managed Windows Player runtime"}
+  ],
+  "externalGates": ["Physical VR", "Android device", "Experimental validation", "Controlled long Player performance", "Human factors"]
+}

@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P04.01",
+  "nextTask": "P04.02",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -463,13 +463,22 @@
           "dependencies": [
             "P02.03"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+          "evidence": [
+            "docs/evidence/p04-01-checkpoint-science.md",
+            "native/tests/test_abi.cpp:P04_01 real IPhreeqc rollback with completed and in-flight newer-state solves",
+            "native/tests/test_scheduler.cpp:P04_01 same-revision prior-generation completion excluded",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P04_01 scene MeasurementView rollback",
+            "Native 72/72 (15559 assertions), CTest 1/1, Unity PlayMode 18/18, WindowsDesktop build Success"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "3271fdf scheduler dependency generation resets observations and budgets on checkpoint restore",
+            "3271fdf native product ABI rejects old worker completions and offers restored-state IPhreeqc requests"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Real minteq IPhreeqc acid/base checkpoint rollback and Unity Lab MeasurementView recomputation. Experimental pH accuracy, model package mismatch and recorded-only review remain separate open scope.",
           "blocker": null
         },
         {
@@ -2075,10 +2084,10 @@
       "G-R1"
     ]
   },
-  "actualHead": "2fd461396150adf7c30da86faf2cd4c1842e4ba3",
-  "functionalCodeSha": "697a3115ad077ef3d8c61a82dcde64800ebc5f93",
-  "currentTask": "P04.01",
-  "lastVerifiedTask": "P02.03",
+  "actualHead": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+  "functionalCodeSha": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+  "currentTask": "P04.02",
+  "lastVerifiedTask": "P04.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
@@ -2088,6 +2097,7 @@
     "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix.",
     "P02.01 verified through Unity PlayMode selection over real Native sessions; WindowsDesktop Player built and Boot screenshot captured, while stock HUD click/render remains separate UI evidence. Checkpoint science rollback O10-N1 is still open for a later science task.",
     "P02.02 verified through a native-backed Unity facade test for unrelated touched revisions, identical command replay, identity conflict and stale revision. P02.03 whole-lab ledger remains next.",
-    "P02.03 VerifiedLocal with bounded Research ledger evidence: 697a311 live parcels, 72c1b49 full receiver/empty source, 2fd4613 disjoint two-tool pools and Unity Lab scene adapter pour. Native 70/70 (15461 assertions), CTest 1/1, PlayMode 17/17, WindowsDesktop build Success. P03 visual drop IDs, distinct profiles, geometry and convergence remain open; T04/M05 catalog remains Partial. P04.01 checkpoint science rollback is now first eligible."
+    "P02.03 VerifiedLocal with bounded Research ledger evidence: 697a311 live parcels, 72c1b49 full receiver/empty source, 2fd4613 disjoint two-tool pools and Unity Lab scene adapter pour. Native 70/70 (15461 assertions), CTest 1/1, PlayMode 17/17, WindowsDesktop build Success. P03 visual drop IDs, distinct profiles, geometry and convergence remain open; T04/M05 catalog remains Partial.",
+    "P04.01 VerifiedLocal at 3271fdf: O10-N1 red real IPhreeqc pH 12.7877 stuck at restored acid revision, then green generation reset and recomputation to pH 1.10723; prior in-flight completion excluded. Native 72/72 (15559 assertions), CTest 1/1, Unity Lab scene PlayMode 18/18 and WindowsDesktop build Success. Next P04.02 package and contextual observations."
   ]
 }
