@@ -58,6 +58,7 @@ public:
 
 namespace {
 bool validRequest(const SolveRequest& request) {
+    constexpr double maxResearchPoolMolPerKgWater = 1.0;
     const double values[] = {request.solventWaterKg, request.referenceVolumeM3, request.sodiumMol,
                              request.chlorideMol, request.acetateMol, request.temperatureC};
     for (const double value : values) {
@@ -65,7 +66,13 @@ bool validRequest(const SolveRequest& request) {
     }
     return request.solventWaterKg > 0.0 && request.referenceVolumeM3 > 0.0 &&
            request.sodiumMol >= 0.0 && request.chlorideMol >= 0.0 && request.acetateMol >= 0.0 &&
-           request.temperatureC >= 0.0 && request.temperatureC <= 100.0;
+           request.temperatureC == 25.0 &&
+           std::isfinite(request.sodiumMol / request.solventWaterKg) &&
+           std::isfinite(request.chlorideMol / request.solventWaterKg) &&
+           std::isfinite(request.acetateMol / request.solventWaterKg) &&
+           request.sodiumMol / request.solventWaterKg <= maxResearchPoolMolPerKgWater &&
+           request.chlorideMol / request.solventWaterKg <= maxResearchPoolMolPerKgWater &&
+           request.acetateMol / request.solventWaterKg <= maxResearchPoolMolPerKgWater;
 }
 
 bool poolMatches(double expectedMol, double actualMol) {

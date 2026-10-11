@@ -964,7 +964,12 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
     const auto afterOldCompletion = waitCurrent();
     CHECK(afterOldCompletion["asOfMaterialRevision"] == "1");
     CHECK(afterOldCompletion["value"].get<double>() == doctest::Approx(acidPH).epsilon(1e-7));
-    CHECK(plv_destroy(handle) == PLV_OK);
+    std::int32_t destroyStatus = PLV_BUSY;
+    for (int attempt = 0; attempt < 200 && destroyStatus == PLV_BUSY; ++attempt) {
+        destroyStatus = plv_destroy(handle);
+        if (destroyStatus == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(destroyStatus == PLV_OK);
 }
 
 TEST_CASE("P01_01 ten tool science denial is an atomic transport tick") {

@@ -7,6 +7,7 @@ add_executable(plv_tests
     test_science.cpp
     test_scheduler.cpp
     test_solver_worker.cpp
+    test_solver_lifecycle.cpp
     test_persistence.cpp
     test_tools.cpp
     test_transport.cpp
@@ -19,6 +20,7 @@ target_include_directories(plv_tests PRIVATE
 target_link_libraries(plv_tests PRIVATE pharmalab_core plv_core)
 target_compile_definitions(plv_tests PRIVATE PLV_MINTEQ_DATABASE="${CMAKE_SOURCE_DIR}/third_party/iphreeqc-source/database/minteq.v4.dat")
 if(WIN32)
+    target_link_libraries(plv_tests PRIVATE Psapi)
     add_custom_command(TARGET plv_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
             $<TARGET_FILE:pharmalab_core>
