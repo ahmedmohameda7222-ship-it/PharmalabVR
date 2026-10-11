@@ -1,9 +1,13 @@
 #include "plv/solver.hpp"
+#include "plv/sha256.hpp"
 
 #include "IPhreeqc.hpp"
 
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <limits>
 #include <mutex>
 #include <sstream>
@@ -18,7 +22,26 @@ public:
         engine.SetErrorStringOn(true);
         engine.SetOutputStringOn(false);
         engine.SetSelectedOutputStringOn(false);
-        const int errors = engine.LoadDatabase(databasePath.c_str());
+        int errors = 0;
+        constexpr auto pinned = "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7";
+        if (databaseIdentity == pinned) {
+            std::error_code fileError;
+            const auto size = std::filesystem::file_size(databasePath, fileError);
+            if (fileError || size == 0U || size > 32U * 1024U * 1024U) {
+                initializationError = "Pinned scientific database is missing or outside the package size limit";
+                return;
+            }
+            std::ifstream input(databasePath, std::ios::binary);
+            const std::string bytes(std::istreambuf_iterator<char>{input}, std::istreambuf_iterator<char>{});
+            if (input.bad() || bytes.size() != size || sha256Hex(bytes) != databaseIdentity) {
+                initializationError = "Pinned scientific database bytes do not match the declared SHA-256";
+                return;
+            }
+            // Load exactly the bytes whose digest was checked, rather than reopening the path.
+            errors = engine.LoadDatabaseString(bytes.c_str());
+        } else {
+            errors = engine.LoadDatabase(databasePath.c_str());
+        }
         ready = errors == 0;
         if (!ready) {
             const char* message = engine.GetErrorString();

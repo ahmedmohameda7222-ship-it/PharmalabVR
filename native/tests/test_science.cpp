@@ -1,9 +1,11 @@
 #include "doctest.h"
 #include "plv/ideal_reference.hpp"
 #include "plv/solver.hpp"
+#include "plv/sha256.hpp"
 
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <stdexcept>
 
 using namespace plv;
@@ -97,4 +99,23 @@ TEST_CASE("S05 engine adapter rejects invalid requests and missing database") {
     IPhreeqcAdapter missing("definitely-missing-database.dat", "missing");
     CHECK_FALSE(missing.initialized());
     CHECK_FALSE(missing.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0}).succeeded);
+}
+
+TEST_CASE("P04_02 pinned IPhreeqc database rejects changed bytes before loading") {
+    CHECK(sha256Hex("") == "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855");
+    CHECK(sha256Hex("abc") == "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD");
+    constexpr auto pinned = "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7";
+    IPhreeqcAdapter original(minteqDatabasePath(), pinned);
+    INFO("pinned load error: " << original.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0}).error);
+    REQUIRE(original.initialized());
+    const auto changedPath = std::filesystem::temp_directory_path() / "plv-p04-02-changed-minteq.dat";
+    {
+        std::ifstream source(minteqDatabasePath(), std::ios::binary);
+        std::ofstream changed(changedPath, std::ios::binary | std::ios::trunc);
+        changed << source.rdbuf() << '\n';
+    }
+    IPhreeqcAdapter changed(changedPath.string(), pinned);
+    CHECK_FALSE(changed.initialized());
+    CHECK_FALSE(changed.solve({0.01, 1e-5, 0.0, 0.0, 0.0, 25.0}).succeeded);
+    std::filesystem::remove(changedPath);
 }

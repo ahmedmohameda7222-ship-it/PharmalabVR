@@ -6,6 +6,7 @@ set(PLV_CORE_SOURCES
     core/src/material.cpp
     core/src/mixing_model.cpp
     core/src/scheduler.cpp
+    core/src/sha256.cpp
     core/src/solver_worker.cpp
     core/src/state_executor.cpp
     core/src/tool_models.cpp
