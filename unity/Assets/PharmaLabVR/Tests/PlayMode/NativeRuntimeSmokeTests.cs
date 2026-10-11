@@ -278,9 +278,78 @@ namespace PharmaLabVR.Tests.PlayMode
             var databasePath = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
             using var session = new CoreSession("package-load", "Desktop", databasePath, ScientificPackage.DatabaseSha256);
             var exported = session.ExportSession();
-            Assert.Throws<InvalidDataException>(() => CoreSession.ImportSession(exported, databasePath + ".wrong"));
+            Assert.Throws<ScientificPackageMismatchException>(() => CoreSession.ImportSession(exported, databasePath + ".wrong"));
             using var restored = CoreSession.ImportSession(exported, databasePath);
             Assert.That(restored.IsOpen, Is.True);
+        }
+
+        [Test]
+        public void P04_02_ColdStartAndImportRejectMismatchedActualPackageBytes()
+        {
+            var databasePath = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+            var corrupted = Path.Combine(Application.temporaryCachePath, "p04-02-corrupt-minteq.dat");
+            var bytes = File.ReadAllBytes(databasePath);
+            bytes[bytes.Length / 2] ^= 0x01;
+            File.WriteAllBytes(corrupted, bytes);
+            try
+            {
+                Assert.Throws<ScientificPackageMismatchException>(() =>
+                {
+                    using var rejected = new CoreSession("wrong-bytes", "Desktop", corrupted,
+                        ScientificPackage.DatabaseSha256);
+                });
+            }
+            finally { File.Delete(corrupted); }
+            using var session = new CoreSession("package-identity", "Desktop", databasePath,
+                ScientificPackage.DatabaseSha256);
+            var wrongIdentity = session.ExportSession().Replace(ScientificPackage.DatabaseSha256,
+                new string('0', ScientificPackage.DatabaseSha256.Length));
+            Assert.Throws<ScientificPackageMismatchException>(() =>
+            {
+                using var rejected = CoreSession.ImportSession(wrongIdentity);
+            });
+        }
+
+        [UnityTest]
+        public IEnumerator P04_02_MismatchedSaveOpensRecordedOnlyObservationWithoutReplacingLiveSession()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            var controller = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).First();
+            Assert.That(driver.TryPrepareSourceStock("hcl", 0.1), Is.True);
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
+            var actual = driver.Session.ExportSession();
+            var mismatched = actual.Replace(ScientificPackage.DatabaseSha256,
+                new string('0', ScientificPackage.DatabaseSha256.Length));
+            var path = Path.Combine(Application.temporaryCachePath, "p04-02-recorded-only.plv.json");
+            File.WriteAllText(path, mismatched);
+            File.WriteAllText(path + ".bak", actual);
+            try
+            {
+                Assert.Throws<ScientificPackageMismatchException>(() =>
+                    new SaveService().Load(path, driver.ScientificDatabasePath),
+                    "A compatible backup must not silently replace a present save with a different model.");
+                Assert.That(controller.ContinueFrom(path), Is.False);
+                Assert.That(controller.RecordedReview, Is.Not.Null);
+                Assert.That(controller.RecordedReview.Observations.Single(item => item.vesselId == "source").DisplayValue,
+                    Is.EqualTo(driver.Measurement.DisplayValue));
+                Assert.That(controller.LastError, Does.Contain("saved observations only"));
+                Assert.That(driver.Session.IsOpen, Is.True);
+                Assert.That(driver.Session.ReadSnapshot(), Does.Contain("\"source\""));
+            }
+            finally
+            {
+                File.Delete(path);
+                File.Delete(path + ".bak");
+            }
+            yield return SceneManager.UnloadSceneAsync(scene);
         }
 
         [UnityTest]
@@ -407,6 +476,44 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
                 driver.Session.ReadSnapshot());
             Assert.That(driver.Measurement.DisplayValue, Is.EqualTo(acidValue));
+            yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator P04_02_ReceiverInspectionUsesItsOwnLiveObservation()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            Assert.That(driver.TryPrepareSourceStock("hcl", 0.1), Is.True);
+            Assert.That(driver.Session.SubmitOrdered("PrepareStock",
+                "{\"vesselId\":\"receiver\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000001}",
+                "{\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
+            var sourceValue = driver.Measurement.DisplayValue;
+            Assert.That(driver.SelectMeasurementVessel("receiver"), Is.True);
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.DisplayValue, Is.Not.EqualTo(sourceValue));
+            Assert.That(driver.Measurement.Explanation, Does.Contain("receiver"));
+            var baseValue = driver.Measurement.DisplayValue;
+            Assert.That(driver.Session.SubmitOrdered("TransferFixed",
+                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000002},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"source\":\"1\",\"receiver\":\"1\"}"), Does.Contain("\"accepted\":true"));
+            for (var attempt = 0; attempt < 200 && driver.Measurement.DisplayValue == baseValue; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
+                driver.Session.ReadSnapshot());
+            Assert.That(driver.Measurement.DisplayValue, Is.Not.EqualTo(baseValue));
+            Assert.That(driver.Measurement.Explanation, Does.Contain("receiver"));
+            Assert.That(driver.SelectMeasurementVessel("missing"), Is.False);
+            Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("receiver"));
             yield return SceneManager.UnloadSceneAsync(scene);
         }
 

@@ -18,6 +18,8 @@ namespace PharmaLabVR.Core
         public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "")
         {
             if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
+            if (!string.IsNullOrEmpty(databasePath) || !string.IsNullOrEmpty(databaseIdentity))
+                ScientificPackage.VerifyPinnedFile(databasePath, databaseIdentity);
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
             var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\"}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
@@ -35,14 +37,14 @@ namespace PharmaLabVR.Core
         public static CoreSession ImportSession(string json, string expectedScientificDatabasePath = null)
         {
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
-            if (expectedScientificDatabasePath != null)
-            {
-                var package = JsonUtility.FromJson<ScientificPackageEnvelope>(json)?.scientificPackage;
-                if (package == null || package.path != expectedScientificDatabasePath ||
-                    package.identity != ScientificPackage.DatabaseSha256)
-                    throw new InvalidDataException("Save scientific package does not match this installation.");
-                ScientificPackage.Verify(File.ReadAllBytes(expectedScientificDatabasePath));
-            }
+            var package = JsonUtility.FromJson<ScientificPackageEnvelope>(json)?.scientificPackage;
+            if (package == null) throw new ScientificPackageMismatchException("Save scientific package is absent.");
+            if (expectedScientificDatabasePath != null && package.path != expectedScientificDatabasePath)
+                throw new ScientificPackageMismatchException("Save scientific package does not match this installation.");
+            if (!string.IsNullOrEmpty(package.path) || !string.IsNullOrEmpty(package.identity))
+                ScientificPackage.VerifyPinnedFile(package.path, package.identity);
+            else if (expectedScientificDatabasePath != null)
+                throw new ScientificPackageMismatchException("Save has no scientific package for live recomputation.");
             var bytes = Utf8(json);
             Ensure(NativeMethods.Import(bytes, (uint)bytes.Length, out var imported), "import");
             var envelope = JsonUtility.FromJson<SessionEnvelope>(json);

@@ -23,6 +23,7 @@ namespace PharmaLabVR.Core
         public string HoldReason { get; private set; } = string.Empty;
         public bool IsTimeHeld { get; private set; }
         public bool SourceNeedsPreparation { get; private set; }
+        public string SelectedMeasurementVesselId { get; private set; } = "source";
         public IReadOnlyList<string> AvailableStockIds => stockIds;
         public IReadOnlyList<double> ResearchConcentrations => stockCatalog?.researchMatrixMolPerL ?? Array.Empty<double>();
         private readonly List<string> stockIds = new();
@@ -188,6 +189,21 @@ namespace PharmaLabVR.Core
             return outcome != null && outcome.accepted;
         }
 
+        public bool SelectMeasurementVessel(string vesselId)
+        {
+            if (Session == null || string.IsNullOrWhiteSpace(vesselId)) return false;
+            var state = JsonUtility.FromJson<SnapshotEnvelope>(Session.ReadSnapshot());
+            if (state?.vessels == null) return false;
+            foreach (var vessel in state.vessels)
+                if (vessel.id == vesselId)
+                {
+                    SelectedMeasurementVesselId = vesselId;
+                    PublishSnapshot();
+                    return true;
+                }
+            return false;
+        }
+
         public bool RestartCheckpoint(string checkpointId)
         {
             if (Session == null) return false;
@@ -295,9 +311,12 @@ namespace PharmaLabVR.Core
                         SourceNeedsPreparation = true;
             HoldReason = state?.hold?.reason ?? string.Empty;
             if (state?.observations != null && Measurement != null)
+            {
+                var selectedFound = false;
                 foreach (var observation in state.observations)
-                    if (observation.vesselId == "source" && observation.observableId == "pH")
+                    if (observation.vesselId == SelectedMeasurementVesselId && observation.observableId == "pH")
                     {
+                        selectedFound = true;
                         var availability = observation.support != "Supported" ? MeasurementAvailability.Unsupported :
                             observation.computationState == "Failed" ? MeasurementAvailability.Failed :
                             observation.freshness == "Stale" ? MeasurementAvailability.Stale :
@@ -305,9 +324,12 @@ namespace PharmaLabVR.Core
                                 MeasurementAvailability.Current : MeasurementAvailability.Pending;
                         Measurement.Present(availability,
                             observation.value.ToString("0.00", CultureInfo.InvariantCulture),
-                            $"pH {availability} · {observation.maturity} · {observation.modelId}");
+                            $"pH {SelectedMeasurementVesselId} · rev {observation.asOfMaterialRevision} · {availability} · {observation.maturity} · {observation.modelId} · package {observation.databaseIdentity}");
                         break;
                     }
+                if (!selectedFound) Measurement.Present(MeasurementAvailability.Unsupported, "",
+                    $"pH {SelectedMeasurementVesselId} · observation unavailable");
+            }
             var held = state?.hold != null && state.hold.active;
             if (held != IsTimeHeld)
             {
@@ -367,6 +389,8 @@ namespace PharmaLabVR.Core
             public string computationState;
             public string maturity;
             public string modelId;
+            public string asOfMaterialRevision;
+            public string databaseIdentity;
             public double value;
         }
 

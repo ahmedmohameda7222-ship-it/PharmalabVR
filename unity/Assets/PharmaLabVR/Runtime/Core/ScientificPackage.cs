@@ -7,6 +7,12 @@ using UnityEngine.Networking;
 
 namespace PharmaLabVR.Core
 {
+    public sealed class ScientificPackageMismatchException : IOException
+    {
+        public ScientificPackageMismatchException(string message) : base(message) { }
+        public ScientificPackageMismatchException(string message, Exception cause) : base(message, cause) { }
+    }
+
     public static class ScientificPackage
     {
         public const string DatabaseSha256 = "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7";
@@ -16,8 +22,27 @@ namespace PharmaLabVR.Core
         public static string PrepareLocal(string streamingAssetsPath)
         {
             var path = Path.Combine(streamingAssetsPath, RelativeDatabasePath);
-            Verify(File.ReadAllBytes(path));
+            VerifyPinnedFile(path, DatabaseSha256);
             return path;
+        }
+
+        public static void VerifyPinnedFile(string path, string declaredIdentity)
+        {
+            if (string.IsNullOrWhiteSpace(path) ||
+                !string.Equals(declaredIdentity, DatabaseSha256, StringComparison.OrdinalIgnoreCase))
+                throw new ScientificPackageMismatchException("Scientific database identity does not match the pinned model.");
+            try
+            {
+                var size = new FileInfo(path).Length;
+                if (size <= 0 || size > MaxPackageBytes)
+                    throw new InvalidDataException("Scientific database package has an invalid size.");
+                Verify(File.ReadAllBytes(path));
+            }
+            catch (Exception error) when (error is InvalidDataException || error is IOException ||
+                                          error is UnauthorizedAccessException)
+            {
+                throw new ScientificPackageMismatchException("Scientific database bytes are unavailable or invalid.", error);
+            }
         }
 
         public static IEnumerator PrepareAndroid(Action<string> ready, Action<Exception> failed)

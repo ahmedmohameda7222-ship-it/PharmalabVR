@@ -47,8 +47,9 @@ namespace PharmaLabVR.Session
         }
 
         private static bool IsRecoverableReadFailure(Exception error) =>
-            error is InvalidDataException || error is InvalidOperationException ||
-            error is ArgumentException || error is IOException;
+            error is not ScientificPackageMismatchException &&
+            (error is InvalidDataException || error is InvalidOperationException ||
+             error is ArgumentException || error is IOException);
 
         private static void ValidateName(string name)
         {
