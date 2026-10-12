@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.Session;
@@ -33,12 +32,12 @@ namespace PharmaLabVR.UI
                     router.Show(action == PanelAction.Inspect ? ScreenId.Inspect : ScreenId.Measure, entityId);
                     return router.Current.SelectedEntityId == entityId;
                 case PanelAction.Pause:
-                    if (!Accepted(driver.Session.SubmitOrdered("Pause"))) return false;
+                    if (!driver.PauseSession()) return false;
                     router.Show(ScreenId.Pause);
                     return true;
                 case PanelAction.Lab:
                     if (router.Current.ScreenId == ScreenId.Pause &&
-                        !Accepted(driver.Session.SubmitOrdered("Continue"))) return false;
+                        !driver.ContinueSession()) return false;
                     router.Show(ScreenId.Lab);
                     return true;
                 case PanelAction.Review:
@@ -57,12 +56,5 @@ namespace PharmaLabVR.UI
             }
         }
 
-        private static bool Accepted(string result)
-        {
-            var outcome = JsonUtility.FromJson<CommandOutcome>(result);
-            return outcome != null && outcome.accepted;
-        }
-
-        [Serializable] private sealed class CommandOutcome { public bool accepted; }
     }
 }

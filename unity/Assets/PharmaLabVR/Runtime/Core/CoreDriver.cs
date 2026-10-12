@@ -27,6 +27,7 @@ namespace PharmaLabVR.Core
         public string HoldReason { get; private set; } = string.Empty;
         public bool NativeRecoveryReady { get; private set; }
         public bool IsTimeHeld { get; private set; }
+        public bool IsNativePaused { get; private set; }
         public bool SourceNeedsPreparation { get; private set; }
         public string SelectedMeasurementVesselId { get; private set; } = "source";
         public IReadOnlyList<string> AvailableStockIds => stockIds;
@@ -139,6 +140,17 @@ namespace PharmaLabVR.Core
                 PublishSnapshot();
                 return;
             }
+            if (IsNativePaused)
+            {
+                accumulator = Math.Min(TickSeconds, accumulator + Time.unscaledDeltaTime);
+                if (accumulator < TickSeconds) return;
+                var pausedNowNs = NowNs();
+                Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(pausedNowNs)));
+                Session.Step(0.0, pausedNowNs);
+                accumulator = 0.0;
+                PublishSnapshot();
+                return;
+            }
             accumulator += Time.unscaledDeltaTime;
             if (IsTimeHeld)
             {
@@ -222,6 +234,27 @@ namespace PharmaLabVR.Core
             var outcome = JsonUtility.FromJson<CommandOutcome>(
                 Session.SubmitOrdered("CreateCheckpoint", $"{{\"checkpointId\":\"{EscapeJson(checkpointId)}\"}}"));
             return outcome != null && outcome.accepted;
+        }
+
+        public bool PauseSession()
+        {
+            if (Session == null) return false;
+            var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Pause"));
+            if (outcome == null || !outcome.accepted) return false;
+            accumulator = 0.0;
+            PublishSnapshot();
+            return true;
+        }
+
+        public bool ContinueSession()
+        {
+            if (Session == null) return false;
+            var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Continue"));
+            if (outcome == null || !outcome.accepted) return false;
+            accumulator = 0.0;
+            establishFrameClock = true;
+            PublishSnapshot();
+            return true;
         }
 
         public bool SelectMeasurementVessel(string vesselId)
@@ -310,6 +343,8 @@ namespace PharmaLabVR.Core
             var prepared = commands.Submit("PrepareStock", payload, commands.CaptureTouchedRevisions("source"));
             if (!prepared.Accepted) return false;
             RequireAccepted(Session.SubmitOrdered("Continue"));
+            establishFrameClock = true;
+            accumulator = 0.0;
             PublishSnapshot();
             return true;
         }
@@ -341,6 +376,7 @@ namespace PharmaLabVR.Core
             CurrentLabView = LabViewModel.FromNativeSnapshot(snapshot);
             var state = JsonUtility.FromJson<SnapshotEnvelope>(snapshot);
             if (state != null) CurrentMode = state.mode;
+            IsNativePaused = state?.paused ?? false;
             SourceNeedsPreparation = false;
             if (state?.vessels != null)
                 foreach (var vessel in state.vessels)
@@ -453,6 +489,7 @@ namespace PharmaLabVR.Core
             Session?.Dispose();
             Session = null;
             CurrentLabView = null;
+            IsNativePaused = false;
         }
     }
 }

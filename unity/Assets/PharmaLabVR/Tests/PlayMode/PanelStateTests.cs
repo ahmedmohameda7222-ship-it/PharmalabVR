@@ -30,8 +30,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.IsTimeHeld, Is.False, driver.Session.ReadSnapshot());
                 Thread.Sleep(120);
                 yield return null;
+                Assert.That(driver.IsTimeHeld, Is.False,
+                    "A paused setup session has no transport backlog to catch up.");
+                Assert.That(driver.ContinueSession(), Is.True);
+                yield return null;
+                Thread.Sleep(120);
+                yield return null;
                 Assert.That(driver.IsTimeHeld, Is.True,
-                    "Only the first startup frame may establish a new clock baseline.");
+                    "A later unpaused transport backlog must still enter TimeDiscontinuity hold.");
                 StringAssert.Contains("\"reason\":\"TimeDiscontinuity\"", driver.Session.ReadSnapshot());
             }
             finally { Object.DestroyImmediate(root); }
