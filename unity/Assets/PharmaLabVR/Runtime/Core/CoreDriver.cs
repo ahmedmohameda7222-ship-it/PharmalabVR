@@ -34,10 +34,15 @@ namespace PharmaLabVR.Core
         private readonly List<string> stockIds = new();
         private StockCatalogEnvelope stockCatalog;
         private double accumulator;
+        private bool establishFrameClock;
         private Func<string> packagePathResolver = () => ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
         private const double TickSeconds = 0.020;
 
-        public void ConfigureInputs(params MonoBehaviour[] adapters) => inputAdapterBehaviours = adapters;
+        public void ConfigureInputs(params MonoBehaviour[] adapters)
+        {
+            inputAdapterBehaviours = adapters;
+            SynchronizeInputSequences();
+        }
         public void ConfigurePackagePathResolver(Func<string> resolver) =>
             packagePathResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
 
@@ -85,6 +90,8 @@ namespace PharmaLabVR.Core
                             recorder.Configure(this);
                         }
                 StartupError = null;
+                establishFrameClock = true;
+                accumulator = 0.0;
                 PublishSnapshot();
             }
             catch (Exception exception) { FailStartup(exception); }
@@ -122,6 +129,16 @@ namespace PharmaLabVR.Core
         private void Update()
         {
             if (Session == null) return;
+            if (establishFrameClock)
+            {
+                establishFrameClock = false;
+                accumulator = 0.0;
+                var baselineNowNs = NowNs();
+                Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(baselineNowNs)));
+                Session.Step(0.0, baselineNowNs);
+                PublishSnapshot();
+                return;
+            }
             accumulator += Time.unscaledDeltaTime;
             if (IsTimeHeld)
             {
@@ -178,6 +195,7 @@ namespace PharmaLabVR.Core
                 foreach (var behaviour in inputAdapterBehaviours)
                     if (behaviour is ILabInputAdapter adapter) adapter.ResetBaselines();
             accumulator = 0.0;
+            establishFrameClock = true;
             IsTimeHeld = false;
             HoldChanged?.Invoke(false);
             PublishSnapshot();
@@ -240,6 +258,7 @@ namespace PharmaLabVR.Core
             var previous = Session;
             Session = replacement;
             accumulator = 0.0;
+            establishFrameClock = true;
             previous?.Dispose();
             SynchronizeInputSequences();
             PublishSnapshot();

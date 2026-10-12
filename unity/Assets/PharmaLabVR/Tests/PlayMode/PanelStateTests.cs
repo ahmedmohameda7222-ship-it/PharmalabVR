@@ -1,6 +1,7 @@
 using System.Collections;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 using PharmaLabVR.Core;
 using PharmaLabVR.Session;
@@ -16,6 +17,27 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class PanelStateTests
     {
+        [UnityTest]
+        public IEnumerator P06_02_ColdSessionFirstFrameEstablishesClockBaseline()
+        {
+            var root = new GameObject("ColdSessionClockBaseline");
+            try
+            {
+                var driver = root.AddComponent<CoreDriver>();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Thread.Sleep(120);
+                yield return null;
+                Assert.That(driver.IsTimeHeld, Is.False, driver.Session.ReadSnapshot());
+                Thread.Sleep(120);
+                yield return null;
+                Assert.That(driver.IsTimeHeld, Is.True,
+                    "Only the first startup frame may establish a new clock baseline.");
+                StringAssert.Contains("\"reason\":\"TimeDiscontinuity\"", driver.Session.ReadSnapshot());
+            }
+            finally { Object.DestroyImmediate(root); }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P06_02_LiveLabRoutesNativeHoldWithoutOfferingAFalseContinue()
         {

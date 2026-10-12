@@ -699,7 +699,9 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
                 "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000004},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                 "{\"source\":\"1\",\"receiver\":\"1\"}"), Does.Contain("\"accepted\":true"));
-            for (var attempt = 0; attempt < 200 && driver.Measurement.DisplayValue == baseValue; attempt++)
+            for (var attempt = 0; attempt < 200 &&
+                (driver.Measurement.Availability != MeasurementAvailability.Current ||
+                 driver.Measurement.DisplayValue == baseValue); attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
             Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
                 driver.Session.ReadSnapshot());
