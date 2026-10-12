@@ -121,22 +121,22 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "57006a4dc83f49c7216268018b68d0be6e73f83a",
-    "testedHeadBeforeEvidenceCommit": "57006a4dc83f49c7216268018b68d0be6e73f83a",
-    "currentTask": "P05.03 Open",
-    "lastVerifiedLocalTask": "P05.02 scoped Research equilibrium scheduling",
-    "nativeRelease": "88/88 cases, 16080/16080 assertions in saved run; CTest 1/1",
-    "unityPlayMode": "21/21 including real Lab scene continuous pour with unrelated Current IPhreeqc observation and Current/Unsupported UI states",
+    "functionalCodeSha": "0ac90ef19bc8aaf7b545e075717508ac67dcac68",
+    "testedHeadBeforeEvidenceCommit": "0ac90ef19bc8aaf7b545e075717508ac67dcac68",
+    "currentTask": "P06.01 Open",
+    "lastVerifiedLocalTask": "P05.03 scoped Research software holds and worker diagnostics",
+    "nativeRelease": "92/92 cases, 16101/16101 assertions in saved run; CTest 1/1",
+    "unityPlayMode": "23/23 including real Lab scene Compute hold save and unchanged material/event evidence",
     "unityEditMode": "22/22",
-    "windowsDesktopBuild": "Success; current-code executable SHA-256 recorded in artifact-manifest-p05-02.json",
-    "nativePlugins": "Windows and Android staged; hashes recorded in artifact-manifest-p05-02.json",
-    "evidence": "docs/evidence/p05-02-fair-worker.md and artifact-manifest-p05-02.json",
-    "acceptance95": "Historical scoped catalog remains 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion from P05.02; O06 Failed/Stale UI and O07 kinetic/multiphase model remain Partial or unsupported",
+    "windowsDesktopBuild": "Success; current-code executable SHA-256 recorded in artifact-manifest-p05-03.json",
+    "nativePlugins": "Windows and Android staged; hashes recorded in artifact-manifest-p05-03.json",
+    "evidence": "docs/evidence/p05-03-stall-holds.md and artifact-manifest-p05-03.json",
+    "acceptance95": "Historical scoped catalog remains 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion from P05.03; H03 device alignment and actual pathological IPhreeqc cancellation remain open",
     "currentPlayerJourney": "Not verified. WindowsDesktop build and Unity scene tests do not prove full student/instructor/expert Player flows.",
     "currentScreenshots": "No new standalone Player journey screenshot at this functional SHA.",
     "externalGates": "G-R1 Open; physical VR/Android, tool calibration, experimental chemistry and controlled long-performance evidence missing",
-    "ci": "CI on the final P05.02 evidence HEAD must be checked",
-    "nextTask": "P05.03"
+    "ci": "CI on c14b2e8 failed in rollback and was corrected at 0ac90ef; final evidence HEAD must be checked",
+    "nextTask": "P06.01"
   },
   "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }

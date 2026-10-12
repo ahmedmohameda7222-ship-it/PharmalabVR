@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "0ac90ef19bc8aaf7b545e075717508ac67dcac68",
+  "scope": "P05.03 bounded Research software hold and worker diagnostics; actual engine nonconvergence, physical H03 and standalone Player journeys remain open",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p05-03/ctest-p05-03.txt",
+      "sha256": "6F9885DB12E0AADD7FD5C59F7B5FB1E5961C6C4986A65CBA2F492329078B218B",
+      "bytes": 456
+    },
+    {
+      "path": "artifacts/evidence-p05-03/EditMode.xml",
+      "sha256": "A3B3A93396C17702AF52EFD8DC8F30F455EC5B930617D7D026D234DF69957CD9",
+      "bytes": 20526
+    },
+    {
+      "path": "artifacts/evidence-p05-03/libpharmalab_core.so",
+      "sha256": "2FBDE7D3FF405B19210EC724D64BF9C7EEB47E2FE583092D22D49BD59CFB7250",
+      "bytes": 48223296
+    },
+    {
+      "path": "artifacts/evidence-p05-03/native-p05-03.txt",
+      "sha256": "918583E84E6750189DC4F3898D7CCF2E9784C88B68FAA9271A2A7443091E2E7F",
+      "bytes": 724
+    },
+    {
+      "path": "artifacts/evidence-p05-03/pharmalab_core.dll",
+      "sha256": "42077007A296666D1A4FFD7894AB11135A001460FB5D3BA4768603C73698172E",
+      "bytes": 2287104
+    },
+    {
+      "path": "artifacts/evidence-p05-03/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/evidence-p05-03/PlayMode.xml",
+      "sha256": "E1840BF6E7A22B3B64A1914D43801D0031F906F5F19802DEE36150422AEA9677",
+      "bytes": 22721
+    },
+    {
+      "path": "artifacts/evidence-p05-03/unity-WindowsDesktop.log",
+      "sha256": "D35904E105FA6812A42433CD69200AFDFA67F2EA05091F82FA652FF50B23CE44",
+      "bytes": 344659
+    }
+  ]
+}

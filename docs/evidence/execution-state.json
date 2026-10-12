@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P05.03",
+  "nextTask": "P06.01",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -614,7 +614,8 @@
           "implementationEvidence": [
             "57006a4 worker replaces newer pending equilibrium request in place without losing peer order or exceeding capacity",
             "57006a4 scheduler rejects regressive pending requests before changing authoritative observation state",
-            "Native ABI keeps unrelated Current observation and committed event history while changed vessels reach Current revision 2"
+            "Native ABI keeps unrelated Current observation and committed event history while changed vessels reach Current revision 2",
+            "0ac90ef corrects restored dependency generation priority after CI exposed a P04.01 rollback failure on c14b2e8"
           ],
           "externalEvidence": [],
           "acceptanceScope": "Task-scoped Research equilibrium fairness, pending replacement and monotone requests with actual multi-vessel IPhreeqc and Unity live Lab scene. O06 Failed/Stale UI, kinetic/multiphase model, controlled maximum-flow and full Player/device journeys remain Partial or unsupported.",
@@ -633,13 +634,22 @@
           "dependencies": [
             "P05.02"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "0ac90ef19bc8aaf7b545e075717508ac67dcac68",
+          "evidence": [
+            "docs/evidence/p05-03-stall-holds.md",
+            "docs/evidence/artifact-manifest-p05-03.json",
+            "P05_03 blocked worker stop accounting red then green, two-second controlled delay and Unity Lab Compute hold save",
+            "Native 92/92, CTest 1/1, Unity PlayMode 23/23, EditMode 22/22, WindowsDesktop build Success"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "0ac90ef product snapshot exposes solverWallStalled and plv_step enters Compute hold after two-second worker stall",
+            "0ac90ef HoldPanel and Desktop HUD gate Continue on Native recoveryReady; Unity Lab saves with unchanged material/event under Compute hold",
+            "0ac90ef worker stop discards pending accounting but retains blocked active context; no detached replacement"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Task-scoped Research hold/worker software only. Controlled blocked callback is not actual IPhreeqc nonconvergence/cancellation; H03 physical alignment, full standalone Player hold journey and long target workload remain Partial or EvidenceMissing.",
           "blocker": null
         }
       ],
