@@ -897,6 +897,16 @@ TEST_CASE("P05_01 fixed ten ml transfer is denied before material commit") {
     submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
                              {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.01}}, {{"source", "0"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
+    bool current = false;
+    for (int attempt = 0; attempt < 300 && !current; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto state = json::parse(read_text(handle));
+        for (const auto& item : state["observations"])
+            if (item.value("vesselId", "") == "source" && item.value("freshness", "") == "Current")
+                current = true;
+        if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(current);
     const auto before = json::parse(read_text(handle));
     submit(handle, command("5", "TransferFixed",
         {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
@@ -906,7 +916,7 @@ TEST_CASE("P05_01 fixed ten ml transfer is denied before material commit") {
          {"overflowSinkId", "waste"}}, {{"source", "1"}, {"receiver", "0"}}));
     const auto result = poll(handle);
     CHECK_FALSE(result["accepted"].get<bool>());
-    CHECK((result["code"] == "ObservationVolumeHold" || result["code"] == "ObservationRequired"));
+    CHECK(result["code"] == "ObservationVolumeHold");
     const auto after = json::parse(read_text(handle));
     CHECK(after["vessels"] == before["vessels"]);
     CHECK(after["sinks"] == before["sinks"]);
