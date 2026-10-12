@@ -1162,6 +1162,19 @@ TEST_CASE("P05_02 real multi-vessel science scopes freshness and preserves commi
     CHECK(destroyed == PLV_OK);
 }
 
+TEST_CASE("P05_03 product snapshot reports the live worker stall diagnostic") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE},
+                         {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    const auto snapshot = json::parse(read_text(handle));
+    REQUIRE(snapshot.contains("solverWallStalled"));
+    CHECK(snapshot["solverWallStalled"] == false);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored dependency") {
     std::uint64_t handle = 0;
     const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},

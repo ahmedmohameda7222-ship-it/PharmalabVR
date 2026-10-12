@@ -330,6 +330,7 @@ json contextSnapshotJson(const Context& context) {
         {"reason", context.holdReason},
         {"recoveryReady", context.recoveryReady}
     };
+    result["solverWallStalled"] = context.worker && context.worker->stalled();
     result["tools"] = json::array();
     result["scienceDependencyGeneration"] = std::to_string(context.scheduler.dependencyGeneration());
     std::vector<std::string> toolIds;
@@ -1022,6 +1023,12 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     const auto simulationNowNs = static_cast<std::uint64_t>(
         std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
     collectScience(*context, simulationNowNs);
+    if (context->worker && context->worker->stalled() && !context->holdActive) {
+        context->holdActive = true;
+        context->holdReason = "Compute";
+        context->recoveryReady = false;
+        for (auto& item : context->tools) item.second.latestInput.reset();
+    }
     if (context->holdActive) {
         bool ready = freshNeutralInputs(*context, monotonic_now_ns);
         if (context->holdReason == "Compute" && context->worker) {

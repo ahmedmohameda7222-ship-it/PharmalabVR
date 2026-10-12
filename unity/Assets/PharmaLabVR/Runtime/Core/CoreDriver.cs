@@ -23,6 +23,7 @@ namespace PharmaLabVR.Core
         public MeasurementView Measurement { get; private set; }
         public string CurrentMode { get; private set; } = "Desktop";
         public string HoldReason { get; private set; } = string.Empty;
+        public bool NativeRecoveryReady { get; private set; }
         public bool IsTimeHeld { get; private set; }
         public bool SourceNeedsPreparation { get; private set; }
         public string SelectedMeasurementVesselId { get; private set; } = "source";
@@ -313,6 +314,7 @@ namespace PharmaLabVR.Core
                     if (vessel.id == "source" && vessel.materialRevision == "0" && state.paused)
                         SourceNeedsPreparation = true;
             HoldReason = state?.hold?.reason ?? string.Empty;
+            NativeRecoveryReady = state?.hold != null && state.hold.recoveryReady;
             if (state?.observations != null && Measurement != null)
             {
                 var selectedFound = false;
@@ -409,6 +411,7 @@ namespace PharmaLabVR.Core
         {
             public bool active;
             public string reason;
+            public bool recoveryReady;
         }
 
         private void OnDisable()

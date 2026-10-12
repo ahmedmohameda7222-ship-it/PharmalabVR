@@ -11,10 +11,11 @@ namespace PharmaLabVR.UI
         public bool CanContinue { get; private set; }
         public event Action ContinueRequested;
 
-        public void Present(bool held, bool neutral, bool baselineFresh, string reason)
+        public void Present(bool held, bool neutral, bool baselineFresh, string reason,
+            bool nativeRecoveryReady = false)
         {
             IsHeld = held;
-            CanContinue = held && neutral && baselineFresh;
+            CanContinue = held && neutral && baselineFresh && nativeRecoveryReady;
             gameObject.SetActive(held);
             if (reasonLabel != null) reasonLabel.text = reason ?? string.Empty;
         }

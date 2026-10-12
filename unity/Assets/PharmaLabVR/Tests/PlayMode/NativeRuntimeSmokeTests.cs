@@ -24,6 +24,25 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        [Test]
+        public void P05_03_ComputeHoldCannotOfferContinueWithoutNativeRecovery()
+        {
+            var root = new GameObject("ComputeHoldReadiness");
+            var panel = root.AddComponent<HoldPanel>();
+            panel.Present(true, true, true, "Compute");
+            Assert.That(panel.CanContinue, Is.False,
+                "A neutral controller alone cannot clear an unresolved scientific hold.");
+            var requests = 0;
+            panel.ContinueRequested += () => requests++;
+            panel.RequestContinue();
+            Assert.That(requests, Is.Zero);
+            panel.Present(true, true, true, "Compute", nativeRecoveryReady: true);
+            Assert.That(panel.CanContinue, Is.True);
+            panel.RequestContinue();
+            Assert.That(requests, Is.EqualTo(1));
+            Object.DestroyImmediate(root);
+        }
+
         [System.Serializable] private sealed class StockInventory
         {
             public double solventWaterKg;
@@ -47,6 +66,7 @@ namespace PharmaLabVR.Tests.PlayMode
         [System.Serializable] private sealed class StockState
         {
             public bool paused;
+            public string eventSequence;
             public StockVessel[] vessels;
             public StockVessel[] sinks;
             public StockTool[] tools;
@@ -618,6 +638,64 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(viewport.y, Is.InRange(0.1f, 0.9f), name);
             }
             yield return SceneManager.UnloadSceneAsync(scene);
+        }
+
+        [UnityTest]
+        public IEnumerator P05_03_ComputeHoldInLabKeepsSaveResponsiveAndMaterialUnchanged()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity", new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
+            var sessions = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).First();
+            sessions.Configure(driver, "playmode-hold-" + System.Guid.NewGuid().ToString("N"));
+            try
+            {
+            Assert.That(sessions.SelectStock("hcl", 0.1), Is.True, sessions.LastError);
+            for (var attempt = 0; driver.IsTimeHeld && attempt < 100; attempt++)
+            {
+                driver.ResumeAfterTimeHold();
+                yield return new WaitForSecondsRealtime(0.01f);
+            }
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
+            Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
+            var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+            Assert.That(driver.Session.SubmitOrdered("TransferFixed",
+                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("ObservationVolumeHold"));
+            StringAssert.Contains("\"reason\":\"Compute\"", driver.Session.ReadSnapshot());
+            for (var attempt = 0; attempt < 50 && driver.HoldReason != "Compute"; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.HoldReason, Is.EqualTo("Compute"), driver.Session.ReadSnapshot());
+            Assert.That(driver.NativeRecoveryReady, Is.EqualTo(driver.Session.ReadSnapshot().Contains("\"recoveryReady\":true")));
+            Assert.That(sessions.Save(), Is.True, sessions.LastError);
+            var savePath = sessions.LastDurableSavePath;
+            try
+            {
+                Assert.That(File.Exists(savePath), Is.True);
+                var held = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(held.eventSequence, Is.EqualTo(before.eventSequence));
+                Assert.That(held.vessels.First(item => item.id == "source").inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(before.vessels.First(item => item.id == "source").inventory.researchAdditiveVolumeM3));
+            }
+            finally
+            {
+                if (File.Exists(savePath)) File.Delete(savePath);
+                if (File.Exists(savePath + ".bak")) File.Delete(savePath + ".bak");
+                if (File.Exists(savePath + ".tmp")) File.Delete(savePath + ".tmp");
+            }
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
         }
 
         [UnityTest]

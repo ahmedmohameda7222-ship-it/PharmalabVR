@@ -72,7 +72,13 @@ namespace PharmaLabVR.Session
             if (driver.IsTimeHeld)
             {
                 GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
+                if (!driver.NativeRecoveryReady)
+                    GUILayout.Label(driver.HoldReason == "Compute" ?
+                        "Waiting for the scientific result; saving and review remain available." :
+                        "Waiting for a fresh neutral input baseline.");
+                GUI.enabled = driver.NativeRecoveryReady;
                 if (GUILayout.Button("Continue", GUILayout.Height(34f))) ContinueHeldSession();
+                GUI.enabled = true;
             }
             if (GUILayout.Button("Save session", GUILayout.Height(30f))) Save();
             var savedPath = Path.Combine(Application.persistentDataPath, "sessions", saveName + ".plv.json");

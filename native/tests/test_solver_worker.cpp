@@ -100,6 +100,51 @@ TEST_CASE("P05_02 worker replaces a vessel's pending equilibrium without losing 
     CHECK(results[2].observation.vesselId == "C");
 }
 
+TEST_CASE("P05_02 restored dependency generation replaces older pending work despite lower revision") {
+    std::mutex gateMutex;
+    std::condition_variable gateChanged;
+    bool entered = false;
+    bool release = false;
+    SolverWorker worker(2, [&](const SolveRequest&) {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        if (!entered) {
+            entered = true;
+            gateChanged.notify_one();
+            gateChanged.wait(lock, [&] { return release; });
+        }
+        SolveResult result;
+        result.succeeded = true;
+        return result;
+    });
+    ObservationRequest active{"other", "pH", 2, 1, 0.0};
+    active.dependencyGeneration = 1;
+    ObservationRequest oldPending{"acid", "pH", 2, 2, 0.0};
+    oldPending.dependencyGeneration = 1;
+    ObservationRequest restored{"acid", "pH", 1, 3, 0.0};
+    restored.dependencyGeneration = 2;
+    REQUIRE(worker.submit({active, {}}).accepted);
+    {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        REQUIRE(gateChanged.wait_for(lock, std::chrono::seconds(2), [&] { return entered; }));
+    }
+    REQUIRE(worker.submit({oldPending, {}}).accepted);
+    CHECK(worker.submit({restored, {}}).accepted);
+    {
+        std::lock_guard<std::mutex> lock(gateMutex);
+        release = true;
+    }
+    gateChanged.notify_one();
+    std::vector<SolverCompletion> results;
+    for (int attempt = 0; attempt < 200 && results.size() < 2U; ++attempt) {
+        if (auto result = worker.poll()) results.push_back(std::move(*result));
+        else std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(results.size() == 2U);
+    CHECK(results[1].observation.vesselId == "acid");
+    CHECK(results[1].observation.materialRevision == 1U);
+    CHECK(results[1].observation.dependencyGeneration == 2U);
+}
+
 TEST_CASE("P01_02 solver callback and owned engine are destroyed on worker thread") {
     std::thread::id solveThread;
     std::thread::id destructionThread;
@@ -161,4 +206,72 @@ TEST_CASE("P01_02 blocked solve reports busy shutdown without detaching its cont
     for (int attempt = 0; attempt < 200 && !worker.requestStop(); ++attempt)
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     CHECK(worker.requestStop());
+}
+
+TEST_CASE("P05_03 stopping a blocked solver discards queued work from its bounded accounting") {
+    std::mutex gateMutex;
+    std::condition_variable gateChanged;
+    bool entered = false;
+    bool release = false;
+    SolverWorker worker(2, [&](const SolveRequest&) {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        entered = true;
+        gateChanged.notify_one();
+        gateChanged.wait(lock, [&] { return release; });
+        SolveResult result;
+        result.succeeded = true;
+        return result;
+    });
+    REQUIRE(worker.submit({{"A", "pH", 1, 1, 0.0}, {}}).accepted);
+    {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        REQUIRE(gateChanged.wait_for(lock, std::chrono::seconds(2), [&] { return entered; }));
+    }
+    REQUIRE(worker.submit({{"B", "pH", 1, 2, 0.0}, {}}).accepted);
+    CHECK(worker.outstanding() == 2U);
+    CHECK_FALSE(worker.requestStop());
+    CHECK(worker.outstanding() == 1U);
+    {
+        std::lock_guard<std::mutex> lock(gateMutex);
+        release = true;
+    }
+    gateChanged.notify_one();
+    std::optional<SolverCompletion> completion;
+    for (int attempt = 0; attempt < 200 && !completion; ++attempt) {
+        completion = worker.poll();
+        if (!completion) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(completion.has_value());
+    CHECK(completion->observation.vesselId == "A");
+    CHECK(worker.outstanding() == 0U);
+}
+
+TEST_CASE("P05_03 default two second wall diagnostic does not replace a blocked worker") {
+    std::mutex gateMutex;
+    std::condition_variable gateChanged;
+    bool entered = false;
+    bool release = false;
+    SolverWorker worker(1, [&](const SolveRequest&) {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        entered = true;
+        gateChanged.notify_one();
+        gateChanged.wait(lock, [&] { return release; });
+        return SolveResult{};
+    });
+    REQUIRE(worker.submit({{"A", "pH", 1, 1, 0.0}, {}}).accepted);
+    {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        REQUIRE(gateChanged.wait_for(lock, std::chrono::seconds(2), [&] { return entered; }));
+    }
+    CHECK_FALSE(worker.stalled());
+    CHECK_FALSE(worker.submit({{"B", "pH", 1, 2, 0.0}, {}}).accepted);
+    std::this_thread::sleep_for(std::chrono::milliseconds(2100));
+    CHECK(worker.stalled());
+    CHECK_FALSE(worker.requestStop());
+    CHECK(worker.outstanding() == 1U);
+    {
+        std::lock_guard<std::mutex> lock(gateMutex);
+        release = true;
+    }
+    gateChanged.notify_one();
 }

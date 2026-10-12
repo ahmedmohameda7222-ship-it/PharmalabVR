@@ -16,6 +16,7 @@ SolverWorker::~SolverWorker() {
 bool SolverWorker::requestStop() {
     std::lock_guard<std::mutex> lock(mutex_);
     stopping_ = true;
+    outstanding_ -= pending_.size();
     pending_.clear();
     available_.notify_one();
     return !solving_;
@@ -32,9 +33,11 @@ CommandOutcome SolverWorker::submit(SolverJob job) {
     for (auto& pending : pending_) {
         if (pending.observation.vesselId != job.observation.vesselId ||
             pending.observation.observable != job.observation.observable) continue;
-        if (job.observation.materialRevision < pending.observation.materialRevision ||
-            (job.observation.materialRevision == pending.observation.materialRevision &&
-             job.observation.submittedNs < pending.observation.submittedNs)) {
+        if (job.observation.dependencyGeneration < pending.observation.dependencyGeneration ||
+            (job.observation.dependencyGeneration == pending.observation.dependencyGeneration &&
+             (job.observation.materialRevision < pending.observation.materialRevision ||
+              (job.observation.materialRevision == pending.observation.materialRevision &&
+               job.observation.submittedNs < pending.observation.submittedNs)))) {
             return {false, "StaleObservationRequest", "a newer request is already pending for this vessel"};
         }
         pending = std::move(job);
