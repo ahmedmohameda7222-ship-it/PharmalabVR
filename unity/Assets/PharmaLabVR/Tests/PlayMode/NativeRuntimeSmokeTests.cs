@@ -51,6 +51,12 @@ namespace PharmaLabVR.Tests.PlayMode
             public StockVessel[] sinks;
             public StockTool[] tools;
             public StockInventory materialLedger;
+            public StockObservation[] observations;
+        }
+        [System.Serializable] private sealed class StockObservation
+        {
+            public string vesselId;
+            public string freshness;
         }
 
         private sealed class LivePourAdapter : MonoBehaviour, ILabInputAdapter
@@ -449,7 +455,9 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
-            Assert.That(driver.TryPrepareSourceStock("hcl", 0.1), Is.True);
+            Assert.That(driver.Session.SubmitOrdered("PrepareStock",
+                "{\"vesselId\":\"source\",\"stockKind\":\"HydrochloricAcid\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.00000004}",
+                "{\"source\":\"0\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
             Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
@@ -457,11 +465,20 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.Session.SubmitOrdered("CreateVessel", "{\"id\":\"base\",\"capacityM3\":0.00005}"),
                 Does.Contain("\"accepted\":true"));
             Assert.That(driver.Session.SubmitOrdered("PrepareStock",
-                "{\"vesselId\":\"base\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000025}",
+                "{\"vesselId\":\"base\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.00000009}",
                 "{\"base\":\"0\"}"), Does.Contain("\"accepted\":true"));
+            var baseCurrent = false;
+            for (var attempt = 0; attempt < 200 && !baseCurrent; attempt++)
+            {
+                var state = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                baseCurrent = state.observations != null && state.observations.Any(item =>
+                    item.vesselId == "base" && item.freshness == "Current");
+                if (!baseCurrent) yield return new WaitForSecondsRealtime(0.01f);
+            }
+            Assert.That(baseCurrent, Is.True, driver.Session.ReadSnapshot());
             Assert.That(driver.CreateCheckpoint("acid-state"), Is.True);
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
-                "{\"sourceInventoryId\":\"base\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000025},\"captureFractions\":[{\"destinationInventoryId\":\"source\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"sourceInventoryId\":\"base\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000004},\"captureFractions\":[{\"destinationInventoryId\":\"source\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                 "{\"base\":\"1\",\"source\":\"1\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 200 && driver.Measurement.DisplayValue == acidValue; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
@@ -491,7 +508,7 @@ namespace PharmaLabVR.Tests.PlayMode
             var driver = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).First();
             Assert.That(driver.TryPrepareSourceStock("hcl", 0.1), Is.True);
             Assert.That(driver.Session.SubmitOrdered("PrepareStock",
-                "{\"vesselId\":\"receiver\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000001}",
+                "{\"vesselId\":\"receiver\",\"stockKind\":\"SodiumHydroxide\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.00000004}",
                 "{\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
@@ -504,7 +521,7 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.Measurement.Explanation, Does.Contain("receiver"));
             var baseValue = driver.Measurement.DisplayValue;
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
-                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000002},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000004},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                 "{\"source\":\"1\",\"receiver\":\"1\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 200 && driver.Measurement.DisplayValue == baseValue; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
@@ -545,14 +562,17 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.IsTimeHeld, Is.False, "A fresh neutral baseline is required before transfer.");
             Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
             Assert.That(receiverLiquid.CommittedVolumeM3, Is.Zero);
+            for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
-                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000005},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                 "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 20 &&
-                System.Math.Abs(sourceLiquid.CommittedVolumeM3 - 24e-6) > 1e-12; attempt++)
+                System.Math.Abs(sourceLiquid.CommittedVolumeM3 - 24.95e-6) > 1e-12; attempt++)
                 yield return new WaitForSecondsRealtime(0.02f);
-            Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(24e-6).Within(1e-12));
-            Assert.That(receiverLiquid.CommittedVolumeM3, Is.EqualTo(1e-6).Within(1e-12));
+            Assert.That(sourceLiquid.CommittedVolumeM3, Is.EqualTo(24.95e-6).Within(1e-12));
+            Assert.That(receiverLiquid.CommittedVolumeM3, Is.EqualTo(5e-8).Within(1e-12));
             yield return SceneManager.UnloadSceneAsync(scene);
         }
 
@@ -595,8 +615,17 @@ namespace PharmaLabVR.Tests.PlayMode
             var savePath = sessions.LastDurableSavePath;
             try
             {
+                for (var attempt = 0; driver.IsTimeHeld && attempt < 100; attempt++)
+                {
+                    driver.ResumeAfterTimeHold();
+                    yield return new WaitForSecondsRealtime(0.01f);
+                }
+                Assert.That(driver.IsTimeHeld, Is.False);
+                for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
                 Assert.That(driver.Session.SubmitOrdered("TransferFixed",
-                    "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.000001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
+                    "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000005},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                     "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
                 Assert.That(sessions.ContinueFrom(savePath), Is.True, sessions.LastError);
                 var snapshot = driver.Session.ReadSnapshot();

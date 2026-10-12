@@ -60,8 +60,12 @@ struct Context {
         std::string mode;
     };
 
-    explicit Context(std::string branch, std::string databasePath = {}, std::string databaseIdentity = {})
-        : executor(std::move(branch)), scheduler({5e-8, 100'000'000ULL, 16U}),
+    explicit Context(std::string branch, std::string databasePath = {}, std::string databaseIdentity = {},
+                     std::string budgetMode = "Precision")
+        : executor(std::move(branch)),
+          scheduler(budgetMode == "Bulk" ? plv::SchedulerLimits{5e-7, 200'000'000ULL, 16U}
+                                         : plv::SchedulerLimits{5e-8, 100'000'000ULL, 16U}),
+          scienceBudgetMode(std::move(budgetMode)),
           databasePath(std::move(databasePath)), databaseIdentity(std::move(databaseIdentity)) {
         if (!this->databasePath.empty()) {
             worker = std::make_unique<plv::SolverWorker>(16U,
@@ -75,6 +79,7 @@ struct Context {
     plv::StateExecutor executor;
     plv::ObservationScheduler scheduler;
     std::unique_ptr<plv::SolverWorker> worker;
+    std::string scienceBudgetMode;
     std::string databasePath;
     std::string databaseIdentity;
     std::unordered_map<std::string, plv::SolveResult> scienceResults;
@@ -140,6 +145,47 @@ void collectScience(Context& context, std::uint64_t simulationNowNs) {
         }
     }
     dispatchScience(context);
+}
+
+plv::CommandOutcome admitTransportProposal(
+    Context& context, const plv::SessionSnapshot& before,
+    const std::unordered_map<std::string, double>& grossByVessel, std::uint64_t proposedTimeNs) {
+    if (!context.worker) return {true, "Accepted", ""};
+    for (const auto& [vesselId, grossVolume] : grossByVessel) {
+        if (grossVolume <= 0.0) continue;
+        const auto existing = before.vessels.find(vesselId);
+        if (existing != before.vessels.end() && existing->second.inventory.referenceVolumeM3 <= 0.0) continue;
+        const auto admission = context.scheduler.admitTransport(vesselId, grossVolume, proposedTimeNs);
+        if (!admission.accepted) {
+            context.holdActive = true;
+            context.holdReason = "Compute";
+            context.recoveryReady = false;
+            for (auto& item : context.tools) item.second.latestInput.reset();
+            return admission;
+        }
+    }
+    return {true, "Accepted", ""};
+}
+
+std::unordered_map<std::string, double> fixedTransportGross(
+    const plv::SessionSnapshot& before, const plv::SessionSnapshot& after) {
+    std::unordered_map<std::string, double> gross;
+    for (const auto& [id, vessel] : after.vessels) {
+        const auto old = before.vessels.find(id);
+        if (old != before.vessels.end()) {
+            const double movement = std::abs(vessel.inventory.referenceVolumeM3 -
+                                             old->second.inventory.referenceVolumeM3);
+            if (movement > 0.0) gross.emplace(id, movement);
+        }
+    }
+    return gross;
+}
+
+void recordTransportProposal(Context& context,
+    const std::unordered_map<std::string, double>& grossByVessel, std::uint64_t nowNs) {
+    if (!context.worker) return;
+    for (const auto& [vesselId, grossVolume] : grossByVessel)
+        context.scheduler.recordGrossTransport(vesselId, grossVolume, nowNs);
 }
 
 std::mutex registryMutex;
@@ -278,6 +324,7 @@ json contextSnapshotJson(const Context& context) {
     const auto authoritative = context.executor.snapshot();
     auto result = snapshotJson(authoritative);
     result["mode"] = context.mode;
+    result["scienceBudgetMode"] = context.scienceBudgetMode;
     result["hold"] = {
         {"active", context.holdActive},
         {"reason", context.holdReason},
@@ -494,11 +541,13 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
             databasePath.size() > 1024U || databaseIdentity.size() > 128U) return PLV_INVALID_ARGUMENT;
         const auto initialMode = parsed.value("initialMode", "Desktop");
         if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
+        const auto budgetMode = parsed.value("scienceBudgetMode", "Precision");
+        if (budgetMode != "Precision" && budgetMode != "Bulk") return PLV_INVALID_ARGUMENT;
         std::lock_guard<std::mutex> lock(registryMutex);
         if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
         for (const auto& [existingHandle, existing] : contexts)
             if (existing->active.load()) return PLV_BUSY;
-        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity);
+        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity, budgetMode);
         context->mode = initialMode;
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
@@ -624,13 +673,24 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     captures.push_back({destinationId, capture.at("fraction").get<double>()});
                     expected.emplace(destinationId, revision(revisions, destinationId));
                 }
-                outcome = context->executor.transferFixed(
+                auto staged = context->executor;
+                outcome = staged.transferFixed(
                     {sourceId,
                      *basis,
                      payload.at("quantity").at("value").get<double>(),
                      std::move(captures),
                      payload.at("overflowSinkId").get<std::string>()},
                     expected);
+                if (outcome.accepted) {
+                    const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
+                    const auto nowNs = static_cast<std::uint64_t>(
+                        std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                    outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                    if (outcome.accepted) {
+                        context->executor = std::move(staged);
+                        recordTransportProposal(*context, gross, nowNs);
+                    }
+                }
             }
         } else if (type == "PlaceTool") {
             const auto toolId = payload.at("toolId").get<std::string>();
@@ -679,10 +739,21 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             } else if (source->second.inventory.referenceVolumeM3 <= 0.0) {
                 outcome = {false, "AlreadyEmpty", "source inventory is empty"};
             } else {
-                outcome = context->executor.transferFixed(
+                auto staged = context->executor;
+                outcome = staged.transferFixed(
                     {sourceId, plv::TransferQuantityBasis::LiquidVolumeM3,
                      source->second.inventory.referenceVolumeM3, {}, sinkId},
                     {{sourceId, revision(revisions, sourceId)}});
+                if (outcome.accepted) {
+                    const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
+                    const auto nowNs = static_cast<std::uint64_t>(
+                        std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                    outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                    if (outcome.accepted) {
+                        context->executor = std::move(staged);
+                        recordTransportProposal(*context, gross, nowNs);
+                    }
+                }
             }
         } else if (type == "RinseTool") {
             const auto toolId = payload.at("toolId").get<std::string>();
@@ -721,12 +792,19 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     if (!waste.subtract(retained) || !staged.restore(afterRinse).accepted) {
                         outcome = {false, "RinseLedgerError", "rinse cannot preserve the represented material ledger"};
                     } else {
-                        context->executor = std::move(staged);
-                        found->second.tipInventory = retained;
-                        found->second.residualInventory = {};
-                        ++found->second.inventoryRevision;
-                        found->second.actuator01 = 0.0;
-                        found->second.latestInput.reset();
+                        const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
+                        const auto nowNs = static_cast<std::uint64_t>(
+                            std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                        outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                        if (outcome.accepted) {
+                            context->executor = std::move(staged);
+                            recordTransportProposal(*context, gross, nowNs);
+                            found->second.tipInventory = retained;
+                            found->second.residualInventory = {};
+                            ++found->second.inventoryRevision;
+                            found->second.actuator01 = 0.0;
+                            found->second.latestInput.reset();
+                        }
                     }
                 }
             }
@@ -1098,26 +1176,12 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         }).dump());
     }
     const auto proposedTimeNs = simulationNowNs + static_cast<std::uint64_t>(delta_s * 1'000'000'000.0);
-    if (context->worker) {
-        for (const auto& [vesselId, grossVolume] : grossByVessel) {
-            if (grossVolume <= 0.0) continue;
-            const auto before = beforeTick.vessels.find(vesselId);
-            if (before != beforeTick.vessels.end() && before->second.inventory.referenceVolumeM3 <= 0.0) continue;
-            if (!context->scheduler.admitTransport(vesselId, grossVolume, proposedTimeNs).accepted) {
-                context->holdActive = true;
-                context->holdReason = "Compute";
-                context->recoveryReady = false;
-                for (auto& item : context->tools) item.second.latestInput.reset();
-                return PLV_OK;
-            }
-        }
-    }
+    if (!admitTransportProposal(*context, beforeTick, grossByVessel, proposedTimeNs).accepted) return PLV_OK;
     stagedExecutor.advanceTime(delta_s);
     context->executor = std::move(stagedExecutor);
     context->tools = std::move(stagedTools);
     if (context->worker) {
-        for (const auto& [vesselId, grossVolume] : grossByVessel)
-            context->scheduler.recordGrossTransport(vesselId, grossVolume, simulationNowNs);
+        recordTransportProposal(*context, grossByVessel, simulationNowNs);
         offerChangedScience(*context, beforeTick, proposedTimeNs);
     }
     for (auto& event : stagedEvents) context->events.push_back(std::move(event));
@@ -1188,7 +1252,9 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                 (databasePath.empty() && !databaseIdentity.empty()) ||
                 databasePath.size() > 1024U || databaseIdentity.size() > 128U) return PLV_INVALID_ARGUMENT;
         }
-        auto context = std::make_shared<Context>(snapshot.branchId, databasePath, databaseIdentity);
+        const auto budgetMode = parsed.value("scienceBudgetMode", "Precision");
+        if (budgetMode != "Precision" && budgetMode != "Bulk") return PLV_INVALID_ARGUMENT;
+        auto context = std::make_shared<Context>(snapshot.branchId, databasePath, databaseIdentity, budgetMode);
         const auto outcome = context->executor.restore(snapshot);
         if (!outcome.accepted) return PLV_INVALID_ARGUMENT;
         const auto parseTools = [](const json& tools, const plv::SessionSnapshot& ownerSnapshot) {

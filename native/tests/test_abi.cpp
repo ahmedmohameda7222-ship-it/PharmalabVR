@@ -884,6 +884,197 @@ TEST_CASE("S01 product ABI publishes current pinned IPhreeqc acid observation") 
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("P05_01 fixed ten ml transfer is denied before material commit") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE},
+                         {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 0.02}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 0.02}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "waste"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+                             {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 0.01}}, {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto before = json::parse(read_text(handle));
+    submit(handle, command("5", "TransferFixed",
+        {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+         {"selection", "HomogeneousAqueousLiquid"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 0.01}}},
+         {"captureFractions", json::array({{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}})},
+         {"overflowSinkId", "waste"}}, {{"source", "1"}, {"receiver", "0"}}));
+    const auto result = poll(handle);
+    CHECK_FALSE(result["accepted"].get<bool>());
+    CHECK((result["code"] == "ObservationVolumeHold" || result["code"] == "ObservationRequired"));
+    const auto after = json::parse(read_text(handle));
+    CHECK(after["vessels"] == before["vessels"]);
+    CHECK(after["sinks"] == before["sinks"]);
+    CHECK(after["eventSequence"] == before["eventSequence"]);
+    std::int32_t destroyed = PLV_BUSY;
+    for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+        destroyed = plv_destroy(handle);
+        if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(destroyed == PLV_OK);
+}
+
+TEST_CASE("P05_01 product Precision and Bulk profiles admit different fixed proposals and survive export") {
+    for (const std::string profile : {"Precision", "Bulk"}) {
+        std::uint64_t handle = 0;
+        const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                             {"databasePath", PLV_MINTEQ_DATABASE},
+                             {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"},
+                             {"scienceBudgetMode", profile}};
+        const auto encoded = config.dump();
+        REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+        submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 2e-6}})); poll(handle);
+        submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 2e-6}})); poll(handle);
+        submit(handle, command("3", "CreateSink", {{"id", "waste"}})); poll(handle);
+        submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+                                 {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-6}}, {{"source", "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        bool current = false;
+        for (int attempt = 0; attempt < 300 && !current; ++attempt) {
+            REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+            const auto state = json::parse(read_text(handle));
+            for (const auto& item : state["observations"])
+                if (item.value("vesselId", "") == "source" && item.value("freshness", "") == "Current")
+                    current = true;
+            if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        REQUIRE(current);
+        CHECK(json::parse(read_text(handle))["scienceBudgetMode"] == profile);
+        CHECK(json::parse(read_text(handle, true))["scienceBudgetMode"] == profile);
+        submit(handle, command("5", "TransferFixed",
+            {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+             {"selection", "HomogeneousAqueousLiquid"},
+             {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 2e-7}}},
+             {"captureFractions", json::array({{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}})},
+             {"overflowSinkId", "waste"}}, {{"source", "1"}, {"receiver", "0"}}));
+        const auto result = poll(handle);
+        CHECK(result["accepted"] == (profile == "Bulk"));
+        const auto state = json::parse(read_text(handle));
+        CHECK(state["vessels"][0]["materialRevision"] == (profile == "Bulk" ? "1" : "0"));
+        const auto exported = read_text(handle, true);
+        std::uint64_t imported = 0;
+        REQUIRE(plv_import(exported.data(), static_cast<std::uint32_t>(exported.size()), &imported) == PLV_OK);
+        CHECK(json::parse(read_text(imported))["scienceBudgetMode"] == profile);
+        std::int32_t importedDestroyed = PLV_BUSY;
+        for (int i = 0; i < 200 && importedDestroyed == PLV_BUSY; ++i) {
+            importedDestroyed = plv_destroy(imported);
+            if (importedDestroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(importedDestroyed == PLV_OK);
+        std::int32_t destroyed = PLV_BUSY;
+        for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+            destroyed = plv_destroy(handle);
+            if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(destroyed == PLV_OK);
+    }
+}
+
+TEST_CASE("P05_01 rinse and disposal share precommit admission with fixed transfer") {
+    for (const bool rinse : {false, true}) {
+        std::uint64_t handle = 0;
+        const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                             {"databasePath", PLV_MINTEQ_DATABASE},
+                             {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+        const auto encoded = config.dump();
+        REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+        submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 2e-6}})); poll(handle);
+        submit(handle, command("2", "CreateSink", {{"id", "waste"}})); poll(handle);
+        submit(handle, command("3", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "Water"},
+                                 {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 1e-6}}, {{"source", "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        if (rinse) {
+            submit(handle, command("4", "PlaceTool", {{"toolId", "tool"}, {"sourceInventoryId", "source"},
+                {"overflowSinkId", "waste"}, {"coordinateFrame", "lab"},
+                {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}}));
+            REQUIRE(poll(handle)["accepted"].get<bool>());
+        }
+        const auto before = json::parse(read_text(handle));
+        if (rinse) {
+            submit(handle, command("5", "RinseTool", {{"toolId", "tool"},
+                {"rinseSourceInventoryId", "source"}, {"wasteSinkId", "waste"},
+                {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+                {"expectedInventoryRevision", "0"}}, {{"source", "1"}}));
+        } else {
+            submit(handle, command("4", "DisposeContents",
+                {{"sourceInventoryId", "source"}, {"sinkInventoryId", "waste"}}, {{"source", "1"}}));
+        }
+        const auto result = poll(handle);
+        CHECK_FALSE(result["accepted"].get<bool>());
+        CHECK(result["code"] == "ObservationRequired");
+        const auto after = json::parse(read_text(handle));
+        CHECK(after["vessels"] == before["vessels"]);
+        CHECK(after["sinks"] == before["sinks"]);
+        CHECK(after["tools"] == before["tools"]);
+        CHECK(after["eventSequence"] == before["eventSequence"]);
+        std::int32_t destroyed = PLV_BUSY;
+        for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+            destroyed = plv_destroy(handle);
+            if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(destroyed == PLV_OK);
+    }
+}
+
+TEST_CASE("P05_01 opposite fixed transfers cannot hide gross circulation behind zero net volume") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE},
+                         {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    for (const auto& [id, sequence] : {std::pair{"a", "1"}, std::pair{"b", "3"}}) {
+        submit(handle, command(sequence, "CreateVessel", {{"id", id}, {"capacityM3", 2e-6}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+        const auto prepareSequence = std::to_string(std::stoi(sequence) + 1);
+        submit(handle, command(prepareSequence, "PrepareStock",
+            {{"vesselId", id}, {"stockKind", "HydrochloricAcid"},
+             {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-6}}, {{id, "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+    }
+    submit(handle, command("5", "CreateSink", {{"id", "waste"}})); REQUIRE(poll(handle)["accepted"].get<bool>());
+    bool bothCurrent = false;
+    for (int attempt = 0; attempt < 300 && !bothCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto state = json::parse(read_text(handle));
+        std::size_t current = 0;
+        for (const auto& item : state["observations"])
+            if (item.value("freshness", "") == "Current") ++current;
+        bothCurrent = current == 2;
+        if (!bothCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(bothCurrent);
+    const auto transfer = [&](const std::string& sequence, const std::string& from,
+                              const std::string& to, const std::string& revision) {
+        submit(handle, command(sequence, "TransferFixed",
+            {{"sourceInventoryId", from}, {"sourceRegion", "Homogeneous"},
+             {"selection", "HomogeneousAqueousLiquid"},
+             {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 3e-8}}},
+             {"captureFractions", json::array({{{"destinationInventoryId", to}, {"fraction", 1.0}}})},
+             {"overflowSinkId", "waste"}}, {{from, revision}, {to, revision}}));
+        return poll(handle);
+    };
+    REQUIRE(transfer("6", "a", "b", "1")["accepted"].get<bool>());
+    const auto beforeReverse = json::parse(read_text(handle));
+    const auto reverse = transfer("7", "b", "a", "2");
+    CHECK_FALSE(reverse["accepted"].get<bool>());
+    CHECK(reverse["code"] == "ObservationVolumeHold");
+    const auto afterReverse = json::parse(read_text(handle));
+    CHECK(afterReverse["vessels"] == beforeReverse["vessels"]);
+    CHECK(afterReverse["eventSequence"] == beforeReverse["eventSequence"]);
+    std::int32_t destroyed = PLV_BUSY;
+    for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+        destroyed = plv_destroy(handle);
+        if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(destroyed == PLV_OK);
+}
+
 TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored dependency") {
     std::uint64_t handle = 0;
     const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
@@ -896,11 +1087,11 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
     submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
     submit(handle, command("4", "PrepareStock",
                            {{"vesselId", "acid"}, {"stockKind", "HydrochloricAcid"},
-                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-6}},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-8}},
                            {{"acid", "0"}})); poll(handle);
     submit(handle, command("5", "PrepareStock",
                            {{"vesselId", "base"}, {"stockKind", "SodiumHydroxide"},
-                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 9e-6}},
+                            {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 9e-8}},
                            {{"base", "0"}})); poll(handle);
     const auto observation = [](const json& snapshot) {
         for (const auto& item : snapshot.at("observations"))
@@ -921,13 +1112,23 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
     const auto before = waitCurrent();
     REQUIRE(before["freshness"] == "Current");
     REQUIRE(before["asOfMaterialRevision"] == "1");
+    bool baseCurrent = false;
+    for (int attempt = 0; attempt < 250 && !baseCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto state = json::parse(read_text(handle));
+        for (const auto& item : state["observations"])
+            if (item.value("vesselId", "") == "base" && item.value("freshness", "") == "Current")
+                baseCurrent = true;
+        if (!baseCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    REQUIRE(baseCurrent);
     const double acidPH = before["value"].get<double>();
     submit(handle, command("6", "CreateCheckpoint", {{"checkpointId", "acid-state"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
     submit(handle, command("7", "TransferFixed",
                            {{"sourceInventoryId", "base"}, {"sourceRegion", "Homogeneous"},
                             {"selection", "HomogeneousAqueousLiquid"},
-                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 9e-6}}},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 4e-8}}},
                             {"captureFractions", json::array({{{"destinationInventoryId", "acid"}, {"fraction", 1.0}}})},
                             {"overflowSinkId", "spill"}},
                            {{"base", "1"}, {"acid", "1"}}));
@@ -950,7 +1151,7 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
     submit(handle, command("10", "TransferFixed",
                            {{"sourceInventoryId", "base"}, {"sourceRegion", "Homogeneous"},
                             {"selection", "HomogeneousAqueousLiquid"},
-                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 9e-6}}},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 4e-8}}},
                             {"captureFractions", json::array({{{"destinationInventoryId", "acid"}, {"fraction", 1.0}}})},
                             {"overflowSinkId", "spill"}},
                            {{"base", "1"}, {"acid", "1"}}));
@@ -1103,8 +1304,14 @@ TEST_CASE("S01 imported product session resumes pinned chemistry instead of losi
     }
     INFO(lastObservation);
     CHECK(current);
-    CHECK(plv_destroy(imported) == PLV_OK);
-    CHECK(plv_destroy(handle) == PLV_OK);
+    for (const auto session : {imported, handle}) {
+        std::int32_t destroyed = PLV_BUSY;
+        for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+            destroyed = plv_destroy(session);
+            if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        }
+        CHECK(destroyed == PLV_OK);
+    }
 }
 
 TEST_CASE("S01 product session solves acid base acetate and mixed inventories from their materials") {
@@ -1147,7 +1354,7 @@ TEST_CASE("S01 product session solves acid base acetate and mixed inventories fr
     submit(handle, command(std::to_string(sequence++), "TransferFixed",
                            {{"sourceInventoryId", "mixed"}, {"sourceRegion", "Homogeneous"},
                             {"selection", "HomogeneousAqueousLiquid"},
-                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 5e-6}}},
+                            {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 5e-8}}},
                             {"captureFractions", {{{"destinationInventoryId", "acetate"}, {"fraction", 1.0}}}},
                             {"overflowSinkId", "spill"}},
                            {{"mixed", "1"}, {"acetate", "1"}}));

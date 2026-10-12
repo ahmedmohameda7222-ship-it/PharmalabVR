@@ -112,6 +112,22 @@ TEST_CASE("O04 O05 precommit budgets count gross circulation and hold before vio
     CHECK_FALSE(scheduler.admitTransport("A", 0.0, 1800000000ULL).accepted);
 }
 
+TEST_CASE("P05_01 precision and bulk precommit boundaries use gross transport and unresolved age") {
+    ObservationScheduler precision({5e-8, 100'000'000ULL, 16});
+    ObservationScheduler bulk({5e-7, 200'000'000ULL, 16});
+    for (auto* scheduler : {&precision, &bulk}) scheduler->markSolved("source", 1, 1'000'000'000ULL);
+    CHECK(precision.admitTransport("source", 5e-8, 1'000'000'000ULL).accepted);
+    CHECK_FALSE(precision.admitTransport("source", 5e-8 + 1e-12, 1'000'000'000ULL).accepted);
+    CHECK(bulk.admitTransport("source", 5e-7, 1'000'000'000ULL).accepted);
+    CHECK_FALSE(bulk.admitTransport("source", 5e-7 + 1e-11, 1'000'000'000ULL).accepted);
+    precision.recordGrossTransport("source", 2e-8, 1'000'000'000ULL);
+    bulk.recordGrossTransport("source", 2e-7, 1'000'000'000ULL);
+    CHECK(precision.admitTransport("source", 3e-8, 1'100'000'000ULL).accepted);
+    CHECK_FALSE(precision.admitTransport("source", 3e-8, 1'100'000'001ULL).accepted);
+    CHECK(bulk.admitTransport("source", 3e-7, 1'200'000'000ULL).accepted);
+    CHECK_FALSE(bulk.admitTransport("source", 3e-7, 1'200'000'001ULL).accepted);
+}
+
 TEST_CASE("O05 an idle unchanged observation does not age before the first dependency change") {
     ObservationScheduler scheduler({2e-7, 500000000ULL, 8});
     scheduler.markSolved("A", 4, 1000000000ULL);

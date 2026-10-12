@@ -11,7 +11,9 @@ namespace PharmaLabVR.Core
     public sealed class CoreDriver : MonoBehaviour
     {
         [SerializeField] private string branchId = "local-session";
+        [SerializeField] private ScienceBudgetProfile scienceBudgetProfile = ScienceBudgetProfile.Precision;
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
+        public enum ScienceBudgetProfile { Precision, Bulk }
         public event Action<string> SnapshotChanged;
         public event Action<string> NativeEventReceived;
         public event Action<bool> HoldChanged;
@@ -59,7 +61,8 @@ namespace PharmaLabVR.Core
                 stockIds.Clear();
                 foreach (var stock in stockCatalog.stocks) stockIds.Add(stock.id);
                 var initialMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ? "VR" : "Desktop";
-                Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256);
+                Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256,
+                    scienceBudgetProfile.ToString());
                 ScientificDatabasePath = databasePath;
                 BootstrapResearchSession();
                 Measurement = gameObject.AddComponent<MeasurementView>();

@@ -15,13 +15,16 @@ namespace PharmaLabVR.Core
         public bool IsOpen => handle != null && !handle.IsInvalid && !handle.IsClosed;
         public static int PendingRetirements => CoreSafeHandle.PendingRetirements;
 
-        public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "")
+        public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "",
+            string scienceBudgetMode = "Precision")
         {
             if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
+            if (scienceBudgetMode != "Precision" && scienceBudgetMode != "Bulk")
+                throw new ArgumentOutOfRangeException(nameof(scienceBudgetMode));
             if (!string.IsNullOrEmpty(databasePath) || !string.IsNullOrEmpty(databaseIdentity))
                 ScientificPackage.VerifyPinnedFile(databasePath, databaseIdentity);
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
-            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\"}}");
+            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
             this.branchId = branchId;
             nextCommandSequence = 1;
