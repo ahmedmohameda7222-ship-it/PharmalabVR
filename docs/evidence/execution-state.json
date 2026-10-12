@@ -3,7 +3,7 @@
   "planId": "pharmalabvr-premium-platform-2026-10-10",
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
-  "nextTask": "P06.01",
+  "nextTask": "P06.02",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -679,13 +679,25 @@
           "dependencies": [
             "P05.03"
           ],
-          "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "status": "VerifiedLocal",
+          "codeCommit": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+          "evidence": [
+            "docs/evidence/p06-01-scene-lifecycle.md",
+            "docs/evidence/artifact-manifest-p06-01.json",
+            "Unity PlayMode 26/26; EditMode 22/22; Native CTest 1/1",
+            "WindowsDesktop, WindowsVR and AndroidVR fresh Player builds Success",
+            "Actual WindowsDesktop Player missing-minteq Boot-to-Lab error screenshot and log"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "docs/evidence/p06-01-scene-lifecycle.md",
+            "docs/evidence/artifact-manifest-p06-01.json",
+            "Unity PlayMode 26/26; EditMode 22/22; Native CTest 1/1",
+            "WindowsDesktop, WindowsVR and AndroidVR fresh Player builds Success",
+            "Actual WindowsDesktop Player missing-minteq Boot-to-Lab error screenshot and log"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "One live Unity Lab adapter/session and immutable native-backed view after reactivation; actual Windows Player missing scientific package fails closed with visible error. Full normal Player student journey, separate plugin absence and device testing remain open in the 95 catalog.",
           "blocker": null
         },
         {
@@ -2130,10 +2142,10 @@
       "G-R1"
     ]
   },
-  "actualHead": "51069018c917a61f22bdc8ee16a274e8f159661d",
-  "functionalCodeSha": "be2864faa29ce02bb4497ffcfe5560a530e9ca48",
-  "currentTask": "P05.02",
-  "lastVerifiedTask": "P05.01",
+  "actualHead": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+  "functionalCodeSha": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+  "currentTask": "P06.02",
+  "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
   "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
@@ -2147,6 +2159,7 @@
     "P04.01 VerifiedLocal at 3271fdf: O10-N1 red real IPhreeqc pH 12.7877 stuck at restored acid revision, then green generation reset and recomputation to pH 1.10723; prior in-flight completion excluded. Native 72/72 (15559 assertions), CTest 1/1, Unity Lab scene PlayMode 18/18 and WindowsDesktop build Success.",
     "P04.02 VerifiedLocal at 3322c29: red Native pinned-byte mismatch, same-byte IPhreeqc load, cross-platform binary minteq checkout; Unity Lab receiver Current pH after acid transfer, package mismatch recorded-only review, and three Player builds. Native 73/73, PlayMode 21/21, EditMode 22/22. Actual Player click-through and physical/device/experimental gates remain open. Next P04.03.",
     "P04.03 VerifiedLocal at ea79eb3 for a bounded Research S01-S07 evidence matrix: direct same-assumption PHREEQC delta 1.7e-13, ideal-versus-minteq 0.10723 pH difference at 0.1 M, six pool/charge cases, clean-context reuse, domain bounds, eight-context raw lifecycle. Native 80/80, PlayMode 21/21, EditMode 22/22, three Player builds. S07 actual nonconvergence/hard latency and experimental validation remain Open; next P05.01.",
-    "P05.01 VerifiedLocal at be2864f with test refinement 5106901: fixed10ml Current observation denies before material/event commit, Precision/Bulk actual product profiles, rinse/disposal denial, opposite-transfer gross circulation, exact scheduler age/volume boundaries. Native 85/85, CTest 1/1, PlayMode 21/21, EditMode 22/22 and WindowsDesktop build Success. Device/Player journey and external science gates remain open; next P05.02."
+    "P05.01 VerifiedLocal at be2864f with test refinement 5106901: fixed10ml Current observation denies before material/event commit, Precision/Bulk actual product profiles, rinse/disposal denial, opposite-transfer gross circulation, exact scheduler age/volume boundaries. Native 85/85, CTest 1/1, PlayMode 21/21, EditMode 22/22 and WindowsDesktop build Success. Device/Player journey and external science gates remain open; next P05.02.",
+    "P06.01 VerifiedLocal at 7abf0af2d763dfd74d98a37379a858e390aa8a37: PlayMode 26/26, EditMode 22/22, CTest 1/1, WindowsDesktop/WindowsVR/AndroidVR fresh builds Success; actual Windows Player missing-minteq Boot-to-Lab failure visible in screenshot/log. See p06-01-scene-lifecycle.md and SHA manifest. G-R1 and wider U01/U02 remain open; next P06.02."
   ]
 }
