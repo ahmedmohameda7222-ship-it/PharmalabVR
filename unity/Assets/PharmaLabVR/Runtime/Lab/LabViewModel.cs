@@ -25,11 +25,37 @@ namespace PharmaLabVR.Lab
 
         public string EventSequence { get; }
         public IReadOnlyList<VesselView> Vessels { get; }
+        public IReadOnlyList<ObservationView> Observations { get; }
 
-        private LabViewModel(string eventSequence, IReadOnlyList<VesselView> vessels)
+        public readonly struct ObservationView
+        {
+            public string VesselId { get; }
+            public string ObservableId { get; }
+            public string ModelId { get; }
+            public string DatabaseIdentity { get; }
+            public string Support { get; }
+            public string Freshness { get; }
+            public string Maturity { get; }
+
+            public ObservationView(string vesselId, string observableId, string modelId,
+                string databaseIdentity, string support, string freshness, string maturity)
+            {
+                VesselId = vesselId;
+                ObservableId = observableId;
+                ModelId = modelId;
+                DatabaseIdentity = databaseIdentity;
+                Support = support;
+                Freshness = freshness;
+                Maturity = maturity;
+            }
+        }
+
+        private LabViewModel(string eventSequence, IReadOnlyList<VesselView> vessels,
+            IReadOnlyList<ObservationView> observations)
         {
             EventSequence = eventSequence;
             Vessels = vessels;
+            Observations = observations;
         }
 
         public static LabViewModel FromNativeSnapshot(string snapshot)
@@ -46,14 +72,25 @@ namespace PharmaLabVR.Lab
                 vessels[index] = new VesselView(vessel.id, vessel.materialRevision, vessel.capacityM3,
                     vessel.inventory.researchAdditiveVolumeM3);
             }
-            return new LabViewModel(source.eventSequence,
-                new ReadOnlyCollection<VesselView>(vessels));
+            var sourceObservations = source.observations ?? Array.Empty<ObservationEnvelope>();
+            var observations = new ObservationView[sourceObservations.Length];
+            for (var index = 0; index < observations.Length; index++)
+            {
+                var observation = sourceObservations[index];
+                if (observation == null) throw new FormatException("Native observation view is incomplete.");
+                observations[index] = new ObservationView(observation.vesselId, observation.observableId,
+                    observation.modelId, observation.databaseIdentity, observation.support,
+                    observation.freshness, observation.maturity);
+            }
+            return new LabViewModel(source.eventSequence, new ReadOnlyCollection<VesselView>(vessels),
+                new ReadOnlyCollection<ObservationView>(observations));
         }
 
         [Serializable] private sealed class SnapshotEnvelope
         {
             public string eventSequence;
             public VesselEnvelope[] vessels;
+            public ObservationEnvelope[] observations;
         }
 
         [Serializable] private sealed class VesselEnvelope
@@ -67,6 +104,17 @@ namespace PharmaLabVR.Lab
         [Serializable] private sealed class MaterialEnvelope
         {
             public double researchAdditiveVolumeM3;
+        }
+
+        [Serializable] private sealed class ObservationEnvelope
+        {
+            public string vesselId;
+            public string observableId;
+            public string modelId;
+            public string databaseIdentity;
+            public string support;
+            public string freshness;
+            public string maturity;
         }
     }
 }

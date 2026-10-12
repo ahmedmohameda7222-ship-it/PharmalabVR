@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using PharmaLabVR.Core;
+using PharmaLabVR.UI;
 using UnityEngine;
 
 namespace PharmaLabVR.Session
@@ -17,10 +18,24 @@ namespace PharmaLabVR.Session
         private static readonly Rect DesktopHudRect = new(12f, 12f, 370f, 620f);
         private int selectedConcentrationIndex = 2;
         private Vector2 hudScrollPosition;
+        private ScreenRouter router;
+        private LabPanelController panels;
+
+        private void Awake()
+        {
+            router = GetComponent<ScreenRouter>();
+            if (router == null) router = gameObject.AddComponent<ScreenRouter>();
+            router.Configure(driver);
+            panels = GetComponent<LabPanelController>();
+            if (panels == null) panels = gameObject.AddComponent<LabPanelController>();
+            panels.Configure(router, driver, this);
+        }
 
         public void Configure(CoreDriver coreDriver, string sessionName = null)
         {
             driver = coreDriver;
+            router?.Configure(driver);
+            panels?.Configure(router, driver, this);
             if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
         }
 
@@ -35,6 +50,8 @@ namespace PharmaLabVR.Session
             GUILayout.BeginArea(DesktopHudRect, GUI.skin.box);
             hudScrollPosition = GUILayout.BeginScrollView(hudScrollPosition);
             GUILayout.Label("PharmaLabVR · Research Lab");
+            var screen = router?.Current?.ScreenId ?? ScreenId.Lab;
+            GUILayout.Label(screen.ToString());
             if (!string.IsNullOrEmpty(driver.StartupError))
             {
                 GUILayout.Label("Lab unavailable: " + driver.StartupError);
@@ -42,7 +59,55 @@ namespace PharmaLabVR.Session
                 GUILayout.EndArea();
                 return;
             }
-            if (driver.SourceNeedsPreparation)
+            if (screen == ScreenId.Hold)
+            {
+                GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
+                if (!driver.NativeRecoveryReady)
+                    GUILayout.Label(driver.HoldReason == "Compute" ?
+                        "Waiting for the scientific result; saving and review remain available." :
+                        "Waiting for a fresh neutral input baseline.");
+                GUI.enabled = driver.NativeRecoveryReady;
+                if (GUILayout.Button("Continue", GUILayout.Height(44f))) panels?.Request(PanelAction.Continue);
+                GUI.enabled = true;
+                if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Pause)
+            {
+                GUILayout.Label("Session paused. Material and simulation time are frozen.");
+                if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
+                if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Review)
+            {
+                if (RecordedReview == null) GUILayout.Label("No recorded review is open.");
+                else
+                {
+                    GUILayout.Label("Recorded-only review · no model recomputation");
+                    GUILayout.Label("Saved branch: " + RecordedReview.BranchId);
+                    GUILayout.Label("Saved model identity: " + RecordedReview.ModelIdentity);
+                    foreach (var observation in RecordedReview.Observations)
+                        GUILayout.Label($"Recorded {observation.vesselId} pH: {observation.DisplayValue} " +
+                            $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
+                }
+                if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
+                {
+                    RecordedReview = null;
+                    router?.Show(ScreenId.Lab);
+                }
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Lab && driver.SourceNeedsPreparation)
             {
                 GUILayout.Label("Prepare the source stock · Research aqueous profile");
                 var concentrations = driver.ResearchConcentrations;
@@ -63,39 +128,25 @@ namespace PharmaLabVR.Session
             }
             var measurement = driver.Measurement;
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Inspect source", GUILayout.Height(28f))) driver.SelectMeasurementVessel("source");
-            if (GUILayout.Button("Inspect receiver", GUILayout.Height(28f))) driver.SelectMeasurementVessel("receiver");
+            if (GUILayout.Button("Inspect source", GUILayout.Height(28f))) panels?.Request(PanelAction.Inspect, "source");
+            if (GUILayout.Button("Inspect receiver", GUILayout.Height(28f))) panels?.Request(PanelAction.Inspect, "receiver");
             GUILayout.EndHorizontal();
-            GUILayout.Label(measurement == null ? "pH: pending" :
-                $"pH: {measurement.DisplayValue} ({measurement.Availability})");
-            if (measurement != null) GUILayout.Label(measurement.Explanation);
-            if (driver.IsTimeHeld)
+            if (screen == ScreenId.Inspect || screen == ScreenId.Measure)
             {
-                GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
-                if (!driver.NativeRecoveryReady)
-                    GUILayout.Label(driver.HoldReason == "Compute" ?
-                        "Waiting for the scientific result; saving and review remain available." :
-                        "Waiting for a fresh neutral input baseline.");
-                GUI.enabled = driver.NativeRecoveryReady;
-                if (GUILayout.Button("Continue", GUILayout.Height(34f))) ContinueHeldSession();
-                GUI.enabled = true;
+                GUILayout.Label(measurement == null ? "pH: pending" :
+                    $"pH: {measurement.DisplayValue} ({measurement.Availability})");
+                if (measurement != null) GUILayout.Label(measurement.Explanation);
+                if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
             }
-            if (GUILayout.Button("Save session", GUILayout.Height(30f))) Save();
+            if (GUILayout.Button("Pause", GUILayout.Height(44f))) panels?.Request(PanelAction.Pause);
+            if (GUILayout.Button("Save session", GUILayout.Height(30f))) panels?.Request(PanelAction.Save);
             var savedPath = Path.Combine(Application.persistentDataPath, "sessions", saveName + ".plv.json");
             if (File.Exists(savedPath) && GUILayout.Button("Load saved session", GUILayout.Height(30f)))
                 ContinueFrom(savedPath);
             if (GUILayout.Button("Create checkpoint", GUILayout.Height(30f))) CreateCheckpoint();
             if (GUILayout.Button("Restart checkpoint", GUILayout.Height(30f))) RestartCheckpoint();
-            if (RecordedReview != null)
-            {
-                GUILayout.Label("Recorded-only review · no model recomputation");
-                GUILayout.Label("Saved branch: " + RecordedReview.BranchId);
-                GUILayout.Label("Saved model identity: " + RecordedReview.ModelIdentity);
-                foreach (var observation in RecordedReview.Observations)
-                    GUILayout.Label($"Recorded {observation.vesselId} pH: {observation.DisplayValue} " +
-                        $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
-                if (GUILayout.Button("Close recorded review", GUILayout.Height(28f))) RecordedReview = null;
-            }
+            if (RecordedReview != null && GUILayout.Button("Open recorded review", GUILayout.Height(44f)))
+                panels?.Request(PanelAction.Review);
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -124,11 +175,13 @@ namespace PharmaLabVR.Session
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
                 LastDurableSavePath = saves.Save(driver.Session, Path.Combine(Application.persistentDataPath, "sessions"), saveName);
                 LastError = null;
+                router?.MarkSaved();
                 return true;
             }
             catch (Exception exception)
             {
                 LastError = exception.Message;
+                router?.MarkSaveFailed();
                 return false;
             }
         }
@@ -145,6 +198,7 @@ namespace PharmaLabVR.Session
                 imported = null;
                 RecordedReview = null;
                 LastError = null;
+                router?.MarkSaved();
                 return true;
             }
             catch (ScientificPackageMismatchException exception)
@@ -157,6 +211,7 @@ namespace PharmaLabVR.Session
                     return false;
                 }
                 LastError = "Live resume blocked: " + exception.Message + " Viewing saved observations only.";
+                router?.Show(ScreenId.Review);
                 return false;
             }
             catch (Exception exception)
