@@ -9,6 +9,7 @@
 #include <thread>
 #include <atomic>
 #include <cmath>
+#include <unordered_map>
 
 namespace {
 using json = nlohmann::json;
@@ -1077,6 +1078,82 @@ TEST_CASE("P05_01 opposite fixed transfers cannot hide gross circulation behind 
     const auto afterReverse = json::parse(read_text(handle));
     CHECK(afterReverse["vessels"] == beforeReverse["vessels"]);
     CHECK(afterReverse["eventSequence"] == beforeReverse["eventSequence"]);
+    std::int32_t destroyed = PLV_BUSY;
+    for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
+        destroyed = plv_destroy(handle);
+        if (destroyed == PLV_BUSY) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(destroyed == PLV_OK);
+}
+
+TEST_CASE("P05_02 real multi-vessel science scopes freshness and preserves committed history") {
+    std::uint64_t handle = 0;
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"databasePath", PLV_MINTEQ_DATABASE},
+                         {"databaseIdentity", "minteq.v4.dat-pinned-package-bytes"}};
+    const auto encoded = config.dump();
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    std::uint64_t sequence = 1;
+    for (const std::string id : {"a", "b", "unrelated"}) {
+        submit(handle, command(std::to_string(sequence++), "CreateVessel",
+            {{"id", id}, {"capacityM3", 2e-6}})); REQUIRE(poll(handle)["accepted"].get<bool>());
+        submit(handle, command(std::to_string(sequence++), "PrepareStock",
+            {{"vesselId", id}, {"stockKind", "HydrochloricAcid"},
+             {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-6}}, {{id, "0"}}));
+        REQUIRE(poll(handle)["accepted"].get<bool>());
+    }
+    submit(handle, command(std::to_string(sequence++), "CreateSink", {{"id", "waste"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto observations = [](const json& state) {
+        std::unordered_map<std::string, json> byVessel;
+        for (const auto& item : state["observations"])
+            byVessel.emplace(item.at("vesselId").get<std::string>(), item);
+        return byVessel;
+    };
+    bool allCurrent = false;
+    for (int attempt = 0; attempt < 300 && !allCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto items = observations(json::parse(read_text(handle)));
+        allCurrent = items.size() == 3U;
+        for (const auto& [id, item] : items) allCurrent &= item.value("freshness", "") == "Current";
+        if (!allCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(allCurrent);
+    const auto before = json::parse(read_text(handle));
+    const auto unrelatedPH = observations(before).at("unrelated").at("value");
+    submit(handle, command(std::to_string(sequence++), "TransferFixed",
+        {{"sourceInventoryId", "a"}, {"sourceRegion", "Homogeneous"},
+         {"selection", "HomogeneousAqueousLiquid"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-8}}},
+         {"captureFractions", json::array({{{"destinationInventoryId", "b"}, {"fraction", 1.0}}})},
+         {"overflowSinkId", "waste"}}, {{"a", "1"}, {"b", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto afterCommit = json::parse(read_text(handle));
+    CHECK(std::stoull(afterCommit["eventSequence"].get<std::string>()) ==
+          std::stoull(before["eventSequence"].get<std::string>()) + 1U);
+    CHECK(observations(afterCommit).at("unrelated").at("freshness") == "Current");
+    CHECK(observations(afterCommit).at("unrelated").at("value") == unrelatedPH);
+    bool changedCurrent = false;
+    for (int attempt = 0; attempt < 300 && !changedCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto state = json::parse(read_text(handle));
+        const auto items = observations(state);
+        changedCurrent = items.at("a").at("freshness") == "Current" &&
+                         items.at("b").at("freshness") == "Current" &&
+                         items.at("a").at("asOfMaterialRevision") == "2" &&
+                         items.at("b").at("asOfMaterialRevision") == "2";
+        CHECK(items.at("unrelated").at("freshness") == "Current");
+        CHECK(state["eventSequence"] == afterCommit["eventSequence"]);
+        if (!changedCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    CHECK(changedCurrent);
+    const auto beforeUnsupported = json::parse(read_text(handle));
+    submit(handle, command(std::to_string(sequence++), "KineticSolve",
+        {{"vesselId", "a"}, {"durationSeconds", 1.0}}, {{"a", "2"}}));
+    const auto unsupported = poll(handle);
+    CHECK_FALSE(unsupported["accepted"].get<bool>());
+    CHECK(unsupported["code"] == "UnsupportedCommand");
+    CHECK(json::parse(read_text(handle))["eventSequence"] == beforeUnsupported["eventSequence"]);
     std::int32_t destroyed = PLV_BUSY;
     for (int i = 0; i < 200 && destroyed == PLV_BUSY; ++i) {
         destroyed = plv_destroy(handle);

@@ -78,6 +78,22 @@ TEST_CASE("O03 each vessel has one replaceable pending slot without starving pee
     CHECK(coalescedA->materialRevision == 3);
 }
 
+TEST_CASE("P05_02 older pending science cannot displace a newer vessel revision") {
+    ObservationScheduler scheduler({2e-7, 500000000ULL, 2});
+    REQUIRE(scheduler.offer({"A", "pH", 3, 30, 0.0}).accepted);
+    REQUIRE(scheduler.offer({"B", "pH", 1, 31, 0.0}).accepted);
+    const auto older = scheduler.offer({"A", "pH", 2, 32, 0.0});
+    CHECK_FALSE(older.accepted);
+    CHECK(older.code == "StaleObservationRequest");
+    const auto first = scheduler.takeNext();
+    REQUIRE(first.has_value());
+    CHECK(first->vesselId == "A");
+    CHECK(first->materialRevision == 3);
+    const auto second = scheduler.takeNext();
+    REQUIRE(second.has_value());
+    CHECK(second->vesselId == "B");
+}
+
 TEST_CASE("P04_01 restored generation ignores prior in-flight completion even at the same revision") {
     ObservationScheduler scheduler({2e-7, 500000000ULL, 8});
     REQUIRE(scheduler.offer({"A", "pH", 1, 0, 0.0}).accepted);

@@ -29,6 +29,17 @@ bool SolverWorker::stalled(std::chrono::milliseconds threshold) const {
 CommandOutcome SolverWorker::submit(SolverJob job) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (stopping_ || !solve_) return {false, "SolverUnavailable", "solver worker is unavailable"};
+    for (auto& pending : pending_) {
+        if (pending.observation.vesselId != job.observation.vesselId ||
+            pending.observation.observable != job.observation.observable) continue;
+        if (job.observation.materialRevision < pending.observation.materialRevision ||
+            (job.observation.materialRevision == pending.observation.materialRevision &&
+             job.observation.submittedNs < pending.observation.submittedNs)) {
+            return {false, "StaleObservationRequest", "a newer request is already pending for this vessel"};
+        }
+        pending = std::move(job);
+        return {true, "Accepted", ""};
+    }
     if (capacity_ == 0U || outstanding_ >= capacity_) {
         return {false, "SolverQueueFull", "solver request capacity is exhausted"};
     }

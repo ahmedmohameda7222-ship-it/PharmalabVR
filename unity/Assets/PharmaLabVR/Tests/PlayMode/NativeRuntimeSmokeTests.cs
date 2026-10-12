@@ -195,6 +195,12 @@ namespace PharmaLabVR.Tests.PlayMode
                 System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture,
                 out var value), Is.True);
             Assert.That(value, Is.InRange(0f, 14f));
+            Assert.That(driver.Measurement.Explanation, Does.Contain("Research"));
+            Assert.That(driver.Session.SubmitOrdered("CreateVessel", "{\"id\":\"empty-control\",\"capacityM3\":0.000002}"),
+                Does.Contain("\"accepted\":true"));
+            Assert.That(driver.SelectMeasurementVessel("empty-control"), Is.True);
+            Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Unsupported));
+            Assert.That(driver.Measurement.DisplayValue, Is.EqualTo("--"));
             Object.Destroy(root);
             yield return null;
         }
@@ -418,10 +424,24 @@ namespace PharmaLabVR.Tests.PlayMode
                 yield return new WaitForSecondsRealtime(0.01f);
             }
             Assert.That(driver.IsTimeHeld, Is.False);
+            Assert.That(driver.Session.SubmitOrdered("CreateVessel", "{\"id\":\"unrelated\",\"capacityM3\":0.000002}"),
+                Does.Contain("\"accepted\":true"));
+            Assert.That(driver.Session.SubmitOrdered("PrepareStock",
+                "{\"vesselId\":\"unrelated\",\"stockKind\":\"HydrochloricAcid\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000001}",
+                "{\"unrelated\":\"0\"}"), Does.Contain("\"accepted\":true"));
             for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
             Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current),
                 "The first pour needs an eligible science budget boundary.");
+            var unrelatedCurrent = false;
+            for (var attempt = 0; attempt < 200 && !unrelatedCurrent; attempt++)
+            {
+                var state = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                unrelatedCurrent = state.observations != null && state.observations.Any(item =>
+                    item.vesselId == "unrelated" && item.freshness == "Current");
+                if (!unrelatedCurrent) yield return new WaitForSecondsRealtime(0.01f);
+            }
+            Assert.That(unrelatedCurrent, Is.True, driver.Session.ReadSnapshot());
             tool.position = receiver.position + Vector3.up * 0.08f;
             Assert.That(target.Estimate(tool).Length, Is.EqualTo(1), "The scene outlet must aim into its real capture aperture.");
             adapter.Actuator = 1f;
@@ -430,7 +450,7 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(liquid.CommittedVolumeM3, Is.GreaterThan(0d), driver.Session.ReadSnapshot());
             var flowing = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
             Assert.That(flowing.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
-            Assert.That(flowing.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
+            Assert.That(flowing.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(26e-6).Within(1e-12));
             adapter.Actuator = 0f;
             for (var attempt = 0; attempt < 30; attempt++)
             {
@@ -441,7 +461,9 @@ namespace PharmaLabVR.Tests.PlayMode
             var landed = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
             Assert.That(landed.tools[0].inFlightInventory.researchAdditiveVolumeM3, Is.Zero);
             Assert.That(landed.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
-            Assert.That(landed.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(25e-6).Within(1e-12));
+            Assert.That(landed.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(26e-6).Within(1e-12));
+            Assert.That(landed.observations.Any(item => item.vesselId == "unrelated" && item.freshness == "Current"),
+                Is.True, "A continuous pour must not stale an unrelated vessel's real observation.");
             yield return SceneManager.UnloadSceneAsync(scene);
         }
 
@@ -624,9 +646,11 @@ namespace PharmaLabVR.Tests.PlayMode
                 for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                     yield return new WaitForSecondsRealtime(0.01f);
                 Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
+                Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
                 Assert.That(driver.Session.SubmitOrdered("TransferFixed",
                     "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000005},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
-                    "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"));
+                    "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"),
+                    driver.Session.ReadSnapshot());
                 Assert.That(sessions.ContinueFrom(savePath), Is.True, sessions.LastError);
                 var snapshot = driver.Session.ReadSnapshot();
                 StringAssert.Contains("\"reason\":\"SessionLoad\"", snapshot);

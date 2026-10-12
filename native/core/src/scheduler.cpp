@@ -24,6 +24,18 @@ CommandOutcome ObservationScheduler::offer(ObservationRequest request) {
         return reject("InvalidObservationRequest", "invalid observation request");
     }
     const auto vesselId = request.vesselId;
+    const auto pending = pendingByVessel_.find(vesselId);
+    if (pending != pendingByVessel_.end() &&
+        (request.materialRevision < pending->second.materialRevision ||
+         (request.materialRevision == pending->second.materialRevision &&
+          request.submittedNs < pending->second.submittedNs))) {
+        return reject("StaleObservationRequest", "a newer request is already pending for this vessel");
+    }
+    const auto authoritative = authoritativeRevisions_.find(vesselId);
+    if (authoritative != authoritativeRevisions_.end() &&
+        request.materialRevision < authoritative->second) {
+        return reject("StaleObservationRequest", "the vessel material revision is newer");
+    }
     const bool replacesPending = pendingByVessel_.count(vesselId) != 0;
     if (!replacesPending && pendingByVessel_.size() >= limits_.maxPendingRequests) {
         return reject("ObservationQueueFull", "pending observation queue is full");

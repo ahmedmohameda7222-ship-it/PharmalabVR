@@ -7,6 +7,7 @@
 #include <mutex>
 #include <memory>
 #include <thread>
+#include <vector>
 
 using namespace plv;
 
@@ -50,6 +51,53 @@ TEST_CASE("O03 worker keeps solve execution outside queue locks and bounds all o
     REQUIRE(first.has_value());
     CHECK(first->observation.vesselId == "A");
     CHECK(first->result.succeeded);
+}
+
+TEST_CASE("P05_02 worker replaces a vessel's pending equilibrium without losing peer order") {
+    std::mutex gateMutex;
+    std::condition_variable gateChanged;
+    bool entered = false;
+    bool release = false;
+    SolverWorker worker(3, [&](const SolveRequest&) {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        if (!entered) {
+            entered = true;
+            gateChanged.notify_one();
+            gateChanged.wait(lock, [&] { return release; });
+        }
+        SolveResult result;
+        result.succeeded = true;
+        result.pH = 7.0;
+        return result;
+    });
+    REQUIRE(worker.submit({{"A", "pH", 1, 1, 0.0}, {}}).accepted);
+    {
+        std::unique_lock<std::mutex> lock(gateMutex);
+        REQUIRE(gateChanged.wait_for(lock, std::chrono::seconds(2), [&] { return entered; }));
+    }
+    REQUIRE(worker.submit({{"B", "pH", 1, 2, 0.0}, {}}).accepted);
+    REQUIRE(worker.submit({{"C", "pH", 1, 3, 0.0}, {}}).accepted);
+    const auto replacement = worker.submit({{"B", "pH", 2, 4, 0.0}, {}});
+    CHECK(replacement.accepted);
+    const auto stale = worker.submit({{"B", "pH", 1, 5, 0.0}, {}});
+    CHECK_FALSE(stale.accepted);
+    CHECK(stale.code == "StaleObservationRequest");
+    CHECK(worker.outstanding() == 3U);
+    {
+        std::lock_guard<std::mutex> lock(gateMutex);
+        release = true;
+    }
+    gateChanged.notify_one();
+    std::vector<SolverCompletion> results;
+    for (int attempt = 0; attempt < 200 && results.size() < 3U; ++attempt) {
+        if (auto result = worker.poll()) results.push_back(std::move(*result));
+        else std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    REQUIRE(results.size() == 3U);
+    CHECK(results[0].observation.vesselId == "A");
+    CHECK(results[1].observation.vesselId == "B");
+    CHECK(results[1].observation.materialRevision == 2U);
+    CHECK(results[2].observation.vesselId == "C");
 }
 
 TEST_CASE("P01_02 solver callback and owned engine are destroyed on worker thread") {
