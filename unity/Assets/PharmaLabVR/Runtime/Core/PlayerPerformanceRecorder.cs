@@ -22,6 +22,12 @@ namespace PharmaLabVR.Core
 
         public void Configure(CoreDriver core)
         {
+            if (driver == core) return;
+            if (driver != null)
+            {
+                driver.HoldChanged -= OnHoldChanged;
+                driver.SnapshotChanged -= OnSnapshotChanged;
+            }
             driver = core;
             startedUtc = DateTime.UtcNow;
             core.HoldChanged += OnHoldChanged;

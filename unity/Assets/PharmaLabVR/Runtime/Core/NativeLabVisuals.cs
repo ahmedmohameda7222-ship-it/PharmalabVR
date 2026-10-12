@@ -1,4 +1,4 @@
-using System;
+using PharmaLabVR.Lab;
 using PharmaLabVR.Tools;
 using UnityEngine;
 
@@ -12,6 +12,8 @@ namespace PharmaLabVR.Core
 
         public void Configure(CoreDriver core)
         {
+            if (driver == core && source != null && receiver != null) return;
+            if (driver != null) driver.LabViewChanged -= Apply;
             driver = core;
             var roots = core.gameObject.scene.GetRootGameObjects();
             var tool = FindNamed(roots, "DesktopResearchTool");
@@ -20,7 +22,7 @@ namespace PharmaLabVR.Core
             source = CreateLiquid(tool, "NativeSourceLiquid", 0.012f, 0.46f, 0f);
             receiver = CreateLiquid(vessel, "NativeReceiverLiquid", 0.75f, 0.8f, -0.5f);
             DecorateLab(roots, tool, vessel);
-            core.SnapshotChanged += Apply;
+            core.LabViewChanged += Apply;
         }
 
         private static Transform FindNamed(GameObject[] roots, string name)
@@ -108,36 +110,23 @@ namespace PharmaLabVR.Core
             return result;
         }
 
-        private void Apply(string snapshot)
+        private void Apply(LabViewModel state)
         {
             if (source == null || receiver == null) return;
-            var state = JsonUtility.FromJson<LabSnapshot>(snapshot);
-            if (state?.vessels == null) return;
-            foreach (var vessel in state.vessels)
+            if (state?.Vessels == null) return;
+            foreach (var vessel in state.Vessels)
             {
-                if (vessel.inventory == null || vessel.capacityM3 <= 0.0) continue;
-                if (vessel.id == "source") source.Configure(source.transform.Find("NativeSourceLiquid"), vessel.capacityM3, 0.46f, 0f);
-                if (vessel.id == "receiver") receiver.Configure(receiver.transform.Find("NativeReceiverLiquid"), vessel.capacityM3, 0.8f, -0.5f);
-                if (vessel.id == "source") source.SetCommittedVolume(vessel.inventory.researchAdditiveVolumeM3);
-                if (vessel.id == "receiver") receiver.SetCommittedVolume(vessel.inventory.researchAdditiveVolumeM3);
+                if (vessel.CapacityM3 <= 0.0) continue;
+                if (vessel.Id == "source") source.Configure(source.transform.Find("NativeSourceLiquid"), vessel.CapacityM3, 0.46f, 0f);
+                if (vessel.Id == "receiver") receiver.Configure(receiver.transform.Find("NativeReceiverLiquid"), vessel.CapacityM3, 0.8f, -0.5f);
+                if (vessel.Id == "source") source.SetCommittedVolume(vessel.CommittedVolumeM3);
+                if (vessel.Id == "receiver") receiver.SetCommittedVolume(vessel.CommittedVolumeM3);
             }
         }
 
         private void OnDestroy()
         {
-            if (driver != null) driver.SnapshotChanged -= Apply;
+            if (driver != null) driver.LabViewChanged -= Apply;
         }
-
-        [Serializable]
-        private sealed class LabSnapshot { public VesselState[] vessels; }
-        [Serializable]
-        private sealed class VesselState
-        {
-            public string id;
-            public double capacityM3;
-            public MaterialState inventory;
-        }
-        [Serializable]
-        private sealed class MaterialState { public double researchAdditiveVolumeM3; }
     }
 }

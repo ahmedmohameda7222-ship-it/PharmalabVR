@@ -15,12 +15,14 @@ namespace PharmaLabVR.Core
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
         public enum ScienceBudgetProfile { Precision, Bulk }
         public event Action<string> SnapshotChanged;
+        public event Action<LabViewModel> LabViewChanged;
         public event Action<string> NativeEventReceived;
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
         public string StartupError { get; private set; }
         public string ScientificDatabasePath { get; private set; }
         public MeasurementView Measurement { get; private set; }
+        public LabViewModel CurrentLabView { get; private set; }
         public string CurrentMode { get; private set; } = "Desktop";
         public string HoldReason { get; private set; } = string.Empty;
         public bool NativeRecoveryReady { get; private set; }
@@ -32,9 +34,12 @@ namespace PharmaLabVR.Core
         private readonly List<string> stockIds = new();
         private StockCatalogEnvelope stockCatalog;
         private double accumulator;
+        private Func<string> packagePathResolver = () => ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
         private const double TickSeconds = 0.020;
 
         public void ConfigureInputs(params MonoBehaviour[] adapters) => inputAdapterBehaviours = adapters;
+        public void ConfigurePackagePathResolver(Func<string> resolver) =>
+            packagePathResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
 
         private void OnEnable()
         {
@@ -45,7 +50,7 @@ namespace PharmaLabVR.Core
             }
             try
             {
-                InitializeCore(ScientificPackage.PrepareLocal(Application.streamingAssetsPath));
+                InitializeCore(packagePathResolver());
             }
             catch (Exception exception) { FailStartup(exception); }
         }
@@ -66,12 +71,19 @@ namespace PharmaLabVR.Core
                     scienceBudgetProfile.ToString());
                 ScientificDatabasePath = databasePath;
                 BootstrapResearchSession();
-                Measurement = gameObject.AddComponent<MeasurementView>();
-                gameObject.AddComponent<NativeLabVisuals>().Configure(this);
+                Measurement = GetComponent<MeasurementView>();
+                if (Measurement == null) Measurement = gameObject.AddComponent<MeasurementView>();
+                var visuals = GetComponent<NativeLabVisuals>();
+                if (visuals == null) visuals = gameObject.AddComponent<NativeLabVisuals>();
+                visuals.Configure(this);
                 foreach (var root in gameObject.scene.GetRootGameObjects())
                     foreach (var transform in root.GetComponentsInChildren<Transform>(true))
                         if (transform.name == "PerformanceRecorder")
-                            transform.gameObject.AddComponent<PlayerPerformanceRecorder>().Configure(this);
+                        {
+                            var recorder = transform.GetComponent<PlayerPerformanceRecorder>();
+                            if (recorder == null) recorder = transform.gameObject.AddComponent<PlayerPerformanceRecorder>();
+                            recorder.Configure(this);
+                        }
                 StartupError = null;
                 PublishSnapshot();
             }
@@ -84,6 +96,7 @@ namespace PharmaLabVR.Core
             Debug.LogError($"Native scientific core unavailable: {StartupError}");
             Session?.Dispose();
             Session = null;
+            CurrentLabView = null;
             ScientificDatabasePath = null;
             enabled = false;
         }
@@ -306,6 +319,7 @@ namespace PharmaLabVR.Core
             foreach (var nativeEvent in Session.PollEvents())
                 NativeEventReceived?.Invoke(nativeEvent);
             var snapshot = Session.ReadSnapshot();
+            CurrentLabView = LabViewModel.FromNativeSnapshot(snapshot);
             var state = JsonUtility.FromJson<SnapshotEnvelope>(snapshot);
             if (state != null) CurrentMode = state.mode;
             SourceNeedsPreparation = false;
@@ -342,6 +356,7 @@ namespace PharmaLabVR.Core
                 HoldChanged?.Invoke(held);
             }
             SnapshotChanged?.Invoke(snapshot);
+            LabViewChanged?.Invoke(CurrentLabView);
         }
 
         private static ulong NowNs() => (ulong)(Time.realtimeSinceStartupAsDouble * 1_000_000_000.0);
@@ -418,6 +433,7 @@ namespace PharmaLabVR.Core
         {
             Session?.Dispose();
             Session = null;
+            CurrentLabView = null;
         }
     }
 }
