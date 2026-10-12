@@ -5,7 +5,7 @@
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
   "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
-  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records the newer October 11 implementation without promoting historical journeys to current acceptance.",
+  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records the newer October 12 implementation without promoting historical journeys to current acceptance.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
   "implementedTaskIds": [
@@ -121,22 +121,22 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "be2864faa29ce02bb4497ffcfe5560a530e9ca48",
-    "testedHeadBeforeEvidenceCommit": "51069018c917a61f22bdc8ee16a274e8f159661d",
-    "currentTask": "P05.02 Open",
-    "lastVerifiedLocalTask": "P05.01 scoped software admission",
-    "nativeRelease": "85/85 cases, 15803/15803 assertions; CTest 1/1",
-    "unityPlayMode": "21/21 real Lab scene with updated science budget and transfer journeys",
+    "functionalCodeSha": "57006a4dc83f49c7216268018b68d0be6e73f83a",
+    "testedHeadBeforeEvidenceCommit": "57006a4dc83f49c7216268018b68d0be6e73f83a",
+    "currentTask": "P05.03 Open",
+    "lastVerifiedLocalTask": "P05.02 scoped Research equilibrium scheduling",
+    "nativeRelease": "88/88 cases, 16080/16080 assertions in saved run; CTest 1/1",
+    "unityPlayMode": "21/21 including real Lab scene continuous pour with unrelated Current IPhreeqc observation and Current/Unsupported UI states",
     "unityEditMode": "22/22",
-    "windowsDesktopBuild": "Success; current-code executable SHA-256 recorded in artifact-manifest-p05-01.json",
-    "nativePlugins": "Windows and Android staged; hashes recorded in artifact-manifest-p05-01.json",
-    "evidence": "docs/evidence/p05-01-transport-admission.md and artifact-manifest-p05-01.json",
-    "acceptance95": "Historical scoped catalog remains 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion from P05.01",
+    "windowsDesktopBuild": "Success; current-code executable SHA-256 recorded in artifact-manifest-p05-02.json",
+    "nativePlugins": "Windows and Android staged; hashes recorded in artifact-manifest-p05-02.json",
+    "evidence": "docs/evidence/p05-02-fair-worker.md and artifact-manifest-p05-02.json",
+    "acceptance95": "Historical scoped catalog remains 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion from P05.02; O06 Failed/Stale UI and O07 kinetic/multiphase model remain Partial or unsupported",
     "currentPlayerJourney": "Not verified. WindowsDesktop build and Unity scene tests do not prove full student/instructor/expert Player flows.",
-    "currentScreenshots": "No new Player journey screenshot at this functional SHA.",
+    "currentScreenshots": "No new standalone Player journey screenshot at this functional SHA.",
     "externalGates": "G-R1 Open; physical VR/Android, tool calibration, experimental chemistry and controlled long-performance evidence missing",
-    "ci": "CI at be2864f/5106901 pending check after evidence commit; final HEAD must be checked",
-    "nextTask": "P05.02"
+    "ci": "CI on the final P05.02 evidence HEAD must be checked",
+    "nextTask": "P05.03"
   },
   "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }
