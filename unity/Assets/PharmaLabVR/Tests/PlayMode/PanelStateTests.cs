@@ -133,6 +133,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(ray.enableUIInteraction, Is.True);
                 Assert.That(ray.uiPressInput.inputSourceMode, Is.EqualTo(XRInputButtonReader.InputSourceMode.InputAction));
                 StringAssert.Contains("triggerPressed", ray.uiPressInput.inputActionPerformed.bindings[0].path);
+#pragma warning disable CS0618
+                Assert.That(ray.inputCompatibilityMode,
+                    Is.EqualTo(XRBaseInputInteractor.InputCompatibilityMode.ForceInputReaders));
+#pragma warning restore CS0618
             }
             var inspect = presenter.GetComponentsInChildren<Button>(true).Single(button => button.name == "Inspect receiver");
             inspect.onClick.Invoke();

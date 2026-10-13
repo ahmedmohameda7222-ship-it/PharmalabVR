@@ -20,6 +20,8 @@ namespace PharmaLabVR.UI
         private LabPanelController panels;
         private CoreDriver driver;
         private GameObject panelRoot;
+        private Camera xrCamera;
+        private bool placedWithTrackedHead;
         private Text title;
         private Text detail;
         private readonly Dictionary<string, Button> buttons = new();
@@ -44,6 +46,7 @@ namespace PharmaLabVR.UI
         {
             var origin = driver != null ? driver.transform.root.GetComponentInChildren<XROrigin>(true) : null;
             if (origin == null || origin.Camera == null) return;
+            xrCamera = origin.Camera;
             foreach (var ray in origin.GetComponentsInChildren<XRRayInteractor>(true))
             {
                 var hand = ray.name.StartsWith("Left", StringComparison.Ordinal) ? "Left" : "Right";
@@ -56,6 +59,9 @@ namespace PharmaLabVR.UI
                     $"<XRController>{{{usage}}}/trigger", expectedControlType: "Axis");
                 ray.uiPressInput = press;
                 ray.enableUIInteraction = true;
+#pragma warning disable CS0618
+                ray.inputCompatibilityMode = XRBaseInputInteractor.InputCompatibilityMode.ForceInputReaders;
+#pragma warning restore CS0618
             }
             panelRoot = new GameObject("SpatialPanel", typeof(RectTransform), typeof(Canvas),
                 typeof(CanvasScaler), typeof(TrackedDeviceGraphicRaycaster));
@@ -67,7 +73,7 @@ namespace PharmaLabVR.UI
             rect.localRotation = Quaternion.Euler(0f, 180f, 0f);
             var canvas = panelRoot.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
-            canvas.worldCamera = origin.Camera;
+            canvas.worldCamera = xrCamera;
             var background = panelRoot.AddComponent<Image>();
             background.color = new Color(0.91f, 0.94f, 0.94f, 0.97f);
             title = CreateText("Panel title", 214f, 42f, 26, FontStyle.Bold);
@@ -88,6 +94,17 @@ namespace PharmaLabVR.UI
             module.enableTouchInput = false;
             module.enableGamepadInput = false;
             module.enableJoystickInput = false;
+        }
+
+        private void LateUpdate()
+        {
+            if (panelRoot == null || !panelRoot.activeSelf || xrCamera == null || placedWithTrackedHead) return;
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+            var tracked = head.isValid && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var value) && value;
+            var pose = xrCamera.transform;
+            panelRoot.transform.position = pose.position + pose.forward * 0.95f + pose.right * 0.25f;
+            panelRoot.transform.rotation = Quaternion.LookRotation(-pose.forward, Vector3.up);
+            placedWithTrackedHead = tracked;
         }
 
         private Text CreateText(string name, float y, float height, int fontSize, FontStyle style)
