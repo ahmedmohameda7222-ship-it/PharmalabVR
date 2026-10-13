@@ -133,6 +133,29 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(viewport.z, Is.GreaterThan(0f));
             Assert.That(viewport.x, Is.InRange(0.1f, 0.9f));
             Assert.That(viewport.y, Is.InRange(0.1f, 0.9f));
+            var renderTarget = RenderTexture.GetTemporary(512, 512, 24);
+            var oldTarget = xrCamera.targetTexture;
+            var oldActive = RenderTexture.active;
+            var pixels = new Texture2D(512, 512, TextureFormat.RGB24, false);
+            try
+            {
+                xrCamera.targetTexture = renderTarget;
+                xrCamera.Render();
+                RenderTexture.active = renderTarget;
+                pixels.ReadPixels(new Rect(0f, 0f, 512f, 512f), 0, 0);
+                pixels.Apply();
+                var sample = pixels.GetPixel(Mathf.RoundToInt(viewport.x * 511f),
+                    Mathf.RoundToInt(viewport.y * 511f));
+                Assert.That(sample.r, Is.GreaterThan(0.70f),
+                    "The world panel must paint an opaque pale surface inside the XR camera view: " + sample);
+            }
+            finally
+            {
+                xrCamera.targetTexture = oldTarget;
+                RenderTexture.active = oldActive;
+                RenderTexture.ReleaseTemporary(renderTarget);
+                Object.DestroyImmediate(pixels);
+            }
             Assert.That(presenter.GetComponentInChildren<TrackedDeviceGraphicRaycaster>(true), Is.Not.Null);
             var eventSystem = roots.SelectMany(root => root.GetComponentsInChildren<EventSystem>(true)).Single();
             Assert.That(eventSystem.GetComponents<BaseInputModule>().OfType<XRUIInputModule>().Count(), Is.EqualTo(1));
