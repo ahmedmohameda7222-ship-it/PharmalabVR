@@ -133,6 +133,8 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(viewport.z, Is.GreaterThan(0f));
             Assert.That(viewport.x, Is.InRange(0.1f, 0.9f));
             Assert.That(viewport.y, Is.InRange(0.1f, 0.9f));
+            Assert.That(Vector3.Dot(canvas.transform.right, xrCamera.transform.right),
+                Is.GreaterThan(0.9f), "The spatial panel must read left-to-right from the XR camera.");
             var renderTarget = RenderTexture.GetTemporary(512, 512, 24);
             var oldTarget = xrCamera.targetTexture;
             var oldActive = RenderTexture.active;
@@ -148,6 +150,23 @@ namespace PharmaLabVR.Tests.PlayMode
                     Mathf.RoundToInt(viewport.y * 511f));
                 Assert.That(sample.r, Is.GreaterThan(0.70f),
                     "The world panel must paint an opaque pale surface inside the XR camera view: " + sample);
+#if UNITY_EDITOR
+                var renderPath = Path.GetFullPath(Path.Combine(Application.dataPath,
+                    "../../artifacts/test-results/vr-panel-render.ppm"));
+                using (var writer = new BinaryWriter(File.Create(renderPath)))
+                {
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("P6\n512 512\n255\n"));
+                    var colors = pixels.GetPixels32();
+                    for (var y = 511; y >= 0; y--)
+                        for (var x = 0; x < 512; x++)
+                        {
+                            var color = colors[y * 512 + x];
+                            writer.Write(color.r);
+                            writer.Write(color.g);
+                            writer.Write(color.b);
+                        }
+                }
+#endif
             }
             finally
             {

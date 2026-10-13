@@ -70,7 +70,7 @@ namespace PharmaLabVR.UI
             rect.sizeDelta = new Vector2(420f, 520f);
             rect.localScale = Vector3.one * 0.001f;
             rect.localPosition = new Vector3(0.36f, 1.37f, 0.95f);
-            rect.localRotation = Quaternion.Euler(0f, 180f, 0f);
+            rect.localRotation = Quaternion.identity;
             var canvas = panelRoot.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = xrCamera;
@@ -108,7 +108,7 @@ namespace PharmaLabVR.UI
             var tracked = head.isValid && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var value) && value;
             var pose = xrCamera.transform;
             panelRoot.transform.position = pose.position + pose.forward * 0.95f + pose.right * 0.25f;
-            panelRoot.transform.rotation = Quaternion.LookRotation(-pose.forward, Vector3.up);
+            panelRoot.transform.rotation = Quaternion.LookRotation(pose.forward, Vector3.up);
             placedWithTrackedHead = tracked;
         }
 
