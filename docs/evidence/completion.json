@@ -121,20 +121,21 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
-    "testedHeadBeforeEvidenceCommit": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
+    "functionalCodeSha": "614097bc4a5761badeb32aef69a9794066c713fe",
+    "testedHeadBeforeEvidenceCommit": "614097bc4a5761badeb32aef69a9794066c713fe",
     "currentTask": "P06.02 Open",
     "lastVerifiedLocalTask": "P06.01 scoped scene lifecycle and missing scientific package Player error",
     "nativeRelease": "CTest 1/1; native source unchanged from P06.01",
-    "unityPlayMode": "28/28, including actual Lab scene panel routing and paused setup frame regression",
+    "unityPlayMode": "31/31, including Home/Setup mode route, confirmed native Lab load and one active XR manager",
     "unityEditMode": "22/22",
     "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success",
-    "currentPlayerJourney": "WindowsDesktop Boot-to-Lab and Pause panels observed in actual Player; the attempted Inspect click hit Pause, so Inspect and full student/instructor/expert journeys remain unverified",
+    "currentPlayerJourney": "Actual Windows Player Home-to-Setup(VR)-to-Lab screenshots and log show no duplicate XR manager warning; the VR-mode mirror has no spatial UI, and Inspect and full student/instructor/expert journeys remain unverified",
     "currentScreenshots": [
-      "artifacts/evidence-p06-02/windows-desktop-background-print.png",
-      "artifacts/evidence-p06-02/windows-desktop-inspect-receiver2.png"
+      "artifacts/evidence-p06-02-boot-xr/windows-home.png",
+      "artifacts/evidence-p06-02-boot-xr/windows-vr-setup.png",
+      "artifacts/evidence-p06-02-boot-xr/windows-vr-lab.png"
     ],
-    "evidence": "docs/evidence/p06-02-progress.md and artifact-manifest-p06-02.json; task remains Open",
+    "evidence": "docs/evidence/p06-02-progress.md and p06-02-boot-xr-progress.md with both SHA manifests; task remains Open",
     "acceptance95": "Historical catalog stays 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion",
     "externalGates": "G-R1 Open; physical VR/Android, calibration, experimental chemistry and controlled long-performance evidence missing",
     "ci": "Must check final pushed evidence HEAD",
