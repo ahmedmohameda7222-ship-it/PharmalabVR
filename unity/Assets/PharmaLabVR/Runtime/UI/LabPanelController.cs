@@ -1,17 +1,25 @@
 using System.Linq;
 using PharmaLabVR.Core;
+using PharmaLabVR.Input;
 using PharmaLabVR.Session;
 using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue }
 
     public sealed class LabPanelController : MonoBehaviour
     {
         [SerializeField] private ScreenRouter router;
         [SerializeField] private CoreDriver driver;
         [SerializeField] private SessionController sessions;
+        [SerializeField] private BootMenu boot;
+
+        public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
+        {
+            router = screenRouter;
+            boot = bootMenu;
+        }
 
         public void Configure(ScreenRouter screenRouter, CoreDriver coreDriver, SessionController sessionController)
         {
@@ -22,6 +30,27 @@ namespace PharmaLabVR.UI
 
         public bool Request(PanelAction action, string entityId = null)
         {
+            if (boot != null)
+            {
+                if (router?.Current == null || !router.Current.SupportedActions.Contains(action.ToString())) return false;
+                switch (action)
+                {
+                    case PanelAction.EnterDesktop:
+                        boot.ChooseMode(ApplicationMode.Desktop);
+                        return router.Current.ScreenId == ScreenId.Setup;
+                    case PanelAction.EnterVR:
+                        boot.ChooseMode(ApplicationMode.VirtualReality);
+                        return router.Current.ScreenId == ScreenId.Setup;
+                    case PanelAction.Home:
+                        router.Show(ScreenId.Home);
+                        return router.Current.ScreenId == ScreenId.Home;
+                    case PanelAction.ConfirmSetup:
+                        boot.ConfirmSetup();
+                        return true;
+                    default:
+                        return false;
+                }
+            }
             if (router?.Current == null || driver?.Session == null || sessions == null ||
                 !router.Current.SupportedActions.Contains(action.ToString())) return false;
             switch (action)

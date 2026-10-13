@@ -18,6 +18,65 @@ namespace PharmaLabVR.Tests.PlayMode
     public sealed class PanelStateTests
     {
         [UnityTest]
+        public IEnumerator P06_02_BootModeChoiceRoutesThroughSharedSetupState()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Home));
+                Assert.That(panels.Request(PanelAction.EnterDesktop), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Setup));
+                Assert.That(router.Current.Mode, Is.EqualTo("Desktop"));
+                Assert.That(panels.Request(PanelAction.Home), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Home));
+                Assert.That(panels.Request(PanelAction.EnterVR), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Setup));
+                Assert.That(router.Current.Mode, Is.EqualTo("VR"));
+                Assert.That(router.Current.SupportedActions, Does.Contain("ConfirmSetup"));
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_SetupConfirmLoadsNativeBackedLabInSelectedMode()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var panels = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+            Assert.That(panels.Request(PanelAction.EnterDesktop), Is.True);
+            Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+            yield return null;
+            Assert.That(SceneManager.GetActiveScene().name, Is.EqualTo("Lab"));
+            var labRoots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var driver = labRoots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+            Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+            Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+            Assert.That(driver.CurrentLabView, Is.Not.Null);
+            foreach (var root in labRoots) Object.DestroyImmediate(root);
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator P06_02_ColdSessionFirstFrameEstablishesClockBaseline()
         {
             var root = new GameObject("ColdSessionClockBaseline");
