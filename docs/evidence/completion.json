@@ -121,20 +121,21 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "797b836998a45a6804d291f00dd6356d0d84a4c8",
-    "testedHeadBeforeEvidenceCommit": "797b836998a45a6804d291f00dd6356d0d84a4c8",
+    "functionalCodeSha": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
+    "testedHeadBeforeEvidenceCommit": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
     "currentTask": "P06.02 Open",
     "lastVerifiedLocalTask": "P06.01 scoped scene lifecycle and missing scientific package Player error",
-    "nativeRelease": "CTest 1/1 in isolation; one concurrent Unity build run failed 6/92 (first checkpoint science acceptance, then Busy creates), unresolved",
-    "unityPlayMode": "32/32; world-space XR camera pixel, readable orientation and router Inspect callback",
-    "unityEditMode": "22/22 at functional SHA",
+    "nativeRelease": "CTest 1/1 in isolation; prior concurrent Unity build run failed 6/92 and remains a reliability concern",
+    "unityPlayMode": "33/33; live Review from native export, no implicit durable Save, hold return denial, spatial Lab/Review XR camera render",
+    "unityEditMode": "22/22",
     "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success at functional SHA",
-    "currentPlayerJourney": "Editor XR camera renders a readable spatial panel. Prior Windows Player VR-mode mirror was bare; no current-code Player ray click or headset journey is proven.",
+    "currentPlayerJourney": "Actual WindowsDesktop Player reached Home, but 640x400 client clipped its right side and synthetic mouse did not prove transition. Editor XR camera renders Lab and Review; no tracked-ray Player/headset journey.",
     "currentScreenshots": [
-      "artifacts/evidence-p06-02-spatial/vr-panel-render-editor.png",
-      "artifacts/evidence-p06-02-spatial/windows-vr-player-mirror-blank.png"
+      "artifacts/evidence-p06-02-review/vr-lab-render-editor.png",
+      "artifacts/evidence-p06-02-review/vr-review-render-editor.png",
+      "artifacts/evidence-p06-02-review/windows-desktop-home-screen.png"
     ],
-    "evidence": "docs/evidence/p06-02-spatial-progress.md and SHA manifest; task remains Open",
+    "evidence": "docs/evidence/p06-02-review-progress.md and SHA manifest; task remains Open",
     "acceptance95": "Historical catalog stays 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion",
     "externalGates": "G-R1 Open; physical VR/Android, calibration, experimental chemistry and controlled long-performance evidence missing",
     "ci": "Must check final pushed evidence HEAD",

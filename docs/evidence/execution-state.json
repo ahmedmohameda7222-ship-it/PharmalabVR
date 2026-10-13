@@ -715,7 +715,7 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": "797b836998a45a6804d291f00dd6356d0d84a4c8",
+          "codeCommit": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
           "evidence": [
             "docs/evidence/p06-02-progress.md",
             "docs/evidence/artifact-manifest-p06-02.json",
@@ -725,7 +725,10 @@
             "WindowsDesktop, WindowsVR and AndroidVR builds Success at 614097b",
             "docs/evidence/p06-02-spatial-progress.md",
             "docs/evidence/artifact-manifest-p06-02-spatial.json",
-            "Unity PlayMode 32/32, including camera pixel and readable orientation; EditMode/build evidence in spatial manifest"
+            "Unity PlayMode 32/32, including camera pixel and readable orientation; EditMode/build evidence in spatial manifest",
+            "docs/evidence/p06-02-review-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-review.json",
+            "Unity PlayMode 33/33; EditMode 22/22; Native CTest 1/1; three fresh builds Success at 8bba490"
           ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
@@ -734,10 +737,12 @@
             "docs/evidence/p06-02-boot-xr-progress.md",
             "docs/evidence/artifact-manifest-p06-02-boot-xr.json",
             "docs/evidence/p06-02-spatial-progress.md",
-            "docs/evidence/artifact-manifest-p06-02-spatial.json"
+            "docs/evidence/artifact-manifest-p06-02-spatial.json",
+            "docs/evidence/p06-02-review-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-review.json"
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial: native-backed shared panel routing, Boot/Setup mode choice, single XR manager, world-space VR panel and actual Editor XR camera render. Functional Setup preferences, tracked-ray Player click, full Review and learner journey remain open.",
+          "acceptanceScope": "Partial: native-backed shared panel, Boot/Setup mode choice, spatial XR UI, live recorded Review without implicit Save, Editor XR camera Lab/Review render. Actual Player Review/tracked-ray journey, full Setup preferences, history navigation, Arabic and unclipped Desktop Home remain open.",
           "blocker": null
         }
       ],
@@ -2159,9 +2164,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "797b836998a45a6804d291f00dd6356d0d84a4c8",
-  "functionalCodeSha": "797b836998a45a6804d291f00dd6356d0d84a4c8",
-  "currentTask": "P06.02 Open — spatial VR presenter rendered in XR camera; Setup preferences and tracked-ray Player journey remain open",
+  "actualHead": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
+  "functionalCodeSha": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
+  "currentTask": "P06.02 Open — live recorded Review and XR panel rendered; Player input/Setup/full Review remain open",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2180,6 +2185,7 @@
     "P06.01 VerifiedLocal at 7abf0af2d763dfd74d98a37379a858e390aa8a37: PlayMode 26/26, EditMode 22/22, CTest 1/1, WindowsDesktop/WindowsVR/AndroidVR fresh builds Success; actual Windows Player missing-minteq Boot-to-Lab failure visible in screenshot/log. See p06-01-scene-lifecycle.md and SHA manifest. G-R1 and wider U01/U02 remain open; next P06.02.",
     "P06.02 remains Open at dd60197b05fc7963146cfacec98ff50fe37c4cdc: action-driven native Lab/Inspect/Measure/Pause/Hold/recorded Review routing, durable Save state and paused-setup clock correction. Native CTest 1/1, Unity EditMode 22/22, PlayMode 28/28, three Player builds Success. Actual Player Lab/Pause screenshots do not prove Inspect or VR; see p06-02-progress.md and SHA manifest.",
     "P06.02 continued at 614097bc4a5761badeb32aef69a9794066c713fe: Home/Setup mode routing, confirmed native-backed Lab load, one active XR manager binding body and hands. Native CTest 1/1, Unity PlayMode 31/31, EditMode 22/22, three Player builds Success; actual Windows Player VR-mode mirror lacks spatial panel. See p06-02-boot-xr-progress.md and SHA manifest. Next: functional Setup preferences, spatial VR presenter, Player Inspect/review before P08.01.",
-    "P06.02 continued at 797b836998a45a6804d291f00dd6356d0d84a4c8: world-space VR Canvas with XR UI input and visible Editor camera render; mirrored text red at right-vector -1.0 then corrected and 32/32 PlayMode green. Native CTest 1/1 alone; one concurrent-build run failed 6/92 and needs investigation. Fresh three Player builds Success. This is not Player/headset UI interaction proof. See p06-02-spatial-progress.md and SHA manifest. Next P06.02 Setup preferences and tracked-ray journey before P08.01."
+    "P06.02 continued at 797b836998a45a6804d291f00dd6356d0d84a4c8: world-space VR Canvas with XR UI input and visible Editor camera render; mirrored text red at right-vector -1.0 then corrected and 32/32 PlayMode green. Native CTest 1/1 alone; one concurrent-build run failed 6/92 and needs investigation. Fresh three Player builds Success. This is not Player/headset UI interaction proof. See p06-02-spatial-progress.md and SHA manifest. Next P06.02 Setup preferences and tracked-ray journey before P08.01.",
+    "P06.02 continued at 8bba4902b97d2a031315634c7e772eca6af8d1bf: live Lab Review recorded from native export without hidden durable Save or native revision change; held Review cannot falsely return to Lab; VR Lab/Review camera renders and button-gap test. PlayMode 33/33, EditMode 22/22, CTest 1/1 isolated, three fresh builds Success. Actual WindowsDesktop Player Home clipped at 640x400; synthetic click did not prove transition. See p06-02-review-progress.md and SHA manifest. P06.02 stays Open; next tracked-ray/Player journey and Desktop Home responsiveness before P08.01."
   ]
 }
