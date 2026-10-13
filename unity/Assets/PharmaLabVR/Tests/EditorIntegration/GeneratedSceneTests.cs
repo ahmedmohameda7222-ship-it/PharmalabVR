@@ -38,10 +38,19 @@ namespace PharmaLabVR.Tests.EditorIntegration
             var xrRig = FindInActiveScene("XRPlayerRig");
             Assert.That(xrRig, Is.Not.Null);
             Assert.That(xrRig.GetComponent<XROrigin>(), Is.Not.Null);
-            Assert.That(xrRig.GetComponentInChildren<XRInteractionManager>(true), Is.Not.Null);
+            var manager = FindInActiveScene("XRInteractionManager").GetComponent<XRInteractionManager>();
+            Assert.That(manager, Is.Not.Null);
+            Assert.That(manager.transform.IsChildOf(xrRig.transform), Is.False,
+                "The shared manager must be active before the tool registers.");
             Assert.That(xrRig.GetComponentsInChildren<ActionBasedController>(true).Length, Is.EqualTo(2));
             Assert.That(xrRig.GetComponentsInChildren<XRDirectInteractor>(true).Length, Is.EqualTo(2));
             Assert.That(xrRig.GetComponentsInChildren<XRRayInteractor>(true).Length, Is.EqualTo(2));
+            Assert.That(xrRig.GetComponentsInChildren<XRDirectInteractor>(true)
+                .All(interactor => interactor.interactionManager == manager), Is.True);
+            Assert.That(xrRig.GetComponentsInChildren<XRRayInteractor>(true)
+                .All(interactor => interactor.interactionManager == manager), Is.True);
+            Assert.That(FindInActiveScene("DesktopResearchTool").GetComponent<XRGrabInteractable>()
+                .interactionManager, Is.SameAs(manager));
 
             var adapter = xrRig.GetComponent<XRInputAdapter>();
             Assert.That(adapter, Is.Not.Null);
