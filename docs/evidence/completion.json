@@ -121,21 +121,20 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "614097bc4a5761badeb32aef69a9794066c713fe",
-    "testedHeadBeforeEvidenceCommit": "614097bc4a5761badeb32aef69a9794066c713fe",
+    "functionalCodeSha": "797b836998a45a6804d291f00dd6356d0d84a4c8",
+    "testedHeadBeforeEvidenceCommit": "797b836998a45a6804d291f00dd6356d0d84a4c8",
     "currentTask": "P06.02 Open",
     "lastVerifiedLocalTask": "P06.01 scoped scene lifecycle and missing scientific package Player error",
-    "nativeRelease": "CTest 1/1; native source unchanged from P06.01",
-    "unityPlayMode": "31/31, including Home/Setup mode route, confirmed native Lab load and one active XR manager",
-    "unityEditMode": "22/22",
-    "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success",
-    "currentPlayerJourney": "Actual Windows Player Home-to-Setup(VR)-to-Lab screenshots and log show no duplicate XR manager warning; the VR-mode mirror has no spatial UI, and Inspect and full student/instructor/expert journeys remain unverified",
+    "nativeRelease": "CTest 1/1 in isolation; one concurrent Unity build run failed 6/92 (first checkpoint science acceptance, then Busy creates), unresolved",
+    "unityPlayMode": "32/32; world-space XR camera pixel, readable orientation and router Inspect callback",
+    "unityEditMode": "22/22 at functional SHA",
+    "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success at functional SHA",
+    "currentPlayerJourney": "Editor XR camera renders a readable spatial panel. Prior Windows Player VR-mode mirror was bare; no current-code Player ray click or headset journey is proven.",
     "currentScreenshots": [
-      "artifacts/evidence-p06-02-boot-xr/windows-home.png",
-      "artifacts/evidence-p06-02-boot-xr/windows-vr-setup.png",
-      "artifacts/evidence-p06-02-boot-xr/windows-vr-lab.png"
+      "artifacts/evidence-p06-02-spatial/vr-panel-render-editor.png",
+      "artifacts/evidence-p06-02-spatial/windows-vr-player-mirror-blank.png"
     ],
-    "evidence": "docs/evidence/p06-02-progress.md and p06-02-boot-xr-progress.md with both SHA manifests; task remains Open",
+    "evidence": "docs/evidence/p06-02-spatial-progress.md and SHA manifest; task remains Open",
     "acceptance95": "Historical catalog stays 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion",
     "externalGates": "G-R1 Open; physical VR/Android, calibration, experimental chemistry and controlled long-performance evidence missing",
     "ci": "Must check final pushed evidence HEAD",
