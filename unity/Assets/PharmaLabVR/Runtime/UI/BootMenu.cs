@@ -70,8 +70,8 @@ namespace PharmaLabVR.UI
 
         private void OnGUI()
         {
-            var width = Mathf.Min(520f, Screen.width - 40f);
-            var area = new Rect((Screen.width - width) * 0.5f, Mathf.Max(30f, Screen.height * 0.2f), width, 300f);
+            var width = Mathf.Min(520f, Screen.width - 24f);
+            var area = new Rect(12f, 12f, width, 300f);
             GUILayout.BeginArea(area, GUI.skin.box);
             GUILayout.Label("PharmaLabVR — Research Foundation");
             var screen = router?.Current?.ScreenId ?? ScreenId.Home;
