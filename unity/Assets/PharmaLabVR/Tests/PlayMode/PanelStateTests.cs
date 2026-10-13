@@ -10,6 +10,11 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 using UnityEngine.XR.Interaction.Toolkit;
+using UnityEngine.XR.Interaction.Toolkit.UI;
+using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using UnityEngine.UI;
+using UnityEngine.EventSystems;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
@@ -96,6 +101,44 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(managers.Length, Is.EqualTo(1),
                 "A second auto-created manager can isolate the body from the controller interactors.");
             foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects()) Object.DestroyImmediate(root);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_VrPanelRoutesInspectThroughSharedNativeState()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var panels = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+            Assert.That(panels.Request(PanelAction.EnterVR), Is.True);
+            Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+            yield return null;
+            var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+            var presenter = roots.SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+            var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+            Assert.That(presenter.GetComponentInChildren<Canvas>(true).renderMode, Is.EqualTo(RenderMode.WorldSpace));
+            Assert.That(presenter.GetComponentInChildren<TrackedDeviceGraphicRaycaster>(true), Is.Not.Null);
+            var eventSystem = roots.SelectMany(root => root.GetComponentsInChildren<EventSystem>(true)).Single();
+            Assert.That(eventSystem.GetComponents<BaseInputModule>().OfType<XRUIInputModule>().Count(), Is.EqualTo(1));
+            var rays = roots.SelectMany(root => root.GetComponentsInChildren<XRRayInteractor>(true)).ToArray();
+            Assert.That(rays.Length, Is.EqualTo(2));
+            foreach (var ray in rays)
+            {
+                Assert.That(ray.enableUIInteraction, Is.True);
+                Assert.That(ray.uiPressInput.inputSourceMode, Is.EqualTo(XRInputButtonReader.InputSourceMode.InputAction));
+                StringAssert.Contains("triggerPressed", ray.uiPressInput.inputActionPerformed.bindings[0].path);
+            }
+            var inspect = presenter.GetComponentsInChildren<Button>(true).Single(button => button.name == "Inspect receiver");
+            inspect.onClick.Invoke();
+            Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Inspect));
+            Assert.That(router.Current.SelectedEntityId, Is.EqualTo("receiver"));
+            foreach (var root in roots) Object.DestroyImmediate(root);
             yield return null;
         }
 

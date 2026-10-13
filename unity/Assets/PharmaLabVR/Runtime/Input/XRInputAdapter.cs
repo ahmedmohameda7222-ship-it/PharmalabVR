@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
+using UnityEngine.XR.Interaction.Toolkit.Interactors;
 
 namespace PharmaLabVR.Input
 {
@@ -57,6 +58,8 @@ namespace PharmaLabVR.Input
         private static float Actuator(ActionBasedController controller)
         {
             if (controller == null) return 0f;
+            var ray = controller.GetComponentInChildren<XRRayInteractor>(true);
+            if (ray != null && ray.IsOverUIGameObject()) return 0f;
             var grip = controller.selectActionValue.action;
             var trigger = controller.activateActionValue.action;
             return ChooseActuatorValue(

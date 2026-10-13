@@ -20,6 +20,7 @@ namespace PharmaLabVR.Session
         private Vector2 hudScrollPosition;
         private ScreenRouter router;
         private LabPanelController panels;
+        private SpatialPanelPresenter spatialPanel;
 
         private void Awake()
         {
@@ -29,6 +30,9 @@ namespace PharmaLabVR.Session
             panels = GetComponent<LabPanelController>();
             if (panels == null) panels = gameObject.AddComponent<LabPanelController>();
             panels.Configure(router, driver, this);
+            spatialPanel = GetComponent<SpatialPanelPresenter>();
+            if (spatialPanel == null) spatialPanel = gameObject.AddComponent<SpatialPanelPresenter>();
+            spatialPanel.Configure(router, panels, driver);
         }
 
         public void Configure(CoreDriver coreDriver, string sessionName = null)
@@ -36,6 +40,7 @@ namespace PharmaLabVR.Session
             driver = coreDriver;
             router?.Configure(driver);
             panels?.Configure(router, driver, this);
+            spatialPanel?.Configure(router, panels, driver);
             if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
         }
 
