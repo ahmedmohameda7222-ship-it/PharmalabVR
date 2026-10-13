@@ -126,6 +126,17 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.WorldSpace));
             Assert.That(router.Current.Mode, Is.EqualTo("VR"));
             Assert.That(canvas.gameObject.activeInHierarchy, Is.True);
+            var visibleButtons = presenter.GetComponentsInChildren<Button>()
+                .Select(button => button.GetComponent<RectTransform>())
+                .OrderByDescending(rect => rect.anchoredPosition.y).ToArray();
+            for (var index = 1; index < visibleButtons.Length; index++)
+            {
+                var clearGap = visibleButtons[index - 1].anchoredPosition.y -
+                    visibleButtons[index].anchoredPosition.y -
+                    (visibleButtons[index - 1].rect.height + visibleButtons[index].rect.height) / 2f;
+                Assert.That(clearGap, Is.GreaterThanOrEqualTo(5f),
+                    "Adjacent world-panel buttons need a visible, hittable gap.");
+            }
             var xrCamera = roots.SelectMany(root => root.GetComponentsInChildren<Camera>(true))
                 .Single(camera => camera.name == "XR Camera");
             Assert.That(xrCamera.gameObject.activeInHierarchy, Is.True);
@@ -194,6 +205,17 @@ namespace PharmaLabVR.Tests.PlayMode
             inspect.onClick.Invoke();
             Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Inspect));
             Assert.That(router.Current.SelectedEntityId, Is.EqualTo("receiver"));
+            var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+            var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+            sessions.Configure(driver, "playmode-vr-review-" + System.Guid.NewGuid().ToString("N"));
+            var review = presenter.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "Open review");
+            Assert.That(review.gameObject.activeInHierarchy, Is.True);
+            review.onClick.Invoke();
+            Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+            Assert.That(sessions.RecordedReview, Is.Not.Null);
+            Assert.That(sessions.LastDurableSavePath, Is.Null,
+                "Opening a recorded review must not silently overwrite a durable save.");
             foreach (var root in roots) Object.DestroyImmediate(root);
             yield return null;
         }
@@ -256,7 +278,6 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.SaveState, Is.EqualTo("Saved"));
                 Assert.That(router.Current.Dirty, Is.False);
                 Assert.That(File.Exists(sessions.LastDurableSavePath), Is.True);
-                File.Delete(sessions.LastDurableSavePath);
                 Assert.That(panels.Request(PanelAction.Pause), Is.True);
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
                 StringAssert.Contains("\"paused\":true", driver.Session.ReadSnapshot());
@@ -268,7 +289,49 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.SupportedActions, Does.Not.Contain("Continue"));
                 Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.False);
                 Assert.That(panels.Request(PanelAction.Continue), Is.False);
-                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(panels.Request(PanelAction.Lab), Is.False,
+                    "A held session must not report a successful return to the operating Lab.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                File.Delete(sessions.LastDurableSavePath);
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_LiveLabReviewCapturesRecordedStateWithoutImplicitSaveOrNativeRevision()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                sessions.Configure(driver, "playmode-review-" + System.Guid.NewGuid().ToString("N"));
+                var before = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
+                Assert.That(sessions.LastDurableSavePath, Is.Null);
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(sessions.RecordedReview, Is.Not.Null);
+                Assert.That(sessions.RecordedReview.ModelIdentity, Is.Not.Empty);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(before));
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
             }
             finally
             {

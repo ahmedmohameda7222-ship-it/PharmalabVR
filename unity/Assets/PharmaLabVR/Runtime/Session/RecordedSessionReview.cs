@@ -22,8 +22,15 @@ namespace PharmaLabVR.Session
             var info = new FileInfo(path);
             if (!info.Exists || info.Length <= 0 || info.Length > 16 * 1024 * 1024)
                 throw new InvalidDataException("Recorded session is missing, empty, or oversized.");
-            var saved = JsonUtility.FromJson<RecordedEnvelope>(File.ReadAllText(info.FullName,
-                System.Text.Encoding.UTF8));
+            return FromJson(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8));
+        }
+
+        public static RecordedSessionReview FromJson(string json)
+        {
+            if (string.IsNullOrEmpty(json) ||
+                System.Text.Encoding.UTF8.GetByteCount(json) > 16 * 1024 * 1024)
+                throw new InvalidDataException("Recorded session is empty or oversized.");
+            var saved = JsonUtility.FromJson<RecordedEnvelope>(json);
             if (saved == null || saved.schemaVersion != 1 || string.IsNullOrWhiteSpace(saved.branchId) ||
                 saved.scientificPackage == null || saved.observations == null || saved.observations.Length > 16)
                 throw new InvalidDataException("Recorded session lacks its model or observation identity.");

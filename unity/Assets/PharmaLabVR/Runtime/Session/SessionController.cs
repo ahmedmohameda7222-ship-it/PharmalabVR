@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.UI;
 using UnityEngine;
@@ -150,7 +151,8 @@ namespace PharmaLabVR.Session
                 ContinueFrom(savedPath);
             if (GUILayout.Button("Create checkpoint", GUILayout.Height(30f))) CreateCheckpoint();
             if (GUILayout.Button("Restart checkpoint", GUILayout.Height(30f))) RestartCheckpoint();
-            if (RecordedReview != null && GUILayout.Button("Open recorded review", GUILayout.Height(44f)))
+            if (router?.Current?.SupportedActions.Contains("Review") == true &&
+                GUILayout.Button("Open recorded review", GUILayout.Height(44f)))
                 panels?.Request(PanelAction.Review);
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
@@ -190,6 +192,25 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+
+        public bool OpenReview()
+        {
+            if (RecordedReview != null) return true;
+            try
+            {
+                if (driver?.Session == null) throw new InvalidOperationException("No open native session.");
+                RecordedReview = RecordedSessionReview.FromJson(driver.Session.ExportSession());
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = "Recorded review unavailable: " + exception.Message;
+                return false;
+            }
+        }
+
+        public void CloseReview() => RecordedReview = null;
 
         public bool ContinueFrom(string path)
         {

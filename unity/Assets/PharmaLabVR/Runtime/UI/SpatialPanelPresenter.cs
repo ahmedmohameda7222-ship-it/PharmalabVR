@@ -67,7 +67,7 @@ namespace PharmaLabVR.UI
                 typeof(CanvasScaler), typeof(TrackedDeviceGraphicRaycaster));
             panelRoot.transform.SetParent(transform, false);
             var rect = panelRoot.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(420f, 520f);
+            rect.sizeDelta = new Vector2(420f, 560f);
             rect.localScale = Vector3.one * 0.001f;
             rect.localPosition = new Vector3(0.36f, 1.37f, 0.95f);
             rect.localRotation = Quaternion.identity;
@@ -78,13 +78,14 @@ namespace PharmaLabVR.UI
             background.color = new Color(0.91f, 0.94f, 0.94f, 0.97f);
             title = CreateText("Panel title", 214f, 42f, 26, FontStyle.Bold);
             detail = CreateText("Panel detail", 126f, 112f, 20, FontStyle.Normal);
-            AddButton("Inspect receiver", 28f, PanelAction.Inspect, "receiver");
-            AddButton("Inspect source", -28f, PanelAction.Inspect, "source");
-            AddButton("Measure", -84f, PanelAction.Measure, "receiver");
-            AddButton("Return to lab", -130f, PanelAction.Lab);
-            AddButton("Pause", -184f, PanelAction.Pause);
-            AddButton("Save session", -236f, PanelAction.Save);
-            AddButton("Continue", -184f, PanelAction.Continue);
+            AddButton("Inspect receiver", 30f, PanelAction.Inspect, "receiver");
+            AddButton("Inspect source", -26f, PanelAction.Inspect, "source");
+            AddButton("Measure", -82f, PanelAction.Measure, "receiver");
+            AddButton("Open review", -138f, PanelAction.Review);
+            AddButton("Return to lab", -138f, PanelAction.Lab);
+            AddButton("Pause", -194f, PanelAction.Pause);
+            AddButton("Save session", -250f, PanelAction.Save);
+            AddButton("Continue", -194f, PanelAction.Continue);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
             eventObject.transform.SetParent(panelRoot.transform, false);
@@ -160,6 +161,8 @@ namespace PharmaLabVR.UI
             {
                 ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
                 ScreenId.Pause => "Material and simulation time are paused.",
+                ScreenId.Review => "Recorded branch " + (panels.CurrentReview?.BranchId ?? "--") +
+                    " · " + (panels.CurrentReview?.Observations.Length ?? 0) + " saved observations. No recomputation.",
                 ScreenId.Inspect or ScreenId.Measure => state.SelectedEntityId + " · " +
                     (driver.Measurement?.DisplayValue ?? "--") + " pH · " + state.ObservationFreshness,
                 _ => "Select a vessel to inspect. Research model · " + state.SaveState
@@ -167,6 +170,9 @@ namespace PharmaLabVR.UI
             SetButton("Inspect receiver", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Inspect source", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Measure", state.SupportedActions.Contains("Measure"));
+            SetButton("Open review", state.SupportedActions.Contains("Review"));
+            buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save"));

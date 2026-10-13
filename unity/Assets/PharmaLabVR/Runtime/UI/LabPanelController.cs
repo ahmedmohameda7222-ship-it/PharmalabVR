@@ -14,6 +14,7 @@ namespace PharmaLabVR.UI
         [SerializeField] private CoreDriver driver;
         [SerializeField] private SessionController sessions;
         [SerializeField] private BootMenu boot;
+        public RecordedSessionReview CurrentReview => sessions?.RecordedReview;
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
         {
@@ -65,12 +66,14 @@ namespace PharmaLabVR.UI
                     router.Show(ScreenId.Pause);
                     return true;
                 case PanelAction.Lab:
+                    if (driver.IsTimeHeld) return false;
                     if (router.Current.ScreenId == ScreenId.Pause &&
                         !driver.ContinueSession()) return false;
+                    if (router.Current.ScreenId == ScreenId.Review) sessions.CloseReview();
                     router.Show(ScreenId.Lab);
-                    return true;
+                    return router.Current.ScreenId == ScreenId.Lab;
                 case PanelAction.Review:
-                    if (sessions.RecordedReview == null) return false;
+                    if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
                     return true;
                 case PanelAction.Settings:
