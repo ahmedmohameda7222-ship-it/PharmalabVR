@@ -99,6 +99,11 @@ namespace PharmaLabVR.UI
         private void LateUpdate()
         {
             if (panelRoot == null || !panelRoot.activeSelf || xrCamera == null || placedWithTrackedHead) return;
+            UpdatePlacement();
+        }
+
+        private void UpdatePlacement()
+        {
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
             var tracked = head.isValid && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var value) && value;
             var pose = xrCamera.transform;
@@ -149,6 +154,7 @@ namespace PharmaLabVR.UI
         {
             if (panelRoot == null || driver == null) return;
             panelRoot.SetActive(driver.CurrentMode == "VR");
+            if (panelRoot.activeSelf && !placedWithTrackedHead) UpdatePlacement();
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {

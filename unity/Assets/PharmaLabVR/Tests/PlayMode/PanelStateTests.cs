@@ -122,7 +122,17 @@ namespace PharmaLabVR.Tests.PlayMode
             var roots = SceneManager.GetActiveScene().GetRootGameObjects();
             var presenter = roots.SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
             var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
-            Assert.That(presenter.GetComponentInChildren<Canvas>(true).renderMode, Is.EqualTo(RenderMode.WorldSpace));
+            var canvas = presenter.GetComponentInChildren<Canvas>(true);
+            Assert.That(canvas.renderMode, Is.EqualTo(RenderMode.WorldSpace));
+            Assert.That(router.Current.Mode, Is.EqualTo("VR"));
+            Assert.That(canvas.gameObject.activeInHierarchy, Is.True);
+            var xrCamera = roots.SelectMany(root => root.GetComponentsInChildren<Camera>(true))
+                .Single(camera => camera.name == "XR Camera");
+            Assert.That(xrCamera.gameObject.activeInHierarchy, Is.True);
+            var viewport = xrCamera.WorldToViewportPoint(canvas.transform.position);
+            Assert.That(viewport.z, Is.GreaterThan(0f));
+            Assert.That(viewport.x, Is.InRange(0.1f, 0.9f));
+            Assert.That(viewport.y, Is.InRange(0.1f, 0.9f));
             Assert.That(presenter.GetComponentInChildren<TrackedDeviceGraphicRaycaster>(true), Is.Not.Null);
             var eventSystem = roots.SelectMany(root => root.GetComponentsInChildren<EventSystem>(true)).Single();
             Assert.That(eventSystem.GetComponents<BaseInputModule>().OfType<XRUIInputModule>().Count(), Is.EqualTo(1));
