@@ -715,12 +715,20 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
+          "evidence": [
+            "docs/evidence/p06-02-progress.md",
+            "docs/evidence/artifact-manifest-p06-02.json",
+            "Native CTest 1/1; Unity PlayMode 28/28; EditMode 22/22",
+            "WindowsDesktop, WindowsVR and AndroidVR builds Success at functional SHA"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "docs/evidence/p06-02-progress.md",
+            "docs/evidence/artifact-manifest-p06-02.json"
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Partial: native-backed Lab/Inspect/Measure/Pause/Hold/recorded Review coordinator and paused setup clock regression. Boot/Setup action journey, VR spatial presenter, full Review and Player Inspect remain open.",
           "blocker": null
         }
       ],
@@ -2142,8 +2150,8 @@
       "G-R1"
     ]
   },
-  "actualHead": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
-  "functionalCodeSha": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+  "actualHead": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
+  "functionalCodeSha": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
   "currentTask": "P06.02",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
@@ -2160,6 +2168,7 @@
     "P04.02 VerifiedLocal at 3322c29: red Native pinned-byte mismatch, same-byte IPhreeqc load, cross-platform binary minteq checkout; Unity Lab receiver Current pH after acid transfer, package mismatch recorded-only review, and three Player builds. Native 73/73, PlayMode 21/21, EditMode 22/22. Actual Player click-through and physical/device/experimental gates remain open. Next P04.03.",
     "P04.03 VerifiedLocal at ea79eb3 for a bounded Research S01-S07 evidence matrix: direct same-assumption PHREEQC delta 1.7e-13, ideal-versus-minteq 0.10723 pH difference at 0.1 M, six pool/charge cases, clean-context reuse, domain bounds, eight-context raw lifecycle. Native 80/80, PlayMode 21/21, EditMode 22/22, three Player builds. S07 actual nonconvergence/hard latency and experimental validation remain Open; next P05.01.",
     "P05.01 VerifiedLocal at be2864f with test refinement 5106901: fixed10ml Current observation denies before material/event commit, Precision/Bulk actual product profiles, rinse/disposal denial, opposite-transfer gross circulation, exact scheduler age/volume boundaries. Native 85/85, CTest 1/1, PlayMode 21/21, EditMode 22/22 and WindowsDesktop build Success. Device/Player journey and external science gates remain open; next P05.02.",
-    "P06.01 VerifiedLocal at 7abf0af2d763dfd74d98a37379a858e390aa8a37: PlayMode 26/26, EditMode 22/22, CTest 1/1, WindowsDesktop/WindowsVR/AndroidVR fresh builds Success; actual Windows Player missing-minteq Boot-to-Lab failure visible in screenshot/log. See p06-01-scene-lifecycle.md and SHA manifest. G-R1 and wider U01/U02 remain open; next P06.02."
+    "P06.01 VerifiedLocal at 7abf0af2d763dfd74d98a37379a858e390aa8a37: PlayMode 26/26, EditMode 22/22, CTest 1/1, WindowsDesktop/WindowsVR/AndroidVR fresh builds Success; actual Windows Player missing-minteq Boot-to-Lab failure visible in screenshot/log. See p06-01-scene-lifecycle.md and SHA manifest. G-R1 and wider U01/U02 remain open; next P06.02.",
+    "P06.02 remains Open at dd60197b05fc7963146cfacec98ff50fe37c4cdc: action-driven native Lab/Inspect/Measure/Pause/Hold/recorded Review routing, durable Save state and paused-setup clock correction. Native CTest 1/1, Unity EditMode 22/22, PlayMode 28/28, three Player builds Success. Actual Player Lab/Pause screenshots do not prove Inspect or VR; see p06-02-progress.md and SHA manifest. Next: complete Boot/Setup, world-space presenter and Player Inspect/review journey before P08.01."
   ]
 }

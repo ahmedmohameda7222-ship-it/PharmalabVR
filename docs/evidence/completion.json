@@ -5,7 +5,7 @@
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
   "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
-  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records the newer October 12 implementation without promoting historical journeys to current acceptance.",
+  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records newer local implementation through October 13 without promoting historical journeys to current acceptance.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
   "implementedTaskIds": [
@@ -121,19 +121,20 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
-    "testedHeadBeforeEvidenceCommit": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+    "functionalCodeSha": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
+    "testedHeadBeforeEvidenceCommit": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
     "currentTask": "P06.02 Open",
     "lastVerifiedLocalTask": "P06.01 scoped scene lifecycle and missing scientific package Player error",
-    "nativeRelease": "CTest 1/1; native source unchanged in this commit",
-    "unityPlayMode": "26/26, including actual Lab scene reactivation and package failure injection",
+    "nativeRelease": "CTest 1/1; native source unchanged from P06.01",
+    "unityPlayMode": "28/28, including actual Lab scene panel routing and paused setup frame regression",
     "unityEditMode": "22/22",
     "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success",
-    "currentPlayerJourney": "WindowsDesktop Boot-to-Lab missing-minteq error path observed in actual Player; normal student/instructor/expert journeys not verified",
+    "currentPlayerJourney": "WindowsDesktop Boot-to-Lab and Pause panels observed in actual Player; the attempted Inspect click hit Pause, so Inspect and full student/instructor/expert journeys remain unverified",
     "currentScreenshots": [
-      "artifacts/evidence-p06-01/missing-package-player-error.png"
+      "artifacts/evidence-p06-02/windows-desktop-background-print.png",
+      "artifacts/evidence-p06-02/windows-desktop-inspect-receiver2.png"
     ],
-    "evidence": "docs/evidence/p06-01-scene-lifecycle.md and artifact-manifest-p06-01.json",
+    "evidence": "docs/evidence/p06-02-progress.md and artifact-manifest-p06-02.json; task remains Open",
     "acceptance95": "Historical catalog stays 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion",
     "externalGates": "G-R1 Open; physical VR/Android, calibration, experimental chemistry and controlled long-performance evidence missing",
     "ci": "Must check final pushed evidence HEAD",
