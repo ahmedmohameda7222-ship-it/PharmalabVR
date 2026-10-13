@@ -161,8 +161,7 @@ namespace PharmaLabVR.UI
             {
                 ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
                 ScreenId.Pause => "Material and simulation time are paused.",
-                ScreenId.Review => "Recorded branch " + (panels.CurrentReview?.BranchId ?? "--") +
-                    " · " + (panels.CurrentReview?.Observations.Length ?? 0) + " saved observations. No recomputation.",
+                ScreenId.Review => ReviewDetails(),
                 ScreenId.Inspect or ScreenId.Measure => state.SelectedEntityId + " · " +
                     (driver.Measurement?.DisplayValue ?? "--") + " pH · " + state.ObservationFreshness,
                 _ => "Select a vessel to inspect. Research model · " + state.SaveState
@@ -182,6 +181,17 @@ namespace PharmaLabVR.UI
         private void SetButton(string name, bool visible)
         {
             if (buttons.TryGetValue(name, out var button)) button.gameObject.SetActive(visible);
+        }
+
+        private string ReviewDetails()
+        {
+            var recorded = panels?.CurrentReview;
+            if (recorded == null) return "Recorded review unavailable.";
+            var values = recorded.Observations.Take(3)
+                .Select(observation => observation.vesselId + " pH " +
+                    observation.DisplayValue + " · " + observation.freshness);
+            return "Recorded · no recomputation\n" +
+                (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values));
         }
     }
 }

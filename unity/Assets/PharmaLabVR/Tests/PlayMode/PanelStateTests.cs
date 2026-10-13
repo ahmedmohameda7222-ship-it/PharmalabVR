@@ -214,8 +214,48 @@ namespace PharmaLabVR.Tests.PlayMode
             review.onClick.Invoke();
             Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
             Assert.That(sessions.RecordedReview, Is.Not.Null);
+            var reviewDetail = presenter.GetComponentsInChildren<Text>(true)
+                .Single(label => label.name == "Panel detail");
+            StringAssert.Contains("receiver", reviewDetail.text,
+                "VR Review must show a recorded vessel, not just an observation count.");
             Assert.That(sessions.LastDurableSavePath, Is.Null,
                 "Opening a recorded review must not silently overwrite a durable save.");
+#if UNITY_EDITOR
+            var reviewTarget = RenderTexture.GetTemporary(512, 512, 24);
+            var originalTarget = xrCamera.targetTexture;
+            var originalActive = RenderTexture.active;
+            var reviewPixels = new Texture2D(512, 512, TextureFormat.RGB24, false);
+            try
+            {
+                xrCamera.targetTexture = reviewTarget;
+                xrCamera.Render();
+                RenderTexture.active = reviewTarget;
+                reviewPixels.ReadPixels(new Rect(0f, 0f, 512f, 512f), 0, 0);
+                reviewPixels.Apply();
+                var reviewPath = Path.GetFullPath(Path.Combine(Application.dataPath,
+                    "../../artifacts/test-results/vr-review-render.ppm"));
+                using (var writer = new BinaryWriter(File.Create(reviewPath)))
+                {
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("P6\n512 512\n255\n"));
+                    var colors = reviewPixels.GetPixels32();
+                    for (var y = 511; y >= 0; y--)
+                        for (var x = 0; x < 512; x++)
+                        {
+                            var color = colors[y * 512 + x];
+                            writer.Write(color.r);
+                            writer.Write(color.g);
+                            writer.Write(color.b);
+                        }
+                }
+            }
+            finally
+            {
+                xrCamera.targetTexture = originalTarget;
+                RenderTexture.active = originalActive;
+                RenderTexture.ReleaseTemporary(reviewTarget);
+                Object.DestroyImmediate(reviewPixels);
+            }
+#endif
             foreach (var root in roots) Object.DestroyImmediate(root);
             yield return null;
         }
