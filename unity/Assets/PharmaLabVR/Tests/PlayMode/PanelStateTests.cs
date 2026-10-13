@@ -9,6 +9,7 @@ using PharmaLabVR.UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.XR.Interaction.Toolkit;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
@@ -73,6 +74,28 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
             Assert.That(driver.CurrentLabView, Is.Not.Null);
             foreach (var root in labRoots) Object.DestroyImmediate(root);
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_VrLabHasOneActiveInteractionManager()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var panels = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+            Assert.That(panels.Request(PanelAction.EnterVR), Is.True);
+            Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+            yield return null;
+            var managers = Object.FindObjectsByType<XRInteractionManager>(FindObjectsSortMode.None);
+            Assert.That(managers.Length, Is.EqualTo(1),
+                "A second auto-created manager can isolate the body from the controller interactors.");
+            foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects()) Object.DestroyImmediate(root);
             yield return null;
         }
 

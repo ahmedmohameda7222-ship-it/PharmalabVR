@@ -662,7 +662,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 213405772}
-  - {fileID: 413471500}
   m_Father: {fileID: 2038433212}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!115 &379770735
@@ -710,7 +709,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 321742115}
+  m_Father: {fileID: 2038433212}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &413471501
 MonoBehaviour:
@@ -757,7 +756,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0ad34abafad169848a38072baa96cdb2, type: 3}
   m_Name:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable
-  m_InteractionManager: {fileID: 0}
+  m_InteractionManager: {fileID: 413471501}
   m_Colliders: []
   m_InteractionLayers:
     m_Bits: 1
@@ -974,7 +973,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6803edce0201f574f923fd9d10e5b30a, type: 3}
   m_Name:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.XRRayInteractor
-  m_InteractionManager: {fileID: 0}
+  m_InteractionManager: {fileID: 413471501}
   m_InteractionLayers:
     m_Bits: 4294967295
   m_Handedness: 0
@@ -1377,7 +1376,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4253f32900bcc4d499d675566142ded0, type: 3}
   m_Name:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.XRDirectInteractor
-  m_InteractionManager: {fileID: 0}
+  m_InteractionManager: {fileID: 413471501}
   m_InteractionLayers:
     m_Bits: 4294967295
   m_Handedness: 0
@@ -2735,7 +2734,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4253f32900bcc4d499d675566142ded0, type: 3}
   m_Name:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.XRDirectInteractor
-  m_InteractionManager: {fileID: 0}
+  m_InteractionManager: {fileID: 413471501}
   m_InteractionLayers:
     m_Bits: 4294967295
   m_Handedness: 0
@@ -2921,6 +2920,7 @@ Transform:
   - {fileID: 1581786100}
   - {fileID: 1896670735}
   - {fileID: 321742115}
+  - {fileID: 413471500}
   - {fileID: 158373480}
   - {fileID: 492363950}
   - {fileID: 1678543954}
@@ -2974,7 +2974,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6803edce0201f574f923fd9d10e5b30a, type: 3}
   m_Name:
   m_EditorClassIdentifier: Unity.XR.Interaction.Toolkit::UnityEngine.XR.Interaction.Toolkit.Interactors.XRRayInteractor
-  m_InteractionManager: {fileID: 0}
+  m_InteractionManager: {fileID: 413471501}
   m_InteractionLayers:
     m_Bits: 4294967295
   m_Handedness: 0

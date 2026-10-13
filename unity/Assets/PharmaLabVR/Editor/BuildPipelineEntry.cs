@@ -83,10 +83,10 @@ namespace PharmaLabVR.Editor
             xrOrigin.Camera = xrCamera;
             xrOrigin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
             var interactionManager = new GameObject("XRInteractionManager");
-            interactionManager.transform.SetParent(xrRig.transform, false);
-            interactionManager.AddComponent<XRInteractionManager>();
-            var leftController = CreateXrController(cameraOffset.transform, true);
-            var rightController = CreateXrController(cameraOffset.transform, false);
+            interactionManager.transform.SetParent(lab.transform, false);
+            var xrInteractionManager = interactionManager.AddComponent<XRInteractionManager>();
+            var leftController = CreateXrController(cameraOffset.transform, true, xrInteractionManager);
+            var rightController = CreateXrController(cameraOffset.transform, false, xrInteractionManager);
             var xrInput = xrRig.AddComponent<XRInputAdapter>();
             xrRig.SetActive(false);
             var desktopRig = new GameObject("DesktopPlayerRig");
@@ -117,6 +117,7 @@ namespace PharmaLabVR.Editor
             body.useGravity = false;
             body.isKinematic = false;
             var grab = researchTool.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            grab.interactionManager = xrInteractionManager;
             var receiver = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             receiver.name = "ReceiverVessel";
             receiver.transform.SetParent(lab.transform);
@@ -140,7 +141,8 @@ namespace PharmaLabVR.Editor
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }
 
-        private static ActionBasedController CreateXrController(Transform parent, bool leftHand)
+        private static ActionBasedController CreateXrController(Transform parent, bool leftHand,
+            XRInteractionManager interactionManager)
         {
             var hand = leftHand ? "Left" : "Right";
             var usage = leftHand ? "LeftHand" : "RightHand";
@@ -162,11 +164,11 @@ namespace PharmaLabVR.Editor
             var collider = direct.AddComponent<SphereCollider>();
             collider.radius = 0.08f;
             collider.isTrigger = true;
-            direct.AddComponent<XRDirectInteractor>();
+            direct.AddComponent<XRDirectInteractor>().interactionManager = interactionManager;
 
             var ray = new GameObject($"{hand} Ray Interactor");
             ray.transform.SetParent(controllerObject.transform, false);
-            ray.AddComponent<XRRayInteractor>();
+            ray.AddComponent<XRRayInteractor>().interactionManager = interactionManager;
             return controller;
         }
 
