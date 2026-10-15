@@ -32,3 +32,17 @@
 - **GREEN functional source:** `aa0f42259212cbc1dca84e884997d24a090c2808`. `DropPresenter` reads actual Native snapshot `hold.reason` and resets last-landed identity only during `SessionLoad` or `CheckpointRestart` replay epochs. `DropParcelState.ResetSession` makes saved pre-landing parcel visible again, even if it landed in the preceding live session. The normal stale same-session parcel suppression remains intact and matching landing receipts still own the visual transition.
 - [GREEN CI push 38714853023](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38714853023): **124 headless assertions pass**, five mutations deliberately RED then exact-original-source GREEN, including stale-drop bypass. Native platform CI and PR job conclusions at latest SHA must be checked separately; no Unity renderer is exercised here.
 - **Next required acceptance:** Native real Save/Checkpoint of outstanding drop → land → Load/Restart pre-landing → Native SessionLoad/CheckpointRestart hold → real visible same-ID pending drop → fresh neutral continue → valid one-time landing into receiver or spill. Unity and Player/XR remain **NOT_RUN**, P03.01 Open/NotReviewed, 15/51 and G-R1 Open unchanged.
+
+## Restore epoch cannot reset repeatedly during a held Native session
+
+| Reference | SHA |
+|---|---|
+| Test-first RED | `98d79cec3aeefc7dec3c2e5724d3686bfd6a82fc` |
+| Functional code | `15a067e17ee00995e914442a15f0c8c76c77e83a` |
+| Negative mutation test | `666b9188897e418273b464f54e45e2389c403ca9` |
+
+- [RED CI push](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38716087729): C# `CS1061`, real production `DropParcelState.ApplyNativeSnapshot` missing before implementation.
+- [GREEN source push](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38716320883) / [GREEN PR](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38716327900): `panel-routing` passed **136 headless C# assertions**. This verifies the pure production state model and unrelated existing panel routes, not Unity renderer code or a real Native session import.
+- [Mutation push](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38716458968): the explicit `reason != lastHoldReason` guard was temporarily disabled on CI runner. Named repeated-held-snapshot diagnostic failed **exit 134**; after restoring exact source, all 136 assertions passed. Five earlier mutations also RED then exact-source GREEN. Native Windows/Ubuntu status separately pending at checkpoint creation.
+- `DropParcelState.ApplyNativeSnapshot` recognizes `SessionLoad` or `CheckpointRestart` **only on hold transition**, instead of resetting on each repeated held snapshot. `CoreDriver.NativeSessionRestored` explicitly signals only accepted `RestartCheckpoint` and `ReplaceSession` before snapshot publication, allowing a saved parcel to reappear if a second import occurs while the same reason is still held. `NativeLabVisuals` subscribes/unsubscribes `DropPresenter.ResetSession`. No Native material, transport or science equations changed.
+- Unity 6000.3.25f1 assembly/scene, PlayMode real Native Save→Land→Load/Restart→Land, Desktop/VR Player, tracked XR rays and device acceptance remain **NOT_RUN**. Formal P03.01 and dependency P07.03 **Open**, G-R1 Open, 15 VerifiedLocal/51 Open. No new AcceptedPlanner.
