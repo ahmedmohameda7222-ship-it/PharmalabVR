@@ -274,6 +274,27 @@ namespace PharmaLabVR.Tests.EditorIntegration
             finally { Object.DestroyImmediate(instance); }
         }
 
+        [Test]
+        public void P08_02_ReconfiguredNativeCapacityKeepsMeniscusAndLiquidInSync()
+        {
+            var root = new GameObject("NativeVolumeVisualProbe");
+            try
+            {
+                var liquidGeometry = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                liquidGeometry.transform.SetParent(root.transform, false);
+                var meniscus = root.AddComponent<MeniscusPresenter>();
+                meniscus.Configure(root.transform, 1.0, 0.48f, 0f, 0.006f);
+                var liquid = root.AddComponent<LiquidPresenter>();
+                liquid.Configure(liquidGeometry.transform, 0.00005, 0.48f, 0f);
+                liquid.SetCommittedVolume(0.000025);
+                Assert.That(liquid.Fill01, Is.EqualTo(0.5f).Within(0.000001f));
+                Assert.That(meniscus.Fill01, Is.EqualTo(0.5f).Within(0.000001f),
+                    "The meniscus must use the live Native vessel capacity, not its bootstrap placeholder.");
+                Assert.That(meniscus.Surface.localPosition.y, Is.EqualTo(0.24f).Within(0.00001f));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
