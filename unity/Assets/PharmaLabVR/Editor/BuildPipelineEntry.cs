@@ -156,6 +156,9 @@ namespace PharmaLabVR.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var lab = new GameObject("LabRoot");
+            // The same visual/accessibility preference stream applies to
+            // both Player rigs and all Lab panels, not a label-only setting.
+            lab.AddComponent<AudioPreferencesOutput>();
             var benchRoot = new GameObject("BenchRoot");
             benchRoot.transform.SetParent(lab.transform);
             var roomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(

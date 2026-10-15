@@ -39,6 +39,8 @@ namespace PharmaLabVR.UI
             // Boot is the persistence boundary for local ergonomics only.
             // Do not store or restore Native chemistry through PlayerPrefs.
             SetupPreferencesPersistence.Initialize();
+            if (!TryGetComponent<AudioPreferencesOutput>(out _))
+                gameObject.AddComponent<AudioPreferencesOutput>();
             router = GetComponent<ScreenRouter>();
             if (router == null) router = gameObject.AddComponent<ScreenRouter>();
             router.Configure(null);
