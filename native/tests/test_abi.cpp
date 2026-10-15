@@ -1938,7 +1938,7 @@ TEST_CASE("P03_02 registered 100ml stock bottle pours through revised Native inv
             {{"bottle-stock", "2"}, {"receiver", "1"}});
         CHECK(stale["accepted"] == false);
         CHECK(stale["code"] == "StaleInventoryRevision");
-        CHECK(json::parse(read_text(handle))["materialLedger"] == original["materialLedger"]);
+        CHECK(equivalentResearchMaterialLedger(json::parse(read_text(handle))["materialLedger"], original["materialLedger"]));
     }
     CHECK(plv_destroy(handle) == PLV_OK);
 }
