@@ -106,7 +106,8 @@ namespace PharmaLabVR.UI
             Hook("High contrast", () => Update(p => p.With(highContrast: !p.HighContrast)));
             Hook("Audio mute", () => Update(p => p.With(audioVolume:
                 p.AudioVolume > 0.01f ? 0f : 1f)));
-            Hook("Next", () => { page = Mathf.Min(page + 1, 2); Present(router.Current); });
+            Hook("Language", () => { LanguageSelection.Toggle(); Present(router.Current); });
+            Hook("Next", () => { page = Mathf.Min(page + 1, 3); Present(router.Current); });
             Hook("Previous", () => { page = Mathf.Max(page - 1, 0); Present(router.Current); });
             Hook("Enter lab", () => menu.Panels.Request(PanelAction.ConfirmSetup));
             Hook("Back", () => menu.Panels.Request(PanelAction.Home));
@@ -137,7 +138,7 @@ namespace PharmaLabVR.UI
             {
                 var availability = menu.LaunchAvailability();
                 status.text = state.ScreenId == ScreenId.Setup ?
-                    "Setup " + (page + 1) + "/3 · " + state.Mode +
+                    "Setup " + (page + 1) + "/4 · " + state.Mode +
                     "\n" + (availability.CanEnter(BootMenu.RequestedMode) ?
                         "XR ready" : availability.UnavailableReason(BootMenu.RequestedMode)) :
                     "Choose a laboratory mode";
@@ -153,7 +154,11 @@ namespace PharmaLabVR.UI
             foreach (var item in first) Set(item, !home && page == 0, 78f - Array.IndexOf(first, item) * 56f);
             foreach (var item in second) Set(item, !home && page == 1, 78f - Array.IndexOf(second, item) * 56f);
             foreach (var item in third) Set(item, !home && page == 2, 78f - Array.IndexOf(third, item) * 56f);
-            Set("Next", !home && page < 2, -153f);
+            Set("Language", !home && page == 3, 78f);
+            var languageLabel = buttons["Language"].GetComponentInChildren<Text>(true);
+            if (languageLabel != null)
+                languageLabel.text = "Language: " + (LanguageSelection.IsRightToLeft ? "Arabic" : "English");
+            Set("Next", !home && page < 3, -153f);
             Set("Previous", !home && page > 0, -153f);
             Set("Enter lab", !home, -222f);
             Set("Back", !home, -279f);
