@@ -222,11 +222,20 @@ namespace PharmaLabVR.Editor
             body.isKinematic = false;
             var grab = researchTool.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
             grab.interactionManager = xrInteractionManager;
+            grab.throwOnDetach = false;
+            grab.forceGravityOnDetach = false;
             var receiver = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             receiver.name = "ReceiverVessel";
             receiver.transform.SetParent(lab.transform);
             receiver.transform.localPosition = new Vector3(0.25f, 0.53f, 0.2f);
             receiver.transform.localScale = new Vector3(0.10f, 0.08f, 0.10f);
+            var receiverBody = receiver.AddComponent<Rigidbody>();
+            receiverBody.useGravity = false;
+            receiverBody.isKinematic = false;
+            var receiverGrab = receiver.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            receiverGrab.interactionManager = xrInteractionManager;
+            receiverGrab.throwOnDetach = false;
+            receiverGrab.forceGravityOnDetach = false;
             var captureTarget = receiver.AddComponent<LabCaptureTarget>();
             captureTarget.Configure("receiver", 0.05f, 0.04f);
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,

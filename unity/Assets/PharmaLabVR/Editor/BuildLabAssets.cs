@@ -171,7 +171,9 @@ namespace PharmaLabVR.Editor
             var valve = root.AddComponent<ValveActuator>();
             root.AddComponent<ToolPresenter>().Configure("burette-50ml-research-v1", liquidPresenter, valve);
             root.AddComponent<Rigidbody>().isKinematic = false;
-            root.AddComponent<XRGrabInteractable>();
+            var grip = root.AddComponent<XRGrabInteractable>();
+            grip.throwOnDetach = false;
+            grip.forceGravityOnDetach = false;
             PrefabUtility.SaveAsPrefabAsset(root, "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
             Object.DestroyImmediate(root);
         }
