@@ -15,7 +15,11 @@ namespace PharmaLabVR.Core
         {
             if (driver == core && source != null && receiver != null) return;
             if (driver != null) driver.LabViewChanged -= Apply;
-            if (driver != null && drop != null) driver.SnapshotChanged -= drop.ApplySnapshot;
+            if (driver != null && drop != null)
+            {
+                driver.SnapshotChanged -= drop.ApplySnapshot;
+                driver.NativeEventReceived -= drop.ApplyNativeEvent;
+            }
             driver = core;
             var roots = core.gameObject.scene.GetRootGameObjects();
             var tool = FindNamed(roots, "DesktopResearchTool");
@@ -34,6 +38,7 @@ namespace PharmaLabVR.Core
             drop = tool.gameObject.AddComponent<DropPresenter>();
             drop.Configure("research-tool", dropVisual);
             core.SnapshotChanged += drop.ApplySnapshot;
+            core.NativeEventReceived += drop.ApplyNativeEvent;
             core.LabViewChanged += Apply;
         }
 
@@ -142,7 +147,11 @@ namespace PharmaLabVR.Core
         private void OnDestroy()
         {
             if (driver != null) driver.LabViewChanged -= Apply;
-            if (driver != null && drop != null) driver.SnapshotChanged -= drop.ApplySnapshot;
+            if (driver != null && drop != null)
+            {
+                driver.SnapshotChanged -= drop.ApplySnapshot;
+                driver.NativeEventReceived -= drop.ApplyNativeEvent;
+            }
         }
     }
 }

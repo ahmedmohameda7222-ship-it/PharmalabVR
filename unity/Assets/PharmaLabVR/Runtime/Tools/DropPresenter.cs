@@ -3,13 +3,14 @@ using UnityEngine;
 
 namespace PharmaLabVR.Tools
 {
-    // A view of a represented native parcel. Its GameObject never owns material.
+    // A presentation of represented Native material, never a material owner.
     public sealed class DropPresenter : MonoBehaviour
     {
         [SerializeField] private string toolId = "research-tool";
         [SerializeField] private GameObject visual;
-        public string ActiveParcelId { get; private set; } = string.Empty;
-        public double CommittedVolumeM3 { get; private set; }
+        private readonly DropParcelState state = new DropParcelState();
+        public string ActiveParcelId => state.ActiveParcelId;
+        public double CommittedVolumeM3 => state.CommittedVolumeM3;
 
         public void Configure(string id, GameObject dropVisual)
         {
@@ -21,17 +22,31 @@ namespace PharmaLabVR.Tools
         public void ApplySnapshot(string snapshot)
         {
             var envelope = string.IsNullOrEmpty(snapshot) ? null : JsonUtility.FromJson<Snapshot>(snapshot);
-            ActiveParcelId = string.Empty;
-            CommittedVolumeM3 = 0.0;
+            var id = string.Empty;
+            var volume = 0.0;
             if (envelope?.tools != null)
                 foreach (var tool in envelope.tools)
                     if (tool != null && tool.id == toolId && tool.inFlightInventory != null)
                     {
-                        CommittedVolumeM3 = tool.inFlightInventory.researchAdditiveVolumeM3;
-                        if (CommittedVolumeM3 > 0.0) ActiveParcelId = tool.inFlightParcelId ?? string.Empty;
+                        id = tool.inFlightParcelId;
+                        volume = tool.inFlightInventory.researchAdditiveVolumeM3;
                         break;
                     }
-            if (visual != null) visual.SetActive(CommittedVolumeM3 > 0.0);
+            state.ApplySnapshot(id, volume);
+            RefreshVisual();
+        }
+
+        public void ApplyNativeEvent(string eventJson)
+        {
+            if (string.IsNullOrEmpty(eventJson)) return;
+            var receipt = JsonUtility.FromJson<ParcelEvent>(eventJson);
+            if (receipt?.type != "InFlightLanded" || receipt.toolId != toolId) return;
+            if (state.Landed(receipt.parcelId)) RefreshVisual();
+        }
+
+        private void RefreshVisual()
+        {
+            if (visual != null) visual.SetActive(state.CommittedVolumeM3 > 0.0);
         }
 
         [Serializable] private sealed class Snapshot { public Tool[] tools; }
@@ -42,5 +57,11 @@ namespace PharmaLabVR.Tools
             public Inventory inFlightInventory;
         }
         [Serializable] private sealed class Inventory { public double researchAdditiveVolumeM3; }
+        [Serializable] private sealed class ParcelEvent
+        {
+            public string type;
+            public string toolId;
+            public string parcelId;
+        }
     }
 }
