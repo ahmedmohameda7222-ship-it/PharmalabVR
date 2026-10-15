@@ -1318,6 +1318,23 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                 const auto residual = parseMaterial(item.at("residualInventory"));
                 const auto inFlight = parseMaterial(item.at("inFlightInventory"));
                 const auto parcelId = item.value("inFlightParcelId", std::string{});
+                // Pending material is a committed parcel, never an anonymous
+                // renderer token. Keep its branch/event/tool provenance intact
+                // on restore; a forged or future identity cannot be replayed.
+                const bool validParcelIdentity = [&] {
+                    if (inFlight.referenceVolumeM3 == 0.0) return parcelId.empty();
+                    if (parcelId.empty() || parcelId.size() > 256U) return false;
+                    const std::string prefix = ownerSnapshot.branchId + "/";
+                    const std::string suffix = "/" + id;
+                    if (parcelId.size() <= prefix.size() + suffix.size() ||
+                        parcelId.compare(0, prefix.size(), prefix) != 0 ||
+                        parcelId.compare(parcelId.size() - suffix.size(), suffix.size(), suffix) != 0)
+                        return false;
+                    const auto numericId = decimalSequence(parcelId.substr(
+                        prefix.size(), parcelId.size() - prefix.size() - suffix.size()));
+                    return numericId.has_value() && *numericId > 0U &&
+                           *numericId <= ownerSnapshot.eventSequence;
+                }();
                 std::vector<plv::CaptureFraction> flightCaptures;
                 if (item.contains("inFlightCaptures")) {
                     const auto& captures = item.at("inFlightCaptures");
@@ -1341,7 +1358,7 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     !actuatorRevision || !inventoryRevision || *toolRevision == 0U ||
                     !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
                     !tip.isFiniteNonNegative() || !residual.isFiniteNonNegative() || !inFlight.isFiniteNonNegative() ||
-                    parcelId.size() > 256U || (inFlight.referenceVolumeM3 == 0.0 && !parcelId.empty()) ||
+                    !validParcelIdentity ||
                     frame != "lab" || profile != plv::BuretteProfile::researchDefault().id ||
                     ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
                     !result.emplace(id, Context::ToolState{
