@@ -482,5 +482,74 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator P06_02_PausedReviewReturnResumesNativeBeforeReportingLab()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                var before = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False,
+                    "Returning to an operating Lab from Review must issue the native Continue.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(before),
+                    "Panel navigation may not add native material events.");
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_SettingsBackRestoresNativePausedScreenWithoutContinuing()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(panels.Request(PanelAction.Settings), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+                Assert.That(panels.Request(PanelAction.Back), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
     }
 }
