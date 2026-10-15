@@ -141,6 +141,28 @@ namespace PharmaLabVR.Editor
             liquid.GetComponent<Collider>().enabled = false;
             var meniscus = root.AddComponent<MeniscusPresenter>();
             meniscus.Configure(root.transform, 0.00005, 0.48f, -0.24f, 0.006f);
+            // Runtime-generated meshes/materials are NOT persistent prefab references.
+            // Save them as project sub-assets before serializing the tool prefab.
+            var surfaceFilter = meniscus.Surface.GetComponent<MeshFilter>();
+            const string meshPath = "Assets/PharmaLabVR/Materials/ResearchMeniscus.asset";
+            var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+            if (savedMesh == null)
+                AssetDatabase.CreateAsset(surfaceFilter.sharedMesh, meshPath);
+            else
+            {
+                Object.DestroyImmediate(surfaceFilter.sharedMesh);
+                surfaceFilter.sharedMesh = savedMesh;
+            }
+            var surfaceRenderer = meniscus.Surface.GetComponent<MeshRenderer>();
+            const string meniscusMatPath = "Assets/PharmaLabVR/Materials/ResearchMeniscus.mat";
+            var savedMaterial = AssetDatabase.LoadAssetAtPath<Material>(meniscusMatPath);
+            if (savedMaterial == null)
+                AssetDatabase.CreateAsset(surfaceRenderer.sharedMaterial, meniscusMatPath);
+            else
+            {
+                Object.DestroyImmediate(surfaceRenderer.sharedMaterial);
+                surfaceRenderer.sharedMaterial = savedMaterial;
+            }
             var liquidPresenter = root.AddComponent<LiquidPresenter>();
             liquidPresenter.Configure(liquid.transform, 0.00005, 0.48f, -0.24f);
             InstrumentMeshBuilder.BuildBuretteGraduations(root.transform, 0.22f, 0.44f, 0.02f);

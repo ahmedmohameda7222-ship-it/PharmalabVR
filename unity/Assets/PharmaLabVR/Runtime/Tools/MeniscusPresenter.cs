@@ -45,8 +45,8 @@ namespace PharmaLabVR.Tools
             for (var i = 0; i < sectors; ++i)
             {
                 triangles[i * 3] = 0;
-                triangles[i * 3 + 1] = i + 1;
-                triangles[i * 3 + 2] = i + 2;
+                triangles[i * 3 + 1] = i + 2;
+                triangles[i * 3 + 2] = i + 1;
             }
             mesh.vertices = vertices;
             mesh.triangles = triangles;
