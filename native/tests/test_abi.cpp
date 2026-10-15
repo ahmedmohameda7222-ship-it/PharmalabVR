@@ -2060,3 +2060,62 @@ TEST_CASE("P03_02 rinse rejects solute-bearing stock without debiting the materi
     CHECK(afterClean["sinks"][0]["inventory"]["sodiumMol"].get<double>() == doctest::Approx(0.0));
     CHECK(plv_destroy(handle) == PLV_OK);
 }
+
+
+TEST_CASE("P03_02 bottle film is conserved through measured pours and real water rinse") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"bottle-film","scienceBudgetMode":"Bulk"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    const auto issue = [&](const std::string& sequence, const std::string& type,
+                           json payload, json expected = json::object()) {
+        submit(handle, command(sequence, type, std::move(payload), std::move(expected)));
+        return poll(handle);
+    };
+    REQUIRE(issue("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 1e-4}})["accepted"] == true);
+    REQUIRE(issue("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})["accepted"] == true);
+    REQUIRE(issue("3", "CreateVessel", {{"id", "clean-water"}, {"capacityM3", 1e-4}})["accepted"] == true);
+    REQUIRE(issue("4", "CreateSink", {{"id", "waste"}})["accepted"] == true);
+    REQUIRE(issue("5", "PrepareStock", {{"vesselId", "stock"}, {"stockKind", "SodiumChloride"},
+        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 2e-6}}, {{"stock", "0"}})["accepted"] == true);
+    REQUIRE(issue("6", "PrepareStock", {{"vesselId", "clean-water"}, {"stockKind", "Water"},
+        {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 1e-6}}, {{"clean-water", "0"}})["accepted"] == true);
+    REQUIRE(issue("7", "PlaceTool", {{"toolId", "bottle"}, {"sourceInventoryId", "stock"},
+        {"overflowSinkId", "waste"}, {"coordinateFrame", "lab"},
+        {"geometryProfileHash", "bottle-100ml-research-v1"}, {"profileRevision", "1"}})["accepted"] == true);
+    const auto initial = json::parse(read_text(handle));
+    REQUIRE(issue("8", "PourBottle", {{"toolId", "bottle"},
+        {"destinationInventoryId", "receiver"}, {"quantityM3", 2e-8},
+        {"expectedInventoryRevision", "0"}}, {{"stock", "1"}, {"receiver", "0"}})["accepted"] == true);
+    const auto afterPour = json::parse(read_text(handle));
+    const auto oldFilm = afterPour["tools"][0]["tipInventory"];
+    CHECK(oldFilm["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-8));
+    CHECK(oldFilm["chlorideMol"].get<double>() > 0.0);
+    CHECK(afterPour["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(1.96e-6));
+    CHECK(afterPour["vessels"][2]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(2e-8));
+    CHECK(afterPour["materialLedger"] == initial["materialLedger"]);
+
+    const auto denied = issue("9", "RinseTool", {{"toolId", "bottle"},
+        {"rinseSourceInventoryId", "stock"}, {"wasteSinkId", "waste"},
+        {"expectedInventoryRevision", "1"},
+        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-7}}}}, {{"stock", "2"}});
+    CHECK(denied["accepted"] == false);
+    CHECK(denied["code"] == "InvalidRinseSource");
+    CHECK(json::parse(read_text(handle))["materialLedger"] == initial["materialLedger"]);
+
+    const auto washed = issue("10", "RinseTool", {{"toolId", "bottle"},
+        {"rinseSourceInventoryId", "clean-water"}, {"wasteSinkId", "waste"},
+        {"expectedInventoryRevision", "1"},
+        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-7}}}}, {{"clean-water", "1"}});
+    REQUIRE(washed["accepted"] == true);
+    const auto afterWash = json::parse(read_text(handle));
+    const auto newFilm = afterWash["tools"][0]["tipInventory"];
+    CHECK(newFilm["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-8));
+    CHECK(newFilm["chlorideMol"].get<double>() > 0.0);
+    CHECK(newFilm["chlorideMol"].get<double>() < oldFilm["chlorideMol"].get<double>());
+    CHECK(afterWash["sinks"][0]["inventory"]["chlorideMol"].get<double>() > 0.0);
+    CHECK(afterWash["materialLedger"] == initial["materialLedger"]);
+    CHECK(afterWash["tools"][0]["inventoryRevision"] == "2");
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
