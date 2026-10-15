@@ -28,6 +28,13 @@ namespace PharmaLabVR.Tools
             return native.Pour(toolId, receiverId, quantityM3);
         }
 
+        public LabCommandReceipt RefillFromPreparedStock(string preparedSourceId, double quantityM3)
+        {
+            var native = Native;
+            native.EnsurePlaced(toolId, sourceId, sinkId, ResearchInstrumentPayloads.BottleProfile);
+            return native.RefillBottle(toolId, preparedSourceId, quantityM3);
+        }
+
         public LabCommandReceipt Rinse(double quantityM3) =>
             Native.Rinse(toolId, ResearchInstrumentPayloads.BottleProfile, waterId, wasteId, quantityM3);
     }

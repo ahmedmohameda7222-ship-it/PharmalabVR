@@ -68,6 +68,15 @@ namespace PharmaLabVR.Tools
                 commands.CaptureTouchedRevisions(tool.sourceInventoryId, receiver));
         }
 
+        public LabCommandReceipt RefillBottle(string id, string preparedReserveId, double quantity)
+        {
+            var tool = Require(id, ResearchInstrumentPayloads.BottleProfile);
+            return commands.Submit("TransferFixed",
+                ResearchInstrumentPayloads.RefillFromPreparedStock(
+                    preparedReserveId, tool.sourceInventoryId, tool.overflowSinkId, quantity),
+                commands.CaptureTouchedRevisions(preparedReserveId, tool.sourceInventoryId));
+        }
+
         public LabCommandReceipt Rinse(string id, string profile, string waterSource, string sink, double quantity)
         {
             var tool = Require(id, profile);
