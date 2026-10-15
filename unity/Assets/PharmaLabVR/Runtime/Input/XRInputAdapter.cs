@@ -46,7 +46,8 @@ namespace PharmaLabVR.Input
                 return System.Array.Empty<LabInputSample>();
             var selected = grabInteractable != null && grabInteractable.isSelected;
             var owner = selected ? SelectingController() : null;
-            var actuator = selected ? Actuator(owner) : 0f;
+            var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
+            var actuator = selected ? Actuator(owner, directBodyGrip) : 0f;
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
@@ -55,11 +56,12 @@ namespace PharmaLabVR.Input
             };
         }
 
-        private static float Actuator(ActionBasedController controller)
+        private static float Actuator(ActionBasedController controller, bool directBodyGrip)
         {
             if (controller == null) return 0f;
             var ray = controller.GetComponentInChildren<XRRayInteractor>(true);
-            if (ray != null && ray.IsOverUIGameObject()) return 0f;
+            if (!InteractionOwnership.MayActuateValve(directBodyGrip, Tracked(controller),
+                ray != null && ray.IsOverUIGameObject())) return 0f;
             var grip = controller.selectActionValue.action;
             var trigger = controller.activateActionValue.action;
             return ChooseActuatorValue(
