@@ -68,22 +68,36 @@ namespace PharmaLabVR.Session
             return true;
         }
 
+        public bool TrySnapTurn(int direction)
+        {
+            if (direction != -1 && direction != 1 || !CanAlignXrView(out var alignment))
+                return false;
+            return alignment.TrySnapTurn(direction);
+        }
+
         public bool TryRecenterView()
         {
+            if (!CanAlignXrView(out var alignment)) return false;
+            // Same Native-held safety boundary as snap-turn.
+            return alignment.TryRecenter();
+        }
+
+        private bool CanAlignXrView(out RecoveryAlignment alignment)
+        {
+            alignment = null;
             if (driver?.Session == null || router?.Current == null) return false;
             var root = driver.transform.root;
             var dock = root.GetComponentInChildren<ToolMount>(true);
-            var alignment = root.GetComponentInChildren<RecoveryAlignment>(true);
+            alignment = root.GetComponentInChildren<RecoveryAlignment>(true);
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
             var tracked = head.isValid &&
                 head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracking) && tracking;
             if (!RecoveryAlignmentPolicy.CanRecenter(driver.CurrentMode == "VR",
                     driver.IsNativePaused, driver.IsTimeHeld, tracked,
                     dock != null && dock.IsMounted)) return false;
-            if (alignment == null || !alignment.TryRecenter()) return false;
-            // This operation neither submits Native Continue nor changes material.
-            // Fresh neutral input samples must still pass Native recovery on Continue.
-            return true;
+            // Neither view operation submits Native Continue or changes material.
+            // Continue still needs fresh neutral input through the Native authority.
+            return alignment != null;
         }
 
         public bool RequestDesktopPause()

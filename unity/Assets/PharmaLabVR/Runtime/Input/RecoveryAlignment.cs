@@ -18,6 +18,17 @@ namespace PharmaLabVR.Input
             dockAnchor = dock;
         }
 
+        public bool TrySnapTurn(int direction)
+        {
+            if (direction != -1 && direction != 1 ||
+                xrOrigin == null || xrOrigin.Camera == null || dockAnchor == null ||
+                !xrOrigin.gameObject.activeInHierarchy) return false;
+            var headPivot = xrOrigin.Camera.transform.position;
+            xrOrigin.transform.RotateAround(headPivot, Vector3.up,
+                RecoveryAlignmentPolicy.SnapDegrees(direction));
+            return true;
+        }
+
         public bool TryRecenter()
         {
             if (xrOrigin == null || xrOrigin.Camera == null || dockAnchor == null ||

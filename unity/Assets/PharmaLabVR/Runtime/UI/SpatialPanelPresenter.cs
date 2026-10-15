@@ -92,6 +92,16 @@ namespace PharmaLabVR.UI
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
+            AddButton("Snap left 30", -26f, PanelAction.SnapLeft);
+            AddButton("Snap right 30", -26f, PanelAction.SnapRight);
+            // Half-width peers share one row without overlapping each other,
+            // the Recenter button above, or the Settings button below.
+            foreach (var name in new[] { "Snap left 30", "Snap right 30" })
+                buttons[name].GetComponent<RectTransform>().sizeDelta = new Vector2(176f, 46f);
+            buttons["Snap left 30"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(-94f, -26f);
+            buttons["Snap right 30"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(94f, -26f);
             AddSettingButton("Settings choice A", 30f, 0);
             AddSettingButton("Settings choice B", -26f, 1);
             AddSettingButton("Settings choice C", -82f, 2);
@@ -300,6 +310,8 @@ namespace PharmaLabVR.UI
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
                 dockReleaseVisible);
             SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
+            SetButton("Snap left 30", state.SupportedActions.Contains("SnapLeft"));
+            SetButton("Snap right 30", state.SupportedActions.Contains("SnapRight"));
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);

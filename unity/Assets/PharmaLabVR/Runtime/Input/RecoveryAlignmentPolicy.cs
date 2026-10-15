@@ -9,5 +9,12 @@ namespace PharmaLabVR.Input
         {
             return vrMode && (nativePaused || nativeHeld) && headTracked && bodyParked;
         }
+
+        public static int SnapDegrees(int direction)
+        {
+            if (direction != -1 && direction != 1)
+                throw new System.ArgumentOutOfRangeException(nameof(direction));
+            return 30 * direction;
+        }
     }
 }
