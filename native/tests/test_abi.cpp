@@ -1414,6 +1414,22 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
     CHECK(json::parse(read_text(handle))["scienceDependencyGeneration"] == "2");
     const auto recomputed = waitCurrent();
     CHECK(recomputed["asOfMaterialRevision"] == "1");
+    // Restart invalidates the observation budgets of BOTH vessels. A Current
+    // acid result alone does not imply that the restored base has a solved
+    // boundary, so a second transfer must await both actual solver receipts.
+    baseCurrent = false;
+    for (int attempt = 0; attempt < 250 && !baseCurrent; ++attempt) {
+        REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+        const auto state = json::parse(read_text(handle));
+        for (const auto& item : state["observations"])
+            if (item.value("vesselId", "") == "base" &&
+                item.value("freshness", "") == "Current" &&
+                item.value("computationState", "") == "Ready" &&
+                item.value("asOfMaterialRevision", "") == "1")
+                baseCurrent = true;
+        if (!baseCurrent) std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    REQUIRE_MESSAGE(baseCurrent, "Restored base observation must be Current before a second transfer.");
     CHECK(recomputed["freshness"] == "Current");
     CHECK(recomputed["value"].get<double>() == doctest::Approx(acidPH).epsilon(1e-7));
     submit(handle, command("9", "Continue"));
@@ -1425,7 +1441,9 @@ TEST_CASE("P04_01 checkpoint rollback recomputes real IPhreeqc for restored depe
                             {"captureFractions", json::array({{{"destinationInventoryId", "acid"}, {"fraction", 1.0}}})},
                             {"overflowSinkId", "spill"}},
                            {{"base", "1"}, {"acid", "1"}}));
-    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto secondTransferOutcome = poll(handle);
+    INFO("P04_01 second transfer after rollback: " << secondTransferOutcome.dump());
+    REQUIRE(secondTransferOutcome["accepted"].get<bool>());
     submit(handle, command("11", "RestartCheckpoint", {{"checkpointId", "acid-state"}}));
     REQUIRE(poll(handle)["accepted"].get<bool>());
     const auto pendingRestore = json::parse(read_text(handle));
