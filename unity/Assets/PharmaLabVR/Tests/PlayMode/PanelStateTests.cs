@@ -15,6 +15,9 @@ using UnityEngine.XR.Interaction.Toolkit.Inputs.Readers;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
+using PharmaLabVR.Input;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
@@ -606,6 +609,47 @@ namespace PharmaLabVR.Tests.PlayMode
                     Object.DestroyImmediate(root);
                 if (scene.isLoaded)
                     foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P10_01_EscapeFromDesktopLabRequestsActualNativePauseAndSharedPanel()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var keyboard = InputSystem.AddDevice<Keyboard>();
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var input = roots.SelectMany(root => root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
+                InputSystem.Update();
+                input.SampleInputs(1_000_000_000UL);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "Esc must dispatch through the panel route rather than disabling input.");
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(input.AwaitingFocusContinue, Is.False,
+                    "Esc is a routine native Pause, not an unrecoverable focus-loss hold.");
+                Assert.That(roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single()
+                    .Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(keyboard);
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
             }
             yield return null;
         }
