@@ -124,11 +124,12 @@ namespace PharmaLabVR.UI
     {
         public ScreenRouter Router { get; set; }
         public bool Confirmed { get; private set; }
+        public bool CanConfirm { get; set; } = true;
         public void ChooseMode(PharmaLabVR.Input.ApplicationMode mode)
         {
             Router.SetBootMode(mode == PharmaLabVR.Input.ApplicationMode.VirtualReality ? "VR" : "Desktop");
             Router.Show(ScreenId.Setup);
         }
-        public bool ConfirmSetup() { Confirmed = true; return true; }
+        public bool ConfirmSetup() { if (!CanConfirm) return false; Confirmed = true; return true; }
     }
 }

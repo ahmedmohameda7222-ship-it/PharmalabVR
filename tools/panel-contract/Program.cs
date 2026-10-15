@@ -36,6 +36,10 @@ internal static class Program
             Check(bootActions.Request(PanelAction.EnterDesktop), "Home → Desktop Setup action refused");
             Check(bootRouter.Current.Mode == "Desktop", "Desktop mode lost");
             Check(ReferenceEquals(bootRouter.Current.Setup, selected), "Back navigation lost preferences");
+            boot.CanConfirm = false;
+            Check(!bootActions.Request(PanelAction.ConfirmSetup), "Unavailable Boot falsely returned success");
+            Check(!boot.Confirmed, "Rejected Boot loaded the Lab anyway");
+            boot.CanConfirm = true;
             Check(bootActions.Request(PanelAction.ConfirmSetup) && boot.Confirmed, "Setup confirmation refused");
             Check(!bootActions.Request(PanelAction.Pause), "Unsupported Boot action falsely succeeded");
             Check(selected.With(textScale: 1.3f).TextScale > selected.TextScale,
