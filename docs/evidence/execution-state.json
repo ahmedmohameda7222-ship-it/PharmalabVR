@@ -4,6 +4,7 @@
   "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
   "branch": "feat/foundation-vr-first",
   "nextTask": "P06.02",
+  "userPriorityWorkstream": "P03 lab authority and geometry; partial implementation only until P07.03 and P03 task dependencies pass",
   "executionOrder": [
     "P00.01",
     "P00.02",
@@ -385,10 +386,10 @@
             "P07.03"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "bcec7d54da50c69e6ccf036b6ae2a0f7b16f0249",
+          "evidence": ["docs/evidence/p03-lab-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": ["Native P03_01 red/green, parcel IDs in product ABI, Unity Lab pending drop state, native 93/93, PlayMode 33/33"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -430,10 +431,10 @@
             "P03.02"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "f56a75806f2199aa2380419c76c15b4fb1dca77c",
+          "evidence": ["docs/evidence/p03-lab-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": ["Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null

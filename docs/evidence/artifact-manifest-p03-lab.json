@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "f56a75806f2199aa2380419c76c15b4fb1dca77c",
+  "testAndCaptureSha": "ba71c74783bbc9e63610fbbdc9e253a8b07a7abc",
+  "unityEditor": "6000.3.25f1",
+  "profile": "Research",
+  "sha256": {
+    "artifacts/WindowsDesktop/PharmaLabVR.exe": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+    "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll": "E6A6C40C251E4D4FF75ED7C4DAF122986989451A4AF09BCA487D2FF87FD1720A",
+    "artifacts/WindowsVR/PharmaLabVR.exe": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+    "artifacts/WindowsVR/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll": "E6A6C40C251E4D4FF75ED7C4DAF122986989451A4AF09BCA487D2FF87FD1720A",
+    "artifacts/AndroidVR/PharmaLabVR-research.apk": "DAFBF65C8495B67DB7F781237A2A5A02B691617A51BE58B5104E75263A2C7226",
+    "apk:lib/arm64-v8a/libpharmalab_core.so": "B75B00E6EF65BA3486DC0071F704393CF110C4E0C8F87C00AA483038CDC5788C",
+    "apk:assets/science/minteq.v4.dat": "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7",
+    "artifacts/evidence-p03-lab/lab-pending-drop-editor.png": "1DB38820B6D5A9BB7A85CF21B9C6BB40DE08FACA4C10BEF2996567DE8CC519B8",
+    "artifacts/test-results/PlayMode.xml": "B3BB4DFB3BC383362DDFF55679B661DC56BE23166B4B6871ED132FB3BF3FA756",
+    "artifacts/test-results/EditMode.xml": "FF0119BE66007241E89B8DA629F3E48107AFC6A80FB8DBC164DF3BD98C932649",
+    "artifacts/test-results/native-p03-01.txt": "F996FBCDA53DDB3DC97AF965D9F5D40175DBBAEAE21612E79CC42498E2841782"
+  },
+  "buildLogs": [
+    "artifacts/logs/unity-WindowsDesktop.log",
+    "artifacts/logs/unity-WindowsVR.log",
+    "artifacts/logs/unity-AndroidVR.log"
+  ],
+  "scope": "Native and Unity Editor lab action evidence plus fresh Player builds. No current-code standalone Player lab journey, physical device run, or calibration result."
+}

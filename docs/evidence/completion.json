@@ -5,7 +5,7 @@
   "reviewPullRequest": "https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1",
   "pullRequestMerged": false,
   "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
-  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records newer local implementation through October 13 without promoting historical journeys to current acceptance.",
+  "evidenceCommitNote": "The testedCodeCommitSha and legacy Player journeys below describe the October 9 historical round only. latestLocalRound records newer local implementation through October 15 without promoting historical journeys to current acceptance.",
   "productMaturity": "Research",
   "completionStatus": "Partial",
   "implementedTaskIds": [
@@ -121,25 +121,26 @@
     "Participant human-factors study"
   ],
   "latestLocalRound": {
-    "functionalCodeSha": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
-    "testedHeadBeforeEvidenceCommit": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
-    "currentTask": "P06.02 Open",
+    "functionalCodeSha": "f56a75806f2199aa2380419c76c15b4fb1dca77c",
+    "testedHeadBeforeEvidenceCommit": "ba71c74783bbc9e63610fbbdc9e253a8b07a7abc",
+    "currentTask": "P03.01/P03.03 partial lab work; both Open under the v2 dependency graph",
     "lastVerifiedLocalTask": "P06.01 scoped scene lifecycle and missing scientific package Player error",
-    "nativeRelease": "CTest 1/1 in isolation; prior concurrent Unity build run failed 6/92 and remains a reliability concern",
-    "unityPlayMode": "33/33; live Review from native export, no implicit durable Save, hold return denial, spatial Lab/Review XR camera render",
-    "unityEditMode": "22/22",
-    "playerBuilds": "WindowsDesktop, WindowsVR, AndroidVR Success at functional SHA",
-    "currentPlayerJourney": "Actual WindowsDesktop Player reached Home, but 640x400 client clipped its right side and synthetic mouse did not prove transition. Editor XR camera renders Lab and Review; no tracked-ray Player/headset journey.",
+    "nativeRelease": "93/93 cases, 16023/16023 assertions; CTest 1/1 in isolation. A prior concurrent Unity build run failed 6/92 and remains a reliability concern",
+    "unityPlayMode": "33/33; Lab scene native pour shows represented pending parcel ID and drop visual, then one-time landing",
+    "unityEditMode": "23/23; capture follows the rendered outlet marker rather than an embedded offset",
+    "playerBuilds": "WindowsDesktop, WindowsVR and AndroidVR rebuilt at current lab code; see p03-lab-progress.md for exact logs and hashes",
+    "currentPlayerJourney": "No current-code standalone Player lab click-through or tracked-ray headset journey is proven. The Lab pour screenshot is a Unity Editor PlayMode render. An earlier Desktop Player Home layout image at b66db7c is bounded evidence only.",
     "currentScreenshots": [
       "artifacts/evidence-p06-02-review/vr-lab-render-editor.png",
       "artifacts/evidence-p06-02-review/vr-review-render-editor.png",
-      "artifacts/evidence-p06-02-review/windows-desktop-home-screen.png"
+      "artifacts/evidence-p06-02-review/windows-desktop-home-layout-fixed-final.png",
+      "artifacts/evidence-p03-lab/lab-pending-drop-editor.png"
     ],
-    "evidence": "docs/evidence/p06-02-review-progress.md and SHA manifest; task remains Open",
+    "evidence": "docs/evidence/p03-lab-progress.md; P03.01/P03.03 remain Open. Prior P06.02 evidence remains in p06-02-review-progress.md",
     "acceptance95": "Historical catalog stays 18 Passed, 73 Partial, 4 EvidenceMissing; no global promotion",
     "externalGates": "G-R1 Open; physical VR/Android, calibration, experimental chemistry and controlled long-performance evidence missing",
     "ci": "Must check final pushed evidence HEAD",
-    "nextTask": "P06.02"
+    "nextTask": "P03 lab workstream by latest user priority; formal selector remains P06.02"
   },
   "notes": "The October review supersedes historical reports only for defects actually fixed at the tested code revision. Tests and builds are real but do not complete P01-P16 or certify the product. The PR remains open and unmerged."
 }
