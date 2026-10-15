@@ -90,6 +90,7 @@ struct Context {
     std::unordered_map<std::string, ToolState> tools;
     std::unordered_map<std::string, CheckpointState> checkpoints;
     std::uint64_t nextCommandSequence = 1;
+    bool setupClosed = false;
     std::string mode = "Desktop";
     bool holdActive = false;
     std::string holdReason;
@@ -326,6 +327,7 @@ json contextSnapshotJson(const Context& context) {
     const auto authoritative = context.executor.snapshot();
     auto result = snapshotJson(authoritative);
     result["mode"] = context.mode;
+    result["setupClosed"] = context.setupClosed;
     result["scienceBudgetMode"] = context.scienceBudgetMode;
     result["hold"] = {
         {"active", context.holdActive},
@@ -651,7 +653,9 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             const auto vesselId = payload.at("vesselId").get<std::string>();
             const auto snapshot = context->executor.snapshot();
             const auto vessel = snapshot.vessels.find(vesselId);
-            if (!revisions.is_object() || revisions.size() != 1U || !revisions.contains(vesselId) ||
+            if (context->setupClosed) {
+                outcome = {false, "PreparationClosed", "stock preparation is restricted to setup"};
+            } else if (!revisions.is_object() || revisions.size() != 1U || !revisions.contains(vesselId) ||
                 vessel == snapshot.vessels.end() ||
                 revision(revisions, vesselId) != vessel->second.materialRevision) {
                 outcome = {false, "StaleRevision", "stock preparation revision does not match touched inventory"};
@@ -897,6 +901,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 context->recoveryReady = false;
                 for (auto& item : context->tools) item.second.latestInput.reset();
                 context->executor.setPaused(false);
+                context->setupClosed = true;
                 outcome = {true, "Accepted", ""};
             }
         } else {
@@ -1208,6 +1213,7 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     stagedExecutor.advanceTime(delta_s);
     context->executor = std::move(stagedExecutor);
     context->tools = std::move(stagedTools);
+    if (delta_s > 0.0) context->setupClosed = true;
     if (context->worker) {
         recordTransportProposal(*context, grossByVessel, simulationNowNs);
         offerChangedScience(*context, beforeTick, proposedTimeNs);
@@ -1282,6 +1288,7 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
         }
         const auto budgetMode = parsed.value("scienceBudgetMode", "Precision");
         if (budgetMode != "Precision" && budgetMode != "Bulk") return PLV_INVALID_ARGUMENT;
+        if (parsed.contains("setupClosed") && !parsed.at("setupClosed").is_boolean()) return PLV_INVALID_ARGUMENT;
         auto context = std::make_shared<Context>(snapshot.branchId, databasePath, databaseIdentity, budgetMode);
         const auto outcome = context->executor.restore(snapshot);
         if (!outcome.accepted) return PLV_INVALID_ARGUMENT;
@@ -1370,6 +1377,17 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
             }
         }
         if (context->receipts.size() != *nextSequence - 1U) return PLV_INVALID_ARGUMENT;
+        bool setupBoundaryRecorded = snapshot.simulationTimeS > 0.0;
+        for (const auto& receipt : context->receipts) {
+            const auto command = json::parse(receipt.second.first);
+            const auto outcomeReceipt = json::parse(receipt.second.second);
+            if (command.value("type", "") == "Continue" && outcomeReceipt.value("accepted", false)) {
+                setupBoundaryRecorded = true;
+                break;
+            }
+        }
+        context->setupClosed = parsed.value("setupClosed", setupBoundaryRecorded);
+        if (setupBoundaryRecorded && !context->setupClosed) return PLV_INVALID_ARGUMENT;
         for (const auto& item : parsed.at("inputSequences").items()) {
             const auto sequence = decimalSequence(item.value().get<std::string>());
             if (!plv::isValidId(item.key()) || !sequence || context->tools.count(item.key()) == 0U) {
