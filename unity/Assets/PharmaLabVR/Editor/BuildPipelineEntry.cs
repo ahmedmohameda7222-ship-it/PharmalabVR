@@ -221,11 +221,10 @@ namespace PharmaLabVR.Editor
             camera.AddComponent<AudioListener>();
             var desktopCameraController = camera.AddComponent<DesktopCameraController>();
             camera.transform.SetParent(desktopRig.transform);
-            // AddComponent invokes Awake before parenting; explicitly bind
-            // the very adapter that owns physical grab and wheel routing.
-            desktopCameraController.Configure(desktopInput);
             camera.transform.localPosition = new Vector3(0f, 1.25f, -0.8f);
             camera.transform.localRotation = Quaternion.Euler(30f, 0f, 0f);
+            // Bind after parenting AND rotation. Both were absent in Awake.
+            desktopCameraController.Configure(desktopInput);
             var holdAnchor = new GameObject("DesktopToolHoldAnchor");
             holdAnchor.transform.SetParent(desktopRig.transform, false);
             holdAnchor.AddComponent<DesktopHoldAnchorFollower>().Configure(

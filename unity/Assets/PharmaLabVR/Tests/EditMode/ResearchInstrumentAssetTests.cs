@@ -143,6 +143,9 @@ namespace PharmaLabVR.Tests
                     root.GetComponentsInChildren<DesktopCameraController>(true)).Single();
                 Assert.That(camera.ToolInputAdapter, Is.SameAs(adapter),
                     "The Desktop Camera was created before parenting; its wheel must share the real held tool.");
+                Assert.That(camera.PitchDegrees,
+                    Is.EqualTo(Mathf.DeltaAngle(0f, camera.transform.eulerAngles.x)).Within(0.01f),
+                    "The first right-drag must preserve authored 30 degree camera pitch.");
             }
             finally { EditorSceneManager.CloseScene(scene, true); }
         }

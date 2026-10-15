@@ -266,6 +266,10 @@ namespace PharmaLabVR.Session
                         SelectStock(stockId, stockId == "water" ? 0.0 : concentrations[selectedConcentrationIndex]);
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
+            if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
+                GUILayout.Label("Desktop controls: F select/place on the bench; Shift+left-drag = held tool plane; " +
+                    "left-drag = held burette valve; mouse wheel = held height / empty-hand zoom; " +
+                    "Q/E = held tilt; right-drag = camera; WASD = camera; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
                 GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");

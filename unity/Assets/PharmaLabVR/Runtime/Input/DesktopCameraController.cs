@@ -14,11 +14,16 @@ namespace PharmaLabVR.Input
         private Camera sceneCamera;
         private DesktopInputAdapter desktopInput;
         public DesktopInputAdapter ToolInputAdapter => desktopInput;
+        public float PitchDegrees => pitch;
 
         public void Configure(DesktopInputAdapter owner)
         {
             desktopInput = owner != null ? owner :
                 throw new System.ArgumentNullException(nameof(owner));
+            // SceneBuilder assigns the authored view rotation after AddComponent
+            // (and therefore after Awake). The first right-drag must not snap
+            // the camera back to pitch zero.
+            pitch = Mathf.DeltaAngle(0f, transform.eulerAngles.x);
         }
 
         private void Awake()
