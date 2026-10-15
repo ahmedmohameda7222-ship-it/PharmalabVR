@@ -70,6 +70,19 @@ internal static class Program
             Check(!desktopAvailable.UnavailableReason(ApplicationMode.Desktop).Contains("unavailable"),
                 "Desktop ready status was misleading");
 
+            // P07.02: owning the tool body is not enough if an XR UI click
+            // is being routed on the same trigger or ownership came from a ray.
+            Check(!InteractionOwnership.MayActuateValve(false, true, false),
+                "Ray selection must not actuate the gripped body valve");
+            Check(!InteractionOwnership.MayActuateValve(true, false, false),
+                "Lost controller tracking must not actuate the valve");
+            Check(!InteractionOwnership.MayActuateValve(true, true, true),
+                "The world-panel UI owns the trigger; valve must stay closed");
+            Check(InteractionOwnership.MayActuateValve(true, true, false),
+                "Valid direct grip should permit the held valve input");
+            Check(!InteractionOwnership.MayActuateValve(false, false, true),
+                "Unowned tool cannot be actuated");
+
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
