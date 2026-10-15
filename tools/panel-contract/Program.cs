@@ -19,6 +19,56 @@ internal static class Program
 
     private static void Main()
     {
+        // P10.03: locale switch must be a shared non-chemical presentation
+        // selection; repeated and invalid selections cannot replay events.
+        var originalLanguage = LanguageSelection.Current;
+        var originalSetup = SetupPreferencesSelection.Current;
+        var localeChangeCount = 0;
+        Action<string> onLanguageChange = _ => localeChangeCount++;
+        LanguageSelection.Changed += onLanguageChange;
+        try
+        {
+            LanguageSelection.Select("ar");
+            Check(LanguageSelection.Current == "ar" && LanguageSelection.IsRightToLeft,
+                "Arabic language choice was not propagated to shared runtime");
+            LanguageSelection.Select("ar");
+            Check(localeChangeCount <= 1, "Repeated selection replayed localization events");
+            var previousEvents = localeChangeCount;
+            var rejectedLanguage = false;
+            try { LanguageSelection.Select("fr"); }
+            catch (ArgumentException) { rejectedLanguage = true; }
+            Check(rejectedLanguage && localeChangeCount == previousEvents &&
+                  LanguageSelection.Current == "ar",
+                "Unsupported language changed shared UI or re-fired event");
+            LanguageSelection.Select("en");
+            Check(LanguageSelection.Current == "en" && !LanguageSelection.IsRightToLeft,
+                "Returning to English failed or retained an RTL flag");
+            Check(ReferenceEquals(originalSetup, SetupPreferencesSelection.Current),
+                "Switching presentation locale rewrote Native/ergonomic selection");
+        }
+        finally
+        {
+            LanguageSelection.Changed -= onLanguageChange;
+            LanguageSelection.Select(originalLanguage);
+        }
+        // The actual pinned JSON assets, not an invented test-only copy.
+        var en = new LocalizationService();
+        en.Load("en", new UnityEngine.TextAsset(System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Content/Localization/en.json")));
+        var ar = new LocalizationService();
+        ar.Load("ar", new UnityEngine.TextAsset(System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Content/Localization/ar.json")));
+        foreach (var key in new[] { "offline", "enterVr", "enterDesktop",
+                 "continue", "trackingHold", "computeHold", "unsupported",
+                 "setup", "save", "review", "pause", "settings", "back",
+                 "stock", "pipette", "bottle", "rinse", "measure", "locale",
+                 "water", "nativeHeld", "nativePaused", "source" })
+        {
+            Check(!en.Get(key).StartsWith("[", StringComparison.Ordinal) &&
+                  !ar.Get(key).StartsWith("[", StringComparison.Ordinal),
+                "Production bilingual catalog is missing paired UI key: " + key);
+        }
+
         // P10.03: real production catalog parser must accept formatted JSON
         // and keep its last valid locale if a table is corrupted.
         var localization = new LocalizationService();
