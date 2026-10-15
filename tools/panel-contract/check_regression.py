@@ -1,7 +1,7 @@
 """Mutation check: prove the actual C# routing regression test detects an old bypass.
 
 Edits a CI runner worktree temporarily; never commits or updates the remote branch.
-Only exercises ScreenRouter / LabPanelController with test-only adapters, not Unity or Native.
+Only exercises production routing and pure drop-parcel view policies with test-only adapters, not Unity or Native.
 """
 from pathlib import Path
 import subprocess
@@ -9,6 +9,7 @@ import re
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs"
+DROP_SOURCE = ROOT / "unity/Assets/PharmaLabVR/Runtime/Tools/DropParcelState.cs"
 PROJECT = ROOT / "tools/panel-contract/PanelContract.csproj"
 MUTATIONS = [
     (
@@ -65,12 +66,29 @@ def main():
             print("RED verified: " + label + " (exit=" + str(red.returncode) + ")")
         finally:
             SOURCE.write_bytes(original)
+    drop_original = DROP_SOURCE.read_bytes()
+    good = "volumeM3 <= 0.0 || parcelId == LastLandedParcelId)"
+    bad = "volumeM3 <= 0.0 || false)"
+    drop_content = drop_original.decode("utf-8")
+    if drop_content.count(good) != 1:
+        raise RuntimeError("Expected stale-drop suppression guard missing exactly once")
+    try:
+        DROP_SOURCE.write_text(drop_content.replace(good, bad), encoding="utf-8")
+        red = exercise()
+        output = red.stdout + red.stderr
+        if red.returncode == 0 or "Stale Native snapshot resurrected an already landed drop" not in output:
+            raise RuntimeError("Pending parcel replay mutation not detected; exit=" +
+                               str(red.returncode) + " output=" + output[-3000:])
+        print("RED verified: stale committed drop cannot be resurrected (exit=" +
+              str(red.returncode) + ")")
+    finally:
+        DROP_SOURCE.write_bytes(drop_original)
     green = exercise()
     output = green.stdout + green.stderr
     if green.returncode != 0 or re.search(r"headless routing checks: ([1-9][0-9]*) passed", output) is None:
         raise RuntimeError("Restored GREEN failed: exit=" + str(green.returncode) +
                            " output=" + output[-3000:])
-    if SOURCE.read_bytes() != original:
+    if SOURCE.read_bytes() != original or DROP_SOURCE.read_bytes() != drop_original:
         raise RuntimeError("Production source not restored byte-for-byte")
     print("GREEN verified: exact source restored; all headless routing assertions pass")
 
