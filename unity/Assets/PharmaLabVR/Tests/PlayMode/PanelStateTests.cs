@@ -690,5 +690,86 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
 
+        [UnityTest]
+        public IEnumerator P07_03_CrossModeNativeImportRetainsOriginalSessionOnFailure()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            try
+            {
+                var driver = scene.GetRootGameObjects().SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var original = driver.Session;
+                var exportedDesktop = original.ExportSession();
+                Assert.That(driver.BeginModeChange(ApplicationMode.VirtualReality), Is.True);
+                var beforeRevision = driver.CurrentLabView.EventSequence;
+                imported = CoreSession.ImportSession(exportedDesktop, driver.ScientificDatabasePath);
+                Assert.That(imported.IsOpen, Is.True);
+                Assert.Throws<System.InvalidOperationException>(() => driver.ReplaceSession(imported));
+                Assert.That(driver.Session, Is.SameAs(original),
+                    "Denied cross-mode replacement must retain the original Native handle.");
+                Assert.That(original.IsOpen, Is.True);
+                Assert.That(imported.IsOpen, Is.True,
+                    "Failed replacement must not silently dispose a caller-owned candidate.");
+                Assert.That(driver.CurrentMode, Is.EqualTo("VR"));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(beforeRevision),
+                    "Denied load must not mutate material revision.");
+                Assert.That(driver.IsTimeHeld, Is.True);
+            }
+            finally
+            {
+                imported?.Dispose();
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P07_03_DesktopNativeImportEntersSessionLoadHoldWithRevisionPreserved()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            try
+            {
+                var driver = scene.GetRootGameObjects().SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                var original = driver.Session;
+                var revision = driver.CurrentLabView.EventSequence;
+                imported = CoreSession.ImportSession(original.ExportSession(), driver.ScientificDatabasePath);
+                driver.ReplaceSession(imported);
+                imported = null;
+                Assert.That(original.IsOpen, Is.False);
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.NativeRecoveryReady, Is.False);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.IsNativePaused, Is.True);
+            }
+            finally
+            {
+                imported?.Dispose();
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
     }
 }
