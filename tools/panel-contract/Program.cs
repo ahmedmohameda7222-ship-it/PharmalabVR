@@ -204,6 +204,34 @@ internal static class Program
         try { ResearchOutletGeometry.BottomLocalY(0.25, double.NaN, 0.25); }
         catch (ArgumentOutOfRangeException) { invalidOutletRejected = true; }
         Check(invalidOutletRejected, "Nonfinite mesh geometry cannot define a capture outlet");
+        // P10.02: accessibility settings survive Boot->Lab and process restarts
+        // without being interpreted as Native chemistry or using local number formats.
+        var persisted = new LabSetupPreferences("Seated", "Left", 0.77f, 1.25f,
+            true, true, true, 0.45f);
+        var previousCulture = System.Globalization.CultureInfo.CurrentCulture;
+        try
+        {
+            System.Globalization.CultureInfo.CurrentCulture =
+                System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+            var encoded = SetupPreferencesCodec.Encode(persisted);
+            Check(encoded.Contains("0.77") && encoded.Contains("1.25") &&
+                  !encoded.Contains("0,77"),
+                "Preference encoding must use invariant decimal separators");
+            Check(SetupPreferencesCodec.TryDecode(encoded, out var restored) &&
+                  restored.Posture == "Seated" && restored.DominantHand == "Left" &&
+                  restored.BenchHeightMeters == 0.77f && restored.TextScale == 1.25f &&
+                  restored.CaptionsEnabled && restored.ReducedMotion && restored.HighContrast &&
+                  restored.AudioVolume == 0.45f,
+                "Roundtrip lost actual ergonomics or accessibility options");
+            Check(!SetupPreferencesCodec.TryDecode(encoded.Replace("1;Seated", "2;Seated"), out _),
+                "Unknown stored preferences schema silently admitted");
+            Check(!SetupPreferencesCodec.TryDecode(encoded.Replace("0.77", "NaN"), out _) &&
+                  !SetupPreferencesCodec.TryDecode(encoded + ";injection", out _),
+                "Invalid stored values must not enter runtime accessibility state");
+            Check(!SetupPreferencesCodec.TryDecode("", out _),
+                "Blank persisted content cannot override safe Boot defaults");
+        }
+        finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
         var initial = SetupPreferencesSelection.Current;
         try
         {
