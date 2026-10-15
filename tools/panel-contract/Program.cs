@@ -47,6 +47,13 @@ internal static class Program
                 "Landed parcel remained visible as a hanging drop");
             Check(!parcel.ApplySnapshot("branch-1/8/burette-1", 5e-8),
                 "Stale Native snapshot resurrected an already landed drop");
+            // Explicit Native SessionLoad is a new replay boundary: a saved
+            // pending parcel may legitimately reuse the pre-landing ID.
+            parcel.ResetSession();
+            Check(parcel.ApplySnapshot("branch-1/8/burette-1", 5e-8),
+                "A legitimately restored Native SessionLoad drop stayed invisible");
+            Check(parcel.Landed("branch-1/8/burette-1"),
+                "Restored parcel must accept its own later landing exactly once");
             Check(parcel.ApplySnapshot("branch-1/9/burette-1", 5e-8),
                 "Next newly committed parcel was suppressed");
             Check(!parcel.ApplySnapshot("branch-1/9/burette-1", double.NaN),
