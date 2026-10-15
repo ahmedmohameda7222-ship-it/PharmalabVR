@@ -16,6 +16,10 @@ using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.Features.Interactions;
 using UnityEditor.XR.Management;
 using Unity.XR.CoreUtils;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using UnityEngine.XR.Interaction.Toolkit.UI;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Tests.EditorIntegration
 {
@@ -293,6 +297,31 @@ namespace PharmaLabVR.Tests.EditorIntegration
                 Assert.That(meniscus.Surface.localPosition.y, Is.EqualTo(0.24f).Within(0.00001f));
             }
             finally { Object.DestroyImmediate(root); }
+        }
+
+        [Test]
+        public void P07_01_BootSceneHasControllerRayDrivenWorldSpaceSetupWithOneEventSystem()
+        {
+            EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Boot.unity");
+            var rig = FindInActiveScene("BootXRPlayerRig");
+            Assert.That(rig, Is.Not.Null, "Boot must support headset cold start, not only IMGUI.");
+            var origin = rig.GetComponent<XROrigin>();
+            Assert.That(origin, Is.Not.Null);
+            Assert.That(origin.Camera, Is.Not.Null);
+            Assert.That(rig.GetComponentsInChildren<XRRayInteractor>(true).Length, Is.EqualTo(2));
+            var world = FindInActiveScene("BootWorldPanel");
+            Assert.That(world, Is.Not.Null);
+            Assert.That(world.GetComponent<Canvas>().renderMode, Is.EqualTo(RenderMode.WorldSpace));
+            Assert.That(world.GetComponent<TrackedDeviceGraphicRaycaster>(), Is.Not.Null);
+            Assert.That(world.GetComponent<BootSpatialPanelPresenter>(), Is.Not.Null);
+            foreach (var label in new[] { "Enter VR", "Desktop", "Seated", "Standing",
+                "Left hand", "Right hand", "Enter lab", "Back" })
+                Assert.That(world.GetComponentsInChildren<Button>(true)
+                    .Any(button => button.name == label), Is.True, "Missing real VR button " + label);
+            var systems = SceneManager.GetActiveScene().GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<EventSystem>(true)).ToArray();
+            Assert.That(systems, Has.Length.EqualTo(1), "Two active EventSystems double-dispatch XR UI.");
+            Assert.That(systems[0].GetComponent<XRUIInputModule>(), Is.Not.Null);
         }
 
         private static GameObject FindInActiveScene(string name)
