@@ -69,7 +69,7 @@ namespace PharmaLabVR.Tools
         // Do not regenerate renderer meshes or reset the committed parcel.
         public void SetProfile(double capacity, float height, float baseY)
         {
-            if (capacity <= 0.0 || height <= 0f || !double.IsFinite(capacity))
+            if (capacity <= 0.0 || height <= 0f || double.IsNaN(capacity) || double.IsInfinity(capacity))
                 throw new ArgumentException("Invalid native liquid profile.");
             capacityM3 = capacity;
             maximumHeight = height;
