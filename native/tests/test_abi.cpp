@@ -1810,7 +1810,7 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
 
 TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserved material") {
     std::uint64_t handle = 0;
-    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Bulk"})";
     REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
     const auto issue = [&](const std::string& sequence, const std::string& type,
                            const json& payload, const json& expected = json::object()) {
@@ -1836,32 +1836,32 @@ TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserv
     CHECK(actuator["accepted"] == false);
     CHECK(actuator["code"] == "PipetteRequiresMeteredAction");
     const auto filled = issue("9", "AspiratePipette", {{"toolId", "pipette"},
-        {"expectedInventoryRevision", "0"}, {"quantityM3", 2e-5}}, {{"bottle", "1"}});
+        {"expectedInventoryRevision", "0"}, {"quantityM3", 3e-7}}, {{"bottle", "1"}});
     CHECK(filled["accepted"] == true);
     const auto full = json::parse(read_text(handle));
     if (!full["tools"].empty()) {
         CHECK(full["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
-              doctest::Approx(2e-5));
+              doctest::Approx(3e-7));
         CHECK(full["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
-              doctest::Approx(2e-5));
+              doctest::Approx(3.97e-5));
     }
     const auto overflow = issue("10", "AspiratePipette", {{"toolId", "pipette"},
-        {"expectedInventoryRevision", "1"}, {"quantityM3", 6e-6}}, {{"bottle", "2"}});
+        {"expectedInventoryRevision", "1"}, {"quantityM3", 2.6e-5}}, {{"bottle", "2"}});
     CHECK(overflow["accepted"] == false);
     CHECK(overflow["code"] == "PipetteCapacityExceeded");
     const auto delivered = issue("11", "DispensePipette", {{"toolId", "pipette"},
         {"expectedInventoryRevision", "1"}, {"destinationInventoryId", "receiver"},
-        {"quantityM3", 1e-5}}, {{"receiver", "0"}});
+        {"quantityM3", 1e-7}}, {{"receiver", "0"}});
     CHECK(delivered["accepted"] == true);
     const auto after = json::parse(read_text(handle));
     if (!after["tools"].empty()) {
         CHECK(after["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
-              doctest::Approx(1e-5));
+              doctest::Approx(2e-7));
         CHECK(after["tools"][0]["tipInventory"]["chlorideMol"].get<double>() > 0.0);
         for (const auto& vessel : after["vessels"])
             if (vessel["id"] == "receiver") {
                 CHECK(vessel["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
-                      doctest::Approx(1e-5));
+                      doctest::Approx(1e-7));
                 CHECK(vessel["inventory"]["chlorideMol"].get<double>() > 0.0);
             }
     }
@@ -1870,7 +1870,7 @@ TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserv
               doctest::Approx(before["materialLedger"][key].get<double>()).epsilon(1e-10));
     const auto rinsed = issue("12", "RinseTool", {{"toolId", "pipette"},
         {"rinseSourceInventoryId", "rinse"}, {"wasteSinkId", "waste"},
-        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-7}}},
         {"expectedInventoryRevision", "2"}}, {{"rinse", "1"}});
     CHECK(rinsed["accepted"] == true);
     const auto cleaned = json::parse(read_text(handle));
