@@ -486,6 +486,44 @@ internal static class Program
             router.Configure(driver);
             Check(!panels.Request(PanelAction.Recenter), "Desktop admitted XR recenter");
 
+            // P06.02: if recovery completes while Settings obscures Hold,
+            // Back must not resurrect an obsolete/native-inactive Hold screen.
+            var interruptedDriver = new CoreDriver();
+            var interruptedRouter = new ScreenRouter();
+            interruptedRouter.Configure(interruptedDriver);
+            var interruptedSessions = new SessionController();
+            var interruptedPanels = new LabPanelController();
+            interruptedPanels.Configure(interruptedRouter, interruptedDriver, interruptedSessions);
+            interruptedDriver.SetHold(true);
+            Check(interruptedRouter.Current.ScreenId == ScreenId.Hold,
+                "Asynchronous Native hold not shown");
+            Check(interruptedPanels.Request(PanelAction.Settings),
+                "Held Settings must remain accessible");
+            Check(interruptedPanels.Request(PanelAction.Back) &&
+                  interruptedRouter.Current.ScreenId == ScreenId.Hold,
+                "While still held, Settings Back must restore active Hold");
+            Check(interruptedPanels.Request(PanelAction.Settings),
+                "Hold Settings second entry rejected");
+            interruptedDriver.SetHold(false);
+            Check(interruptedPanels.Request(PanelAction.Back) &&
+                  interruptedRouter.Current.ScreenId == ScreenId.Lab,
+                "Resolved Native Hold was resurrected by Settings Back");
+            Check(interruptedSessions.SaveCalls == 0 && interruptedDriver.ContinueCalls == 0 &&
+                  interruptedDriver.PauseCalls == 0,
+                "Settings Back issued Save, Pause, or Continue without user intent");
+            // Reproduce a hold that interrupts Settings, not just Hold -> Settings.
+            Check(interruptedPanels.Request(PanelAction.Settings),
+                "Lab Settings navigation unavailable");
+            interruptedDriver.SetHold(true);
+            Check(interruptedRouter.Current.ScreenId == ScreenId.Hold,
+                "Native Hold must supersede previously open Settings");
+            Check(interruptedPanels.Request(PanelAction.Settings),
+                "Interrupted Settings reopen failed");
+            interruptedDriver.SetHold(false);
+            Check(interruptedPanels.Request(PanelAction.Back) &&
+                  interruptedRouter.Current.ScreenId == ScreenId.Lab,
+                "Settings interrupted by recovered Hold returned to stale Hold/Settings");
+
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");
