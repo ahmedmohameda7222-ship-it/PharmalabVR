@@ -4,6 +4,7 @@ using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.UI;
 using PharmaLabVR.Tools;
+using PharmaLabVR.Input;
 using UnityEngine;
 
 namespace PharmaLabVR.Session
@@ -64,6 +65,24 @@ namespace PharmaLabVR.Session
             var dock = driver.transform.root.GetComponentInChildren<ToolMount>(true);
             if (dock == null || !dock.ReleaseFromDock()) return false;
             router.Show(ScreenId.Lab);
+            return true;
+        }
+
+        public bool TryRecenterView()
+        {
+            if (driver?.Session == null || router?.Current == null) return false;
+            var root = driver.transform.root;
+            var dock = root.GetComponentInChildren<ToolMount>(true);
+            var alignment = root.GetComponentInChildren<RecoveryAlignment>(true);
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+            var tracked = head.isValid &&
+                head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracking) && tracking;
+            if (!RecoveryAlignmentPolicy.CanRecenter(driver.CurrentMode == "VR",
+                    driver.IsNativePaused, driver.IsTimeHeld, tracked,
+                    dock != null && dock.IsMounted)) return false;
+            if (alignment == null || !alignment.TryRecenter()) return false;
+            // This operation neither submits Native Continue nor changes material.
+            // Fresh neutral input samples must still pass Native recovery on Continue.
             return true;
         }
 

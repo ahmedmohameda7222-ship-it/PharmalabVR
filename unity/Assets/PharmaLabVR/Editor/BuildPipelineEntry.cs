@@ -232,6 +232,7 @@ namespace PharmaLabVR.Editor
             dock.transform.position = researchTool.transform.position;
             dock.transform.rotation = researchTool.transform.rotation;
             researchTool.AddComponent<ToolMount>().Configure(dock.transform, body, grab);
+            xrRig.AddComponent<RecoveryAlignment>().Configure(xrOrigin, dock.transform);
             var receiver = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             receiver.name = "ReceiverVessel";
             receiver.transform.SetParent(lab.transform);

@@ -91,6 +91,7 @@ namespace PharmaLabVR.UI
             AddButton("Settings", -82f, PanelAction.Settings);
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
+            AddButton("Recenter view", 30f, PanelAction.Recenter);
             AddSettingButton("Settings choice A", 30f, 0);
             AddSettingButton("Settings choice B", -26f, 1);
             AddSettingButton("Settings choice C", -82f, 2);
@@ -298,6 +299,7 @@ namespace PharmaLabVR.UI
             SetButton("Back", state.SupportedActions.Contains("Back"));
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
                 dockReleaseVisible);
+            SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
