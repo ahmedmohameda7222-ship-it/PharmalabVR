@@ -177,6 +177,7 @@ namespace PharmaLabVR.UI
         public event Action<PanelState> Changed;
         private ScreenId screen = ScreenId.Lab;
         private ScreenId beforeHold = ScreenId.Lab;
+        private ScreenId beforeSettings = ScreenId.Lab;
         private string selectedEntityId = "source";
         private string workspace = "Student";
         private string pendingMode = "Desktop";
@@ -202,8 +203,16 @@ namespace PharmaLabVR.UI
                     !driver.CurrentLabView.Vessels.Any(vessel => vessel.Id == entityId)) return;
                 selectedEntityId = entityId;
             }
+            if (id == ScreenId.Settings && screen != ScreenId.Settings) beforeSettings = screen;
             screen = id;
             Refresh();
+        }
+
+        public bool ReturnFromSettings()
+        {
+            if (screen != ScreenId.Settings) return false;
+            Show(beforeSettings);
+            return screen == beforeSettings;
         }
 
         public void UpdateSetupPreferences(LabSetupPreferences preferences)
@@ -303,7 +312,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save" },
                 ScreenId.Pause => new[] { "Lab", "Save", "Settings", "Review" },
                 ScreenId.Review => new[] { "Lab", "Settings", "Save" },
-                ScreenId.Settings => new[] { "Lab", "Save" },
+                ScreenId.Settings => new[] { "Back", "Save" },
                 _ => Array.Empty<string>()
             };
             Current = new PanelState(screen, driver?.CurrentMode ?? pendingMode, SetupPreferencesSelection.Current, workspace,

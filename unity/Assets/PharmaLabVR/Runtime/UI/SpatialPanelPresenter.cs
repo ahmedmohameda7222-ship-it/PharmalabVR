@@ -87,6 +87,8 @@ namespace PharmaLabVR.UI
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
             AddButton("Continue", -194f, PanelAction.Continue);
+            AddButton("Settings", -82f, PanelAction.Settings);
+            AddButton("Back", -138f, PanelAction.Back);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
             eventObject.transform.SetParent(panelRoot.transform, false);
@@ -195,6 +197,8 @@ namespace PharmaLabVR.UI
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save"));
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
+            SetButton("Settings", state.SupportedActions.Contains("Settings"));
+            SetButton("Back", state.SupportedActions.Contains("Back"));
         }
 
         private void SetButton(string name, bool visible)

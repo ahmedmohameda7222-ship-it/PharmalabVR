@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -64,21 +64,22 @@ namespace PharmaLabVR.UI
                 case PanelAction.Pause:
                     if (!driver.PauseSession()) return false;
                     router.Show(ScreenId.Pause);
-                    return true;
+                    return router.Current.ScreenId == ScreenId.Pause;
                 case PanelAction.Lab:
                     if (driver.IsTimeHeld) return false;
-                    if (router.Current.ScreenId == ScreenId.Pause &&
-                        !driver.ContinueSession()) return false;
+                    if (driver.IsNativePaused && !driver.ContinueSession()) return false;
                     if (router.Current.ScreenId == ScreenId.Review) sessions.CloseReview();
                     router.Show(ScreenId.Lab);
                     return router.Current.ScreenId == ScreenId.Lab;
                 case PanelAction.Review:
                     if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
-                    return true;
+                    return router.Current.ScreenId == ScreenId.Review;
                 case PanelAction.Settings:
                     router.Show(ScreenId.Settings);
-                    return true;
+                    return router.Current.ScreenId == ScreenId.Settings;
+                case PanelAction.Back:
+                    return router.ReturnFromSettings();
                 case PanelAction.Save:
                     return sessions.Save();
                 case PanelAction.Continue:

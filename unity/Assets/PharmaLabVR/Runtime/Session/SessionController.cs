@@ -16,7 +16,9 @@ namespace PharmaLabVR.Session
         public string LastError { get; private set; }
         public RecordedSessionReview RecordedReview { get; private set; }
         private readonly SaveService saves = new();
-        private static readonly Rect DesktopHudRect = new(12f, 12f, 370f, 620f);
+        public static Rect DesktopHudBounds => new Rect(12f, 12f,
+            Mathf.Max(1f, Mathf.Min(370f, Screen.width - 24f)),
+            Mathf.Max(1f, Mathf.Min(620f, Screen.height - 24f)));
         private int selectedConcentrationIndex = 2;
         private Vector2 hudScrollPosition;
         private ScreenRouter router;
@@ -47,13 +49,13 @@ namespace PharmaLabVR.Session
 
         public static bool PointerOverDesktopHud(Vector2 screenPosition)
         {
-            return DesktopHudRect.Contains(new Vector2(screenPosition.x, Screen.height - screenPosition.y));
+            return DesktopHudBounds.Contains(new Vector2(screenPosition.x, Screen.height - screenPosition.y));
         }
 
         private void OnGUI()
         {
             if (driver == null || driver.CurrentMode != "Desktop") return;
-            GUILayout.BeginArea(DesktopHudRect, GUI.skin.box);
+            GUILayout.BeginArea(DesktopHudBounds, GUI.skin.box);
             hudScrollPosition = GUILayout.BeginScrollView(hudScrollPosition);
             GUILayout.Label("PharmaLabVR · Research Lab");
             var screen = router?.Current?.ScreenId ?? ScreenId.Lab;
@@ -76,6 +78,8 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Continue", GUILayout.Height(44f))) panels?.Request(PanelAction.Continue);
                 GUI.enabled = true;
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
+                if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -86,6 +90,8 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Session paused. Material and simulation time are frozen.");
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
+                if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
@@ -105,10 +111,18 @@ namespace PharmaLabVR.Session
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
                 }
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
-                {
-                    RecordedReview = null;
-                    router?.Show(ScreenId.Lab);
-                }
+                    panels?.Request(PanelAction.Lab);
+                if (GUILayout.Button("Settings", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Settings);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Settings)
+            {
+                SetupPreferenceControls.Draw(router);
+                if (GUILayout.Button("Back", GUILayout.Height(44f))) panels?.Request(PanelAction.Back);
+                if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;
@@ -142,6 +156,8 @@ namespace PharmaLabVR.Session
                 GUILayout.Label(measurement == null ? "pH: pending" :
                     $"pH: {measurement.DisplayValue} ({measurement.Availability})");
                 if (measurement != null) GUILayout.Label(measurement.Explanation);
+                if (screen == ScreenId.Inspect && GUILayout.Button("Measure selected vessel", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Measure, router.Current.SelectedEntityId);
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
             }
             if (GUILayout.Button("Pause", GUILayout.Height(44f))) panels?.Request(PanelAction.Pause);
