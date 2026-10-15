@@ -408,10 +408,10 @@
             "P03.01"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "d8fabed1785227a700308a839c9f256e3fe79f58",
+          "evidence": ["docs/evidence/p03-02-tip-mixing-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": ["Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
