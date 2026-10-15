@@ -10,7 +10,7 @@ BuretteProfile BuretteProfile::researchDefault() {
 }
 
 PipetteProfile PipetteProfile::researchDefault() {
-    return {"pipette-25ml-research-v1", 25e-6, 5e-8};
+    return {"pipette-25ml-research-v1", 25e-6, 1e-7};
 }
 
 MaterialState ToolParcelState::rinse(const MaterialState& rinseParcel, double residualVolumeM3) {

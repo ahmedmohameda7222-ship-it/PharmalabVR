@@ -914,9 +914,14 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     auto combined = sourceBefore.fraction(rinseVolumeM3);
                     combined.add(found->second.tipInventory);
                     combined.add(found->second.residualInventory);
-                    const auto retained = combined.fraction(std::min(
-                        plv::BuretteProfile::researchDefault().dropReferenceVolumeM3,
-                        combined.referenceVolumeM3));
+                    // Distinct pipette hold-up is represented and mixed into
+                    // waste on rinse; burette keeps its original tip reference.
+                    const double retainedCapacity =
+                        found->second.geometryProfileHash == plv::PipetteProfile::researchDefault().id ?
+                            plv::PipetteProfile::researchDefault().retainedTipVolumeM3 :
+                            plv::BuretteProfile::researchDefault().dropReferenceVolumeM3;
+                    const auto retained = combined.fraction(
+                        std::min(retainedCapacity, combined.referenceVolumeM3));
                     auto& waste = afterRinse.sinks.at(sinkId);
                     waste.add(found->second.tipInventory);
                     waste.add(found->second.residualInventory);

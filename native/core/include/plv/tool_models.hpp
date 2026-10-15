@@ -25,7 +25,7 @@ struct BuretteProfile {
 struct PipetteProfile {
     std::string id;
     double capacityM3 = 25e-6;
-    double retainedTipVolumeM3 = 5e-8;
+    double retainedTipVolumeM3 = 1e-7;
     static PipetteProfile researchDefault();
 };
 
