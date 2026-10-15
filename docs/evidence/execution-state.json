@@ -418,7 +418,7 @@
             "P03.01"
           ],
           "status": "Open",
-          "codeCommit": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
+          "codeCommit": "0628c421ef2da5b56264719ee58f2436dc26cabc",
           "evidence": [
             "docs/evidence/p03-02-measured-stock-bottle-progress.md",
             "docs/evidence/p03-02-metered-pipette-progress.md",
@@ -432,7 +432,8 @@
             "P03.02 first distinct pipette source: C++ product ABI registered 25mL research profile with explicit AspiratePipette/DispensePipette, science-budget staged material moves and retained-rinse volume; real Native RED/GREEN Windows+Ubuntu; separate bottle/Unity journey NOT_RUN",
             "Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open",
             "Rinse source C ABI red 8802396 on Ubuntu 95/96 and green c7dc189 on all four native CI jobs, 1/1 CTest and 9/9 tooling per matrix; no current Unity/Player verification for new code",
-            "2026-10-15 Research P03.02 source batch: product Native bottle mixed 2e-8 m3 synthetic film, source-debited measured pours, real contaminated rinses/waste and import-bounded residual (C ABI regression; Native Windows/Ubuntu RED/GREEN at 6e8cee2). Unity source adds ResearchInstrumentPayloads, PipetteActuator, BottlePourActuator, actual Native revisions/receipts via LabCommandService, optional setup-only prepared rinse water, Desktop actions and dedicated XR spatial panel navigation; NUnit PlayMode source authored, real Unity/Player/XR NOT_RUN. Latest functional source 43690cfa57ead8d650f081bf3959650f4e1ec37d. P03.02 remains Open/NotReviewed, P03.01/P07.03 and P06.02 dependencies Open; 66 deferred Unity rows remain NOT_RUN."
+            "2026-10-15 Research P03.02 source batch: product Native bottle mixed 2e-8 m3 synthetic film, source-debited measured pours, real contaminated rinses/waste and import-bounded residual (C ABI regression; Native Windows/Ubuntu RED/GREEN at 6e8cee2). Unity source adds ResearchInstrumentPayloads, PipetteActuator, BottlePourActuator, actual Native revisions/receipts via LabCommandService, optional setup-only prepared rinse water, Desktop actions and dedicated XR spatial panel navigation; NUnit PlayMode source authored, real Unity/Player/XR NOT_RUN. Latest functional source 43690cfa57ead8d650f081bf3959650f4e1ec37d. P03.02 remains Open/NotReviewed, P03.01/P07.03 and P06.02 dependencies Open; 66 deferred Unity rows remain NOT_RUN.",
+            "P03.02 tip residual/GUI control correction: 5e-8 m3 aspiration leaves less than Native pipette retainedTipVolumeM3 1e-7 m3, so immediate 5e-8 dispense must be denied without misleading availability. Headless test-first RED 8436348, GREEN 0628c421 with real Native tip readback eligibility and shared panel/Desktop/XR disabled action and research hold-up notice; push CI 38799030228 SUCCESS Windows/Ubuntu Native+headless; Unity NOT_RUN."
           ],
           "externalEvidence": [],
           "acceptanceScope": null,
@@ -453,13 +454,14 @@
             "P03.02"
           ],
           "status": "Open",
-          "codeCommit": "f56a75806f2199aa2380419c76c15b4fb1dca77c",
+          "codeCommit": "7669830d75241ad8dcb080d845bc64f6df42bfad",
           "evidence": [
             "docs/evidence/p03-lab-progress.md"
           ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33"
+            "Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33",
+            "P03.03 source slice: CaptureAdmission static aperture geometry (reject outside radius/height, invalid tilt/direction, fast receiver >0.02m/s), ReceiverMotionTracker frame-cached world transform velocity for kinematic/XR receiver with invalid timestamp fail-closed; actual LabCaptureTarget uses tracker and Rigidbody speed. Native chemistry unchanged. Test-first RED 880ce0b (missing policy) and dc0d889 (missing motion type) confirmed in GitHub headless; GREEN headless success for geometry 09ff2e7 and motion 7669830. BuildLabAssets now generates profile-specific OutletExit anchored to pipette mesh tip/bottle neck, plus authored NUnit EditMode P03_03_ResearchOutletMarkersMatchActualPipetteTipAndBottleNeck. Full geometry, moving-body XR scene and Unity physics NOT_RUN; acceptance Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": null,
@@ -832,7 +834,7 @@
             "P07.01"
           ],
           "status": "Open",
-          "codeCommit": "89174e8a311b283746eb6056505f3aeb75a8d480",
+          "codeCommit": "a93e40b57eb6181e3177da7e5d48148387f61f7f",
           "evidence": [
             "docs/evidence/p07-dock-and-tracking-progress.md",
             "docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"
@@ -840,7 +842,8 @@
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "P07.02 native-safe visual XR tool dock and single-shot shared ReleaseTool action; direct XR simulation and mounting geometry remain NOT_RUN",
-            "P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending"
+            "P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending",
+            "P07.02 authored real XRGrabInteractable and parked kinematic Rigidbody on separate research pipette and bottle prefab generation (a93e40b), with enabled child collider, distinct tool type and no simulated burette valve; authored NUnit P07_02_ResearchToolPrefabsAllowPhysicalGripWithoutBecomingBuretteValves. Native/XR grab ownership and real headset interactions remain NOT_RUN/Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": null,
@@ -2227,9 +2230,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
-  "functionalCodeSha": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
-  "currentTask": "P03.02 source: Native bottle film and rinse GREEN; Unity metered pipette/bottle actuators, Desktop/VR command routes authored, pending Unity verification and remaining full instrument/refill interactions",
+  "actualHead": "7669830d75241ad8dcb080d845bc64f6df42bfad",
+  "functionalCodeSha": "7669830d75241ad8dcb080d845bc64f6df42bfad",
+  "currentTask": "P03.03 source: real mesh outlet markers + stationary/moving receiver admission including XR-kinematic observed motion; P03.02 UI respects 0.10 ml Native pipette retained tip. Unity/Player/XR pending",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2268,6 +2271,7 @@
     "Ruling 2026-10-15 P03.02 source-first slice while P03.01 dependency and P07.03 remain Open: create a distinct pipette research profile and actual Native metered commands, not pretend the burette valve represents a pipette. TDD RED test a53ff552493c93225e423bc961307a6d631c5aab, corrected Bulk-budget test e3d3100cb07704267fe1435014f8c4ed663395aa, push CI 38719239548 Ubuntu 97/98 cases passed with six expected new-case failures: pipette profile not admitted, SetActuator lacked distinct rejection, no aspirate/dispense, rinse path denied. Implementation in 3cb88d90921fdfbf8751c887e568ea25958a1424 and 8dd167a329a3a3a667c18bc29eb35871a02a5f39 adds PipetteProfile, PlaceTool admission, explicit AspiratePipette and DispensePipette with source/destination revision checks, 25mL hard capacity, science budget staging, inventory and material ledger conservation and blocks burette hydraulic actuation for pipette; push 38719760416 and PR 38719769670 all Windows/Ubuntu native SUCCESS. TDD residual RED 75572fb6c478af6fa1b4867a46b31237a5d1e6e6, Ubuntu push 38720128482 98/99 cases passed, expected shared 5e-8 residual failure; GREEN 259b0b96cbf4216df588532fe48d3b632efe7048 separate research pipette 1e-7 m3 tip residue vs burette 5e-8, RinseTool retains profile-specific material and sends represented contamination to waste. Latest green Ubuntu CTest 1/1 success in CI 38720458723, Windows in progress at ledger writing. Calibration pending: research numbers not device calibration; science package/bottle profile and Unity PipetteActuator/actual user fill-refill/rinse UI are NOT IMPLEMENTED/NOT_RUN. P03.02 Open/NotReviewed, no 15/51 promotion, G-R1 Open, PR #1 unmerged.",
     "Ruling 2026-10-15 P03.02 continue: Add explicit SwitchPipetteSource command only to a registered 25mL research pipette after a metered aspiration/dispense, preserving the tip residue and requiring registered prepared alternate stock, fresh bottle material revision and pipette inventory revision; refuses missing stock and leaves material ledger unchanged. Source TDD RED 659dd0eb3e4aa0e6ae84c4e4877e0498a979eda7, Ubuntu push CI 38721263996 99/100 cases passed, 7 failures isolated to missing source switch and descendant mixed receiver. Functional source 482e2e2c97cd280e832d887d4bf4aa9fe023366a, Ubuntu Native CTest passed CI 38721647508 and PR 38721653481; Windows jobs still building at ledger write. New product ABI demonstrates hydrochloric acid tip residual is carried into next separately prepared sodium hydroxide aliquot, receiver includes real represented Na and Cl, material ledger remains conserved. All chemistry remains Native; research values not physically calibrated. Unity User UI PipetteActuator, independently modeled bottle and calibration remain NOT_IMPLEMENTED/NOT_RUN. P03.01 and P03.02 both Open, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged, 66 deferred Unity task rows NOT_RUN.",
     "Ruling: 2026-10-15 P03.02 research bottle continuation: HEAD at turn start 52529238ea7d3d30f7461598ba3732d6a31fece8 had parallel completed pipette and prepared-stock switch implementations, so stale original base 5ecbe7e8 was abandoned rather than overwritten. New test-first Native product ABI 26019233c93758414c60fa5fad16e8e5db0b99c8 demonstrated 100/101 test cases passing, exact new bottle case rejected valid bottle PlaceTool before implementation (PR CI 38786863512). Functional source ca1aea83b24429ce0b55615754c7b8bec58e1b63 adds BottleProfile 100mL research-only, package profile pending calibration, accepts PlaceTool stock source up to capacity, denies unsafe SetActuator and raw positive tracked actuation, measured PourBottle uses existing staged TransferFixed, budget and source/receiver/tool revisions, rejects generic bottle RinseTool as not implemented; import enforces bottle profile, capacity, empty residual and no raw actuator. Exact functional code CI PR 38787431765 and push 38787422220 Ubuntu native CTest 1/1 SUCCESS, panel-routing success; Windows native still building at checkpoint. This does not provide bottle film residual, bottle tilt dynamics, real user fill/rinse/refill/transfer or Unity/Player/XR. P03.02 Open/NotReviewed, dependency P03.01 Open, P07.03 Open; 15 VerifiedLocal/51 Open, G-R1 Open, 66 deferred Unity checks NOT_RUN, formal selector P06.02 unchanged, PR #1 not merged.",
-    "2026-10-15 P03.02 source first per planner Full Development First: Native 20 uL bottle film RED fixture revisions b548556/33b94e and BLUE source f7b1ce; fixture branch correction d775e; floating point material pool conservation corrections 285ce8/6e8cee (green Windows/Ubuntu Native six workflow jobs at 6e8cee). Pure C# ResearchInstrumentPayloads at bc14aa9 headless Windows/Ubuntu/native SUCCESS. Native-backed Unity pipette/bottle actuator components, optional setup-only water and waste, real Desktop controls, PlayMode source and shared VR world-space panel actions added through 43690cfa57ead8d650f081bf3959650f4e1ec37d. Last exact HEAD CI may still be queued. Formal nextTask P06.02 remains; 15 VerifiedLocal/51 Open, G-R1 Open, 66 Unity verification NOT_RUN, PR #1 open. No new task/source slice self-accepted."
+    "2026-10-15 P03.02 source first per planner Full Development First: Native 20 uL bottle film RED fixture revisions b548556/33b94e and BLUE source f7b1ce; fixture branch correction d775e; floating point material pool conservation corrections 285ce8/6e8cee (green Windows/Ubuntu Native six workflow jobs at 6e8cee). Pure C# ResearchInstrumentPayloads at bc14aa9 headless Windows/Ubuntu/native SUCCESS. Native-backed Unity pipette/bottle actuator components, optional setup-only water and waste, real Desktop controls, PlayMode source and shared VR world-space panel actions added through 43690cfa57ead8d650f081bf3959650f4e1ec37d. Last exact HEAD CI may still be queued. Formal nextTask P06.02 remains; 15 VerifiedLocal/51 Open, G-R1 Open, 66 Unity verification NOT_RUN, PR #1 open. No new task/source slice self-accepted.",
+    "2026-10-15 source development continued from actual HEAD 25d9e943 (PR #1 OPEN, Windows/Ubuntu Native CI all jobs SUCCESS). P03.03 test-first RED 880ce0be/dc0d889, functional policies 09ff2e7 and 7669830; 6 headless geometry checks + 6 motion checks, actual LabCaptureTarget rejects moving rigidbody and kinematic transform receiver > research 0.02 m/s, fail-closed NaN/time; generated pipette/bottle OutletExit mesh anchors and separate XRGrabInteractable bodies a93e40 with NUnit tests authored not executed. P03.02 numeric tip residual admission RED 8436348, GREEN 0628c421, push CI 38799030228 SUCCESS (Windows, Ubuntu and headless); cannot dispense 0.05 mL after just 0.05 mL aspirate because Native retains 0.10 mL. P03.03 latest 7669830 headless push/PR success, Native jobs still running when inspected (push 38799497076, PR 38799506521). Official 15 VerifiedLocal/51 Open and all 66 Unity NOT_RUN; G-R1 Open; formal nextTask P06.02 unchanged. Source feature detail docs/evidence/p03-03-moving-receiver-and-tool-outlet-source.md."
   ]
 }
