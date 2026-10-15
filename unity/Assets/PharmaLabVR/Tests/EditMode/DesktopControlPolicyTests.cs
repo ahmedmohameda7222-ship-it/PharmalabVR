@@ -8,6 +8,16 @@ namespace PharmaLabVR.Tests.EditMode
     public sealed class DesktopControlPolicyTests
     {
         [Test]
+        public void P10_01_PlacingToolMustHitVisibleBenchWithoutTeleportingThroughReceiver()
+        {
+            Assert.That(DesktopPlacementAdmission.CanPlace(0.06, 1d, true, false), Is.True);
+            Assert.That(DesktopPlacementAdmission.CanPlace(0.32, 1d, true, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlace(0.06, 1d, false, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlace(0.06, 0.2d, true, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlace(0.06, 1d, true, true), Is.False);
+        }
+
+        [Test]
         public void P10_01_WheelCannotMoveHeldInstrumentAndCameraTogether()
         {
             Assert.That(DesktopWheelRouting.Resolve(true, false, 120d),

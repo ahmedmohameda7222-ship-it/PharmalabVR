@@ -121,8 +121,9 @@ namespace PharmaLabVR.Input
             actuator = 0f;
             if (heldTool != null)
             {
-                if (heldTool.TryGetComponent<Rigidbody>(out var heldBody)) heldBody.isKinematic = false;
-                heldTool = null;
+                // An F release is a real bench placement, not "drop in air".
+                // Refusal leaves hold ownership, pose and Rigidbody unchanged.
+                TryPlaceHeldTool();
                 return;
             }
             if (viewCamera == null || holdAnchor == null || !Physics.Raycast(viewCamera.transform.position, viewCamera.transform.forward, out var hit, 3f)) return;
@@ -130,6 +131,42 @@ namespace PharmaLabVR.Input
             if (grabbable == null) return;
             BeginHold(grabbable.transform);
             heldToolId = grabbable.ToolId;
+        }
+
+        private bool TryPlaceHeldTool()
+        {
+            if (heldTool == null || labFrame == null) return false;
+            var up = labFrame.up;
+            var cast = new Ray(heldTool.position + up * 0.02f, -up);
+            var hits = Physics.RaycastAll(cast, 0.45f, Physics.DefaultRaycastLayers,
+                QueryTriggerInteraction.Ignore);
+            // Unity RaycastAll enumeration order is not stable; choose the
+            // closest non-self collider, not the first returned result.
+            var closestDistance = float.PositiveInfinity;
+            RaycastHit nearest = default;
+            foreach (var hit in hits)
+            {
+                if (hit.collider == null ||
+                    hit.collider.transform.IsChildOf(heldTool) ||
+                    hit.distance >= closestDistance) continue;
+                nearest = hit;
+                closestDistance = hit.distance;
+            }
+            var hitsBench = nearest.collider != null &&
+                nearest.collider.name == "BenchSurface" &&
+                nearest.collider.transform.IsChildOf(labFrame);
+            var height = hitsBench ? Vector3.Dot(heldTool.position - nearest.point, up) :
+                double.PositiveInfinity;
+            var uprightDot = Vector3.Dot(heldTool.up, up);
+            if (!DesktopPlacementAdmission.CanPlace(height, uprightDot, hitsBench, false))
+                return false;
+            // Root is a tool-foot landmark; snap only a nearby, properly
+            // aligned root to the actual collider surface, not arbitrary y.
+            heldTool.position = nearest.point + up * 0.005f;
+            if (heldTool.TryGetComponent<Rigidbody>(out var heldBody))
+                heldBody.isKinematic = false;
+            heldTool = null;
+            return true;
         }
 
         private void BeginHold(Transform tool)
