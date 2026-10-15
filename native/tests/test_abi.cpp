@@ -1023,7 +1023,7 @@ TEST_CASE("P03_01 imported in-flight parcel requires its committed identity") {
     REQUIRE(exported["tools"].size() == 1U);
     const auto originalId = exported["tools"][0]["inFlightParcelId"].get<std::string>();
     REQUIRE_FALSE(originalId.empty());
-    REQUIRE(exported["tools"][0]["inFlightInventory"]["referenceVolumeM3"].get<double>() > 0.0);
+    REQUIRE(exported["tools"][0]["inFlightInventory"]["researchAdditiveVolumeM3"].get<double>() > 0.0);
     CHECK(originalId == issued["inFlightParcelId"]);
 
     const auto importStatus = [](const json& candidate) {
