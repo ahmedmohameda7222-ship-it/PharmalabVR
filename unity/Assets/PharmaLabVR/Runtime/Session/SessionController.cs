@@ -266,6 +266,19 @@ namespace PharmaLabVR.Session
                         SelectStock(stockId, stockId == "water" ? 0.0 : concentrations[selectedConcentrationIndex]);
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
+            if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
+            {
+                GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");
+                var concentrations = driver.ResearchConcentrations;
+                foreach (var id in driver.AvailableStockIds)
+                {
+                    var stock = id;
+                    if (GUILayout.Button("Prepare reserve " + stock, GUILayout.Height(27f)))
+                        TryPrepareResearchReserveStock(stock,
+                            stock == "water" ? 0.0 : concentrations[Mathf.Clamp(
+                                selectedConcentrationIndex, 0, concentrations.Count - 1)]);
+                }
+            }
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.RinseWaterPrepared)
             {
                 GUILayout.Label("Optional: prepare measured clean water before entering the live lab.");
@@ -281,6 +294,13 @@ namespace PharmaLabVR.Session
                     TryPipetteDispense();
                 if (GUILayout.Button("Bottle: pour 0.01 ml", GUILayout.Height(32f)))
                     TryBottleMeasuredPour();
+                if (driver.ReserveStockPrepared)
+                {
+                    if (GUILayout.Button("Pipette: switch to prepared reserve", GUILayout.Height(32f)))
+                        TryPipetteSwitchReserve();
+                    if (GUILayout.Button("Bottle: refill from prepared reserve 0.01 ml", GUILayout.Height(32f)))
+                        TryBottleRefillFromReserve();
+                }
                 if (driver.RinseWaterPrepared)
                 {
                     if (GUILayout.Button("Pipette: water rinse 0.01 ml", GUILayout.Height(32f)))
@@ -379,6 +399,28 @@ namespace PharmaLabVR.Session
         public bool TryBottleMeasuredPour() => TryResearchCommand(() => ResearchBottle.Pour(1e-8));
         public bool TryPipetteWaterRinse() => TryResearchCommand(() => ResearchPipette.Rinse(1e-8));
         public bool TryBottleWaterRinse() => TryResearchCommand(() => ResearchBottle.Rinse(1e-8));
+        public bool TryPipetteSwitchReserve() => TryResearchCommand(() =>
+            ResearchPipette.SwitchPreparedSource("reserve-stock"));
+        public bool TryBottleRefillFromReserve() => TryResearchCommand(() =>
+            ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
+
+        public bool TryPrepareResearchReserveStock(string stockId, double concentrationMolPerL)
+        {
+            try
+            {
+                if (driver == null || !driver.TryPrepareReserveStock(stockId, concentrationMolPerL))
+                    throw new InvalidOperationException(
+                        "Reserve stock must be deliberately prepared before leaving Native setup.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                return false;
+            }
+        }
+
 
         public bool TryPrepareResearchRinseWater()
         {
