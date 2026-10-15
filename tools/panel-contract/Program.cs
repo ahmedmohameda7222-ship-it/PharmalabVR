@@ -1,6 +1,7 @@
 // Headless behavioral coverage for actual production routing classes.
 // This is intentionally NOT Unity scene/input, native chemistry, or headset evidence.
 using System;
+using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.Input;
 using PharmaLabVR.Session;
@@ -111,6 +112,17 @@ internal static class Program
             Check(session.SaveCalls == 0, "Review implicitly saved");
             Check(session.RecordedReview == null, "Review close failed");
             Check(driver.CurrentLabView.EventSequence == "7", "Navigation altered native revision metadata");
+            driver.CurrentMode = "VR";
+            router.Configure(driver);
+            Check(router.Current.SupportedActions.Contains("ReleaseTool"),
+                "VR Lab omitted the dock-release action");
+            Check(panels.Request(PanelAction.ReleaseTool),
+                "An explicitly docked VR body cannot be released through the shared panel");
+            Check(session.ReleaseCalls == 1, "Dock release must dispatch exactly once");
+            Check(!panels.Request(PanelAction.ReleaseTool),
+                "Releasing an already released tool falsely succeeded");
+            driver.CurrentMode = "Desktop";
+            router.Configure(driver);
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");

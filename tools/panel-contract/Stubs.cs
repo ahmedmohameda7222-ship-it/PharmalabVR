@@ -107,6 +107,15 @@ namespace PharmaLabVR.Session
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
         public int ReviewOpens { get; private set; }
+        public bool CanReleaseTool { get; private set; } = true;
+        public int ReleaseCalls { get; private set; }
+        public bool ReleaseToolFromDock()
+        {
+            if (!CanReleaseTool) return false;
+            ReleaseCalls++;
+            CanReleaseTool = false;
+            return true;
+        }
         public bool Save() { SaveCalls++; return true; }
         public bool OpenReview()
         {
