@@ -15,8 +15,9 @@ namespace UnityEngine
     public sealed class TextAsset
     {
         public string text { get; }
-        public TextAsset(string content) { text = content; }
+        public TextAsset(string value) { text = value; }
     }
+
     public static class GUILayout
     {
         public static void Label(string value) { }

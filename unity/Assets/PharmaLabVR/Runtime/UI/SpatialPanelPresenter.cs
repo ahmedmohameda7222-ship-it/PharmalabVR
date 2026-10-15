@@ -259,7 +259,7 @@ namespace PharmaLabVR.UI
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() =>
             {
-                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 3);
+                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 2);
                 if (router?.Current != null) Present(router.Current);
             });
         }
@@ -294,13 +294,6 @@ namespace PharmaLabVR.UI
                     else if (choice == 3) next = current.With(audioVolume:
                         current.AudioVolume >= 0.99f ? 0f : 1f);
                     break;
-                case 3:
-                    if (choice == 0)
-                    {
-                        LanguageSelection.Toggle();
-                        Present(router.Current);
-                    }
-                    break;
             }
             if (!ReferenceEquals(current, next)) router.UpdateSetupPreferences(next);
         }
@@ -312,8 +305,6 @@ namespace PharmaLabVR.UI
             {
                 0 => new[] { "Posture: " + setup.Posture, "Hand: " + setup.DominantHand, "", "" },
                 1 => new[] { "Bench lower", "Bench higher", "Text larger", "Text smaller" },
-                3 => new[] { "Language: " +
-                    (LanguageSelection.IsRightToLeft ? "Arabic" : "English"), "", "", "" },
                 _ => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
                     "Reduced motion: " + (setup.ReducedMotion ? "On" : "Off"),
                     "Contrast: " + (setup.HighContrast ? "High" : "Normal"),
@@ -323,13 +314,13 @@ namespace PharmaLabVR.UI
                 "Settings choice C", "Settings choice D" };
             for (var i = 0; i < names.Length; i++)
             {
-                SetButton(names[i], i < (settingsPage == 0 ? 2 : settingsPage == 3 ? 1 : 4));
+                SetButton(names[i], i < (settingsPage == 0 ? 2 : 4));
                 var label = buttons[names[i]].GetComponentInChildren<Text>(true);
                 if (label != null) label.text = labels[i];
             }
-            SetButton("Next settings", settingsPage < 3);
+            SetButton("Next settings", settingsPage < 2);
             SetButton("Previous settings", settingsPage > 0);
-            detail.text = "Settings " + (settingsPage + 1) + "/4 · " +
+            detail.text = "Settings " + (settingsPage + 1) + "/3 · " +
                 setup.BenchHeightMeters.ToString("0.00") + "m · text " +
                 setup.TextScale.ToString("0.00") + "×";
         }

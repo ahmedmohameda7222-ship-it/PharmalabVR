@@ -19,85 +19,27 @@ internal static class Program
 
     private static void Main()
     {
-        // P10.03: locale switch must be a shared non-chemical presentation
-        // selection; repeated and invalid selections cannot replay events.
-        var originalLanguage = LanguageSelection.Current;
-        var originalSetup = SetupPreferencesSelection.Current;
-        var localeChangeCount = 0;
-        Action<string> onLanguageChange = _ => localeChangeCount++;
-        LanguageSelection.Changed += onLanguageChange;
-        try
-        {
-            LanguageSelection.Select("ar");
-            Check(LanguageSelection.Current == "ar" && LanguageSelection.IsRightToLeft,
-                "Arabic language choice was not propagated to shared runtime");
-            LanguageSelection.Select("ar");
-            Check(localeChangeCount <= 1, "Repeated selection replayed localization events");
-            var previousEvents = localeChangeCount;
-            var rejectedLanguage = false;
-            try { LanguageSelection.Select("fr"); }
-            catch (ArgumentException) { rejectedLanguage = true; }
-            Check(rejectedLanguage && localeChangeCount == previousEvents &&
-                  LanguageSelection.Current == "ar",
-                "Unsupported language changed shared UI or re-fired event");
-            LanguageSelection.Select("en");
-            Check(LanguageSelection.Current == "en" && !LanguageSelection.IsRightToLeft,
-                "Returning to English failed or retained an RTL flag");
-            Check(ReferenceEquals(originalSetup, SetupPreferencesSelection.Current),
-                "Switching presentation locale rewrote Native/ergonomic selection");
-        }
-        finally
-        {
-            LanguageSelection.Changed -= onLanguageChange;
-            LanguageSelection.Select(originalLanguage);
-        }
-        // The actual pinned JSON assets, not an invented test-only copy.
-        var en = new LocalizationService();
-        en.Load("en", new UnityEngine.TextAsset(System.IO.File.ReadAllText(
-            "unity/Assets/PharmaLabVR/Content/Localization/en.json")));
-        var ar = new LocalizationService();
-        ar.Load("ar", new UnityEngine.TextAsset(System.IO.File.ReadAllText(
-            "unity/Assets/PharmaLabVR/Content/Localization/ar.json")));
-        foreach (var key in new[] { "offline", "enterVr", "enterDesktop",
-                 "continue", "trackingHold", "computeHold", "unsupported",
-                 "setup", "save", "review", "pause", "settings", "back",
-                 "stock", "pipette", "bottle", "rinse", "measure", "locale",
-                 "water", "nativeHeld", "nativePaused", "source" })
-        {
-            Check(!en.Get(key).StartsWith("[", StringComparison.Ordinal) &&
-                  !ar.Get(key).StartsWith("[", StringComparison.Ordinal),
-                "Production bilingual catalog is missing paired UI key: " + key);
-        }
-
-        // P10.03: real production catalog parser must accept formatted JSON
-        // and keep its last valid locale if a table is corrupted.
-        var localization = new LocalizationService();
-        localization.Load("ar", new UnityEngine.TextAsset(
-            "{\n  \"offline\" : \"غير متصل\" ,\n  \"mixed\" : \"NaOH 0.1 mol/L\" \n}"));
-        Check(localization.IsRightToLeft && localization.Get("offline") == "غير متصل",
-            "Formatted Arabic JSON catalog not loaded correctly");
-        Check(localization.Get("mixed") == "NaOH 0.1 mol/L",
-            "Mixed chemistry symbols and Latin units were reversed/changed");
-        var invalidLocaleRejected = false;
-        try { localization.Load("fr", new UnityEngine.TextAsset("{\"offline\":\"hors ligne\"}")); }
-        catch (ArgumentException) { invalidLocaleRejected = true; }
-        Check(invalidLocaleRejected && localization.Locale == "ar" &&
-              localization.Get("offline") == "غير متصل",
-            "Unsupported locale overwrote an accepted Arabic catalog");
-        var duplicateTranslationRejected = false;
-        try { localization.Load("en", new UnityEngine.TextAsset(
-            "{\"offline\":\"one\",\"offline\":\"two\"}")); }
-        catch (FormatException) { duplicateTranslationRejected = true; }
-        Check(duplicateTranslationRejected && localization.Locale == "ar",
-            "Duplicate keys silently overwrote verified translation values");
-        var corruptedTableRejected = false;
-        try { localization.Load("en", new UnityEngine.TextAsset("{ \"offline\": \"broken\", }")); }
-        catch (FormatException) { corruptedTableRejected = true; }
-        Check(corruptedTableRejected && localization.Get("offline") == "غير متصل",
-            "Malformed JSON destroyed the still-valid Arabic translation state");
-        localization.Load("en", new UnityEngine.TextAsset("{ \"offline\" : \"Offline\" }"));
-        Check(!localization.IsRightToLeft && localization.Get("offline") == "Offline",
-            "Switching back to English did not update live text direction/catalog");
+        // P10.03 product directive: English-only, without any runtime locale toggle.
+        var englishUi = new LocalizationService();
+        englishUi.Load("en", new UnityEngine.TextAsset(
+            System.IO.File.ReadAllText("unity/Assets/PharmaLabVR/Content/Localization/en.json")));
+        Check(englishUi.Locale == "en" && englishUi.Get("offline") == "Offline",
+            "Installed English product text was not loaded.");
+        var deniedOtherLocale = false;
+        try { englishUi.Load("ar", new UnityEngine.TextAsset("{\"offline\":\"unavailable\"}")); }
+        catch (ArgumentException) { deniedOtherLocale = true; }
+        Check(deniedOtherLocale && englishUi.Locale == "en" && englishUi.Get("offline") == "Offline",
+            "A second runtime language displaced the English UI.");
+        var badCatalogDenied = false;
+        try { englishUi.Load("en", new UnityEngine.TextAsset("{\"offline\":\"one\",\"offline\":\"two\"}")); }
+        catch (FormatException) { badCatalogDenied = true; }
+        Check(badCatalogDenied && englishUi.Get("offline") == "Offline",
+            "A corrupted English table overwrote live product labels.");
+        var trailingCommaDenied = false;
+        try { englishUi.Load("en", new UnityEngine.TextAsset("{\"offline\":\"Offline\",}")); }
+        catch (FormatException) { trailingCommaDenied = true; }
+        Check(trailingCommaDenied && englishUi.Get("offline") == "Offline",
+            "A malformed product copy table was accepted.");
 
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.

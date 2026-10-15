@@ -39,7 +39,6 @@ namespace PharmaLabVR.UI
             // Boot is the persistence boundary for local ergonomics only.
             // Do not store or restore Native chemistry through PlayerPrefs.
             SetupPreferencesPersistence.Initialize();
-            LanguagePreferencePersistence.Initialize();
             if (!TryGetComponent<AudioPreferencesOutput>(out _))
                 gameObject.AddComponent<AudioPreferencesOutput>();
             router = GetComponent<ScreenRouter>();
@@ -142,8 +141,7 @@ namespace PharmaLabVR.UI
                 var screen = router?.Current?.ScreenId ?? ScreenId.Home;
                 if (screen == ScreenId.Home)
                 {
-                    GUILayout.Label(LocalizationCatalogHost.Get("selectMode",
-                        "Choose Desktop or Virtual Reality"));
+                    GUILayout.Label("Choose an interaction mode. Both use the same native laboratory authority.");
                     if (GUILayout.Button("Desktop — mouse and keyboard", GUILayout.Height(56f)))
                         panels?.Request(PanelAction.EnterDesktop);
                     if (GUILayout.Button("Virtual reality — OpenXR", GUILayout.Height(56f)))
@@ -151,24 +149,18 @@ namespace PharmaLabVR.UI
                 }
                 else if (screen == ScreenId.Setup)
                 {
-                    GUILayout.Label(LocalizationCatalogHost.Get("setup", "Setup") +
-                        " · " + router.Current.Mode);
+                    GUILayout.Label("Setup · " + router.Current.Mode);
                     var availability = LaunchAvailability();
                     var selected = RequestedMode;
                     if (!availability.CanEnter(selected))
                         GUILayout.Label("Cannot enter yet: " + availability.UnavailableReason(selected));
                     SetupPreferenceControls.Draw(router);
                     GUILayout.Label("Physical reach and headset alignment still require device calibration.");
-                    if (GUILayout.Button(LocalizationCatalogHost.Get("enterLab", "Enter lab"),
-                        GUILayout.Height(56f)))
+                    if (GUILayout.Button("Enter lab", GUILayout.Height(56f)))
                         panels?.Request(PanelAction.ConfirmSetup);
-                    if (GUILayout.Button(LocalizationCatalogHost.Get("back", "Back"),
-                        GUILayout.Height(44f)))
+                    if (GUILayout.Button("Back", GUILayout.Height(44f)))
                         panels?.Request(PanelAction.Home);
                 }
-                if (GUILayout.Button("Language / اللغة: " +
-                    (LanguageSelection.IsRightToLeft ? "Arabic" : "English"), GUILayout.Height(36f)))
-                    LanguageSelection.Toggle();
                 if (!string.IsNullOrEmpty(LastLaunchError))
                     GUILayout.Label("Entry blocked: " + LastLaunchError);
                 GUILayout.Label("Research observations state support, freshness and maturity; not certified evidence.");

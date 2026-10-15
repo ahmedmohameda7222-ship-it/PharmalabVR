@@ -54,9 +54,6 @@ namespace PharmaLabVR.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var root = new GameObject("BootRoot");
-            root.AddComponent<LocalizationCatalogHost>().Configure(
-                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/PharmaLabVR/Content/Localization/en.json"),
-                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/PharmaLabVR/Content/Localization/ar.json"));
             var menu = root.AddComponent<BootMenu>();
             var camera = new GameObject("BootCamera");
             camera.AddComponent<Camera>();
@@ -105,7 +102,7 @@ namespace PharmaLabVR.Editor
             string[] names = { "Enter VR", "Desktop", "Seated", "Standing",
                 "Left hand", "Right hand", "Bench lower", "Bench higher",
                 "Text larger", "Text smaller", "Captions", "Reduced motion",
-                "High contrast", "Audio mute", "Language", "Next", "Previous", "Enter lab", "Back" };
+                "High contrast", "Audio mute", "Next", "Previous", "Enter lab", "Back" };
             for (var i = 0; i < names.Length; i++)
                 BootButton(world.transform, names[i], 92f - (i % 4) * 58f);
             world.AddComponent<BootSpatialPanelPresenter>().Configure(menu);
@@ -159,9 +156,6 @@ namespace PharmaLabVR.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var lab = new GameObject("LabRoot");
-            lab.AddComponent<LocalizationCatalogHost>().Configure(
-                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/PharmaLabVR/Content/Localization/en.json"),
-                AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/PharmaLabVR/Content/Localization/ar.json"));
             // The same visual/accessibility preference stream applies to
             // both Player rigs and all Lab panels, not a label-only setting.
             lab.AddComponent<AudioPreferencesOutput>();

@@ -241,9 +241,6 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Settings)
             {
                 SetupPreferenceControls.Draw(router);
-                if (GUILayout.Button("Language / اللغة: " +
-                    (LanguageSelection.IsRightToLeft ? "Arabic" : "English"), GUILayout.Height(36f)))
-                    LanguageSelection.Toggle();
                 if (GUILayout.Button("Back", GUILayout.Height(44f))) panels?.Request(PanelAction.Back);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUILayout.EndScrollView();
