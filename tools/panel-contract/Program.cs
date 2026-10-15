@@ -85,6 +85,22 @@ internal static class Program
             "Invalid Native tip snapshot cannot enable dispense");
         Check(!ResearchInstrumentPayloads.CanDispensePipette(1e-4, double.PositiveInfinity),
             "Unbounded requested delivery cannot enable dispense");
+        // P03.03: kinematic/XR-held receiver motion has no reliable
+        // Rigidbody linearVelocity; sample real world transform displacement.
+        var motion = new ReceiverMotionTracker();
+        Check(motion.Observe(20, 2.0, 0.0, 0.0, 0.0) == 0.0,
+            "Initial receiver motion observation must be stationary");
+        Check(motion.Observe(21, 2.1, 0.0, 0.0, 0.0) == 0.0,
+            "Unmoved receiver must remain a valid capture target");
+        var moving = motion.Observe(22, 2.2, 0.01, 0.0, 0.0);
+        Check(moving > CaptureAdmission.MaximumReceiverSpeedMetresPerSecond,
+            "Translated receiver must be rejected even without a Rigidbody");
+        Check(motion.Observe(22, 2.21, 0.02, 0.0, 0.0) == moving,
+            "Repeated per-frame interactor sampling must preserve the moving state");
+        Check(motion.Observe(23, 2.3, 0.01, 0.0, 0.0) == 0.0,
+            "Stationary receiver must recover on a fresh frame");
+        Check(double.IsPositiveInfinity(motion.Observe(24, double.NaN, 0.01, 0.0, 0.0)),
+            "Non-finite capture timestamps must fail closed");
         var initial = SetupPreferencesSelection.Current;
         try
         {
