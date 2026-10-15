@@ -84,6 +84,19 @@ internal static class Program
             Check(!InteractionOwnership.MayActuateValve(false, false, true),
                 "Unowned tool cannot be actuated");
 
+            // P07.03: the absence of an active grip cannot stand in for
+            // real tracked head and controller devices during Native recovery.
+            Check(!XRTrackingAdmission.HasFreshTracking(false, true, true),
+                "Missing XR head falsely admitted a neutral recovery baseline");
+            Check(!XRTrackingAdmission.HasFreshTracking(true, false, true),
+                "Lost left hand falsely admitted native recovery");
+            Check(!XRTrackingAdmission.HasFreshTracking(true, true, false),
+                "Lost right hand falsely admitted native recovery");
+            Check(!XRTrackingAdmission.HasFreshTracking(false, false, false),
+                "Untracked VR devices falsely admitted native recovery");
+            Check(XRTrackingAdmission.HasFreshTracking(true, true, true),
+                "Fully tracked headset and both controllers should be eligible");
+
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
