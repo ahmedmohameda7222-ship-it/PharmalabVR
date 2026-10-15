@@ -178,6 +178,7 @@ namespace PharmaLabVR.UI
         private ScreenId screen = ScreenId.Lab;
         private ScreenId beforeHold = ScreenId.Lab;
         private ScreenId beforeSettings = ScreenId.Lab;
+        private ScreenId beforeInterruptedSettings = ScreenId.Lab;
         private string selectedEntityId = "source";
         private string workspace = "Student";
         private string pendingMode = "Desktop";
@@ -217,11 +218,12 @@ namespace PharmaLabVR.UI
             // screen underneath Settings when it opened.
             if (destination == ScreenId.Hold && driver != null && !driver.IsTimeHeld)
             {
-                destination = beforeHold;
-                // If the Hold interrupted an earlier Settings screen, do
-                // not loop back into the same Settings or a stale Hold.
+                destination = beforeHold == ScreenId.Settings
+                    ? beforeInterruptedSettings : beforeHold;
+                // A recovered Hold must not revive obsolete Hold/Settings,
+                // and a still-paused Native session must remain in Pause.
                 if (destination == ScreenId.Settings || destination == ScreenId.Hold)
-                    destination = ScreenId.Lab;
+                    destination = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
             }
             Show(destination);
             return screen == destination;
@@ -298,7 +300,12 @@ namespace PharmaLabVR.UI
         {
             if (held)
             {
-                if (screen != ScreenId.Hold) beforeHold = screen;
+                if (screen != ScreenId.Hold)
+                {
+                    if (screen == ScreenId.Settings)
+                        beforeInterruptedSettings = beforeSettings;
+                    beforeHold = screen;
+                }
                 screen = ScreenId.Hold;
             }
             else if (screen == ScreenId.Hold) screen = beforeHold;
