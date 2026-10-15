@@ -6,6 +6,7 @@ using PharmaLabVR.Core;
 using PharmaLabVR.Input;
 using PharmaLabVR.Session;
 using PharmaLabVR.UI;
+using PharmaLabVR.Tools;
 
 internal static class Program
 {
@@ -21,6 +22,37 @@ internal static class Program
         var initial = SetupPreferencesSelection.Current;
         try
         {
+            // P03.01: the rendered pending drop is a view of the Native parcel,
+            // never a source of material. A matching committed landing receipt
+            // clears it exactly once, even if an older snapshot arrives later.
+            var parcel = new DropParcelState();
+            Check(!parcel.ApplySnapshot("", 5e-8),
+                "Anonymous positive-volume drop must not become visible");
+            Check(parcel.ActiveParcelId == "" && parcel.CommittedVolumeM3 == 0.0,
+                "Anonymous input leaked a pending material visual");
+            Check(parcel.ApplySnapshot("branch-1/8/burette-1", 5e-8),
+                "Valid committed drop did not enter pending presentation");
+            Check(parcel.ActiveParcelId == "branch-1/8/burette-1" &&
+                parcel.CommittedVolumeM3 == 5e-8,
+                "Presenter parcel identity or volume differed from Native");
+            Check(!parcel.Landed("branch-1/7/burette-1"),
+                "Unrelated landing receipt cleared another pending parcel");
+            Check(parcel.ActiveParcelId == "branch-1/8/burette-1",
+                "Unrelated landing changed the pending drop");
+            Check(parcel.Landed("branch-1/8/burette-1"),
+                "The Native landing for this parcel was not observed");
+            Check(!parcel.Landed("branch-1/8/burette-1"),
+                "Duplicate landing receipt was accepted twice");
+            Check(parcel.ActiveParcelId == "" && parcel.CommittedVolumeM3 == 0.0,
+                "Landed parcel remained visible as a hanging drop");
+            Check(!parcel.ApplySnapshot("branch-1/8/burette-1", 5e-8),
+                "Stale Native snapshot resurrected an already landed drop");
+            Check(parcel.ApplySnapshot("branch-1/9/burette-1", 5e-8),
+                "Next newly committed parcel was suppressed");
+            Check(!parcel.ApplySnapshot("branch-1/9/burette-1", double.NaN),
+                "Invalid pending volume must never be presented");
+            Check(!parcel.ApplySnapshot("branch-1/9/burette-1", 0.0),
+                "Zero-volume flight must hide the visual");
             var bootRouter = new ScreenRouter();
             bootRouter.Configure(null);
             bootRouter.Show(ScreenId.Home);
