@@ -1729,3 +1729,59 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
     CHECK(plv_destroy(imported) == PLV_OK);
     CHECK(plv_destroy(handle) == PLV_OK);
 }
+
+TEST_CASE("P03_02 rinse rejects solute-bearing stock without debiting the material ledger") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+
+    submit(handle, command("1", "CreateVessel", {{"id", "stock"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "CreateSink", {{"id", "waste"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("4", "PrepareStock",
+        {{"vesselId", "stock"}, {"stockKind", "SodiumChloride"},
+         {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}}, {{"stock", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "PrepareStock",
+        {{"vesselId", "rinse"}, {"stockKind", "Water"},
+         {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-6}}, {{"rinse", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("6", "PlaceTool",
+        {{"toolId", "burette"}, {"sourceInventoryId", "stock"}, {"overflowSinkId", "waste"},
+         {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+         {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+
+    const auto before = json::parse(read_text(handle));
+    submit(handle, command("7", "RinseTool",
+        {{"toolId", "burette"}, {"rinseSourceInventoryId", "stock"}, {"wasteSinkId", "waste"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+         {"expectedInventoryRevision", "0"}}, {{"stock", "1"}}));
+    const auto denied = poll(handle);
+    CHECK_FALSE(denied["accepted"].get<bool>());
+    CHECK(denied["code"] == "InvalidRinseSource");
+    const auto afterDenied = json::parse(read_text(handle));
+    CHECK(afterDenied["vessels"] == before["vessels"]);
+    CHECK(afterDenied["sinks"] == before["sinks"]);
+    CHECK(afterDenied["tools"] == before["tools"]);
+    CHECK(afterDenied["materialLedger"] == before["materialLedger"]);
+
+    submit(handle, command("8", "RinseTool",
+        {{"toolId", "burette"}, {"rinseSourceInventoryId", "rinse"}, {"wasteSinkId", "waste"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+         {"expectedInventoryRevision", "0"}}, {{"rinse", "1"}}));
+    CHECK(poll(handle)["accepted"].get<bool>());
+    const auto afterClean = json::parse(read_text(handle));
+    CHECK(afterClean["materialLedger"]["researchAdditiveVolumeM3"].get<double>() ==
+          doctest::Approx(before["materialLedger"]["researchAdditiveVolumeM3"].get<double>()).epsilon(1e-12));
+    CHECK(afterClean["materialLedger"]["sodiumMol"].get<double>() ==
+          doctest::Approx(before["materialLedger"]["sodiumMol"].get<double>()).epsilon(1e-12));
+    const auto retained = afterClean["tools"][0]["tipInventory"];
+    CHECK(retained["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(5e-8));
+    CHECK(retained["sodiumMol"].get<double>() == doctest::Approx(0.0));
+    CHECK(afterClean["sinks"][0]["inventory"]["sodiumMol"].get<double>() == doctest::Approx(0.0));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
