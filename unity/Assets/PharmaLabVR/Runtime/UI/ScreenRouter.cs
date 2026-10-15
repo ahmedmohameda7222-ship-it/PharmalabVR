@@ -314,10 +314,10 @@ namespace PharmaLabVR.UI
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Inspect", "Measure", "Pause", "Review", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse" } :
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill" } :
                     new[] { "Inspect", "Measure", "Pause", "Review", "Save",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse" },
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?

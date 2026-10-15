@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -62,6 +62,13 @@ namespace PharmaLabVR.UI
                 case PanelAction.PrepareResearchStock:
                     return !string.IsNullOrEmpty(entityId) &&
                         sessions.SelectStock(entityId, entityId == "water" ? 0.0 : 0.1);
+                case PanelAction.PrepareReserveStock:
+                    return !string.IsNullOrEmpty(entityId) &&
+                        sessions.TryPrepareResearchReserveStock(entityId, entityId == "water" ? 0.0 : 0.1);
+                case PanelAction.PipetteSwitchReserve:
+                    return sessions.TryPipetteSwitchReserve();
+                case PanelAction.BottleRefill:
+                    return sessions.TryBottleRefillFromReserve();
                 case PanelAction.PrepareRinseWater:
                     return sessions.TryPrepareResearchRinseWater();
                 case PanelAction.PipetteAspirate:

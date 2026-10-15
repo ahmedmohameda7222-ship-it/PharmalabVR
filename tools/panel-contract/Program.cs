@@ -248,6 +248,14 @@ internal static class Program
                 "Bottle command panel routing did not reach measured pour and rinse");
             Check(session.MeteredCalls == 7,
                 "A tool command was silently swallowed or replayed more than once");
+            Check(panels.Request(PanelAction.PrepareReserveStock, "naoh"),
+                "Panel cannot prepare real reserve stock during setup");
+            Check(panels.Request(PanelAction.PipetteSwitchReserve),
+                "Panel cannot switch pipette to preprepared reserve");
+            Check(panels.Request(PanelAction.BottleRefill),
+                "Panel cannot refill bottle from bounded prepared inventory");
+            Check(session.MeteredCalls == 10,
+                "Reserve/refill commands bypassed their one-time shared route");
             Check(session.SaveCalls == 0 && session.ReviewOpens == 0,
                 "Lab instrument actions silently opened Review or created a Save");
             Check(panels.Request(PanelAction.Inspect, "receiver"), "Inspect receiver action refused");
