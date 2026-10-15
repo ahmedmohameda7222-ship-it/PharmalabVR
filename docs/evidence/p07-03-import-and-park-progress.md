@@ -23,3 +23,11 @@ No C++17 chemistry/core/solver implementation changed. `CoreDriver.ReplaceSessio
 **Unresolved:** user-facing VR Load action; complete hold/recenter/load/regrab journey, safe actual ray/trigger dispatch, reach tray, 0.12 m reach usability, X03/X04/H02/H03 physical/simulator acceptance, material-pool conservation across all P03 stocks, full OpenXR build. P07.03 stays **Open / NotReviewed**; G-R1 Open. Official totals unchanged, **15 VerifiedLocal / 51 Open**; deferred Unity register **66 NOT_RUN**.
 
 **Next bounded code:** VR Load action via explicit saved-session command with admission, then P03.01 in-flight burette outlet/parcel visuals and P03.02 distinct pipette/bottle native-safe behavior. Do not merge PR #1.
+
+## Explicit user-driven VR Load — source `77bb8b9e206f52cdbbf81a748db54a5c6d6a352f`
+
+- **RED:** test commit `b192844f3467209fe57eda0389d6223d6a6869f9` and [CI 38709463677](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38709463677) witnessed missing `PanelAction.Load` (`CS0117`).
+- **GREEN:** production `77bb8b9e206f52cdbbf81a748db54a5c6d6a352f` routes a real VR Pause/Hold Load via `LabPanelController`→`SessionController.LoadSavedSession`→pinned `SaveService`→Native import. It is visible only for a parked tool and an existing named save. Imported mode/dock are checked before replacing old Native handle; imported Native automatically enters `SessionLoad` Hold. Rejected actions return false with `LastError`, no implicit Save/Continue/material mutation. Park and Load share an exclusive button slot, Save is separate.
+- [Headless GREEN CI 38709745486](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38709745486): panel-routing success, 109 assertions with original Review/Boot/Recenter negative mutations RED→GREEN. This is NOT Unity or a real Native-backed UI journey; Windows/Ubuntu platform jobs pending when noted.
+- Unity actual Native Save→Load PlayMode test `8183662ce7df6c36075251d52a5f2e454cb2a150` was authored but **NOT_RUN**. Fourth denied-Load mutation `8a388a3fda52e0be871778144f3a5e375b174edd` at [CI 38709992513](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38709992513) must be checked separately.
+- G-R1 remains Open, 15 VerifiedLocal / 51 Open, P07.03 NotReviewed. No physical headset, Player, XR simulator or Unity test acceptance claimed.
