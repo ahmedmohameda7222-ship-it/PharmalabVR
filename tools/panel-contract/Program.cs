@@ -114,6 +114,20 @@ internal static class Program
         try { ResearchConcentrationSelection.Resolve(matrix, 3, "hcl"); }
         catch (ArgumentOutOfRangeException) { invalidMatrixIndexRejected = true; }
         Check(invalidMatrixIndexRejected, "Unlisted research molarity was accepted");
+        // P03.03: two geometrically eligible receiving rims are ambiguous.
+        // Do not accidentally credit the first collider to Native material.
+        Check(CaptureTargetSelection.ResolveUnique(new[] { "receiver" }) == "receiver",
+            "Single eligible Native receiver must remain a valid capture.");
+        Check(CaptureTargetSelection.ResolveUnique(new[] { "receiver", "beaker-b" }) == null,
+            "Two valid receivers must NOT pick an arbitrary first candidate.");
+        Check(CaptureTargetSelection.ResolveUnique(new[] { "receiver", "receiver" }) == null,
+            "Two physical targets sharing an inventory id remain ambiguous.");
+        Check(CaptureTargetSelection.ResolveUnique(Array.Empty<string>()) == null,
+            "No aperture hit must preserve spill rather than invent capture.");
+        Check(CaptureTargetSelection.ResolveUnique(new[] { "" }) == null,
+            "Blank inventory destinations cannot be admitted.");
+        Check(CaptureTargetSelection.ResolveUnique(new[] { "beaker-b", "receiver" }) == null,
+            "Reversing candidate enumeration must not alter ambiguous rejection.");
         var initial = SetupPreferencesSelection.Current;
         try
         {
