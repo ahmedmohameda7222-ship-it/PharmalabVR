@@ -108,6 +108,16 @@ namespace PharmaLabVR.Session
         public int SaveCalls { get; private set; }
         public int ReviewOpens { get; private set; }
         public bool CanReleaseTool { get; private set; } = true;
+        public bool CanParkTool => !CanReleaseTool;
+        public bool ParkPermitted { get; set; } = true;
+        public int ParkCalls { get; private set; }
+        public bool ParkToolAtDock()
+        {
+            if (!ParkPermitted || CanReleaseTool) return false;
+            ParkCalls++;
+            CanReleaseTool = true;
+            return true;
+        }
         public int ReleaseCalls { get; private set; }
         public bool SnapPermitted { get; set; } = true;
         public int SnapCalls { get; private set; }

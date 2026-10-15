@@ -154,6 +154,21 @@ internal static class Program
             Check(session.ReleaseCalls == 1, "Dock release must dispatch exactly once");
             Check(!panels.Request(PanelAction.ReleaseTool),
                 "Releasing an already released tool falsely succeeded");
+            Check(router.Current.SupportedActions.Contains("ParkTool"),
+                "Released VR tool cannot be parked from the shared panel");
+            session.ParkPermitted = false;
+            Check(!panels.Request(PanelAction.ParkTool),
+                "Out-of-range tool falsely reported a successful park");
+            Check(session.ParkCalls == 0, "Rejected park mutated the tool mount");
+            session.ParkPermitted = true;
+            Check(panels.Request(PanelAction.ParkTool),
+                "Valid nearby tool could not return to the rack");
+            Check(session.ParkCalls == 1,
+                "Valid parking must dispatch exactly once");
+            Check(!panels.Request(PanelAction.ParkTool),
+                "Double-park falsely succeeded");
+            Check(session.SaveCalls == 0 && driver.CurrentLabView.EventSequence == "7",
+                "Parking a physical tool must not Save or change Native revision");
             driver.CurrentMode = "Desktop";
             router.Configure(driver);
             // P07.03: recentering is presentation only, requires a parked
