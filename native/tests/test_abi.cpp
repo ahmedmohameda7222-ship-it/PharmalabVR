@@ -2090,10 +2090,13 @@ TEST_CASE("P03_02 bottle film is conserved through measured pours and real water
     const auto oldFilm = afterPour["tools"][0]["tipInventory"];
     CHECK(oldFilm["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(2e-8));
     CHECK(oldFilm["chlorideMol"].get<double>() > 0.0);
-    CHECK(afterPour["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
-          doctest::Approx(1.96e-6));
-    CHECK(afterPour["vessels"][2]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
-          doctest::Approx(2e-8));
+    const auto volumeOf = [](const json& snapshot, const std::string& id) {
+        for (const auto& vessel : snapshot["vessels"])
+            if (vessel["id"] == id) return vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+        return -1.0;
+    };
+    CHECK(volumeOf(afterPour, "stock") == doctest::Approx(1.96e-6));
+    CHECK(volumeOf(afterPour, "receiver") == doctest::Approx(2e-8));
     CHECK(afterPour["materialLedger"] == initial["materialLedger"]);
 
     const auto denied = issue("9", "RinseTool", {{"toolId", "bottle"},
