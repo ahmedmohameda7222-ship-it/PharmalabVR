@@ -97,7 +97,13 @@ namespace PharmaLabVR.UI
             // Half-width peers share one row without overlapping each other,
             // the Recenter button above, or the Settings button below.
             foreach (var name in new[] { "Snap left 30", "Snap right 30" })
+            {
                 buttons[name].GetComponent<RectTransform>().sizeDelta = new Vector2(176f, 46f);
+                // The Text also raycasts; its child rectangle must not span
+                // across the adjacent button.
+                var text = buttons[name].GetComponentInChildren<Text>(true);
+                text.rectTransform.sizeDelta = new Vector2(164f, 35f);
+            }
             buttons["Snap left 30"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(-94f, -26f);
             buttons["Snap right 30"].GetComponent<RectTransform>().anchoredPosition =
