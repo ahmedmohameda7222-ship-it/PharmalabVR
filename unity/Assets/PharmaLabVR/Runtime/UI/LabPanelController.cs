@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -59,6 +59,21 @@ namespace PharmaLabVR.UI
                 !router.Current.SupportedActions.Contains(action.ToString())) return false;
             switch (action)
             {
+                case PanelAction.PrepareResearchStock:
+                    return !string.IsNullOrEmpty(entityId) &&
+                        sessions.SelectStock(entityId, entityId == "water" ? 0.0 : 0.1);
+                case PanelAction.PrepareRinseWater:
+                    return sessions.TryPrepareResearchRinseWater();
+                case PanelAction.PipetteAspirate:
+                    return sessions.TryPipetteAspirate();
+                case PanelAction.PipetteDispense:
+                    return sessions.TryPipetteDispense();
+                case PanelAction.PipetteRinse:
+                    return sessions.TryPipetteWaterRinse();
+                case PanelAction.BottlePour:
+                    return sessions.TryBottleMeasuredPour();
+                case PanelAction.BottleRinse:
+                    return sessions.TryBottleWaterRinse();
                 case PanelAction.Inspect:
                 case PanelAction.Measure:
                     if (string.IsNullOrEmpty(entityId) || !driver.SelectMeasurementVessel(entityId)) return false;

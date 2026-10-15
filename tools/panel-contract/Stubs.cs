@@ -149,6 +149,21 @@ namespace PharmaLabVR.Session
             CanReleaseTool = false;
             return true;
         }
+        public int MeteredCalls { get; private set; }
+        public string PreparedStockId { get; private set; }
+        public bool SelectStock(string stock, double concentration)
+        {
+            if (string.IsNullOrEmpty(stock)) return false;
+            PreparedStockId = stock;
+            MeteredCalls++;
+            return true;
+        }
+        public bool TryPrepareResearchRinseWater() { MeteredCalls++; return true; }
+        public bool TryPipetteAspirate() { MeteredCalls++; return true; }
+        public bool TryPipetteDispense() { MeteredCalls++; return true; }
+        public bool TryPipetteWaterRinse() { MeteredCalls++; return true; }
+        public bool TryBottleMeasuredPour() { MeteredCalls++; return true; }
+        public bool TryBottleWaterRinse() { MeteredCalls++; return true; }
         public bool Save() { SaveCalls++; return true; }
         public bool OpenReview()
         {

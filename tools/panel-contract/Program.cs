@@ -222,6 +222,23 @@ internal static class Program
             var session = new SessionController();
             var panels = new LabPanelController();
             panels.Configure(router, driver, session);
+            Check(router.Current.SupportedActions.Contains("PipetteAspirate"),
+                "Lab did not publish the revision-bound instrument route");
+            Check(panels.Request(PanelAction.PrepareRinseWater),
+                "VR/Desktop shared panel refused explicit setup water preparation");
+            Check(panels.Request(PanelAction.PrepareResearchStock, "nacl"),
+                "Shared Native stock preparation action refused");
+            Check(session.PreparedStockId == "nacl", "Prepared stock identity was not preserved");
+            Check(panels.Request(PanelAction.PipetteAspirate) &&
+                  panels.Request(PanelAction.PipetteDispense) &&
+                  panels.Request(PanelAction.PipetteRinse),
+                "Pipette command panel routing did not call the actual SessionController methods");
+            Check(panels.Request(PanelAction.BottlePour) && panels.Request(PanelAction.BottleRinse),
+                "Bottle command panel routing did not reach measured pour and rinse");
+            Check(session.MeteredCalls == 7,
+                "A tool command was silently swallowed or replayed more than once");
+            Check(session.SaveCalls == 0 && session.ReviewOpens == 0,
+                "Lab instrument actions silently opened Review or created a Save");
             Check(panels.Request(PanelAction.Inspect, "receiver"), "Inspect receiver action refused");
             Check(router.Current.ScreenId == ScreenId.Inspect, "Inspect route missing");
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
