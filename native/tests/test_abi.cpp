@@ -519,6 +519,73 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     CHECK(plv_destroy(imported) == PLV_OK);
 }
 
+TEST_CASE("P03_02 retained tip contaminates the next stock delivered through the live tool") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-5}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+                           {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}}, {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "PlaceTool", {{"toolId", "tool"}, {"sourceInventoryId", "source"},
+                           {"overflowSinkId", "spill"}, {"coordinateFrame", "lab"},
+                           {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const std::string acidInput = R"([{"toolId":"tool","sampleSequence":"1","captureMonotonicNs":"1000000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":1.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
+    REQUIRE(plv_input_batch(handle, acidInput.data(), static_cast<std::uint32_t>(acidInput.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'010'000'000ULL) == PLV_OK);
+    REQUIRE(poll(handle)["type"] == "LiveTransferCommitted");
+    const std::string closedInput = R"([{"toolId":"tool","sampleSequence":"2","captureMonotonicNs":"1020000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
+    REQUIRE(plv_input_batch(handle, closedInput.data(), static_cast<std::uint32_t>(closedInput.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'030'000'000ULL) == PLV_OK);
+    REQUIRE(poll(handle)["type"] == "InFlightLanded");
+    const auto beforeSwitch = json::parse(read_text(handle));
+    const auto& beforeSource = beforeSwitch["vessels"][0]["id"] == "source" ?
+        beforeSwitch["vessels"][0] : beforeSwitch["vessels"][1];
+    const auto& beforeReceiver = beforeSwitch["vessels"][0]["id"] == "receiver" ?
+        beforeSwitch["vessels"][0] : beforeSwitch["vessels"][1];
+    const double chlorideBefore = beforeReceiver["inventory"]["chlorideMol"].get<double>();
+    const double tipChloride = beforeSwitch["tools"][0]["tipInventory"]["chlorideMol"].get<double>();
+    REQUIRE(tipChloride > 0.0);
+    submit(handle, command("6", "DisposeContents", {{"sourceInventoryId", "source"},
+                           {"sinkInventoryId", "spill"}}, {{"source", beforeSource["materialRevision"]}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto emptied = json::parse(read_text(handle));
+    const auto& emptySource = emptied["vessels"][0]["id"] == "source" ?
+        emptied["vessels"][0] : emptied["vessels"][1];
+    submit(handle, command("7", "CreateVessel", {{"id", "base-stock"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("8", "PrepareStock", {{"vesselId", "base-stock"}, {"stockKind", "SodiumHydroxide"},
+                           {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-6}},
+                           {{"base-stock", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("9", "TransferFixed", {{"sourceInventoryId", "base-stock"},
+                           {"sourceRegion", "Homogeneous"}, {"selection", "HomogeneousAqueousLiquid"},
+                           {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 4e-6}}},
+                           {"captureFractions", json::array({{{"destinationInventoryId", "source"}, {"fraction", 1.0}}})},
+                           {"overflowSinkId", "spill"}},
+                           {{"base-stock", "1"}, {"source", emptySource["materialRevision"]}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto beforeBase = json::parse(read_text(handle));
+    const std::string baseInput = R"([{"toolId":"tool","sampleSequence":"3","captureMonotonicNs":"1040000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":1.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":1.0}]}])";
+    REQUIRE(plv_input_batch(handle, baseInput.data(), static_cast<std::uint32_t>(baseInput.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'050'000'000ULL) == PLV_OK);
+    REQUIRE(poll(handle)["type"] == "LiveTransferCommitted");
+    const auto afterBase = json::parse(read_text(handle));
+    const auto& receiver = afterBase["vessels"][0]["id"] == "receiver" ?
+        afterBase["vessels"][0] : afterBase["vessels"][1];
+    CHECK(receiver["inventory"]["chlorideMol"].get<double>() > chlorideBefore);
+    CHECK(receiver["inventory"]["sodiumMol"].get<double>() > beforeReceiver["inventory"]["sodiumMol"].get<double>());
+    for (const char* pool : {"chlorideMol", "sodiumMol", "acetateMol", "solventWaterKg",
+                             "researchAdditiveVolumeM3"}) {
+        CHECK(afterBase["materialLedger"][pool].get<double>() ==
+              doctest::Approx(beforeBase["materialLedger"][pool].get<double>()).epsilon(1e-12));
+    }
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("P02_03 full receiver and exhausted source preserve the live tool ledger") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";

@@ -1163,10 +1163,15 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         const double tipCapacity = plv::BuretteProfile::researchDefault().dropReferenceVolumeM3;
         const double tipFill = std::min(std::max(0.0, tipCapacity - tool.tipInventory.referenceVolumeM3),
                                         requestedVolumeM3 * 0.25);
-        const auto tipParcel = sourceParcel.fraction(tipFill);
-        auto delivery = sourceParcel;
-        if (!delivery.subtract(tipParcel)) return PLV_INTERNAL_ERROR;
-        tool.tipInventory.add(tipParcel);
+        // The represented hold-up shares one well-mixed tip volume with the
+        // incoming parcel. Keep the same bounded hold-up volume while allowing
+        // its material pools to enter the next delivered parcel.
+        auto throughTip = sourceParcel;
+        throughTip.add(tool.tipInventory);
+        const auto retainedTip = throughTip.fraction(tool.tipInventory.referenceVolumeM3 + tipFill);
+        auto delivery = throughTip;
+        if (!delivery.subtract(retainedTip)) return PLV_INTERNAL_ERROR;
+        tool.tipInventory = retainedTip;
         const double flightVolume = std::min(tipCapacity, delivery.referenceVolumeM3 * 0.5);
         const auto flightParcel = delivery.fraction(flightVolume);
         if (!delivery.subtract(flightParcel)) return PLV_INTERNAL_ERROR;
