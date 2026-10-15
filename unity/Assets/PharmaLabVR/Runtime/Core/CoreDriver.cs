@@ -383,6 +383,64 @@ namespace PharmaLabVR.Core
             return true;
         }
 
+        public bool ReserveStockPrepared
+        {
+            get
+            {
+                if (CurrentLabView == null) return false;
+                foreach (var vessel in CurrentLabView.Vessels)
+                    if (vessel.Id == "reserve-stock" && vessel.CommittedVolumeM3 > 0.0)
+                        return true;
+                return false;
+            }
+        }
+
+        // An alternate source must be deliberately prepared while still in
+        // setup. Later switching/refilling consumes this represented inventory.
+        public bool TryPrepareReserveStock(string stockId, double concentrationMolPerL)
+        {
+            if (Session == null || !SourceNeedsPreparation ||
+                stockCatalog?.stocks == null || ReserveStockPrepared) return false;
+            StockChoice choice = null;
+            foreach (var stock in stockCatalog.stocks)
+                if (stock.id == stockId) { choice = stock; break; }
+            if (choice == null) return false;
+            if (choice.kind == "Water")
+            {
+                if (concentrationMolPerL != 0.0) return false;
+            }
+            else
+            {
+                var supported = false;
+                foreach (var value in stockCatalog.researchMatrixMolPerL)
+                    if (Math.Abs(value - concentrationMolPerL) < 1e-12) supported = true;
+                if (!supported) return false;
+            }
+            var snapshot = JsonUtility.FromJson<RinseSetupState>(Session.ReadSnapshot());
+            if (snapshot?.vessels == null)
+                throw new InvalidOperationException("Native reserve-stock setup is unavailable.");
+            var exists = false;
+            foreach (var vessel in snapshot.vessels)
+                if (vessel.id == "reserve-stock")
+                {
+                    exists = true;
+                    if (vessel.inventory != null &&
+                        vessel.inventory.researchAdditiveVolumeM3 > 0.0) return false;
+                }
+            if (!exists)
+                RequireAccepted(Session.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"reserve-stock\",\"capacityM3\":0.00005}"));
+            var commands = new LabCommandService(Session);
+            var payload = $"{{\"vesselId\":\"reserve-stock\",\"stockKind\":\"{EscapeJson(choice.kind)}\"," +
+                          $"\"concentrationMolPerL\":{concentrationMolPerL.ToString("R", CultureInfo.InvariantCulture)}," +
+                          "\"referenceVolumeM3\":0.000025}";
+            var prepared = commands.Submit("PrepareStock", payload,
+                commands.CaptureTouchedRevisions("reserve-stock"));
+            if (!prepared.Accepted) return false;
+            PublishSnapshot();
+            return true;
+        }
+
         public bool TryPrepareSourceStock(string stockId, double concentrationMolPerL)
         {
             if (Session == null || stockCatalog?.stocks == null || !SourceNeedsPreparation) return false;
