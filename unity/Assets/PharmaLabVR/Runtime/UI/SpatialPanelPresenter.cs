@@ -22,6 +22,7 @@ namespace PharmaLabVR.UI
         private GameObject panelRoot;
         private Camera xrCamera;
         private bool placedWithTrackedHead;
+        private int settingsPage;
         private Text title;
         private Text detail;
         private Image background;
@@ -89,6 +90,12 @@ namespace PharmaLabVR.UI
             AddButton("Continue", -194f, PanelAction.Continue);
             AddButton("Settings", -82f, PanelAction.Settings);
             AddButton("Back", -138f, PanelAction.Back);
+            AddSettingButton("Settings choice A", 30f, 0);
+            AddSettingButton("Settings choice B", -26f, 1);
+            AddSettingButton("Settings choice C", -82f, 2);
+            AddSettingButton("Settings choice D", -138f, 3);
+            AddSettingNavigation("Next settings", -194f, 1);
+            AddSettingNavigation("Previous settings", -194f, -1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
             eventObject.transform.SetParent(panelRoot.transform, false);
@@ -159,6 +166,87 @@ namespace PharmaLabVR.UI
             buttons.Add(name, button);
         }
 
+        private void AddSettingButton(string name, float y, int choice)
+        {
+            AddButton(name, y, PanelAction.Settings);
+            var button = buttons[name];
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() => ChangeSetting(choice));
+        }
+
+        private void AddSettingNavigation(string name, float y, int direction)
+        {
+            AddButton(name, y, PanelAction.Settings);
+            var button = buttons[name];
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() =>
+            {
+                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 2);
+                if (router?.Current != null) Present(router.Current);
+            });
+        }
+
+        private void ChangeSetting(int choice)
+        {
+            if (router?.Current?.ScreenId != ScreenId.Settings) return;
+            var current = router.Current.Setup;
+            LabSetupPreferences next = current;
+            switch (settingsPage)
+            {
+                case 0:
+                    if (choice == 0)
+                        next = current.With(posture: current.Posture == "Seated" ? "Standing" : "Seated");
+                    else if (choice == 1)
+                        next = current.With(dominantHand: current.DominantHand == "Left" ? "Right" : "Left");
+                    break;
+                case 1:
+                    if (choice == 0) next = current.With(benchHeightMeters:
+                        Mathf.Clamp(current.BenchHeightMeters - 0.05f, 0.65f, 1.05f));
+                    else if (choice == 1) next = current.With(benchHeightMeters:
+                        Mathf.Clamp(current.BenchHeightMeters + 0.05f, 0.65f, 1.05f));
+                    else if (choice == 2) next = current.With(textScale:
+                        Mathf.Clamp(current.TextScale + 0.05f, 0.85f, 1.35f));
+                    else if (choice == 3) next = current.With(textScale:
+                        Mathf.Clamp(current.TextScale - 0.05f, 0.85f, 1.35f));
+                    break;
+                case 2:
+                    if (choice == 0) next = current.With(captionsEnabled: !current.CaptionsEnabled);
+                    else if (choice == 1) next = current.With(reducedMotion: !current.ReducedMotion);
+                    else if (choice == 2) next = current.With(highContrast: !current.HighContrast);
+                    else if (choice == 3) next = current.With(audioVolume:
+                        current.AudioVolume >= 0.99f ? 0f : 1f);
+                    break;
+            }
+            if (!ReferenceEquals(current, next)) router.UpdateSetupPreferences(next);
+        }
+
+        private void PresentSettings(PanelState state)
+        {
+            var setup = state.Setup;
+            var labels = settingsPage switch
+            {
+                0 => new[] { "Posture: " + setup.Posture, "Hand: " + setup.DominantHand, "", "" },
+                1 => new[] { "Bench lower", "Bench higher", "Text larger", "Text smaller" },
+                _ => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
+                    "Reduced motion: " + (setup.ReducedMotion ? "On" : "Off"),
+                    "Contrast: " + (setup.HighContrast ? "High" : "Normal"),
+                    "Audio: " + (setup.AudioVolume > 0f ? "On" : "Muted") }
+            };
+            var names = new[] { "Settings choice A", "Settings choice B",
+                "Settings choice C", "Settings choice D" };
+            for (var i = 0; i < names.Length; i++)
+            {
+                SetButton(names[i], i < (settingsPage == 0 ? 2 : 4));
+                var label = buttons[names[i]].GetComponentInChildren<Text>(true);
+                if (label != null) label.text = labels[i];
+            }
+            SetButton("Next settings", settingsPage < 2);
+            SetButton("Previous settings", settingsPage > 0);
+            detail.text = "Settings " + (settingsPage + 1) + "/3 · " +
+                setup.BenchHeightMeters.ToString("0.00") + "m · text " +
+                setup.TextScale.ToString("0.00") + "×";
+        }
+
         private void Present(PanelState state)
         {
             if (panelRoot == null || driver == null) return;
@@ -175,6 +263,7 @@ namespace PharmaLabVR.UI
                 button.GetComponent<Image>().color = state.Setup.HighContrast ?
                     new Color(0.04f, 0.17f, 0.18f) : new Color(0.14f, 0.37f, 0.39f);
             }
+            if (state.ScreenId != ScreenId.Settings) settingsPage = 0;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -195,10 +284,20 @@ namespace PharmaLabVR.UI
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
-            SetButton("Save session", state.SupportedActions.Contains("Save"));
+            SetButton("Save session", state.SupportedActions.Contains("Save") &&
+                state.ScreenId != ScreenId.Settings);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
             SetButton("Settings", state.SupportedActions.Contains("Settings"));
             SetButton("Back", state.SupportedActions.Contains("Back"));
+            buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
+            if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
+            else
+            {
+                foreach (var name in new[] { "Settings choice A", "Settings choice B",
+                    "Settings choice C", "Settings choice D", "Next settings", "Previous settings" })
+                    SetButton(name, false);
+            }
         }
 
         private void SetButton(string name, bool visible)
