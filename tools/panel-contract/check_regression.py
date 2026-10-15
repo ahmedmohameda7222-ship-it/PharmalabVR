@@ -83,6 +83,24 @@ def main():
               str(red.returncode) + ")")
     finally:
         DROP_SOURCE.write_bytes(drop_original)
+    # Independently mutate restore-epoch edge detection. Repeated held
+    # snapshots must not be mistaken for newly imported sessions.
+    good = "reason != lastHoldReason)"
+    bad = "true)"
+    drop_content = drop_original.decode("utf-8")
+    if drop_content.count(good) != 1:
+        raise RuntimeError("Missing once-per-restore-epoch guard")
+    try:
+        DROP_SOURCE.write_text(drop_content.replace(good, bad), encoding="utf-8")
+        red = exercise()
+        output = red.stdout + red.stderr
+        if red.returncode == 0 or "Repeated SessionLoad snapshot erased landed-parcel suppression" not in output:
+            raise RuntimeError("Repeated hold mutation not detected; exit=" +
+                               str(red.returncode) + " output=" + output[-3000:])
+        print("RED verified: repeated Native hold is not a new restore (exit=" +
+              str(red.returncode) + ")")
+    finally:
+        DROP_SOURCE.write_bytes(drop_original)
     green = exercise()
     output = green.stdout + green.stderr
     if green.returncode != 0 or re.search(r"headless routing checks: ([1-9][0-9]*) passed", output) is None:
