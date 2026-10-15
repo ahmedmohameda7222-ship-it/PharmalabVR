@@ -1,0 +1,90 @@
+// Headless behavioral coverage for actual production routing classes.
+// This is intentionally NOT Unity scene/input, native chemistry, or headset evidence.
+using System;
+using PharmaLabVR.Core;
+using PharmaLabVR.Session;
+using PharmaLabVR.UI;
+
+internal static class Program
+{
+    private static int checks;
+    private static void Check(bool condition, string message)
+    {
+        checks++;
+        if (!condition) throw new InvalidOperationException(message);
+    }
+
+    private static void Main()
+    {
+        var initial = SetupPreferencesSelection.Current;
+        try
+        {
+            var bootRouter = new ScreenRouter();
+            bootRouter.Configure(null);
+            bootRouter.Show(ScreenId.Home);
+            var boot = new BootMenu { Router = bootRouter };
+            var bootActions = new LabPanelController();
+            bootActions.ConfigureBoot(bootRouter, boot);
+            Check(bootActions.Request(PanelAction.EnterVR), "Home → VR Setup action refused");
+            Check(bootRouter.Current.Mode == "VR", "Boot mode lost");
+            Check(bootRouter.Current.ScreenId == ScreenId.Setup, "Setup route missing");
+            var selected = new LabSetupPreferences("Seated", "Left", 0.74f, 1.2f, true, true, true, 0.5f);
+            bootRouter.UpdateSetupPreferences(selected);
+            Check(ReferenceEquals(bootRouter.Current.Setup, selected), "Immutable preference snapshot missing");
+            Check(bootActions.Request(PanelAction.Home), "Setup → Home action refused");
+            Check(bootActions.Request(PanelAction.EnterDesktop), "Home → Desktop Setup action refused");
+            Check(bootRouter.Current.Mode == "Desktop", "Desktop mode lost");
+            Check(ReferenceEquals(bootRouter.Current.Setup, selected), "Back navigation lost preferences");
+            Check(bootActions.Request(PanelAction.ConfirmSetup) && boot.Confirmed, "Setup confirmation refused");
+            Check(!bootActions.Request(PanelAction.Pause), "Unsupported Boot action falsely succeeded");
+            Check(selected.With(textScale: 1.3f).TextScale > selected.TextScale,
+                "Immutable preference replacement did not apply");
+            var invalidRejected = false;
+            try { new LabSetupPreferences("Invalid", "Left", 0.74f, 1f, false, false, false); }
+            catch (ArgumentException) { invalidRejected = true; }
+            Check(invalidRejected, "Invalid posture was admitted");
+
+            var driver = new CoreDriver();
+            var router = new ScreenRouter();
+            router.Configure(driver);
+            Check(ReferenceEquals(router.Current.Setup, selected), "Scene-level selection did not survive");
+            var session = new SessionController();
+            var panels = new LabPanelController();
+            panels.Configure(router, driver, session);
+            Check(panels.Request(PanelAction.Inspect, "receiver"), "Inspect receiver action refused");
+            Check(router.Current.ScreenId == ScreenId.Inspect, "Inspect route missing");
+            Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
+            Check(panels.Request(PanelAction.Measure, "receiver"), "Measure action refused");
+            Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
+            Check(panels.Request(PanelAction.Pause), "Pause action refused");
+            Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            Check(panels.Request(PanelAction.Settings), "Pause → Settings action refused");
+            Check(router.Current.ScreenId == ScreenId.Settings, "Settings not visible");
+            Check(panels.Request(PanelAction.Back), "Settings Back refused");
+            Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused,
+                "Settings Back unpaused the operating authority");
+            Check(panels.Request(PanelAction.Review), "Paused Review refused");
+            Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
+            Check(panels.Request(PanelAction.Lab), "Recorded Review return refused");
+            Check(router.Current.ScreenId == ScreenId.Lab && !driver.IsNativePaused,
+                "Review return failed to resume the paused authority");
+            Check(driver.ContinueCalls == 1, "Review path did not submit exactly one Continue");
+            Check(session.SaveCalls == 0, "Review implicitly saved");
+            Check(session.RecordedReview == null, "Review close failed");
+            Check(driver.CurrentLabView.EventSequence == "7", "Navigation altered native revision metadata");
+            driver.SetHold(true);
+            Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
+            Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");
+            Check(!panels.Request(PanelAction.Measure, "receiver"), "Held Measure falsely succeeded");
+            Check(panels.Request(PanelAction.Review), "Recorded Review blocked during Hold");
+            Check(!panels.Request(PanelAction.Lab), "Held Review bypassed native hold");
+            Check(router.Current.ScreenId == ScreenId.Review, "Denied held return hid review");
+            Check(session.SaveCalls == 0, "Hold/Review caused implicit Save");
+            Console.WriteLine($"P06.02 headless routing checks: {checks} passed (NOT Unity, Player or Native Core)");
+        }
+        finally
+        {
+            SetupPreferencesSelection.Select(initial);
+        }
+    }
+}

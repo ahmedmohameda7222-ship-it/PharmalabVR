@@ -8,6 +8,12 @@ permissions:
   contents: read
 
 jobs:
+  panel-routing:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compile and exercise shared C# panel routing (headless; not Unity)
+        run: dotnet run --project tools/panel-contract/PanelContract.csproj --configuration Release
   native:
     strategy:
       fail-fast: false
