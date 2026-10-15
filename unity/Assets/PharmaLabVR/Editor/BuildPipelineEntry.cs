@@ -10,6 +10,9 @@ using UnityEngine;
 using PharmaLabVR.UI;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.XR;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 using UnityEngine.XR;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
@@ -50,11 +53,101 @@ namespace PharmaLabVR.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var root = new GameObject("BootRoot");
-            root.AddComponent<BootMenu>();
+            var menu = root.AddComponent<BootMenu>();
             var camera = new GameObject("BootCamera");
             camera.AddComponent<Camera>();
-            camera.transform.SetParent(root.transform);
+            camera.transform.SetParent(root.transform, false);
+            var rig = new GameObject("BootXRPlayerRig");
+            rig.transform.SetParent(root.transform, false);
+            var origin = rig.AddComponent<XROrigin>();
+            var offset = new GameObject("Camera Offset");
+            offset.transform.SetParent(rig.transform, false);
+            var head = new GameObject("XR Boot Camera");
+            head.transform.SetParent(offset.transform, false);
+            var xrCamera = head.AddComponent<Camera>();
+            var listener = head.AddComponent<AudioListener>();
+            xrCamera.enabled = false;
+            listener.enabled = false;
+            var poseDriver = head.AddComponent<TrackedPoseDriver>();
+            poseDriver.positionInput = Action("Boot Head Position", InputActionType.Value,
+                "Vector3", "<XRHMD>/devicePosition");
+            poseDriver.rotationInput = Action("Boot Head Rotation", InputActionType.Value,
+                "Quaternion", "<XRHMD>/deviceRotation");
+            poseDriver.trackingStateInput = Action("Boot Head Tracking", InputActionType.Value,
+                "Integer", "<XRHMD>/trackingState");
+            origin.CameraFloorOffsetObject = offset;
+            origin.Camera = xrCamera;
+            origin.RequestedTrackingOriginMode = XROrigin.TrackingOriginMode.Floor;
+            var interactionManager = new GameObject("BootXRInteractionManager");
+            interactionManager.transform.SetParent(root.transform, false);
+            var manager = interactionManager.AddComponent<XRInteractionManager>();
+            CreateXrController(offset.transform, true, manager);
+            CreateXrController(offset.transform, false, manager);
+
+            var world = new GameObject("BootWorldPanel", typeof(RectTransform),
+                typeof(Canvas), typeof(CanvasScaler), typeof(TrackedDeviceGraphicRaycaster));
+            world.transform.SetParent(rig.transform, false);
+            var rect = world.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(420f, 620f);
+            rect.localScale = Vector3.one * 0.001f;
+            var canvas = world.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.WorldSpace;
+            canvas.worldCamera = xrCamera;
+            var canvasBackground = world.AddComponent<Image>();
+            canvasBackground.color = new Color(0.89f, 0.94f, 0.94f, 0.97f);
+            BootText(world.transform, "Boot Title", 240f, 46f, 30);
+            BootText(world.transform, "Boot Status", 170f, 94f, 22);
+            string[] names = { "Enter VR", "Desktop", "Seated", "Standing",
+                "Left hand", "Right hand", "Bench lower", "Bench higher",
+                "Text larger", "Text smaller", "Captions", "Reduced motion",
+                "High contrast", "Audio mute", "Next", "Previous", "Enter lab", "Back" };
+            for (var i = 0; i < names.Length; i++)
+                BootButton(world.transform, names[i], 92f - (i % 4) * 58f);
+            world.AddComponent<BootSpatialPanelPresenter>().Configure(menu);
+
+            var events = new GameObject("BootXRUIEventSystem", typeof(EventSystem),
+                typeof(XRUIInputModule));
+            events.transform.SetParent(root.transform, false);
+            var module = events.GetComponent<XRUIInputModule>();
+            module.enableXRInput = true;
+            module.enableMouseInput = false;
+            module.enableTouchInput = false;
+            module.enableGamepadInput = false;
+            module.enableJoystickInput = false;
+            events.SetActive(false); // Enabled only with a live tracked XR head.
             EditorSceneManager.SaveScene(scene, Scenes[0]);
+        }
+
+        private static Text BootText(Transform parent, string name, float y, float height, int size)
+        {
+            var child = new GameObject(name, typeof(RectTransform), typeof(Text));
+            child.transform.SetParent(parent, false);
+            var rect = child.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(366f, height);
+            rect.anchoredPosition = new Vector2(0f, y);
+            var label = child.GetComponent<Text>();
+            label.font = Resources.Load<Font>("Fonts/NotoSans-Regular");
+            if (label.font == null) throw new InvalidOperationException("Missing licensed pinned UI font.");
+            label.fontSize = size;
+            label.color = new Color(0.09f, 0.18f, 0.2f);
+            label.alignment = TextAnchor.MiddleCenter;
+            label.horizontalOverflow = HorizontalWrapMode.Wrap;
+            label.verticalOverflow = VerticalWrapMode.Overflow;
+            label.text = name;
+            return label;
+        }
+
+        private static void BootButton(Transform parent, string name, float y)
+        {
+            var child = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button));
+            child.transform.SetParent(parent, false);
+            var rect = child.GetComponent<RectTransform>();
+            rect.sizeDelta = new Vector2(366f, 50f);
+            rect.anchoredPosition = new Vector2(0f, y);
+            child.GetComponent<Image>().color = new Color(0.13f, 0.33f, 0.36f);
+            var text = BootText(child.transform, name + " label", 0f, 40f, 22);
+            text.rectTransform.anchoredPosition = Vector2.zero;
+            text.color = Color.white;
         }
 
         private static void CreateLabScene()

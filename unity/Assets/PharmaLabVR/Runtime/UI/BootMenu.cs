@@ -30,6 +30,8 @@ namespace PharmaLabVR.UI
         private ScreenRouter router;
         private LabPanelController panels;
         private Vector2 setupScroll;
+        public ScreenRouter Router => router;
+        public LabPanelController Panels => panels;
         public string LastLaunchError { get; private set; }
 
         private void Awake()
@@ -116,6 +118,9 @@ namespace PharmaLabVR.UI
 
         private void OnGUI()
         {
+            // XR renders its own world-space controls; never draw an IMGUI layer
+            // over a tracked head-mounted display. Desktop remains a fallback.
+            if (LaunchAvailability().CanEnter(ApplicationMode.VirtualReality)) return;
             var area = new Rect(12f, 12f, Mathf.Max(1f, Mathf.Min(520f, Screen.width - 24f)),
                 Mathf.Max(1f, Screen.height - 24f));
             var previousLabelSize = GUI.skin.label.fontSize;
