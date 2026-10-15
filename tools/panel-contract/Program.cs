@@ -60,6 +60,19 @@ internal static class Program
         try { ResearchInstrumentPayloads.RefillFromPreparedStock("source", "source", "spill", 2e-8); }
         catch (ArgumentException) { sameStockRejected = true; }
         Check(sameStockRejected, "A bottle cannot refill itself through a fictitious stock transfer");
+        // P03.03: moving receivers are not a valid static-aperture capture.
+        Check(CaptureAdmission.MayCapture(1.0, 1.0, 0.08, 0.001, 0.05, 0.15, 0.0),
+            "Stationary upright receiver with valid outlet should capture");
+        Check(!CaptureAdmission.MayCapture(1.0, 1.0, 0.08, 0.001, 0.05, 0.15, 0.04),
+            "Receiver moving at 4 cm/s must reject static capture");
+        Check(!CaptureAdmission.MayCapture(1.0, 1.0, 0.08, 0.001, 0.05, 0.15, double.NaN),
+            "Unknown receiver motion cannot become a valid committed capture");
+        Check(!CaptureAdmission.MayCapture(1.0, 0.5, 0.08, 0.001, 0.05, 0.15, 0.0),
+            "Sideways outlet must spill rather than hit the aperture");
+        Check(!CaptureAdmission.MayCapture(1.0, 1.0, 0.08, 0.004, 0.05, 0.15, 0.0),
+            "A tool outside the receiver rim must not capture");
+        Check(!CaptureAdmission.MayCapture(1.0, 1.0, 0.20, 0.001, 0.05, 0.15, 0.0),
+            "An outlet above the researched maximum fall distance must not capture");
         var initial = SetupPreferencesSelection.Current;
         try
         {

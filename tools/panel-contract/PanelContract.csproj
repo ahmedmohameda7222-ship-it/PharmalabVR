@@ -13,6 +13,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScreenRouter.cs" Link="ScreenRouter.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/BootLaunchAvailability.cs" Link="BootLaunchAvailability.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/InteractionOwnership.cs" Link="InteractionOwnership.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureAdmission.cs" Link="CaptureAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/XRTrackingAdmission.cs" Link="XRTrackingAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/RecoveryAlignmentPolicy.cs" Link="RecoveryAlignmentPolicy.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/SessionLoadAdmission.cs" Link="SessionLoadAdmission.cs" />
