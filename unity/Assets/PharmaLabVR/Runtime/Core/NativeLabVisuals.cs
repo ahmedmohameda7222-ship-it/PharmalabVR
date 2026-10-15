@@ -61,7 +61,7 @@ namespace PharmaLabVR.Core
         private static void DecorateLab(GameObject[] roots, Transform tool, Transform vessel)
         {
             var bench = FindNamed(roots, "BenchRoot");
-            if (bench != null)
+            if (bench != null && bench.Find("BenchAssembly") == null)
             {
                 Primitive(bench, "BenchSurface", PrimitiveType.Cube,
                     new Vector3(0f, 0.44f, 0.2f), new Vector3(1.8f, 0.08f, 1.1f),

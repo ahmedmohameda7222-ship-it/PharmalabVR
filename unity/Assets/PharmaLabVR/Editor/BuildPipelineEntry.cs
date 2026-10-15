@@ -61,7 +61,18 @@ namespace PharmaLabVR.Editor
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var lab = new GameObject("LabRoot");
-            new GameObject("BenchRoot").transform.SetParent(lab.transform);
+            var benchRoot = new GameObject("BenchRoot");
+            benchRoot.transform.SetParent(lab.transform);
+            var roomPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Environment/PremiumLabShell.prefab");
+            var benchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Environment/BenchAssembly.prefab");
+            if (roomPrefab == null || benchPrefab == null)
+                throw new InvalidOperationException("Generate environment prefabs before creating the Lab scene.");
+            var room = (GameObject)PrefabUtility.InstantiatePrefab(roomPrefab);
+            room.transform.SetParent(lab.transform, false);
+            var bench = (GameObject)PrefabUtility.InstantiatePrefab(benchPrefab);
+            bench.transform.SetParent(benchRoot.transform, false);
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
