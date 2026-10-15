@@ -48,10 +48,17 @@ namespace PharmaLabVR.Input
             var owner = selected ? SelectingController() : null;
             var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
             var actuator = selected ? Actuator(owner, directBodyGrip) : 0f;
+            // Every admitted recovery baseline must reflect actual head and both
+            // controller tracking. An unheld tool is not evidence of tracked XR.
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+            var headTracked = head.isValid &&
+                head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracked) && tracked;
+            var trackingValid = XRTrackingAdmission.HasFreshTracking(
+                headTracked, Tracked(leftActionController), Tracked(rightActionController));
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
-                    !selected || Tracked(owner),
+                    trackingValid && (!selected || Tracked(owner)),
                     captureTarget != null ? captureTarget.Estimate(registeredTool) : null)
             };
         }
