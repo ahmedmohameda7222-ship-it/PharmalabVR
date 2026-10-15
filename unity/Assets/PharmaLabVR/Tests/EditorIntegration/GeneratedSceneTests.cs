@@ -395,6 +395,44 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(mount.ReleaseFromDock(), Is.False);
         }
 
+        [Test]
+        public void P07_03_RecenterIsHorizontalAndNeverScalesCalibratedTool()
+        {
+            var rig = FindInActiveScene("XRPlayerRig");
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var dock = FindInActiveScene("BuretteDockAnchor");
+            var alignment = rig.GetComponent<RecoveryAlignment>();
+            Assert.That(alignment, Is.Not.Null,
+                "Lab scene requires explicit recovery alignment on the XR rig.");
+            Assert.That(tool, Is.Not.Null);
+            Assert.That(dock, Is.Not.Null);
+            var originalRigActive = rig.activeSelf;
+            rig.SetActive(true);
+            try
+            {
+                var originalToolScale = tool.transform.localScale;
+                var originalToolPosition = tool.transform.position;
+                var originalRigY = rig.transform.position.y;
+                var head = rig.GetComponent<XROrigin>().Camera.transform;
+                var originalHorizontalDistance = Vector3.Distance(
+                    Vector3.ProjectOnPlane(head.position, Vector3.up),
+                    Vector3.ProjectOnPlane(dock.transform.position, Vector3.up));
+                Assert.That(alignment.TryRecenter(), Is.True);
+                Assert.That(rig.transform.position.y, Is.EqualTo(originalRigY).Within(1e-5f),
+                    "Recenter cannot fake a height calibration.");
+                Assert.That(tool.transform.localScale, Is.EqualTo(originalToolScale),
+                    "Instrument dimensions and native volume calibration are immutable.");
+                Assert.That(tool.transform.position, Is.EqualTo(originalToolPosition),
+                    "View alignment must never move native-registered instruments.");
+                var horizontal = Vector3.Distance(
+                    Vector3.ProjectOnPlane(head.position, Vector3.up),
+                    Vector3.ProjectOnPlane(dock.transform.position, Vector3.up));
+                Assert.That(horizontal, Is.EqualTo(0.78f).Within(0.02f));
+                Assert.That(originalHorizontalDistance, Is.Not.EqualTo(horizontal).Within(1e-4f));
+            }
+            finally { rig.SetActive(originalRigActive); }
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
