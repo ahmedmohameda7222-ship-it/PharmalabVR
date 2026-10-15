@@ -17,6 +17,8 @@ namespace PharmaLabVR.Editor
             Directory.CreateDirectory("Assets/PharmaLabVR/Materials");
             GenerateEnvironment();
             GenerateResearchBurette();
+            GenerateResearchPipette();
+            GenerateResearchStockBottle();
             GenerateMeasurementPanel();
             AssetDatabase.SaveAssets();
         }
@@ -176,6 +178,67 @@ namespace PharmaLabVR.Editor
             grip.forceGravityOnDetach = false;
             PrefabUtility.SaveAsPrefabAsset(root, "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
             Object.DestroyImmediate(root);
+        }
+
+        // Research geometry only; these are distinct view/actuator prefabs,
+        // not calibrated pipettes or a substitute for Native volume transfers.
+        private static void GenerateResearchPipette()
+        {
+            var glass = CreateMaterial("ResearchPipetteGlass",
+                new Color(0.77f, 0.91f, 0.95f, 0.55f), 0.02f, 0.75f);
+            var ink = CreateMaterial("ResearchPipetteInk",
+                new Color(0.06f, 0.16f, 0.19f), 0f, 0.18f);
+            var root = new GameObject("ResearchPipette");
+            try
+            {
+                Part(root.transform, "GraduatedGlassTube", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.15f, 0f), new Vector3(0.015f, 0.135f, 0.015f), glass, true);
+                Part(root.transform, "MeteredOutletTip", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.012f, 0f), new Vector3(0.004f, 0.019f, 0.004f), glass);
+                Part(root.transform, "SuctionCollar", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.287f, 0f), new Vector3(0.022f, 0.008f, 0.022f), ink);
+                for (var ml = 0; ml <= 25; ++ml)
+                {
+                    var major = ml % 5 == 0;
+                    Part(root.transform, "PipetteScale " + ml + " mL", PrimitiveType.Cube,
+                        new Vector3(0.016f, 0.275f - 0.25f * ml / 25f, 0f),
+                        new Vector3(major ? 0.012f : 0.005f, 0.001f, 0.0015f), ink);
+                }
+                root.AddComponent<PipetteActuator>();
+                PrefabUtility.SaveAsPrefabAsset(root,
+                    "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+        private static void GenerateResearchStockBottle()
+        {
+            var glass = CreateMaterial("ResearchBottleGlass",
+                new Color(0.69f, 0.85f, 0.91f, 0.65f), 0.03f, 0.70f);
+            var ink = CreateMaterial("ResearchBottleCap",
+                new Color(0.09f, 0.30f, 0.35f), 0.04f, 0.35f);
+            var root = new GameObject("ResearchStockBottle");
+            try
+            {
+                Part(root.transform, "StockBottleBody", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.083f, 0f), new Vector3(0.075f, 0.075f, 0.075f), glass, true);
+                Part(root.transform, "NarrowNeck", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.181f, 0f), new Vector3(0.033f, 0.024f, 0.033f), glass);
+                Part(root.transform, "ClosedResearchCap", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.214f, 0f), new Vector3(0.042f, 0.012f, 0.042f), ink);
+                var label = new GameObject("100mL_Research_NotCalibrated");
+                label.transform.SetParent(root.transform, false);
+                label.transform.localPosition = new Vector3(-0.052f, 0.09f, -0.076f);
+                var text = label.AddComponent<TextMesh>();
+                text.text = "100mL Research";
+                text.fontSize = 20;
+                text.characterSize = 0.007f;
+                text.color = new Color(0.04f, 0.16f, 0.18f);
+                root.AddComponent<BottlePourActuator>();
+                PrefabUtility.SaveAsPrefabAsset(root,
+                    "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            }
+            finally { Object.DestroyImmediate(root); }
         }
 
         private static void GenerateMeasurementPanel()

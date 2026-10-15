@@ -332,6 +332,8 @@ namespace PharmaLabVR.Session
             get
             {
                 var tool = GetComponent<PipetteActuator>();
+                if (tool == null && driver != null)
+                    tool = driver.transform.root.GetComponentInChildren<PipetteActuator>(true);
                 if (tool == null) tool = gameObject.AddComponent<PipetteActuator>();
                 tool.Configure(driver);
                 return tool;
@@ -343,6 +345,8 @@ namespace PharmaLabVR.Session
             get
             {
                 var tool = GetComponent<BottlePourActuator>();
+                if (tool == null && driver != null)
+                    tool = driver.transform.root.GetComponentInChildren<BottlePourActuator>(true);
                 if (tool == null) tool = gameObject.AddComponent<BottlePourActuator>();
                 tool.Configure(driver);
                 return tool;

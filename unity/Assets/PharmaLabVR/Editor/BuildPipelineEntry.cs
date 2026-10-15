@@ -168,6 +168,22 @@ namespace PharmaLabVR.Editor
             room.transform.SetParent(lab.transform, false);
             var bench = (GameObject)PrefabUtility.InstantiatePrefab(benchPrefab);
             bench.transform.SetParent(benchRoot.transform, false);
+            // Independent instrument assets are authored and linked in AllAssets,
+            // never substituted with the burette valve. Their measured actions
+            // remain explicit SessionController commands under Native authority.
+            foreach (var item in new[] {
+                ("ResearchPipette", new Vector3(-0.34f, 0.49f, 0.26f)),
+                ("ResearchStockBottle", new Vector3(-0.58f, 0.49f, 0.22f))
+            })
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    "Assets/PharmaLabVR/Prefabs/Tools/" + item.Item1 + ".prefab");
+                if (prefab == null)
+                    throw new InvalidOperationException("Missing generated research instrument prefab: " + item.Item1);
+                var toolInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+                toolInstance.transform.SetParent(lab.transform, false);
+                toolInstance.transform.localPosition = item.Item2;
+            }
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
