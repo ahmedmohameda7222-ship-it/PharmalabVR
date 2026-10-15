@@ -66,7 +66,8 @@ namespace PharmaLabVR.Input
                 if (adapter is ILabInputAdapter desktopInputAdapter) desktopInputAdapter.SetEnabled(mode == ApplicationMode.Desktop);
             foreach (var adapter in xrRig.GetComponentsInChildren<MonoBehaviour>(true))
                 if (adapter is ILabInputAdapter xrInputAdapter) xrInputAdapter.SetEnabled(mode == ApplicationMode.VirtualReality);
-            if (coreDriver != null)
+            // Scene generation must not serialize a runtime-only dock lock.
+            if (Application.isPlaying && coreDriver != null)
                 foreach (var mount in coreDriver.transform.root.GetComponentsInChildren<ToolMount>(true))
                 {
                     if (mode == ApplicationMode.VirtualReality) mount.TryMount();
