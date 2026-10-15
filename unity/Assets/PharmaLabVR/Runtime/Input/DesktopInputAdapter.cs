@@ -83,7 +83,8 @@ namespace PharmaLabVR.Input
             var sampledActuator = heldTool != null ? actuator : 0f;
             return new[] { LabGeometryAdapter.BuildSample(
                 heldToolId, ++sequence, nowNs, labFrame, sampledTool, sampledActuator,
-                geometryProfileHash, true, captureTarget != null ? captureTarget.Estimate(sampledTool) : null) };
+                geometryProfileHash, true, captureTarget != null ?
+                    LabCaptureTarget.EstimateExclusive(sampledTool, captureTarget) : null) };
         }
 
         public void ResetBaselines()

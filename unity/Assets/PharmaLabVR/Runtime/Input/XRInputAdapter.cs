@@ -59,7 +59,8 @@ namespace PharmaLabVR.Input
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
                     trackingValid && (!selected || Tracked(owner)),
-                    captureTarget != null ? captureTarget.Estimate(registeredTool) : null)
+                    captureTarget != null ?
+                        LabCaptureTarget.EstimateExclusive(registeredTool, captureTarget) : null)
             };
         }
 

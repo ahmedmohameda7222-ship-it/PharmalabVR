@@ -95,6 +95,46 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P03_03_OverlappingPhysicalReceiversNeverAwardFirstColliderMaterial()
+        {
+            var first = new GameObject("first-receiver");
+            var second = new GameObject("second-receiver");
+            var tool = new GameObject("outlet-tool");
+            try
+            {
+                var a = first.AddComponent<LabCaptureTarget>();
+                a.Configure("receiver", 0.05f);
+                var b = second.AddComponent<LabCaptureTarget>();
+                b.Configure("other-receiver", 0.05f);
+                var outlet = new GameObject("OutletExit");
+                outlet.transform.SetParent(tool.transform, false);
+                outlet.transform.localPosition = new Vector3(0f, -0.02f, 0f);
+                tool.transform.position = new Vector3(0f, 0.10f, 0f);
+                // Moving the second receiver away makes the only real target
+                // admissible; restoring it must refuse both candidates.
+                second.transform.position = new Vector3(0.5f, 0f, 0f);
+                var single = LabCaptureTarget.EstimateExclusive(tool.transform, a);
+                Assert.That(single.Length, Is.EqualTo(1));
+                Assert.That(single[0].destinationInventoryId, Is.EqualTo("receiver"));
+                second.transform.position = Vector3.zero;
+                Assert.That(LabCaptureTarget.EstimateExclusive(tool.transform, a).Length,
+                    Is.Zero, "Overlapping receiver rims must be rejected, never first-wins.");
+                b.Configure("receiver", 0.05f);
+                Assert.That(LabCaptureTarget.EstimateExclusive(tool.transform, a).Length,
+                    Is.Zero, "Two physical rims remain ambiguous even with same inventory ID.");
+                second.SetActive(false);
+                Assert.That(LabCaptureTarget.EstimateExclusive(tool.transform, a).Length,
+                    Is.EqualTo(1), "An inactive candidate cannot shadow an active receiver.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(tool);
+                Object.DestroyImmediate(second);
+                Object.DestroyImmediate(first);
+            }
+        }
+
+        [Test]
         public void Q02_ResearchOrUnsupportedObservationCannotEnableCertifiedScore()
         {
             var protocol = new ProtocolDefinition { certifiedScoring = true, requiredObservables = new[] { "pH", "indicatorColor" } };
