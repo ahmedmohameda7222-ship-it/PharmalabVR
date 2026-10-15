@@ -380,5 +380,107 @@ namespace PharmaLabVR.Tests.PlayMode
             }
             yield return null;
         }
+        [UnityTest]
+        public IEnumerator P06_02_SetupPreferencesSurviveBackNavigationAndNativeLabSceneLoad()
+        {
+            var previous = SetupPreferencesSelection.Current;
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var router = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(panels.Request(PanelAction.EnterDesktop), Is.True);
+                var selected = new LabSetupPreferences("Seated", "Left", 0.74f, 1.2f,
+                    captionsEnabled: true, reducedMotion: true, highContrast: true);
+                router.UpdateSetupPreferences(selected);
+                Assert.That(router.Current.Setup.Posture, Is.EqualTo("Seated"));
+                Assert.That(router.Current.Setup.DominantHand, Is.EqualTo("Left"));
+                Assert.That(router.Current.Setup.BenchHeightMeters, Is.EqualTo(0.74f).Within(0.0001f));
+                Assert.That(router.Current.Setup.TextScale, Is.EqualTo(1.2f).Within(0.0001f));
+                Assert.That(router.Current.Setup.CaptionsEnabled, Is.True);
+                Assert.That(router.Current.Setup.ReducedMotion, Is.True);
+                Assert.That(router.Current.Setup.HighContrast, Is.True);
+                Assert.That(panels.Request(PanelAction.Home), Is.True);
+                Assert.That(panels.Request(PanelAction.EnterDesktop), Is.True);
+                Assert.That(router.Current.Setup, Is.SameAs(selected));
+                Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+                yield return null;
+                var labRoots = SceneManager.GetActiveScene().GetRootGameObjects();
+                var labRouter = labRoots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var driver = labRoots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(labRouter.Current.Setup, Is.SameAs(selected));
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                Assert.That(labRouter.Current.SaveState, Is.EqualTo("Unsaved"));
+            }
+            finally
+            {
+                SetupPreferencesSelection.Select(previous);
+                foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                if (scene.isLoaded)
+                    foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_LeftHandAndTextScaleAffectTheActualVrWorldPanel()
+        {
+            var previous = SetupPreferencesSelection.Current;
+            SetupPreferencesSelection.Select(new LabSetupPreferences(
+                "Standing", "Left", 1.00f, 1.2f, captionsEnabled: true,
+                reducedMotion: true, highContrast: true));
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var panels = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(panels.Request(PanelAction.EnterVR), Is.True);
+                Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+                yield return null;
+                var labRoots = SceneManager.GetActiveScene().GetRootGameObjects();
+                var presenter = labRoots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var camera = labRoots.SelectMany(root => root.GetComponentsInChildren<Camera>(true))
+                    .Single(item => item.name == "XR Camera");
+                var canvas = presenter.GetComponentInChildren<Canvas>(true);
+                Assert.That(canvas.gameObject.activeInHierarchy, Is.True);
+                Assert.That(Vector3.Dot(canvas.transform.position - camera.transform.position,
+                    camera.transform.right), Is.LessThan(0f),
+                    "Left-hand setup must move the interactive world panel left of the head.");
+                var title = presenter.GetComponentsInChildren<Text>(true)
+                    .Single(item => item.name == "Panel title");
+                Assert.That(title.fontSize, Is.EqualTo(31),
+                    "Text scale must modify the rendered world-panel typography.");
+                var router = labRoots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(router.Current.Setup.BenchHeightMeters, Is.EqualTo(1.00f).Within(0.0001f));
+            }
+            finally
+            {
+                SetupPreferencesSelection.Select(previous);
+                foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                if (scene.isLoaded)
+                    foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            }
+            yield return null;
+        }
+
     }
 }
