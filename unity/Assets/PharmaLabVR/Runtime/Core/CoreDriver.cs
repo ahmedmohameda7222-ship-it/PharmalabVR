@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using PharmaLabVR.Input;
 using PharmaLabVR.Lab;
+using PharmaLabVR.Tools;
 using PharmaLabVR.UI;
 using UnityEngine;
 
@@ -287,7 +288,19 @@ namespace PharmaLabVR.Core
 
         public void ReplaceSession(CoreSession replacement)
         {
-            if (replacement == null || !replacement.IsOpen) throw new ArgumentException("Replacement session is not open.", nameof(replacement));
+            if (replacement == null || !replacement.IsOpen)
+                throw new ArgumentException("Replacement session is not open.", nameof(replacement));
+            if (Session == null || !Session.IsOpen)
+                throw new InvalidOperationException("A live Native session is required for a replacement.");
+            // Import forces SessionLoad Hold in Native. Before swapping handles,
+            // refuse mode mismatch or an undocked tool in VR. The old Native
+            // session remains fully owned and open on all admission failures.
+            var imported = JsonUtility.FromJson<SnapshotEnvelope>(replacement.ReadSnapshot());
+            var mount = transform.root.GetComponentInChildren<ToolMount>(true);
+            if (!SessionLoadAdmission.MayReplace(CurrentMode, imported?.mode,
+                    mount != null, mount != null && mount.IsMounted))
+                throw new InvalidOperationException(
+                    "Load refused: saved mode must match current mode and VR tool must be docked.");
             var previous = Session;
             Session = replacement;
             accumulator = 0.0;
