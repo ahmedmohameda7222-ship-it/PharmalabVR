@@ -643,7 +643,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         if (context->holdActive &&
             (type == "CreateVessel" || type == "CreateSink" || type == "PrepareStock" ||
              type == "TransferFixed" || type == "DisposeContents" || type == "RinseTool" ||
-              type == "AspiratePipette" || type == "DispensePipette" ||
+              type == "PourBottle" || type == "AspiratePipette" || type == "DispensePipette" ||
               type == "SwitchPipetteSource")) {
             context->recoveryReady = false;
             outcome = {false, "SessionHeld", "material operations require explicit recovery"};
@@ -711,8 +711,11 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             const auto snapshot = context->executor.snapshot();
             if (!plv::isValidId(toolId) || !profileRevision || *profileRevision == 0U || frame != "lab" ||
                 (profile != plv::BuretteProfile::researchDefault().id &&
-                  profile != plv::PipetteProfile::researchDefault().id) ||
+                  profile != plv::PipetteProfile::researchDefault().id &&
+                  profile != plv::BottleProfile::researchDefault().id) ||
                  snapshot.vessels.count(sourceId) == 0U ||
+                 (profile == plv::BottleProfile::researchDefault().id &&
+                  snapshot.vessels.at(sourceId).capacityM3 > plv::BottleProfile::researchDefault().capacityM3) ||
                 snapshot.sinks.count(sinkId) == 0U) {
                 outcome = {false, "InvalidToolPlacement", "tool identity, profile, source, sink, or frame is invalid"};
             } else if (context->tools.count(toolId) != 0U) {
@@ -734,6 +737,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 outcome = {false, "StaleActuatorRevision", "tool actuator revision changed"};
             } else if (found->second.geometryProfileHash == plv::PipetteProfile::researchDefault().id) {
                 outcome = {false, "PipetteRequiresMeteredAction", "use explicit pipette aspiration/dispense"};
+            } else if (found->second.geometryProfileHash == plv::BottleProfile::researchDefault().id) {
+                outcome = {false, "BottleRequiresMeasuredPour", "use an explicit revision-bound measured bottle pour"};
             } else if (!std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
                 outcome = {false, "InvalidActuator", "actuator must be finite and within [0,1]"};
             } else {
@@ -741,6 +746,55 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 ++found->second.actuatorRevision;
                 found->second.latestInput.reset();
                 outcome = {true, "Accepted", ""};
+            }
+        } else if (type == "PourBottle") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto destinationId = payload.at("destinationInventoryId").get<std::string>();
+            const double quantityM3 = payload.at("quantityM3").get<double>();
+            const auto expectedInventoryRevision =
+                decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
+            const auto tool = context->tools.find(toolId);
+            if (tool == context->tools.end() ||
+                tool->second.geometryProfileHash != plv::BottleProfile::researchDefault().id) {
+                outcome = {false, "InvalidBottle", "registered stock bottle required"};
+            } else if (!expectedInventoryRevision ||
+                       *expectedInventoryRevision != tool->second.inventoryRevision) {
+                outcome = {false, "StaleInventoryRevision", "stock bottle inventory revision changed"};
+            } else if (!std::isfinite(quantityM3) || quantityM3 <= 0.0 ||
+                       quantityM3 > plv::BottleProfile::researchDefault().capacityM3) {
+                outcome = {false, "InvalidBottlePour", "invalid measured research bottle aliquot"};
+            } else {
+                const auto sourceId = tool->second.sourceInventoryId;
+                const auto source = beforeCommand.vessels.find(sourceId);
+                const auto receiver = beforeCommand.vessels.find(destinationId);
+                if (destinationId == sourceId || source == beforeCommand.vessels.end() ||
+                    receiver == beforeCommand.vessels.end()) {
+                    outcome = {false, "InvalidBottleDestination", "receiver must differ from bottle stock"};
+                } else if (!revisions.is_object() || revisions.size() != 2U ||
+                           !revisions.contains(sourceId) || !revisions.contains(destinationId) ||
+                           revision(revisions, sourceId) != source->second.materialRevision ||
+                           revision(revisions, destinationId) != receiver->second.materialRevision) {
+                    outcome = {false, "StaleRevision", "stock bottle and receiver revisions required"};
+                } else {
+                    auto staged = context->executor;
+                    outcome = staged.transferFixed(
+                        {sourceId, plv::TransferQuantityBasis::LiquidVolumeM3, quantityM3,
+                         {{destinationId, 1.0}}, tool->second.overflowSinkId},
+                        {{sourceId, source->second.materialRevision},
+                         {destinationId, receiver->second.materialRevision}});
+                    if (outcome.accepted) {
+                        const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
+                        const auto nowNs = static_cast<std::uint64_t>(
+                            std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                        outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                        if (outcome.accepted) {
+                            context->executor = std::move(staged);
+                            recordTransportProposal(*context, gross, nowNs);
+                            ++tool->second.inventoryRevision;
+                            tool->second.latestInput.reset();
+                        }
+                    }
+                }
             }
         } else if (type == "AspiratePipette") {
             const auto toolId = payload.at("toolId").get<std::string>();
@@ -924,6 +978,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             if (found == context->tools.end() || !expectedInventoryRevision ||
                 *expectedInventoryRevision != found->second.inventoryRevision) {
                 outcome = {false, "StaleInventoryRevision", "tool rinse inventory revision changed"};
+            } else if (found->second.geometryProfileHash == plv::BottleProfile::researchDefault().id) {
+                outcome = {false, "BottleRinseNotImplemented", "stock bottle cleaning requires a validated protocol"};
             } else if (!basis) {
                 outcome = {false, "InvalidRinse", "unsupported rinse quantity basis"};
             } else if (found->second.inFlightInventory.referenceVolumeM3 > 0.0) {
@@ -1075,8 +1131,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         if (outcome.accepted && context->holdActive &&
             (type == "CreateVessel" || type == "PrepareStock" || type == "TransferFixed" ||
              type == "PlaceTool" || type == "SetActuator" || type == "DisposeContents" ||
-             type == "RinseTool" || type == "AspiratePipette" ||
-              type == "DispensePipette" ||
+             type == "RinseTool" || type == "PourBottle" ||
+              type == "AspiratePipette" || type == "DispensePipette" ||
               type == "SwitchPipetteSource")) context->recoveryReady = false;
         if (outcome.accepted && type != "RestartCheckpoint") {
             const auto nowNs = static_cast<std::uint64_t>(
@@ -1134,7 +1190,8 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
                 !position.is_array() || position.size() != 3U || !rotation.is_array() || rotation.size() != 4U ||
                 !captureFractions.is_array() || captureFractions.size() > plv::kMaxVesselInventories ||
                 !sample.at("trackingValid").is_boolean() || !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
-                 (profile == plv::PipetteProfile::researchDefault().id && actuator > 0.0)) {
+                 ((profile == plv::PipetteProfile::researchDefault().id ||
+                   profile == plv::BottleProfile::researchDefault().id) && actuator > 0.0)) {
                 return PLV_INVALID_ARGUMENT;
             }
             double normSquared = 0.0;
@@ -1523,11 +1580,16 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     !validParcelIdentity ||
                     frame != "lab" ||
                     (profile != plv::BuretteProfile::researchDefault().id &&
-                     profile != plv::PipetteProfile::researchDefault().id) ||
+                     profile != plv::PipetteProfile::researchDefault().id &&
+                     profile != plv::BottleProfile::researchDefault().id) ||
                     (profile == plv::PipetteProfile::researchDefault().id &&
                      (tip.referenceVolumeM3 > plv::PipetteProfile::researchDefault().capacityM3 ||
                       inFlight.referenceVolumeM3 > 0.0 || actuator > 0.0)) ||
                     ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
+                    (profile == plv::BottleProfile::researchDefault().id &&
+                     (ownerSnapshot.vessels.at(sourceId).capacityM3 > plv::BottleProfile::researchDefault().capacityM3 ||
+                      tip.referenceVolumeM3 > 0.0 || residual.referenceVolumeM3 > 0.0 ||
+                      inFlight.referenceVolumeM3 > 0.0 || actuator > 0.0)) ||
                     !result.emplace(id, Context::ToolState{
                         sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,
                         *inventoryRevision, actuator,

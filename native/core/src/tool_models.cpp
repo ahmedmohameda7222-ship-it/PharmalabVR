@@ -13,6 +13,10 @@ PipetteProfile PipetteProfile::researchDefault() {
     return {"pipette-25ml-research-v1", 25e-6, 1e-7};
 }
 
+BottleProfile BottleProfile::researchDefault() {
+    return {"bottle-100ml-research-v1", 1e-4};
+}
+
 MaterialState ToolParcelState::rinse(const MaterialState& rinseParcel, double residualVolumeM3) {
     if (!rinseParcel.isFiniteNonNegative() || !std::isfinite(residualVolumeM3) || residualVolumeM3 < 0.0) {
         return {};

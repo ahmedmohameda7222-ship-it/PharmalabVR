@@ -29,6 +29,12 @@ struct PipetteProfile {
     static PipetteProfile researchDefault();
 };
 
+struct BottleProfile {
+    std::string id;
+    double capacityM3 = 1e-4; // Research 100 mL; physical calibration pending.
+    static BottleProfile researchDefault();
+};
+
 struct ToolParcelState {
     MaterialState tip;
     MaterialState inFlight;
