@@ -14,6 +14,7 @@ namespace PharmaLabVR.Tools
         [SerializeField] private float radiusMeters = 0.006f;
 
         public float Fill01 { get; private set; }
+        public double CommittedVolumeM3 { get; private set; }
         public Transform Surface => surface;
 
         public void Configure(Transform parent, double capacity, float height, float baseY,
@@ -61,7 +62,19 @@ namespace PharmaLabVR.Tools
                     material.SetColor("_BaseColor", material.color);
                 renderer.sharedMaterial = material;
             }
-            SetCommittedVolume(Fill01 * capacity);
+            SetCommittedVolume(CommittedVolumeM3);
+        }
+
+        // LiquidPresenter rebinds the native inventory capacity after bootstrap.
+        // Do not regenerate renderer meshes or reset the committed parcel.
+        public void SetProfile(double capacity, float height, float baseY)
+        {
+            if (capacity <= 0.0 || height <= 0f || !double.IsFinite(capacity))
+                throw new ArgumentException("Invalid native liquid profile.");
+            capacityM3 = capacity;
+            maximumHeight = height;
+            baseLocalY = baseY;
+            SetCommittedVolume(CommittedVolumeM3);
         }
 
         public void SetCommittedVolume(double volumeM3)
@@ -69,7 +82,8 @@ namespace PharmaLabVR.Tools
             if (double.IsNaN(volumeM3) || double.IsInfinity(volumeM3) || volumeM3 < 0.0)
                 throw new ArgumentOutOfRangeException(nameof(volumeM3));
             if (capacityM3 <= 0.0) throw new InvalidOperationException("Meniscus capacity must be positive.");
-            Fill01 = (float)(Math.Min(volumeM3, capacityM3) / capacityM3);
+            CommittedVolumeM3 = Math.Min(volumeM3, capacityM3);
+            Fill01 = (float)(CommittedVolumeM3 / capacityM3);
             if (surface == null) return;
             var position = surface.localPosition;
             position.y = baseLocalY + maximumHeight * Fill01;

@@ -22,6 +22,7 @@ namespace PharmaLabVR.Tools
             capacityM3 = capacity;
             maximumVisualHeight = height;
             baseLocalY = baseY;
+            meniscus?.SetProfile(capacity, height, baseY);
             SetCommittedVolume(CommittedVolumeM3);
         }
 
