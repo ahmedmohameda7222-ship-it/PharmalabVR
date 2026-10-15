@@ -97,6 +97,26 @@ internal static class Program
             Check(XRTrackingAdmission.HasFreshTracking(true, true, true),
                 "Fully tracked headset and both controllers should be eligible");
 
+            // P07.03: a real Native import is held by SessionLoad; keep its
+            // restored mode isolated from the currently active Unity rig and
+            // refuse active/free-hand XR replacement before disposing old core.
+            Check(SessionLoadAdmission.MayReplace("Desktop", "Desktop", false, false),
+                "Desktop-to-Desktop import should be permitted without an XR dock");
+            Check(!SessionLoadAdmission.MayReplace("Desktop", "VR", true, true),
+                "Desktop rig accepted a VR session without BeginModeChange");
+            Check(!SessionLoadAdmission.MayReplace("VR", "Desktop", true, true),
+                "VR rig accepted a Desktop session without BeginModeChange");
+            Check(!SessionLoadAdmission.MayReplace("VR", "VR", false, false),
+                "VR import lacked the registered tool dock");
+            Check(!SessionLoadAdmission.MayReplace("VR", "VR", true, false),
+                "VR import while tool undocked falsely admitted");
+            Check(SessionLoadAdmission.MayReplace("VR", "VR", true, true),
+                "Parked VR tool with consistent import mode should be admissible");
+            Check(!SessionLoadAdmission.MayReplace("Unsupported", "VR", true, true),
+                "Unknown active mode falsely admitted imported session");
+            Check(!SessionLoadAdmission.MayReplace("VR", null, true, true),
+                "Missing imported Native mode falsely admitted");
+
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
