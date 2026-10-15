@@ -389,13 +389,17 @@
           "codeCommit": "15a067e17ee00995e914442a15f0c8c76c77e83a",
           "evidence": [
             "docs/evidence/p03-01-drop-presentation-progress.md",
-            "docs/evidence/p03-01-parcel-import-integrity.md","docs/evidence/p03-lab-progress.md"],
+            "docs/evidence/p03-01-parcel-import-integrity.md",
+            "docs/evidence/p03-lab-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "P03.01 repeated SessionLoad/CheckpointRestart snapshots do not clear landed ID more than once; explicit accepted Native replacement/restart resets once even when still held; headless 136 assertions and mutation RED→GREEN; Unity NOT_RUN",
             "P03.01 Source TDD SessionLoad/CheckpointRestart restores same valid pre-landing Native parcel ID after earlier landing, without allowing stale snapshots in same session; headless 124 tests, Unity Player/XR NOT_RUN",
             "P03.01 DropParcelState source-tested through actual class C# headless: committed IDs only, matching landing exactly once, stale snapshot suppressed; DropPresenter connected to Native InFlightLanded receipts; Unity rendering NOT_RUN",
-            "P03.01 C++17 Native ABI test-first import validation rejects anonymous, wrong-branch, wrong-tool and future-sequence pending drop IDs; valid exported parcel imports; no Unity/editor/device tests at new SHA","Native P03_01 red/green, parcel IDs in product ABI, Unity Lab pending drop state, native 93/93, PlayMode 33/33"],
+            "P03.01 C++17 Native ABI test-first import validation rejects anonymous, wrong-branch, wrong-tool and future-sequence pending drop IDs; valid exported parcel imports; no Unity/editor/device tests at new SHA",
+            "Native P03_01 red/green, parcel IDs in product ABI, Unity Lab pending drop state, native 93/93, PlayMode 33/33"
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -414,15 +418,22 @@
             "P03.01"
           ],
           "status": "Open",
-          "codeCommit": "ca1aea83b24429ce0b55615754c7b8bec58e1b63",
+          "codeCommit": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
           "evidence": [
             "docs/evidence/p03-02-measured-stock-bottle-progress.md",
-            "docs/evidence/p03-02-metered-pipette-progress.md","docs/evidence/p03-02-tip-mixing-progress.md", "docs/evidence/p03-02-rinse-source-progress.md"],
+            "docs/evidence/p03-02-metered-pipette-progress.md",
+            "docs/evidence/p03-02-tip-mixing-progress.md",
+            "docs/evidence/p03-02-rinse-source-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "P03.02 distinct bottle-100ml-research-v1 Native profile, PlaceTool capacity bound, explicit PourBottle transactional fixed aliquot with source+receiver/tool revisions and held safety; Ubuntu Native test RED/GREEN; complete bottle rinse/Unity/physical calibration NOT_RUN",
             "P03.02 C ABI source switch between two prepared stock bottles preserves retained chloride in pipette, adds both chloride and sodium to new base receiver, and preserves water/material pools; no Unity Player acceptance",
-            "P03.02 first distinct pipette source: C++ product ABI registered 25mL research profile with explicit AspiratePipette/DispensePipette, science-budget staged material moves and retained-rinse volume; real Native RED/GREEN Windows+Ubuntu; separate bottle/Unity journey NOT_RUN","Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open", "Rinse source C ABI red 8802396 on Ubuntu 95/96 and green c7dc189 on all four native CI jobs, 1/1 CTest and 9/9 tooling per matrix; no current Unity/Player verification for new code"],
+            "P03.02 first distinct pipette source: C++ product ABI registered 25mL research profile with explicit AspiratePipette/DispensePipette, science-budget staged material moves and retained-rinse volume; real Native RED/GREEN Windows+Ubuntu; separate bottle/Unity journey NOT_RUN",
+            "Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open",
+            "Rinse source C ABI red 8802396 on Ubuntu 95/96 and green c7dc189 on all four native CI jobs, 1/1 CTest and 9/9 tooling per matrix; no current Unity/Player verification for new code",
+            "2026-10-15 Research P03.02 source batch: product Native bottle mixed 2e-8 m3 synthetic film, source-debited measured pours, real contaminated rinses/waste and import-bounded residual (C ABI regression; Native Windows/Ubuntu RED/GREEN at 6e8cee2). Unity source adds ResearchInstrumentPayloads, PipetteActuator, BottlePourActuator, actual Native revisions/receipts via LabCommandService, optional setup-only prepared rinse water, Desktop actions and dedicated XR spatial panel navigation; NUnit PlayMode source authored, real Unity/Player/XR NOT_RUN. Latest functional source 43690cfa57ead8d650f081bf3959650f4e1ec37d. P03.02 remains Open/NotReviewed, P03.01/P07.03 and P06.02 dependencies Open; 66 deferred Unity rows remain NOT_RUN."
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -443,9 +454,13 @@
           ],
           "status": "Open",
           "codeCommit": "f56a75806f2199aa2380419c76c15b4fb1dca77c",
-          "evidence": ["docs/evidence/p03-lab-progress.md"],
+          "evidence": [
+            "docs/evidence/p03-lab-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": ["Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33"],
+          "implementationEvidence": [
+            "Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33"
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -789,10 +804,14 @@
           ],
           "status": "Open",
           "codeCommit": "8c1b55de9c10b0ae9fd744fed8fb58b6d691d61a",
-          "evidence": ["docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"],
+          "evidence": [
+            "docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "P07.01 real OpenXR Boot admission, Android VR default Setup, world-space Canvas + controller rays, XRUIInputModule; generated scene and tracked trigger NOT_RUN in Unity","P06.02 new Boot/VR runtime audio listener exclusivity; headless shared-panel contract verifies no implicit Save/Review paused resume, no Unity Player run at this SHA"],
+            "P07.01 real OpenXR Boot admission, Android VR default Setup, world-space Canvas + controller rays, XRUIInputModule; generated scene and tracked trigger NOT_RUN in Unity",
+            "P06.02 new Boot/VR runtime audio listener exclusivity; headless shared-panel contract verifies no implicit Save/Review paused resume, no Unity Player run at this SHA"
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -815,10 +834,14 @@
           "status": "Open",
           "codeCommit": "89174e8a311b283746eb6056505f3aeb75a8d480",
           "evidence": [
-            "docs/evidence/p07-dock-and-tracking-progress.md","docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"],
+            "docs/evidence/p07-dock-and-tracking-progress.md",
+            "docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "P07.02 native-safe visual XR tool dock and single-shot shared ReleaseTool action; direct XR simulation and mounting geometry remain NOT_RUN","P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending"],
+            "P07.02 native-safe visual XR tool dock and single-shot shared ReleaseTool action; direct XR simulation and mounting geometry remain NOT_RUN",
+            "P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending"
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -840,12 +863,16 @@
           "codeCommit": "77bb8b9e206f52cdbbf81a748db54a5c6d6a352f",
           "evidence": [
             "docs/evidence/p07-03-import-and-park-progress.md",
-            "docs/evidence/p07-03-recenter-progress.md","docs/evidence/p07-dock-and-tracking-progress.md"],
+            "docs/evidence/p07-03-recenter-progress.md",
+            "docs/evidence/p07-dock-and-tracking-progress.md"
+          ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "P07.03 Native-backed user-driven Load on VR Pause/Hold requires saved file and docked tool, followed by SessionLoad Native hold; headless RED/GREEN, Unity Save/Load test NOT_RUN",
             "P07.03 post-load mode isolation and docked-tool admission, physical 0.12m park gate and shared VR ParkTool action; Unity tests NOT_RUN",
-            "P07.03 recenter and 30 degree snap turn require VR Native Pause/Hold, tracked head and docked tool; Unity render/geometry/Player NOT_RUN","P07.03 XRTrackingAdmission requires head and both XR controllers tracked for native input recovery; headset/XR simulator, recenter and comfort remain NOT_RUN"],
+            "P07.03 recenter and 30 degree snap turn require VR Native Pause/Hold, tracked head and docked tool; Unity render/geometry/Player NOT_RUN",
+            "P07.03 XRTrackingAdmission requires head and both XR controllers tracked for native input recovery; headset/XR simulator, recenter and comfort remain NOT_RUN"
+          ],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -2200,9 +2227,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "ca1aea83b24429ce0b55615754c7b8bec58e1b63",
-  "functionalCodeSha": "ca1aea83b24429ce0b55615754c7b8bec58e1b63",
-  "currentTask": "P03.02 source: distinct 100 mL registered research stock bottle with Native revision-bound measured pour; pipette/source-switch done; Unity/device remains deferred",
+  "actualHead": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
+  "functionalCodeSha": "43690cfa57ead8d650f081bf3959650f4e1ec37d",
+  "currentTask": "P03.02 source: Native bottle film and rinse GREEN; Unity metered pipette/bottle actuators, Desktop/VR command routes authored, pending Unity verification and remaining full instrument/refill interactions",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2240,6 +2267,7 @@
     "Ruling 2026-10-15 P03.01 Native restore-boundary fix: previous functional aa0f42259212cbc1dca84e884997d24a090c2808 called DropParcelState.ResetSession on every SnapshotChanged with hold.reason SessionLoad or CheckpointRestart, so unchanged held snapshots could erase last-landed suppression repeatedly. User requested development-first source work, so keep P03.01 and dependency P07.03 Open pending Unity. TDD RED 98d79cec3aeefc7dec3c2e5724d3686bfd6a82fc missing production ApplyNativeSnapshot, headless push CI 38716087729 CS1061. GREEN source 15a067e17ee00995e914442a15f0c8c76c77e83a: pure DropParcelState.ApplyNativeSnapshot accepts restore transitions only once per hold reason change; DropPresenter no longer directly resets on every held snapshot; CoreDriver.NativeSessionRestored raised after accepted import/RestartCheckpoint and before PublishSnapshot; NativeLabVisuals wires and unwires DropPresenter.ResetSession. Test proves repeated snapshots keep last landed hidden, explicit same-reason accepted restore can revive legitimate saved parcel, and changed hold reason creates new epoch. Push CI 38716320883/PR 38716327900 panel-routing 136 headless assertions GREEN; mutation commit 666b9188897e418273b464f54e45e2389c403ca9 push CI 38716458968 restored original and passed 136 with six deliberate RED mutations including repeat-held-reset, Native Windows/Ubuntu still pending at observation. Unity EditMode, PlayMode, Player, simulated XR and physical headset NOT_RUN; 66 deferred task rows NOT_RUN, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged.",
     "Ruling 2026-10-15 P03.02 source-first slice while P03.01 dependency and P07.03 remain Open: create a distinct pipette research profile and actual Native metered commands, not pretend the burette valve represents a pipette. TDD RED test a53ff552493c93225e423bc961307a6d631c5aab, corrected Bulk-budget test e3d3100cb07704267fe1435014f8c4ed663395aa, push CI 38719239548 Ubuntu 97/98 cases passed with six expected new-case failures: pipette profile not admitted, SetActuator lacked distinct rejection, no aspirate/dispense, rinse path denied. Implementation in 3cb88d90921fdfbf8751c887e568ea25958a1424 and 8dd167a329a3a3a667c18bc29eb35871a02a5f39 adds PipetteProfile, PlaceTool admission, explicit AspiratePipette and DispensePipette with source/destination revision checks, 25mL hard capacity, science budget staging, inventory and material ledger conservation and blocks burette hydraulic actuation for pipette; push 38719760416 and PR 38719769670 all Windows/Ubuntu native SUCCESS. TDD residual RED 75572fb6c478af6fa1b4867a46b31237a5d1e6e6, Ubuntu push 38720128482 98/99 cases passed, expected shared 5e-8 residual failure; GREEN 259b0b96cbf4216df588532fe48d3b632efe7048 separate research pipette 1e-7 m3 tip residue vs burette 5e-8, RinseTool retains profile-specific material and sends represented contamination to waste. Latest green Ubuntu CTest 1/1 success in CI 38720458723, Windows in progress at ledger writing. Calibration pending: research numbers not device calibration; science package/bottle profile and Unity PipetteActuator/actual user fill-refill/rinse UI are NOT IMPLEMENTED/NOT_RUN. P03.02 Open/NotReviewed, no 15/51 promotion, G-R1 Open, PR #1 unmerged.",
     "Ruling 2026-10-15 P03.02 continue: Add explicit SwitchPipetteSource command only to a registered 25mL research pipette after a metered aspiration/dispense, preserving the tip residue and requiring registered prepared alternate stock, fresh bottle material revision and pipette inventory revision; refuses missing stock and leaves material ledger unchanged. Source TDD RED 659dd0eb3e4aa0e6ae84c4e4877e0498a979eda7, Ubuntu push CI 38721263996 99/100 cases passed, 7 failures isolated to missing source switch and descendant mixed receiver. Functional source 482e2e2c97cd280e832d887d4bf4aa9fe023366a, Ubuntu Native CTest passed CI 38721647508 and PR 38721653481; Windows jobs still building at ledger write. New product ABI demonstrates hydrochloric acid tip residual is carried into next separately prepared sodium hydroxide aliquot, receiver includes real represented Na and Cl, material ledger remains conserved. All chemistry remains Native; research values not physically calibrated. Unity User UI PipetteActuator, independently modeled bottle and calibration remain NOT_IMPLEMENTED/NOT_RUN. P03.01 and P03.02 both Open, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged, 66 deferred Unity task rows NOT_RUN.",
-    "Ruling: 2026-10-15 P03.02 research bottle continuation: HEAD at turn start 52529238ea7d3d30f7461598ba3732d6a31fece8 had parallel completed pipette and prepared-stock switch implementations, so stale original base 5ecbe7e8 was abandoned rather than overwritten. New test-first Native product ABI 26019233c93758414c60fa5fad16e8e5db0b99c8 demonstrated 100/101 test cases passing, exact new bottle case rejected valid bottle PlaceTool before implementation (PR CI 38786863512). Functional source ca1aea83b24429ce0b55615754c7b8bec58e1b63 adds BottleProfile 100mL research-only, package profile pending calibration, accepts PlaceTool stock source up to capacity, denies unsafe SetActuator and raw positive tracked actuation, measured PourBottle uses existing staged TransferFixed, budget and source/receiver/tool revisions, rejects generic bottle RinseTool as not implemented; import enforces bottle profile, capacity, empty residual and no raw actuator. Exact functional code CI PR 38787431765 and push 38787422220 Ubuntu native CTest 1/1 SUCCESS, panel-routing success; Windows native still building at checkpoint. This does not provide bottle film residual, bottle tilt dynamics, real user fill/rinse/refill/transfer or Unity/Player/XR. P03.02 Open/NotReviewed, dependency P03.01 Open, P07.03 Open; 15 VerifiedLocal/51 Open, G-R1 Open, 66 deferred Unity checks NOT_RUN, formal selector P06.02 unchanged, PR #1 not merged."
+    "Ruling: 2026-10-15 P03.02 research bottle continuation: HEAD at turn start 52529238ea7d3d30f7461598ba3732d6a31fece8 had parallel completed pipette and prepared-stock switch implementations, so stale original base 5ecbe7e8 was abandoned rather than overwritten. New test-first Native product ABI 26019233c93758414c60fa5fad16e8e5db0b99c8 demonstrated 100/101 test cases passing, exact new bottle case rejected valid bottle PlaceTool before implementation (PR CI 38786863512). Functional source ca1aea83b24429ce0b55615754c7b8bec58e1b63 adds BottleProfile 100mL research-only, package profile pending calibration, accepts PlaceTool stock source up to capacity, denies unsafe SetActuator and raw positive tracked actuation, measured PourBottle uses existing staged TransferFixed, budget and source/receiver/tool revisions, rejects generic bottle RinseTool as not implemented; import enforces bottle profile, capacity, empty residual and no raw actuator. Exact functional code CI PR 38787431765 and push 38787422220 Ubuntu native CTest 1/1 SUCCESS, panel-routing success; Windows native still building at checkpoint. This does not provide bottle film residual, bottle tilt dynamics, real user fill/rinse/refill/transfer or Unity/Player/XR. P03.02 Open/NotReviewed, dependency P03.01 Open, P07.03 Open; 15 VerifiedLocal/51 Open, G-R1 Open, 66 deferred Unity checks NOT_RUN, formal selector P06.02 unchanged, PR #1 not merged.",
+    "2026-10-15 P03.02 source first per planner Full Development First: Native 20 uL bottle film RED fixture revisions b548556/33b94e and BLUE source f7b1ce; fixture branch correction d775e; floating point material pool conservation corrections 285ce8/6e8cee (green Windows/Ubuntu Native six workflow jobs at 6e8cee). Pure C# ResearchInstrumentPayloads at bc14aa9 headless Windows/Ubuntu/native SUCCESS. Native-backed Unity pipette/bottle actuator components, optional setup-only water and waste, real Desktop controls, PlayMode source and shared VR world-space panel actions added through 43690cfa57ead8d650f081bf3959650f4e1ec37d. Last exact HEAD CI may still be queued. Formal nextTask P06.02 remains; 15 VerifiedLocal/51 Open, G-R1 Open, 66 Unity verification NOT_RUN, PR #1 open. No new task/source slice self-accepted."
   ]
 }
