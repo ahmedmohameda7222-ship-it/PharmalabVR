@@ -1,8 +1,11 @@
 using PharmaLabVR.Input;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR;
+using UnityEngine.XR.Management;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
+using UnityEditor;
 #endif
 
 namespace PharmaLabVR.UI
@@ -16,7 +19,7 @@ namespace PharmaLabVR.UI
         {
             get
             {
-#if PHARMALABVR_VR_FIRST
+#if PHARMALABVR_VR_FIRST || UNITY_ANDROID
                 return ApplicationMode.VirtualReality;
 #else
                 return ApplicationMode.Desktop;
@@ -27,6 +30,7 @@ namespace PharmaLabVR.UI
         private ScreenRouter router;
         private LabPanelController panels;
         private Vector2 setupScroll;
+        public string LastLaunchError { get; private set; }
 
         private void Awake()
         {
@@ -37,6 +41,9 @@ namespace PharmaLabVR.UI
             panels = GetComponent<LabPanelController>();
             if (panels == null) panels = gameObject.AddComponent<LabPanelController>();
             panels.ConfigureBoot(router, this);
+            // Standalone Android has no Desktop route: enter VR Setup directly.
+            if (Application.platform == RuntimePlatform.Android)
+                ChooseMode(ApplicationMode.VirtualReality);
         }
 
         public void ChooseMode(ApplicationMode mode)
@@ -46,15 +53,53 @@ namespace PharmaLabVR.UI
             router.Show(ScreenId.Setup);
         }
 
-        public void ConfirmSetup()
+        // A successful panel action means a scene transition was admitted, not
+        // merely that a button handler happened to run.
+        public BootLaunchAvailability LaunchAvailability()
         {
-            if (router?.Current?.ScreenId != ScreenId.Setup) return;
 #if UNITY_EDITOR
-            EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
-                new LoadSceneParameters(LoadSceneMode.Single));
+            var hasScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                "Assets/PharmaLabVR/Scenes/Lab.unity") != null;
 #else
-            SceneManager.LoadScene(LabScene, LoadSceneMode.Single);
+            var hasScene = Application.CanStreamedLevelBeLoaded(LabScene);
 #endif
+            var manager = XRGeneralSettings.Instance != null
+                ? XRGeneralSettings.Instance.Manager : null;
+            var xrLoaderReady = manager != null && manager.activeLoader != null;
+            var headset = InputDevices.GetDeviceAtXRNode(XRNode.Head);
+            return new BootLaunchAvailability(Application.platform == RuntimePlatform.Android,
+                xrLoaderReady, headset.isValid, hasScene);
+        }
+
+        public bool ConfirmSetup()
+        {
+            if (router?.Current?.ScreenId != ScreenId.Setup)
+            {
+                LastLaunchError = "Finish Setup before entering the lab.";
+                return false;
+            }
+            var status = LaunchAvailability();
+            if (!status.CanEnter(RequestedMode))
+            {
+                LastLaunchError = status.UnavailableReason(RequestedMode);
+                return false;
+            }
+            try
+            {
+#if UNITY_EDITOR
+                EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                    new LoadSceneParameters(LoadSceneMode.Single));
+#else
+                SceneManager.LoadScene(LabScene, LoadSceneMode.Single);
+#endif
+                LastLaunchError = null;
+                return true;
+            }
+            catch (System.Exception exception)
+            {
+                LastLaunchError = "Could not load the Lab scene: " + exception.Message;
+                return false;
+            }
         }
 
         public void StartDesktop()
@@ -95,6 +140,10 @@ namespace PharmaLabVR.UI
                 else if (screen == ScreenId.Setup)
                 {
                     GUILayout.Label("Setup · " + router.Current.Mode);
+                    var availability = LaunchAvailability();
+                    var selected = RequestedMode;
+                    if (!availability.CanEnter(selected))
+                        GUILayout.Label("Cannot enter yet: " + availability.UnavailableReason(selected));
                     SetupPreferenceControls.Draw(router);
                     GUILayout.Label("Physical reach and headset alignment still require device calibration.");
                     if (GUILayout.Button("Enter lab", GUILayout.Height(56f)))
@@ -102,6 +151,8 @@ namespace PharmaLabVR.UI
                     if (GUILayout.Button("Back", GUILayout.Height(44f)))
                         panels?.Request(PanelAction.Home);
                 }
+                if (!string.IsNullOrEmpty(LastLaunchError))
+                    GUILayout.Label("Entry blocked: " + LastLaunchError);
                 GUILayout.Label("Research observations state support, freshness and maturity; not certified evidence.");
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();

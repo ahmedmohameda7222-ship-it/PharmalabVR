@@ -46,8 +46,7 @@ namespace PharmaLabVR.UI
                         router.Show(ScreenId.Home);
                         return router.Current.ScreenId == ScreenId.Home;
                     case PanelAction.ConfirmSetup:
-                        boot.ConfirmSetup();
-                        return true;
+                        return boot.ConfirmSetup();
                     default:
                         return false;
                 }
