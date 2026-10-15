@@ -716,7 +716,7 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": "d3e4aa8c6ee91b09e56968d8017c78ca10fc1115",
+          "codeCommit": "8c1b55de9c10b0ae9fd744fed8fb58b6d691d61a",
           "evidence": [
             "docs/evidence/p06-02-progress.md",
             "docs/evidence/artifact-manifest-p06-02.json",
@@ -777,10 +777,11 @@
             "P08.02"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "8c1b55de9c10b0ae9fd744fed8fb58b6d691d61a",
+          "evidence": ["docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "P07.01 real OpenXR Boot admission, Android VR default Setup, world-space Canvas + controller rays, XRUIInputModule; generated scene and tracked trigger NOT_RUN in Unity","P06.02 new Boot/VR runtime audio listener exclusivity; headless shared-panel contract verifies no implicit Save/Review paused resume, no Unity Player run at this SHA"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -801,10 +802,10 @@
             "P07.01"
           ],
           "status": "Open",
-          "codeCommit": null,
-          "evidence": [],
+          "codeCommit": "da403bf89e3bcc0c78c79ece07fae9227f70704d",
+          "evidence": ["docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": ["P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -2181,9 +2182,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
-  "functionalCodeSha": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
-  "currentTask": "Development-first coding: P06.02/P08.01/P08.02/P10.01 partial source increments; Unity campaign deferred, tasks remain Open",
+  "actualHead": "da403bf89e3bcc0c78c79ece07fae9227f70704d",
+  "functionalCodeSha": "da403bf89e3bcc0c78c79ece07fae9227f70704d",
+  "currentTask": "Development-first coding: P06.02/P07.01/P07.02 partial VR Boot/input source, with prior P08 assets; Unity verification deferred; all tasks Open",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2207,6 +2208,7 @@
     "2026-10-15 ruling: formal next task remains P06.02; user priority P03 Lab native safety subincrement. P03.02 remains Open because P03.01/P07.03 dependencies, distinct pipette/bottle and Unity/Player journeys are not verified. RinseTool rejected solute-bearing rinse source via native ABI RED 880239680456f1ecd4411c9154325b4b9f5a673d (Ubuntu 95/96, 7 assertions failed) to GREEN c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3 (4/4 CI native matrix jobs pass, 1/1 CTest each). Docs at docs/evidence/p03-02-rinse-source-progress.md; no Unity/Player/physical claim. Ledger actualHead denotes last source commit before subsequent evidence-only checkpoint.",
     "2026-10-15 ruling: planner accepted previous bounded P03.02 rinse only, NOT task. Resume formal P06.02. Added four Unity PlayMode tests test-first but Unity 6000.3.25f1 is absent, so Unity RED/GREEN and Player evidence are not claimed. Functional code 4a184c4eca61458027f3274d87fd88cdf7a97243: Boot Setup and Desktop Settings use session-scoped immutable preference snapshots; Desktop camera and scale, audio, VR panel location/fonts/contrast consume state; returned Review from paused state submits native Continue; Settings Back preserves native Pause; UI reachable; Desktop 640x400 bounds adjusted. New CI headless C# test harness at 37440f128950f5f97614b02148a5e596d433a49f runs actual ScreenRouter/LabPanelController sources with adapters: 39/39 assertions, temporary original Review bypass RED exit 134 then restored GREEN 39/39 (push workflow 38681309492, PR 38681313440). Does not validate Unity, actual Core, Player or physical headset. CI native Windows/Ubuntu workflow jobs are tracked separately; final evidence branch HEAD requires its own checks. P06.02 stays Open, 15 VerifiedLocal / 51 Open, plannerStatus NotReviewed and G-R1 Open. Next exact P06.02 substep: Unity PlayMode/EditMode compile, real Boot→Setup→Lab UI clicks, native hold/review snapshot and Player at 640×400/720p/1080p, tracked-ray simulator/interaction acceptance.",
     "2026-10-15 development-first ruling per Product Owner: do not block source work on Unity availability. The canonical 25-phase/66-task ledger retains 15 VerifiedLocal and 51 Open. Native CI Windows intermittent 7-case cascade traced to P04.01 rollback waiting for acid but not base Current budget; test now waits both at 92fb159068e2fbcb4c35f8eb5a68407dcdda8f3a (push/PR Windows+Ubuntu green). P06.02 VR Settings authored at d3e4aa8c6ee91b09e56968d8017c78ca10fc1115, P08.01 serialized environment prefab generator at 98dfdd8c62190f7a72fd39c6ab7135c13f37949c, P08.02 downwards physical burette graduations/volume-derived meniscus and persistent assets at 6e9b86f93d79c40e256048a353fcba485b246a6c, P10.01 Esc Pause route at 2a8071cb2dbc0fc2853ba8a8a1929ccaa447f179. Tests authored first but Unity tests never executed. Deferred register docs/evidence/DEFERRED_UNITY_VERIFICATION.md has 66 NOT_RUN rows, TDD RED FileNotFound then GREEN 11/11 tooling tests CI at bbfa43b334c51621643cafa716d60ce662954b9a on Ubuntu. CI at latest source 6e9 pending when noted. No tasks newly VerifiedLocal or AcceptedPlanner, no G-R1 promotion; next coding focus P06.02 and P07.01 mode/XR Boot, then connected P08/P03 tool journeys.",
-    "2026-10-15 additional P08.02 source review: generated liquid meniscus previously retained bootstrap capacity 1.0 m3 while LiquidPresenter switched to native vessel capacity on snapshots, causing a wrong fractional fill. P08_02_ReconfiguredNativeCapacityKeepsMeniscusAndLiquidInSync Unity test authored at 82ae2877c6678a35f98602f8d683b1c77afb115a, source e5d917bf56d29488e371c679f09dffbab945cb88 and Unity-compatible validation fix a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07. Requires Unity EditMode at exact source SHA; no runtime red/green claimed. Prior generated shell asset tests also NOT_RUN; P08.02 officially Open."
+    "2026-10-15 additional P08.02 source review: generated liquid meniscus previously retained bootstrap capacity 1.0 m3 while LiquidPresenter switched to native vessel capacity on snapshots, causing a wrong fractional fill. P08_02_ReconfiguredNativeCapacityKeepsMeniscusAndLiquidInSync Unity test authored at 82ae2877c6678a35f98602f8d683b1c77afb115a, source e5d917bf56d29488e371c679f09dffbab945cb88 and Unity-compatible validation fix a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07. Requires Unity EditMode at exact source SHA; no runtime red/green claimed. Prior generated shell asset tests also NOT_RUN; P08.02 officially Open.",
+    "2026-10-15 continuation after 4c5ae3: P07.01 actual BootLaunchAvailability source tested RED missing file af1e0f then GREEN from 37304cd/d​​fa74db via headless CI, including 47+ route assertions. Boot Unity scene-generator contains XR rig, two controller rays, tracked-device raycaster, one XRUIInputModule and action-driven BootWorldPanel since fde822df; audio exclusivity and handedness update at 8c1b55de, all Unity/Player/Headset checks NOT_RUN. P07.02 separate XR receiver grip/no liquid throws d13488b7; InteractionOwnership direct+tracked+!UI gate test-first RED missing 63cfa58b and GREEN da403bf: 54 headless routing assertions; two intentional RED mutations (paused Review and false Boot confirmation) restore GREEN; headless CI push 38699826367. No direct headset/real native-science proof. P06.02/P07.01/P07.02 official Open; 15 VerifiedLocal/51 Open; G-R1 Open; planner not reviewed. Next code: P07.02 Mount/Release and physical geometry binding, P07.03 recovery, P03 tool parcels; Unity 6000.3.25f1 validation deferred to final Codex campaign."
   ]
 }
