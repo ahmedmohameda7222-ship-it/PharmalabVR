@@ -2064,7 +2064,7 @@ TEST_CASE("P03_02 rinse rejects solute-bearing stock without debiting the materi
 
 TEST_CASE("P03_02 bottle film is conserved through measured pours and real water rinse") {
     std::uint64_t handle = 0;
-    const std::string config = R"({"schemaVersion":1,"branchId":"bottle-film","scienceBudgetMode":"Bulk"})";
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Bulk"})";
     REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
     const auto issue = [&](const std::string& sequence, const std::string& type,
                            json payload, json expected = json::object()) {
