@@ -219,8 +219,11 @@ namespace PharmaLabVR.Editor
             var camera = new GameObject("DesktopCamera");
             camera.AddComponent<Camera>();
             camera.AddComponent<AudioListener>();
-            camera.AddComponent<DesktopCameraController>();
+            var desktopCameraController = camera.AddComponent<DesktopCameraController>();
             camera.transform.SetParent(desktopRig.transform);
+            // AddComponent invokes Awake before parenting; explicitly bind
+            // the very adapter that owns physical grab and wheel routing.
+            desktopCameraController.Configure(desktopInput);
             camera.transform.localPosition = new Vector3(0f, 1.25f, -0.8f);
             camera.transform.localRotation = Quaternion.Euler(30f, 0f, 0f);
             var holdAnchor = new GameObject("DesktopToolHoldAnchor");

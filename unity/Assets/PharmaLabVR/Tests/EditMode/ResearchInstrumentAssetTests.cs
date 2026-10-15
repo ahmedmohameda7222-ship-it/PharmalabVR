@@ -130,6 +130,24 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P10_01_GeneratedDesktopCameraSharesPhysicalToolOwnershipWithInputAdapter()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var adapter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var camera = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopCameraController>(true)).Single();
+                Assert.That(camera.ToolInputAdapter, Is.SameAs(adapter),
+                    "The Desktop Camera was created before parenting; its wheel must share the real held tool.");
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void P03_03_DesktopBuretteOutletMarkerCapturesReceiverAtAuthoredResearchScenePose()
         {
             var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",

@@ -13,6 +13,13 @@ namespace PharmaLabVR.Input
         private float pitch;
         private Camera sceneCamera;
         private DesktopInputAdapter desktopInput;
+        public DesktopInputAdapter ToolInputAdapter => desktopInput;
+
+        public void Configure(DesktopInputAdapter owner)
+        {
+            desktopInput = owner != null ? owner :
+                throw new System.ArgumentNullException(nameof(owner));
+        }
 
         private void Awake()
         {
@@ -23,6 +30,7 @@ namespace PharmaLabVR.Input
 
         private void Update()
         {
+            if (desktopInput == null) desktopInput = GetComponentInParent<DesktopInputAdapter>();
             if (Keyboard.current == null || Mouse.current == null) return;
             // A UI-focused gesture must never pan or zoom the world beneath it.
             var pointerOverUi =
