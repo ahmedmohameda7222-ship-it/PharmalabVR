@@ -642,7 +642,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         plv::CommandOutcome outcome;
         if (context->holdActive &&
             (type == "CreateVessel" || type == "CreateSink" || type == "PrepareStock" ||
-             type == "TransferFixed" || type == "DisposeContents" || type == "RinseTool")) {
+             type == "TransferFixed" || type == "DisposeContents" || type == "RinseTool" ||
+              type == "AspiratePipette" || type == "DispensePipette")) {
             context->recoveryReady = false;
             outcome = {false, "SessionHeld", "material operations require explicit recovery"};
         } else if (type == "CreateVessel") {
@@ -708,7 +709,9 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             const auto profileRevision = decimalSequence(payload.at("profileRevision").get<std::string>());
             const auto snapshot = context->executor.snapshot();
             if (!plv::isValidId(toolId) || !profileRevision || *profileRevision == 0U || frame != "lab" ||
-                profile != plv::BuretteProfile::researchDefault().id || snapshot.vessels.count(sourceId) == 0U ||
+                (profile != plv::BuretteProfile::researchDefault().id &&
+                  profile != plv::PipetteProfile::researchDefault().id) ||
+                 snapshot.vessels.count(sourceId) == 0U ||
                 snapshot.sinks.count(sinkId) == 0U) {
                 outcome = {false, "InvalidToolPlacement", "tool identity, profile, source, sink, or frame is invalid"};
             } else if (context->tools.count(toolId) != 0U) {
@@ -728,6 +731,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             if (found == context->tools.end() || !expectedActuatorRevision ||
                 *expectedActuatorRevision != found->second.actuatorRevision) {
                 outcome = {false, "StaleActuatorRevision", "tool actuator revision changed"};
+            } else if (found->second.geometryProfileHash == plv::PipetteProfile::researchDefault().id) {
+                outcome = {false, "PipetteRequiresMeteredAction", "use explicit pipette aspiration/dispense"};
             } else if (!std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
                 outcome = {false, "InvalidActuator", "actuator must be finite and within [0,1]"};
             } else {
@@ -918,7 +923,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         if (outcome.accepted && context->holdActive &&
             (type == "CreateVessel" || type == "PrepareStock" || type == "TransferFixed" ||
              type == "PlaceTool" || type == "SetActuator" || type == "DisposeContents" ||
-             type == "RinseTool")) context->recoveryReady = false;
+             type == "RinseTool" || type == "AspiratePipette" ||
+              type == "DispensePipette")) context->recoveryReady = false;
         if (outcome.accepted && type != "RestartCheckpoint") {
             const auto nowNs = static_cast<std::uint64_t>(
                 std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
@@ -974,7 +980,8 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
                 *toolRevision != registered->second.toolRevision ||
                 !position.is_array() || position.size() != 3U || !rotation.is_array() || rotation.size() != 4U ||
                 !captureFractions.is_array() || captureFractions.size() > plv::kMaxVesselInventories ||
-                !sample.at("trackingValid").is_boolean() || !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0) {
+                !sample.at("trackingValid").is_boolean() || !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
+                 (profile == plv::PipetteProfile::researchDefault().id && actuator > 0.0)) {
                 return PLV_INVALID_ARGUMENT;
             }
             double normSquared = 0.0;
@@ -1157,7 +1164,9 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
                 {"parcelId", landedParcelId},
                 {"captured", std::move(landedCaptures)}, {"spilledQuantityM3", landedSpill}}).dump());
         }
-        if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0) continue;
+        if (tool.geometryProfileHash != plv::BuretteProfile::researchDefault().id ||
+            !tool.latestInput || !tool.latestInput->trackingValid ||
+            tool.latestInput->actuator01 <= 0.0) continue;
         auto state = stagedExecutor.snapshot();
         const auto source = state.vessels.find(tool.sourceInventoryId);
         if (source == state.vessels.end() || source->second.inventory.referenceVolumeM3 <= 0.0) continue;
@@ -1359,7 +1368,12 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
                     !tip.isFiniteNonNegative() || !residual.isFiniteNonNegative() || !inFlight.isFiniteNonNegative() ||
                     !validParcelIdentity ||
-                    frame != "lab" || profile != plv::BuretteProfile::researchDefault().id ||
+                    frame != "lab" ||
+                    (profile != plv::BuretteProfile::researchDefault().id &&
+                     profile != plv::PipetteProfile::researchDefault().id) ||
+                    (profile == plv::PipetteProfile::researchDefault().id &&
+                     (tip.referenceVolumeM3 > plv::PipetteProfile::researchDefault().capacityM3 ||
+                      inFlight.referenceVolumeM3 > 0.0 || actuator > 0.0)) ||
                     ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
                     !result.emplace(id, Context::ToolState{
                         sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,

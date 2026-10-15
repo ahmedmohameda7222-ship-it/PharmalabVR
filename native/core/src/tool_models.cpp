@@ -9,6 +9,10 @@ BuretteProfile BuretteProfile::researchDefault() {
     return {"burette-50ml-research-v1", 0.60, 0.00030, 9.80665, 0.006, 5e-8};
 }
 
+PipetteProfile PipetteProfile::researchDefault() {
+    return {"pipette-25ml-research-v1", 25e-6, 5e-8};
+}
+
 MaterialState ToolParcelState::rinse(const MaterialState& rinseParcel, double residualVolumeM3) {
     if (!rinseParcel.isFiniteNonNegative() || !std::isfinite(residualVolumeM3) || residualVolumeM3 < 0.0) {
         return {};
