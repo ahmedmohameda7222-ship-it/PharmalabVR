@@ -55,7 +55,14 @@ namespace PharmaLabVR.Session
         private void OnGUI()
         {
             if (driver == null || driver.CurrentMode != "Desktop") return;
-            GUILayout.BeginArea(DesktopHudBounds, GUI.skin.box);
+            var previousLabelSize = GUI.skin.label.fontSize;
+            var previousButtonSize = GUI.skin.button.fontSize;
+            try
+            {
+                var textScale = router?.Current?.Setup.TextScale ?? 1f;
+                GUI.skin.label.fontSize = Mathf.RoundToInt(14f * textScale);
+                GUI.skin.button.fontSize = Mathf.RoundToInt(14f * textScale);
+                GUILayout.BeginArea(DesktopHudBounds, GUI.skin.box);
             hudScrollPosition = GUILayout.BeginScrollView(hudScrollPosition);
             GUILayout.Label("PharmaLabVR · Research Lab");
             var screen = router?.Current?.ScreenId ?? ScreenId.Lab;
@@ -173,6 +180,12 @@ namespace PharmaLabVR.Session
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+            }
+            finally
+            {
+                GUI.skin.label.fontSize = previousLabelSize;
+                GUI.skin.button.fontSize = previousButtonSize;
+            }
         }
 
         public bool SelectStock(string stockId, double concentrationMolPerL)
