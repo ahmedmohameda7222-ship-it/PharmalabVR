@@ -18,6 +18,19 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void P10_01_DragOnWorldPlaneHasExclusiveInputNotValveOwnership()
+        {
+            Assert.That(DesktopPointerRouting.Resolve(true, true, true, false, true),
+                Is.EqualTo(DesktopPointerAction.ToolDrag));
+            Assert.That(DesktopPointerRouting.Resolve(true, false, true, false, true),
+                Is.EqualTo(DesktopPointerAction.Valve));
+            Assert.That(DesktopPointerRouting.Resolve(false, true, true, false, true),
+                Is.EqualTo(DesktopPointerAction.None));
+            Assert.That(DesktopPointerRouting.Resolve(true, true, true, true, true),
+                Is.EqualTo(DesktopPointerAction.None));
+        }
+
+        [Test]
         public void P10_01_WheelCannotMoveHeldInstrumentAndCameraTogether()
         {
             Assert.That(DesktopWheelRouting.Resolve(true, false, 120d),

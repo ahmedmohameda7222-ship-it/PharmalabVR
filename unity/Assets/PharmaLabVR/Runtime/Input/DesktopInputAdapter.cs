@@ -21,6 +21,8 @@ namespace PharmaLabVR.Input
         private float actuator;
         private bool inputEnabled = true;
         private bool awaitingFocusContinue;
+        private bool pointerDragActive;
+        private Vector3 initialDragOffset;
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
 
@@ -45,6 +47,7 @@ namespace PharmaLabVR.Input
                 inputEnabled = false;
                 awaitingFocusContinue = true;
                 actuator = 0f;
+                pointerDragActive = false;
                 Debug.LogWarning("InputHold: focus was lost; explicit Continue is required.");
             }
         }
@@ -76,13 +79,28 @@ namespace PharmaLabVR.Input
             if (coreDriver != null && (coreDriver.IsNativePaused || coreDriver.IsTimeHeld))
             {
                 actuator = 0f;
+                pointerDragActive = false;
                 return System.Array.Empty<LabInputSample>();
             }
             HandlePickOrPlace();
             var pointerOverUi = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
-            if (Mouse.current != null && ShouldAdjustActuator(pointerOverUi, Mouse.current.leftButton.isPressed))
-                actuator = Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f);
+            var shiftHeld = Keyboard.current != null &&
+                (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
+            var pointerAction = DesktopPointerRouting.Resolve(heldTool != null, shiftHeld,
+                Mouse.current != null && Mouse.current.leftButton.isPressed, pointerOverUi, inputEnabled);
+            if (pointerAction == DesktopPointerAction.ToolDrag)
+            {
+                actuator = 0f; // A physical drag is never a valve opening.
+                DragHeldToolOnPlane();
+            }
+            else
+            {
+                pointerDragActive = false;
+                // Release, focus on UI, or empty hands must close the valve.
+                actuator = pointerAction == DesktopPointerAction.Valve && Mouse.current != null ?
+                    Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f) : 0f;
+            }
             ManipulateHeldTool(pointerOverUi);
             var sampledTool = heldTool != null ? heldTool : registeredTool;
             var sampledActuator = heldTool != null ? actuator : 0f;
@@ -95,6 +113,7 @@ namespace PharmaLabVR.Input
         public void ResetBaselines()
         {
             actuator = 0f;
+            pointerDragActive = false;
             awaitingFocusContinue = false;
             inputEnabled = gameObject.activeInHierarchy;
         }
@@ -103,7 +122,11 @@ namespace PharmaLabVR.Input
             RefreshRegisteredToolId();
             if (toolId == heldToolId && sequence < watermark) sequence = watermark;
         }
-        public void SetEnabled(bool value) { inputEnabled = value && !awaitingFocusContinue; if (!value) actuator = 0f; }
+        public void SetEnabled(bool value)
+        {
+            inputEnabled = value && !awaitingFocusContinue;
+            if (!value) { actuator = 0f; pointerDragActive = false; }
+        }
 
         private static bool ShouldAdjustActuator(bool pointerOverUi, bool leftButtonPressed) => leftButtonPressed && !pointerOverUi;
 
@@ -111,6 +134,33 @@ namespace PharmaLabVR.Input
         {
             if (registeredTool != null && registeredTool.TryGetComponent<DesktopGrabbable>(out var grabbable))
                 heldToolId = grabbable.ToolId;
+        }
+
+        private void DragHeldToolOnPlane()
+        {
+            if (heldTool == null || viewCamera == null || Mouse.current == null || labFrame == null)
+            {
+                pointerDragActive = false;
+                return;
+            }
+            var plane = new Plane(labFrame.up, heldTool.position);
+            var cursor = Mouse.current.position.ReadValue();
+            var ray = viewCamera.ScreenPointToRay(new Vector3(cursor.x, cursor.y, 0f));
+            if (!plane.Raycast(ray, out var distance) || !float.IsFinite(distance) ||
+                distance <= 0f || distance > 5f)
+            {
+                pointerDragActive = false;
+                return;
+            }
+            var positionOnPlane = ray.GetPoint(distance);
+            if (!pointerDragActive)
+            {
+                // No teleport on the first click: preserve the difference
+                // between cursor ray-plane hit and the tool's actual pose.
+                initialDragOffset = heldTool.position - positionOnPlane;
+                pointerDragActive = true;
+            }
+            heldTool.position = positionOnPlane + initialDragOffset;
         }
 
         private void HandlePickOrPlace()
@@ -166,12 +216,14 @@ namespace PharmaLabVR.Input
             if (heldTool.TryGetComponent<Rigidbody>(out var heldBody))
                 heldBody.isKinematic = false;
             heldTool = null;
+            pointerDragActive = false;
             return true;
         }
 
         private void BeginHold(Transform tool)
         {
             heldTool = tool;
+            pointerDragActive = false;
             if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body)) body.isKinematic = true;
         }
 
