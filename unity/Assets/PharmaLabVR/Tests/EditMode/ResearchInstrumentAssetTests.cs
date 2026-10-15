@@ -25,6 +25,10 @@ namespace PharmaLabVR.Tests
             Assert.That(bottle.GetComponent<BottlePourActuator>(), Is.Not.Null);
             Assert.That(pipette.GetComponent<ValveActuator>(), Is.Null,
                 "Research pipette must not masquerade as burette valve.");
+            Assert.That(pipette.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(bottle.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(pipette.transform.Find("NativePipetteLiquid"), Is.Not.Null);
+            Assert.That(bottle.transform.Find("NativeBottleLiquid"), Is.Not.Null);
             Assert.That(bottle.GetComponent<ValveActuator>(), Is.Null,
                 "Stock bottle measured pour cannot be actuated with the burette valve.");
             Assert.That(pipette.transform.Find("GraduatedGlassTube"), Is.Not.Null);

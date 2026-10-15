@@ -204,6 +204,12 @@ namespace PharmaLabVR.Editor
                         new Vector3(0.016f, 0.275f - 0.25f * ml / 25f, 0f),
                         new Vector3(major ? 0.012f : 0.005f, 0.001f, 0.0015f), ink);
                 }
+                var fillMaterial = CreateMaterial("ResearchPipetteLiquid",
+                    new Color(0.21f, 0.56f, 0.84f, 0.73f), 0f, 0.55f);
+                var liquid = Part(root.transform, "NativePipetteLiquid", PrimitiveType.Cylinder,
+                    Vector3.zero, new Vector3(0.012f, 0f, 0.012f), fillMaterial);
+                root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
+                    liquid.transform, "research-pipette", true, 25e-6, 0.25f, 0.025f);
                 root.AddComponent<PipetteActuator>();
                 PrefabUtility.SaveAsPrefabAsset(root,
                     "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab");
@@ -234,6 +240,12 @@ namespace PharmaLabVR.Editor
                 text.fontSize = 20;
                 text.characterSize = 0.007f;
                 text.color = new Color(0.04f, 0.16f, 0.18f);
+                var fillMaterial = CreateMaterial("ResearchStockLiquid",
+                    new Color(0.18f, 0.54f, 0.82f, 0.73f), 0f, 0.48f);
+                var liquid = Part(root.transform, "NativeBottleLiquid", PrimitiveType.Cylinder,
+                    Vector3.zero, new Vector3(0.061f, 0f, 0.061f), fillMaterial);
+                root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
+                    liquid.transform, "source", false, 1e-4, 0.12f, 0.013f);
                 root.AddComponent<BottlePourActuator>();
                 PrefabUtility.SaveAsPrefabAsset(root,
                     "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");

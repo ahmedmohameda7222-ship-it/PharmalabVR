@@ -188,6 +188,8 @@ namespace PharmaLabVR.Editor
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
             coreDriver.transform.SetParent(lab.transform);
+            foreach (var visual in lab.GetComponentsInChildren<NativeMeteredInstrumentVisual>(true))
+                visual.Configure(coreDriver);
             var xrRig = new GameObject("XRPlayerRig");
             xrRig.transform.SetParent(lab.transform);
             var xrOrigin = xrRig.AddComponent<XROrigin>();
