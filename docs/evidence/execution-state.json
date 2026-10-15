@@ -889,13 +889,13 @@
             "P08.01"
           ],
           "status": "Open",
-          "codeCommit": "6e9b86f93d79c40e256048a353fcba485b246a6c",
+          "codeCommit": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
           "evidence": [
             "docs/evidence/development-progress-2026-10-15.md"
           ],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "P08.02 burette 0–50 ml scale, volume-derived meniscus and serialized mesh/ink tests authored; broader apparatus and Unity render pending"
+            "P08.02 burette 0–50 ml scale, volume-derived meniscus and serialized mesh/ink tests authored; broader apparatus and Unity render pending; follow-up SetProfile binds live Native capacity at a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07"
           ],
           "externalEvidence": [],
           "acceptanceScope": null,
@@ -2181,8 +2181,8 @@
       "G-R1"
     ]
   },
-  "actualHead": "6e9b86f93d79c40e256048a353fcba485b246a6c",
-  "functionalCodeSha": "6e9b86f93d79c40e256048a353fcba485b246a6c",
+  "actualHead": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
+  "functionalCodeSha": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
   "currentTask": "Development-first coding: P06.02/P08.01/P08.02/P10.01 partial source increments; Unity campaign deferred, tasks remain Open",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
@@ -2206,6 +2206,7 @@
     "P06.02 continued at 8bba4902b97d2a031315634c7e772eca6af8d1bf: live Lab Review recorded from native export without hidden durable Save or native revision change; held Review cannot falsely return to Lab; VR Lab/Review camera renders and button-gap test. PlayMode 33/33, EditMode 22/22, CTest 1/1 isolated, three fresh builds Success. Actual WindowsDesktop Player Home clipped at 640x400; synthetic click did not prove transition. See p06-02-review-progress.md and SHA manifest. P06.02 stays Open; next tracked-ray/Player journey and Desktop Home responsiveness before P08.01.",
     "2026-10-15 ruling: formal next task remains P06.02; user priority P03 Lab native safety subincrement. P03.02 remains Open because P03.01/P07.03 dependencies, distinct pipette/bottle and Unity/Player journeys are not verified. RinseTool rejected solute-bearing rinse source via native ABI RED 880239680456f1ecd4411c9154325b4b9f5a673d (Ubuntu 95/96, 7 assertions failed) to GREEN c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3 (4/4 CI native matrix jobs pass, 1/1 CTest each). Docs at docs/evidence/p03-02-rinse-source-progress.md; no Unity/Player/physical claim. Ledger actualHead denotes last source commit before subsequent evidence-only checkpoint.",
     "2026-10-15 ruling: planner accepted previous bounded P03.02 rinse only, NOT task. Resume formal P06.02. Added four Unity PlayMode tests test-first but Unity 6000.3.25f1 is absent, so Unity RED/GREEN and Player evidence are not claimed. Functional code 4a184c4eca61458027f3274d87fd88cdf7a97243: Boot Setup and Desktop Settings use session-scoped immutable preference snapshots; Desktop camera and scale, audio, VR panel location/fonts/contrast consume state; returned Review from paused state submits native Continue; Settings Back preserves native Pause; UI reachable; Desktop 640x400 bounds adjusted. New CI headless C# test harness at 37440f128950f5f97614b02148a5e596d433a49f runs actual ScreenRouter/LabPanelController sources with adapters: 39/39 assertions, temporary original Review bypass RED exit 134 then restored GREEN 39/39 (push workflow 38681309492, PR 38681313440). Does not validate Unity, actual Core, Player or physical headset. CI native Windows/Ubuntu workflow jobs are tracked separately; final evidence branch HEAD requires its own checks. P06.02 stays Open, 15 VerifiedLocal / 51 Open, plannerStatus NotReviewed and G-R1 Open. Next exact P06.02 substep: Unity PlayMode/EditMode compile, real Boot→Setup→Lab UI clicks, native hold/review snapshot and Player at 640×400/720p/1080p, tracked-ray simulator/interaction acceptance.",
-    "2026-10-15 development-first ruling per Product Owner: do not block source work on Unity availability. The canonical 25-phase/66-task ledger retains 15 VerifiedLocal and 51 Open. Native CI Windows intermittent 7-case cascade traced to P04.01 rollback waiting for acid but not base Current budget; test now waits both at 92fb159068e2fbcb4c35f8eb5a68407dcdda8f3a (push/PR Windows+Ubuntu green). P06.02 VR Settings authored at d3e4aa8c6ee91b09e56968d8017c78ca10fc1115, P08.01 serialized environment prefab generator at 98dfdd8c62190f7a72fd39c6ab7135c13f37949c, P08.02 downwards physical burette graduations/volume-derived meniscus and persistent assets at 6e9b86f93d79c40e256048a353fcba485b246a6c, P10.01 Esc Pause route at 2a8071cb2dbc0fc2853ba8a8a1929ccaa447f179. Tests authored first but Unity tests never executed. Deferred register docs/evidence/DEFERRED_UNITY_VERIFICATION.md has 66 NOT_RUN rows, TDD RED FileNotFound then GREEN 11/11 tooling tests CI at bbfa43b334c51621643cafa716d60ce662954b9a on Ubuntu. CI at latest source 6e9 pending when noted. No tasks newly VerifiedLocal or AcceptedPlanner, no G-R1 promotion; next coding focus P06.02 and P07.01 mode/XR Boot, then connected P08/P03 tool journeys."
+    "2026-10-15 development-first ruling per Product Owner: do not block source work on Unity availability. The canonical 25-phase/66-task ledger retains 15 VerifiedLocal and 51 Open. Native CI Windows intermittent 7-case cascade traced to P04.01 rollback waiting for acid but not base Current budget; test now waits both at 92fb159068e2fbcb4c35f8eb5a68407dcdda8f3a (push/PR Windows+Ubuntu green). P06.02 VR Settings authored at d3e4aa8c6ee91b09e56968d8017c78ca10fc1115, P08.01 serialized environment prefab generator at 98dfdd8c62190f7a72fd39c6ab7135c13f37949c, P08.02 downwards physical burette graduations/volume-derived meniscus and persistent assets at 6e9b86f93d79c40e256048a353fcba485b246a6c, P10.01 Esc Pause route at 2a8071cb2dbc0fc2853ba8a8a1929ccaa447f179. Tests authored first but Unity tests never executed. Deferred register docs/evidence/DEFERRED_UNITY_VERIFICATION.md has 66 NOT_RUN rows, TDD RED FileNotFound then GREEN 11/11 tooling tests CI at bbfa43b334c51621643cafa716d60ce662954b9a on Ubuntu. CI at latest source 6e9 pending when noted. No tasks newly VerifiedLocal or AcceptedPlanner, no G-R1 promotion; next coding focus P06.02 and P07.01 mode/XR Boot, then connected P08/P03 tool journeys.",
+    "2026-10-15 additional P08.02 source review: generated liquid meniscus previously retained bootstrap capacity 1.0 m3 while LiquidPresenter switched to native vessel capacity on snapshots, causing a wrong fractional fill. P08_02_ReconfiguredNativeCapacityKeepsMeniscusAndLiquidInSync Unity test authored at 82ae2877c6678a35f98602f8d683b1c77afb115a, source e5d917bf56d29488e371c679f09dffbab945cb88 and Unity-compatible validation fix a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07. Requires Unity EditMode at exact source SHA; no runtime red/green claimed. Prior generated shell asset tests also NOT_RUN; P08.02 officially Open."
   ]
 }
