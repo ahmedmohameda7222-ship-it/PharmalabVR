@@ -349,6 +349,28 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(prefab.GetComponent<XRGrabInteractable>().throwOnDetach, Is.False);
         }
 
+        [Test]
+        public void P06_02_BootAndLabKeepOneActiveAudioListenerPerMode()
+        {
+            EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Boot.unity");
+            var bootDesktop = FindInActiveScene("BootCamera").GetComponent<AudioListener>();
+            var bootHead = FindInActiveScene("XR Boot Camera").GetComponent<AudioListener>();
+            Assert.That(bootDesktop, Is.Not.Null);
+            Assert.That(bootHead, Is.Not.Null);
+            Assert.That(bootDesktop.isActiveAndEnabled, Is.True,
+                "The Desktop Boot cannot be silent while XR is unavailable.");
+            Assert.That(bootHead.isActiveAndEnabled, Is.False,
+                "XR audio cannot compete with Desktop audio before tracking.");
+
+            EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity");
+            var desktop = FindInActiveScene("DesktopCamera").GetComponent<AudioListener>();
+            var xr = FindInActiveScene("XR Camera").GetComponent<AudioListener>();
+            Assert.That(desktop, Is.Not.Null);
+            Assert.That(xr, Is.Not.Null);
+            Assert.That(desktop.isActiveAndEnabled, Is.True);
+            Assert.That(xr.isActiveAndEnabled, Is.False);
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
