@@ -201,6 +201,34 @@ namespace PharmaLabVR.Tests.EditorIntegration
             }
         }
 
+        [Test]
+        public void P08_01_LabHasSerializedEnvironmentAndBenchPrefabsWithTaskLighting()
+        {
+            var environment = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Environment/PremiumLabShell.prefab");
+            var benchPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Environment/BenchAssembly.prefab");
+            Assert.That(environment, Is.Not.Null, "Generate real reusable environment assets.");
+            Assert.That(benchPrefab, Is.Not.Null, "The bench must not be a runtime decoration.");
+            var shell = FindInActiveScene("PremiumLabShell");
+            var bench = FindInActiveScene("BenchAssembly");
+            Assert.That(shell, Is.Not.Null);
+            Assert.That(bench, Is.Not.Null);
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(shell), Is.True);
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(bench), Is.True);
+            Assert.That(bench.transform.IsChildOf(FindInActiveScene("BenchRoot").transform), Is.True);
+            Assert.That(shell.GetComponentsInChildren<Light>(true).Length,
+                Is.GreaterThanOrEqualTo(2), "Bench and room require visible task lights.");
+            Assert.That(shell.GetComponentsInChildren<MeshRenderer>(true).Length,
+                Is.GreaterThanOrEqualTo(6));
+            Assert.That(bench.GetComponentsInChildren<MeshRenderer>(true).Length,
+                Is.GreaterThanOrEqualTo(4));
+            var camera = FindInActiveScene("DesktopCamera").GetComponent<Camera>();
+            Assert.That(camera.WorldToViewportPoint(
+                bench.transform.TransformPoint(new Vector3(0f, 0.48f, 0.2f))).z,
+                Is.GreaterThan(0f), "Bench must remain in front of Desktop camera.");
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
