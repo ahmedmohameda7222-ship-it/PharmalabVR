@@ -136,6 +136,44 @@ internal static class Program
                 "Releasing an already released tool falsely succeeded");
             driver.CurrentMode = "Desktop";
             router.Configure(driver);
+            // P07.03: recentering is presentation only, requires a parked
+            // tool and actual head tracking; it must never auto-Continue.
+            Check(!RecoveryAlignmentPolicy.CanRecenter(false, true, false, true, true),
+                "Desktop incorrectly admitted XR recenter");
+            Check(!RecoveryAlignmentPolicy.CanRecenter(true, false, false, true, true),
+                "Running Native session incorrectly admitted recenter");
+            Check(!RecoveryAlignmentPolicy.CanRecenter(true, true, false, false, true),
+                "Untracked head admitted recenter");
+            Check(!RecoveryAlignmentPolicy.CanRecenter(true, true, false, true, false),
+                "Undocked tool admitted head teleport");
+            Check(RecoveryAlignmentPolicy.CanRecenter(true, true, false, true, true),
+                "Paused, parked VR should admit explicit recenter");
+            Check(RecoveryAlignmentPolicy.CanRecenter(true, false, true, true, true),
+                "Native hold with parked tool should admit recenter");
+
+            driver.CurrentMode = "VR";
+            router.Configure(driver);
+            Check(!panels.Request(PanelAction.Recenter),
+                "Running VR recenter falsely returned success");
+            Check(panels.Request(PanelAction.Pause), "Pause required before XR recenter");
+            Check(router.Current.SupportedActions.Contains("Recenter"), "Paused VR missing Recenter");
+            session.RecenterPermitted = false;
+            Check(!panels.Request(PanelAction.Recenter),
+                "Failed XR recenter falsely returned success");
+            session.RecenterPermitted = true;
+            var beforeRecenterRevision = driver.CurrentLabView.EventSequence;
+            var beforeRecenterContinue = driver.ContinueCalls;
+            Check(panels.Request(PanelAction.Recenter), "Parked, paused XR recenter denied");
+            Check(session.RecenterCalls == 1, "Recenter action was not dispatched exactly once");
+            Check(driver.CurrentLabView.EventSequence == beforeRecenterRevision,
+                "Recenter invented a material or observation revision");
+            Check(driver.ContinueCalls == beforeRecenterContinue && driver.IsNativePaused,
+                "Recenter silently resumed the Native Core");
+            Check(panels.Request(PanelAction.Lab), "Cannot return to Lab after paused recenter");
+            driver.CurrentMode = "Desktop";
+            router.Configure(driver);
+            Check(!panels.Request(PanelAction.Recenter), "Desktop admitted XR recenter");
+
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");

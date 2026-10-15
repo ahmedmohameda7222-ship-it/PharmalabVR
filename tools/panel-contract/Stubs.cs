@@ -109,6 +109,9 @@ namespace PharmaLabVR.Session
         public int ReviewOpens { get; private set; }
         public bool CanReleaseTool { get; private set; } = true;
         public int ReleaseCalls { get; private set; }
+        public bool RecenterPermitted { get; set; } = true;
+        public int RecenterCalls { get; private set; }
+        public bool TryRecenterView() { if (!RecenterPermitted) return false; RecenterCalls++; return true; }
         public bool ReleaseToolFromDock()
         {
             if (!CanReleaseTool) return false;
