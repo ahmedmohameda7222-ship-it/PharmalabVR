@@ -526,6 +526,8 @@ namespace PharmaLabVR.Tests.PlayMode
             var driver = children.Select(item => item.GetComponent<CoreDriver>()).First(item => item != null);
             var tool = children.First(item => item.name == "DesktopResearchTool");
             var receiver = children.First(item => item.name == "ReceiverVessel");
+            var pendingDrop = tool.GetComponent<DropPresenter>();
+            Assert.That(pendingDrop, Is.Not.Null);
             var target = receiver.GetComponent<LabCaptureTarget>();
             var liquid = receiver.GetComponent<LiquidPresenter>();
             Assert.That(target, Is.Not.Null);
@@ -584,6 +586,9 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(liquid.CommittedVolumeM3, Is.GreaterThan(0d), driver.Session.ReadSnapshot());
             var flowing = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
             Assert.That(flowing.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
+            Assert.That(pendingDrop.CommittedVolumeM3, Is.GreaterThan(0d));
+            Assert.That(pendingDrop.ActiveParcelId, Is.Not.Empty);
+            Assert.That(tool.Find("NativePendingDrop").gameObject.activeSelf, Is.True);
             Assert.That(flowing.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(26e-6).Within(1e-12));
             adapter.Actuator = 0f;
             for (var attempt = 0; attempt < 30; attempt++)
@@ -595,6 +600,9 @@ namespace PharmaLabVR.Tests.PlayMode
             }
             var landed = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
             Assert.That(landed.tools[0].inFlightInventory.researchAdditiveVolumeM3, Is.Zero);
+            Assert.That(pendingDrop.CommittedVolumeM3, Is.Zero);
+            Assert.That(pendingDrop.ActiveParcelId, Is.Empty);
+            Assert.That(tool.Find("NativePendingDrop").gameObject.activeSelf, Is.False);
             Assert.That(landed.tools[0].tipInventory.researchAdditiveVolumeM3, Is.GreaterThan(0d));
             Assert.That(landed.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(26e-6).Within(1e-12));
             Assert.That(landed.observations.Any(item => item.vesselId == "unrelated" && item.freshness == "Current"),

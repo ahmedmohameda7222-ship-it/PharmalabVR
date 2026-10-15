@@ -52,6 +52,7 @@ struct Context {
         plv::MaterialState inFlightInventory;
         std::vector<plv::CaptureFraction> inFlightCaptures;
         std::optional<ToolInput> latestInput;
+        std::string inFlightParcelId;
     };
 
     struct CheckpointState {
@@ -263,7 +264,8 @@ json toolJson(const std::string& id, const Context::ToolState& tool) {
         {"tipInventory", materialJson(tool.tipInventory)},
         {"residualInventory", materialJson(tool.residualInventory)},
         {"inFlightInventory", materialJson(tool.inFlightInventory)},
-        {"inFlightCaptures", std::move(flightCaptures)}
+        {"inFlightCaptures", std::move(flightCaptures)},
+        {"inFlightParcelId", tool.inFlightParcelId}
     };
 }
 
@@ -711,7 +713,7 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 outcome = {false, "ToolLimitReached", "tool inventory limit reached"};
             } else {
                 context->tools.emplace(toolId, Context::ToolState{
-                    sourceId, sinkId, frame, profile, *profileRevision, 1U, 0U, 0U, 0.0, {}, {}, {}, {}, std::nullopt});
+                    sourceId, sinkId, frame, profile, *profileRevision, 1U, 0U, 0U, 0.0, {}, {}, {}, {}, std::nullopt, {}});
                 outcome = {true, "Accepted", ""};
             }
         } else if (type == "SetActuator") {
@@ -1121,14 +1123,25 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             json landedCaptures = json::array();
             double landedSpill = 0.0;
             const auto landedVolume = tool.inFlightInventory.referenceVolumeM3;
-            if (!allocate(state, tool.inFlightInventory, tool.inFlightCaptures, landedCaptures, landedSpill) ||
+            const auto landedParcelId = tool.inFlightParcelId;
+            // The receiver may move after emission or the valve may close. Resolve
+            // the pending parcel against the current, fresh geometry at landing;
+            // the emission sample is retained only as provenance in the tool state.
+            const bool freshLandingGeometry = tool.latestInput && tool.latestInput->trackingValid &&
+                tool.latestInput->captureMonotonicNs <= monotonic_now_ns &&
+                monotonic_now_ns - tool.latestInput->captureMonotonicNs <= inputStaleCutoffNs;
+            const std::vector<plv::CaptureFraction> noCaptures;
+            const auto& landingCaptures = freshLandingGeometry ? tool.latestInput->captures : noCaptures;
+            if (!allocate(state, tool.inFlightInventory, landingCaptures, landedCaptures, landedSpill) ||
                 !stagedExecutor.restore(state).accepted) return PLV_INTERNAL_ERROR;
             tool.inFlightInventory = {};
             tool.inFlightCaptures.clear();
+            tool.inFlightParcelId.clear();
             ++tool.inventoryRevision;
             stagedEvents.push_back(json({{"schemaVersion", 1}, {"type", "InFlightLanded"},
                 {"branchId", state.branchId}, {"eventSequence", std::to_string(state.eventSequence)},
                 {"toolId", toolId}, {"quantityM3", landedVolume},
+                {"parcelId", landedParcelId},
                 {"captured", std::move(landedCaptures)}, {"spilledQuantityM3", landedSpill}}).dump());
         }
         if (!tool.latestInput || !tool.latestInput->trackingValid || tool.latestInput->actuator01 <= 0.0) continue;
@@ -1164,6 +1177,8 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         double spilledQuantityM3 = 0.0;
         if (!allocate(state, delivery, tool.latestInput->captures, captured, spilledQuantityM3) ||
             !stagedExecutor.restore(state).accepted) return PLV_INTERNAL_ERROR;
+        tool.inFlightParcelId = flightVolume > 0.0 ?
+            state.branchId + "/" + std::to_string(state.eventSequence) + "/" + toolId : std::string{};
         stagedEvents.push_back(json({
             {"schemaVersion", 1},
             {"type", "LiveTransferCommitted"},
@@ -1175,6 +1190,7 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
             {"sourceDebitM3", requestedVolumeM3},
             {"tipRetainedM3", tipFill},
             {"inFlightReservedM3", flightVolume},
+            {"inFlightParcelId", tool.inFlightParcelId},
             {"sourceInventoryId", tool.sourceInventoryId},
             {"sourceMaterialRevision", std::to_string(state.vessels.at(tool.sourceInventoryId).materialRevision)},
             {"captured", std::move(captured)},
@@ -1281,6 +1297,7 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                 const auto tip = parseMaterial(item.at("tipInventory"));
                 const auto residual = parseMaterial(item.at("residualInventory"));
                 const auto inFlight = parseMaterial(item.at("inFlightInventory"));
+                const auto parcelId = item.value("inFlightParcelId", std::string{});
                 std::vector<plv::CaptureFraction> flightCaptures;
                 if (item.contains("inFlightCaptures")) {
                     const auto& captures = item.at("inFlightCaptures");
@@ -1304,12 +1321,13 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     !actuatorRevision || !inventoryRevision || *toolRevision == 0U ||
                     !std::isfinite(actuator) || actuator < 0.0 || actuator > 1.0 ||
                     !tip.isFiniteNonNegative() || !residual.isFiniteNonNegative() || !inFlight.isFiniteNonNegative() ||
+                    parcelId.size() > 256U || (inFlight.referenceVolumeM3 == 0.0 && !parcelId.empty()) ||
                     frame != "lab" || profile != plv::BuretteProfile::researchDefault().id ||
                     ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
                     !result.emplace(id, Context::ToolState{
                         sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,
                         *inventoryRevision, actuator,
-                        tip, residual, inFlight, std::move(flightCaptures), std::nullopt}).second) {
+                        tip, residual, inFlight, std::move(flightCaptures), std::nullopt, parcelId}).second) {
                     throw std::invalid_argument("invalid tool");
                 }
             }

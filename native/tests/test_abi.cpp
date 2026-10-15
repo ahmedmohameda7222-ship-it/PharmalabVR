@@ -466,7 +466,7 @@ TEST_CASE("T02 live ABI input commits bounded conserved delivery on a transport 
     CHECK(snapshot["materialLedger"]["researchAdditiveVolumeM3"].get<double>() == doctest::Approx(4e-6));
     CHECK(snapshot["hold"]["active"].get<bool>() == false);
     const auto exported = read_text(handle, true);
-    const std::string closed = R"([{"toolId":"burette-1","sampleSequence":"2","captureMonotonicNs":"1020000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    const std::string closed = R"([{"toolId":"burette-1","sampleSequence":"2","captureMonotonicNs":"1020000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[{"destinationInventoryId":"receiver","fraction":0.75}]}])";
     REQUIRE(plv_input_batch(handle, closed.data(), static_cast<std::uint32_t>(closed.size())) == PLV_OK);
     REQUIRE(plv_step(handle, 0.02, 1030000000) == PLV_OK);
     const auto closedSnapshot = json::parse(read_text(handle));
@@ -823,6 +823,59 @@ TEST_CASE("T02 long live pour emits ordered allocated events without filling the
     }
     CHECK(allocatedM3 > 0.0);
     CHECK_FALSE(json::parse(read_text(handle))["hold"]["active"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P03_01 closing valve after moving receiver spills the pending drop exactly once") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 0.00005}})); poll(handle);
+    submit(handle, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 0.00005}})); poll(handle);
+    submit(handle, command("3", "CreateSink", {{"id", "spill"}})); poll(handle);
+    submit(handle, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "Water"},
+        {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 0.00004}}, {{"source", "0"}})); poll(handle);
+    submit(handle, command("5", "PlaceTool", {{"toolId", "burette-1"}, {"sourceInventoryId", "source"},
+        {"overflowSinkId", "spill"}, {"coordinateFrame", "lab"},
+        {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}})); poll(handle);
+    json sample = {{"toolId", "burette-1"}, {"sampleSequence", "1"},
+        {"captureMonotonicNs", "1000000000"}, {"positionMetres", {0, 1, 0}},
+        {"rotation", {0, 0, 0, 1}}, {"trackingValid", true}, {"actuator01", 1.0},
+        {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+        {"profileRevision", "1"}, {"toolRevision", "1"},
+        {"captureFractions", json::array({{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}})}};
+    auto batch = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'000'000'000ULL) == PLV_OK);
+    const auto issued = poll(handle);
+    REQUIRE(issued["type"] == "LiveTransferCommitted");
+    const auto beforeLanding = json::parse(read_text(handle));
+    const double pending = beforeLanding["tools"][0]["inFlightInventory"]
+        ["researchAdditiveVolumeM3"].get<double>();
+    REQUIRE(pending > 0.0);
+    const auto parcelId = beforeLanding["tools"][0]["inFlightParcelId"].get<std::string>();
+    REQUIRE_FALSE(parcelId.empty());
+    CHECK(issued["inFlightParcelId"] == parcelId);
+    sample["sampleSequence"] = "2";
+    sample["captureMonotonicNs"] = "1020000000";
+    sample["actuator01"] = 0.0;
+    sample["captureFractions"] = json::array();
+    batch = json::array({sample}).dump();
+    REQUIRE(plv_input_batch(handle, batch.data(), static_cast<std::uint32_t>(batch.size())) == PLV_OK);
+    REQUIRE(plv_step(handle, 0.02, 1'020'000'000ULL) == PLV_OK);
+    const auto landed = poll(handle);
+    CHECK(landed["type"] == "InFlightLanded");
+    CHECK(landed["parcelId"] == parcelId);
+    CHECK(landed["spilledQuantityM3"].get<double>() == doctest::Approx(pending));
+    CHECK(landed["captured"].empty());
+    const auto afterLanding = json::parse(read_text(handle));
+    CHECK(afterLanding["tools"][0]["inFlightParcelId"] == "");
+    CHECK(afterLanding["vessels"] == beforeLanding["vessels"]);
+    CHECK(afterLanding["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+        doctest::Approx(beforeLanding["sinks"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() + pending));
+    REQUIRE(plv_step(handle, 0.02, 1'040'000'000ULL) == PLV_OK);
+    std::uint32_t required = 0;
+    CHECK(plv_poll(handle, nullptr, 0, &required) == PLV_NO_EVENT);
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 

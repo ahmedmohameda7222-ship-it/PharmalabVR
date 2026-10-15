@@ -9,11 +9,13 @@ namespace PharmaLabVR.Core
         private CoreDriver driver;
         private LiquidPresenter source;
         private LiquidPresenter receiver;
+        private DropPresenter drop;
 
         public void Configure(CoreDriver core)
         {
             if (driver == core && source != null && receiver != null) return;
             if (driver != null) driver.LabViewChanged -= Apply;
+            if (driver != null && drop != null) driver.SnapshotChanged -= drop.ApplySnapshot;
             driver = core;
             var roots = core.gameObject.scene.GetRootGameObjects();
             var tool = FindNamed(roots, "DesktopResearchTool");
@@ -22,6 +24,16 @@ namespace PharmaLabVR.Core
             source = CreateLiquid(tool, "NativeSourceLiquid", 0.012f, 0.46f, 0f);
             receiver = CreateLiquid(vessel, "NativeReceiverLiquid", 0.75f, 0.8f, -0.5f);
             DecorateLab(roots, tool, vessel);
+            var dropVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            dropVisual.name = "NativePendingDrop";
+            dropVisual.transform.SetParent(tool, false);
+            dropVisual.transform.localPosition = new Vector3(0f, -0.052f, 0f);
+            dropVisual.transform.localScale = Vector3.one * 0.006f;
+            dropVisual.GetComponent<Collider>().enabled = false;
+            dropVisual.GetComponent<Renderer>().material.color = new Color(0.17f, 0.60f, 0.90f, 0.9f);
+            drop = tool.gameObject.AddComponent<DropPresenter>();
+            drop.Configure("research-tool", dropVisual);
+            core.SnapshotChanged += drop.ApplySnapshot;
             core.LabViewChanged += Apply;
         }
 
@@ -127,6 +139,7 @@ namespace PharmaLabVR.Core
         private void OnDestroy()
         {
             if (driver != null) driver.LabViewChanged -= Apply;
+            if (driver != null && drop != null) driver.SnapshotChanged -= drop.ApplySnapshot;
         }
     }
 }
