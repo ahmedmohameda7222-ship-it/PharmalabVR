@@ -433,6 +433,36 @@ namespace PharmaLabVR.Tests.EditorIntegration
             finally { rig.SetActive(originalRigActive); }
         }
 
+        [Test]
+        public void P07_03_SnapTurnRotatesThirtyDegreesAboutTrackedHeadWithoutMovingTool()
+        {
+            var rig = FindInActiveScene("XRPlayerRig");
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var alignment = rig.GetComponent<RecoveryAlignment>();
+            var originalActive = rig.activeSelf;
+            rig.SetActive(true);
+            try
+            {
+                var camera = rig.GetComponent<XROrigin>().Camera.transform;
+                var originalEye = camera.position;
+                var originalToolPosition = tool.transform.position;
+                var originalToolScale = tool.transform.localScale;
+                var initialYaw = rig.transform.eulerAngles.y;
+                Assert.That(alignment.TrySnapTurn(1), Is.True);
+                Assert.That(Mathf.DeltaAngle(initialYaw, rig.transform.eulerAngles.y),
+                    Is.EqualTo(30f).Within(0.01f));
+                Assert.That(Vector3.Distance(camera.position, originalEye),
+                    Is.LessThan(1e-4f), "A snap turn pivots around the head, never teleports it.");
+                Assert.That(tool.transform.position, Is.EqualTo(originalToolPosition));
+                Assert.That(tool.transform.localScale, Is.EqualTo(originalToolScale));
+                Assert.That(alignment.TrySnapTurn(-1), Is.True);
+                Assert.That(Mathf.DeltaAngle(initialYaw, rig.transform.eulerAngles.y),
+                    Is.EqualTo(0f).Within(0.01f));
+                Assert.That(alignment.TrySnapTurn(0), Is.False);
+            }
+            finally { rig.SetActive(originalActive); }
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
