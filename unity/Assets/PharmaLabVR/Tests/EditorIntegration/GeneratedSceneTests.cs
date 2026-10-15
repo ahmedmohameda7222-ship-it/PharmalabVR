@@ -324,6 +324,31 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(systems[0].GetComponent<XRUIInputModule>(), Is.Not.Null);
         }
 
+        [Test]
+        public void P07_02_IndependentReceiverGrabAndNonThrowableResearchTool()
+        {
+            var manager = FindInActiveScene("XRInteractionManager").GetComponent<XRInteractionManager>();
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var receiver = FindInActiveScene("ReceiverVessel");
+            Assert.That(tool, Is.Not.Null);
+            Assert.That(receiver, Is.Not.Null);
+            var toolGrab = tool.GetComponent<XRGrabInteractable>();
+            var receiverGrab = receiver.GetComponent<XRGrabInteractable>();
+            Assert.That(toolGrab, Is.Not.Null);
+            Assert.That(receiverGrab, Is.Not.Null,
+                "A second hand must be able to own and position the receiver independently.");
+            Assert.That(receiver.GetComponent<Rigidbody>(), Is.Not.Null);
+            Assert.That(toolGrab, Is.Not.SameAs(receiverGrab));
+            Assert.That(toolGrab.interactionManager, Is.SameAs(manager));
+            Assert.That(receiverGrab.interactionManager, Is.SameAs(manager));
+            Assert.That(toolGrab.throwOnDetach, Is.False,
+                "No liquid-tool throws before validated disposal/recovery.");
+            Assert.That(receiverGrab.throwOnDetach, Is.False);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            Assert.That(prefab.GetComponent<XRGrabInteractable>().throwOnDetach, Is.False);
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
