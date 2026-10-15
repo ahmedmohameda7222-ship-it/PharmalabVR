@@ -1876,7 +1876,7 @@ TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserv
     const auto cleaned = json::parse(read_text(handle));
     if (!cleaned["tools"].empty()) {
         CHECK(cleaned["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
-              doctest::Approx(5e-8));
+              doctest::Approx(1e-7));
         CHECK(cleaned["sinks"][0]["inventory"]["chlorideMol"].get<double>() > 0.0);
     }
     for (const auto& key : {"researchAdditiveVolumeM3", "chlorideMol", "solventWaterKg"})

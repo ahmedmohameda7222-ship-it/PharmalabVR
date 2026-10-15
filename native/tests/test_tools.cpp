@@ -7,6 +7,15 @@
 
 using namespace plv;
 
+TEST_CASE("P03_02 research pipette has separate represented residual and capacity") {
+    const auto pipette = PipetteProfile::researchDefault();
+    const auto burette = BuretteProfile::researchDefault();
+    CHECK(pipette.id == "pipette-25ml-research-v1");
+    CHECK(pipette.capacityM3 == doctest::Approx(25e-6));
+    CHECK(pipette.retainedTipVolumeM3 == doctest::Approx(1e-7));
+    CHECK(pipette.retainedTipVolumeM3 > burette.dropReferenceVolumeM3);
+}
+
 TEST_CASE("T04 rinse moves contamination through represented tip inventory") {
     ToolParcelState tool;
     tool.tip = MaterialState::preparedStock("acid", StockKind::HydrochloricAcid, 0.1, 1e-7);
