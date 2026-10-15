@@ -18,13 +18,15 @@ namespace PharmaLabVR.UI
                 throw new ArgumentException("Both pinned locale tables must be present.");
             english = en;
             arabic = ar;
+            if (isActiveAndEnabled) Reload(LanguageSelection.Current);
         }
 
         private void OnEnable()
         {
             active = this;
             LanguageSelection.Changed += OnLocaleChanged;
-            Reload(LanguageSelection.Current);
+            if (english != null && arabic != null)
+                Reload(LanguageSelection.Current);
         }
 
         private void OnDisable()
