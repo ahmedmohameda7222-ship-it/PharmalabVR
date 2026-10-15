@@ -131,6 +131,24 @@ internal static class Program
             Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            driver.CurrentMode = "VR";
+            router.Configure(driver);
+            Check(router.Current.SupportedActions.Contains("Load"),
+                "VR Pause must expose an explicit saved-session Load action");
+            session.LoadPermitted = false;
+            Check(!panels.Request(PanelAction.Load),
+                "Unsupported/missing saved file falsely returned Load success");
+            Check(session.LoadCalls == 0, "Rejected Load touched a Native replacement");
+            session.LoadPermitted = true;
+            var beforeLoadRevision = driver.CurrentLabView.EventSequence;
+            Check(panels.Request(PanelAction.Load),
+                "Available Native-backed VR Save could not be loaded");
+            Check(session.LoadCalls == 1, "Load was dispatched more than once");
+            Check(driver.CurrentLabView.EventSequence == beforeLoadRevision,
+                "UI Load action independently fabricated a Native material revision");
+            Check(session.SaveCalls == 0, "Load silently wrote a new Save");
+            driver.CurrentMode = "Desktop";
+            router.Configure(driver);
             Check(panels.Request(PanelAction.Settings), "Pause → Settings action refused");
             Check(router.Current.ScreenId == ScreenId.Settings, "Settings not visible");
             Check(panels.Request(PanelAction.Back), "Settings Back refused");
