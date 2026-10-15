@@ -43,6 +43,12 @@ internal static class Program
         catch (FormatException) { badCatalogDenied = true; }
         Check(badCatalogDenied && englishUi.Get("offline") == "Offline",
             "A corrupted English table overwrote live product labels.");
+        var otherScriptDenied = false;
+        try { englishUi.Load("en", new UnityEngine.TextAsset(
+            "{\"offline\":\"\u063A\u064A\u0631 \u0645\u062A\u0635\u0644\"}")); }
+        catch (FormatException) { otherScriptDenied = true; }
+        Check(otherScriptDenied && englishUi.Get("offline") == "Offline",
+            "Non-English script was accepted in the shipping English text catalog.");
         var trailingCommaDenied = false;
         try { englishUi.Load("en", new UnityEngine.TextAsset("{\"offline\":\"Offline\",}")); }
         catch (FormatException) { trailingCommaDenied = true; }

@@ -49,6 +49,8 @@ namespace PharmaLabVR.UI
                     var value = ReadString(json, ref index);
                     if (string.IsNullOrWhiteSpace(value))
                         throw new FormatException("Empty English text value.");
+                    if (ContainsArabicScript(key) || ContainsArabicScript(value))
+                        throw new FormatException("Non-English script is not allowed in product UI copy.");
                     values.Add(key, value);
                     SkipWhitespace(json, ref index);
                     if (index < json.Length && json[index] == '}') { index++; break; }
@@ -61,6 +63,20 @@ namespace PharmaLabVR.UI
             SkipWhitespace(json, ref index);
             if (index != json.Length) throw new FormatException("Trailing content after English text.");
             return values;
+        }
+
+        private static bool ContainsArabicScript(string text)
+        {
+            foreach (var c in text)
+            {
+                if ((c >= '\u0600' && c <= '\u06FF') ||
+                    (c >= '\u0750' && c <= '\u077F') ||
+                    (c >= '\u08A0' && c <= '\u08FF') ||
+                    (c >= '\uFB50' && c <= '\uFDFF') ||
+                    (c >= '\uFE70' && c <= '\uFEFF'))
+                    return true;
+            }
+            return false;
         }
 
         private static string ReadString(string json, ref int index)
