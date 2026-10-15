@@ -336,6 +336,53 @@ namespace PharmaLabVR.Core
             RequireAccepted(Session.SubmitOrdered("Pause"));
         }
 
+        // User-requested setup water is real Native inventory, never a
+        // hidden procedural refill after setup has closed.
+        public bool RinseWaterPrepared
+        {
+            get
+            {
+                if (CurrentLabView == null) return false;
+                foreach (var vessel in CurrentLabView.Vessels)
+                    if (vessel.Id == "rinse-water" && vessel.CommittedVolumeM3 > 0.0)
+                        return true;
+                return false;
+            }
+        }
+
+        public bool TryPrepareRinseWater()
+        {
+            if (Session == null || !SourceNeedsPreparation) return false;
+            var state = JsonUtility.FromJson<RinseSetupState>(Session.ReadSnapshot());
+            if (state?.vessels == null || state.sinks == null)
+                throw new InvalidOperationException("Native rinse setup inventory is unavailable.");
+            var vesselExists = false;
+            var waterPresent = false;
+            foreach (var vessel in state.vessels)
+                if (vessel.id == "rinse-water")
+                {
+                    vesselExists = true;
+                    waterPresent = vessel.inventory != null &&
+                                   vessel.inventory.researchAdditiveVolumeM3 > 0.0;
+                }
+            if (waterPresent) return true;
+            var wasteExists = false;
+            foreach (var sink in state.sinks)
+                if (sink.id == "waste") wasteExists = true;
+            if (!vesselExists)
+                RequireAccepted(Session.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"rinse-water\",\"capacityM3\":0.00005}"));
+            if (!wasteExists)
+                RequireAccepted(Session.SubmitOrdered("CreateSink", "{\"id\":\"waste\"}"));
+            var commands = new LabCommandService(Session);
+            var receipt = commands.Submit("PrepareStock",
+                "{\"vesselId\":\"rinse-water\",\"stockKind\":\"Water\",\"concentrationMolPerL\":0.0,\"referenceVolumeM3\":0.000001}",
+                commands.CaptureTouchedRevisions("rinse-water"));
+            if (!receipt.Accepted) return false;
+            PublishSnapshot();
+            return true;
+        }
+
         public bool TryPrepareSourceStock(string stockId, double concentrationMolPerL)
         {
             if (Session == null || stockCatalog?.stocks == null || !SourceNeedsPreparation) return false;
@@ -382,6 +429,14 @@ namespace PharmaLabVR.Core
             if (!IsTimeHeld && samples.Exists(sample => !sample.trackingValid))
                 BeginInputHold("TrackingLoss");
             return samples;
+        }
+
+        // Called after accepted main-thread user commands; read back the Native
+        // receipt/snapshot rather than predicting any displayed material.
+        public void RefreshAfterInstrumentCommand()
+        {
+            if (Session == null || !Session.IsOpen) return;
+            PublishSnapshot();
         }
 
         private void PublishSnapshot()
@@ -449,6 +504,25 @@ namespace PharmaLabVR.Core
             public VesselEnvelope[] vessels;
             public InputWatermark[] inputWatermarks;
             public ObservationEnvelope[] observations;
+        }
+
+        [Serializable] private sealed class RinseSetupState
+        {
+            public RinseSetupVessel[] vessels;
+            public RinseSetupSink[] sinks;
+        }
+
+        [Serializable] private sealed class RinseSetupVessel
+        {
+            public string id;
+            public RinseMaterial inventory;
+        }
+
+        [Serializable] private sealed class RinseSetupSink { public string id; }
+
+        [Serializable] private sealed class RinseMaterial
+        {
+            public double researchAdditiveVolumeM3;
         }
 
         [Serializable] private sealed class VesselEnvelope
