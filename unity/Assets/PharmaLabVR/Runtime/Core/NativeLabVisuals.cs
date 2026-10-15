@@ -53,6 +53,8 @@ namespace PharmaLabVR.Core
             visual.transform.localScale = new Vector3(radius, 0f, radius);
             visual.GetComponent<Collider>().enabled = false;
             visual.GetComponent<Renderer>().material.color = new Color(0.15f, 0.55f, 0.85f, 0.75f);
+            var meniscus = parent.gameObject.AddComponent<MeniscusPresenter>();
+            meniscus.Configure(parent, 1.0, height, baseY, radius * 0.45f);
             var presenter = parent.gameObject.AddComponent<LiquidPresenter>();
             presenter.Configure(visual.transform, 1.0, height, baseY);
             return presenter;
@@ -84,11 +86,7 @@ namespace PharmaLabVR.Core
                     new Vector3(0.014f * Mathf.Cos(angle), 0.25f, 0.014f * Mathf.Sin(angle)),
                     new Vector3(0.002f, 0.25f, 0.002f), Color.white, false);
             }
-            for (var index = 0; index <= 20; index++)
-                Primitive(tool, "Graduation", PrimitiveType.Cube,
-                    new Vector3(0.020f, 0.02f + index * 0.022f, 0f),
-                    new Vector3(index % 5 == 0 ? 0.018f : 0.010f, 0.0015f, 0.0015f),
-                    new Color(0.05f, 0.08f, 0.10f), false);
+            InstrumentMeshBuilder.BuildBuretteGraduations(tool, 0.46f, 0.44f, 0.020f);
             Primitive(tool, "Stopcock", PrimitiveType.Cube,
                 new Vector3(0f, 0.012f, 0f), new Vector3(0.08f, 0.012f, 0.012f),
                 new Color(0.89f, 0.45f, 0.13f), false);

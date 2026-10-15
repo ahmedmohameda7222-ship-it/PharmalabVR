@@ -10,12 +10,15 @@ namespace PharmaLabVR.Tools
         [SerializeField] private float maximumVisualHeight = 0.18f;
         [SerializeField] private float baseLocalY;
 
+        private MeniscusPresenter meniscus;
+
         public double CommittedVolumeM3 { get; private set; }
         public float Fill01 { get; private set; }
 
         public void Configure(Transform visual, double capacity, float height, float baseY)
         {
             liquidVisual = visual;
+            meniscus = GetComponent<MeniscusPresenter>();
             capacityM3 = capacity;
             maximumVisualHeight = height;
             baseLocalY = baseY;
@@ -29,6 +32,7 @@ namespace PharmaLabVR.Tools
             if (capacityM3 <= 0.0) throw new InvalidOperationException("Liquid capacity must be positive.");
             CommittedVolumeM3 = Math.Min(volumeM3, capacityM3);
             Fill01 = (float)(CommittedVolumeM3 / capacityM3);
+            if (meniscus != null) meniscus.SetCommittedVolume(CommittedVolumeM3);
             if (liquidVisual == null) return;
             var height = maximumVisualHeight * Fill01;
             var scale = liquidVisual.localScale;

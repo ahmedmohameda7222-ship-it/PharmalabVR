@@ -139,8 +139,11 @@ namespace PharmaLabVR.Editor
             liquid.transform.SetParent(root.transform, false);
             liquid.transform.localScale = new Vector3(0.014f, 0f, 0.014f);
             liquid.GetComponent<Collider>().enabled = false;
+            var meniscus = root.AddComponent<MeniscusPresenter>();
+            meniscus.Configure(root.transform, 0.00005, 0.48f, -0.24f, 0.006f);
             var liquidPresenter = root.AddComponent<LiquidPresenter>();
             liquidPresenter.Configure(liquid.transform, 0.00005, 0.48f, -0.24f);
+            InstrumentMeshBuilder.BuildBuretteGraduations(root.transform, 0.22f, 0.44f, 0.02f);
             var valve = root.AddComponent<ValveActuator>();
             root.AddComponent<ToolPresenter>().Configure("burette-50ml-research-v1", liquidPresenter, valve);
             root.AddComponent<Rigidbody>().isKinematic = false;
