@@ -25,6 +25,14 @@ internal static class Program
             System.IO.File.ReadAllText("unity/Assets/PharmaLabVR/Content/Localization/en.json")));
         Check(englishUi.Locale == "en" && englishUi.Get("offline") == "Offline",
             "Installed English product text was not loaded.");
+        // Keep unwanted localization assets out of the shipping app and
+        // prevent accidental reintroduction during later implementation.
+        Check(!System.IO.File.Exists("unity/Assets/PharmaLabVR/Content/Localization/ar.json") &&
+              !System.IO.File.Exists("unity/Assets/PharmaLabVR/Content/Fonts/NotoSansArabic-Regular.ttf") &&
+              !System.IO.Directory.Exists("unity/Assets/ThirdParty/RTLTMPro") &&
+              !System.IO.File.Exists("unity/Assets/PharmaLabVR/Runtime/UI/LanguageSelection.cs") &&
+              !System.IO.File.Exists("unity/Assets/PharmaLabVR/Runtime/UI/LocalizedLabel.cs"),
+            "English-only app contains a prohibited bilingual/RTL application asset.");
         var deniedOtherLocale = false;
         try { englishUi.Load("ar", new UnityEngine.TextAsset("{\"offline\":\"unavailable\"}")); }
         catch (ArgumentException) { deniedOtherLocale = true; }
