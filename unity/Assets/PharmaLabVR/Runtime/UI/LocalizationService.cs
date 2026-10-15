@@ -14,8 +14,14 @@ namespace PharmaLabVR.UI
         public void Load(string locale, TextAsset table)
         {
             if (table == null) throw new ArgumentNullException(nameof(table));
+            if (locale != "en" && locale != "ar")
+                throw new ArgumentException("Only pinned English and Arabic catalogs are supported.", nameof(locale));
+            // Parse and validate before any externally visible state mutation.
+            // A bad/partial localization file cannot blank out a live lab UI.
+            var next = ParseStringObject(table.text);
+            if (next.Count == 0) throw new FormatException("Localization catalog has no labels.");
             values.Clear();
-            foreach (var entry in ParseStringObject(table.text)) values[entry.Key] = entry.Value;
+            foreach (var entry in next) values[entry.Key] = entry.Value;
             Locale = locale;
         }
 
@@ -23,27 +29,47 @@ namespace PharmaLabVR.UI
 
         private static Dictionary<string, string> ParseStringObject(string json)
         {
-            var result = new Dictionary<string, string>();
+            if (string.IsNullOrWhiteSpace(json))
+                throw new FormatException("Empty localization JSON.");
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
             var index = 0;
             SkipWhitespace(json, ref index);
             Expect(json, ref index, '{');
             SkipWhitespace(json, ref index);
-            if (index < json.Length && json[index] == '}') return result;
-            while (index < json.Length)
+            if (index < json.Length && json[index] == '}')
             {
-                var key = ReadString(json, ref index);
-                SkipWhitespace(json, ref index);
-                Expect(json, ref index, ':');
-                SkipWhitespace(json, ref index);
-                var value = ReadString(json, ref index);
-                result[key] = value;
-                SkipWhitespace(json, ref index);
-                if (index < json.Length && json[index] == '}') { index++; break; }
-                Expect(json, ref index, ',');
-                SkipWhitespace(json, ref index);
+                index++;
+            }
+            else
+            {
+                while (index < json.Length)
+                {
+                    SkipWhitespace(json, ref index);
+                    var key = ReadString(json, ref index);
+                    if (string.IsNullOrWhiteSpace(key) || result.ContainsKey(key))
+                        throw new FormatException("Duplicate or empty localization key.");
+                    SkipWhitespace(json, ref index);
+                    Expect(json, ref index, ':');
+                    SkipWhitespace(json, ref index);
+                    var value = ReadString(json, ref index);
+                    if (string.IsNullOrWhiteSpace(value))
+                        throw new FormatException("Empty localized label: " + key);
+                    result.Add(key, value);
+                    SkipWhitespace(json, ref index);
+                    if (index < json.Length && json[index] == '}')
+                    {
+                        index++;
+                        break;
+                    }
+                    Expect(json, ref index, ',');
+                    SkipWhitespace(json, ref index);
+                    if (index >= json.Length || json[index] == '}')
+                        throw new FormatException("Trailing comma or unterminated localization object.");
+                }
             }
             SkipWhitespace(json, ref index);
-            if (index != json.Length) throw new FormatException("Unexpected localization JSON suffix.");
+            if (index != json.Length)
+                throw new FormatException("Unexpected localization JSON suffix.");
             return result;
         }
 
@@ -55,7 +81,13 @@ namespace PharmaLabVR.UI
             {
                 var character = json[index++];
                 if (character == '"') return value.ToString();
-                if (character != '\\') { value.Append(character); continue; }
+                if (character != '\\')
+                {
+                    if (char.IsControl(character))
+                        throw new FormatException("Unescaped control character in localization string.");
+                    value.Append(character);
+                    continue;
+                }
                 if (index >= json.Length) throw new FormatException("Incomplete JSON escape.");
                 var escape = json[index++];
                 switch (escape)
