@@ -996,6 +996,66 @@ TEST_CASE("P03_01 closing valve after moving receiver spills the pending drop ex
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("P03_01 imported in-flight parcel requires its committed identity") {
+    std::uint64_t live = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &live) == PLV_OK);
+    submit(live, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); poll(live);
+    submit(live, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 5e-5}})); poll(live);
+    submit(live, command("3", "CreateSink", {{"id", "spill"}})); poll(live);
+    submit(live, command("4", "PrepareStock", {{"vesselId", "source"}, {"stockKind", "Water"},
+        {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 4e-5}}, {{"source", "0"}})); poll(live);
+    submit(live, command("5", "PlaceTool", {{"toolId", "burette-1"}, {"sourceInventoryId", "source"},
+        {"overflowSinkId", "spill"}, {"coordinateFrame", "lab"},
+        {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}})); poll(live);
+    const json sample = {{{"toolId", "burette-1"}, {"sampleSequence", "1"},
+        {"captureMonotonicNs", "1000000000"}, {"positionMetres", {0, 1, 0}},
+        {"rotation", {0, 0, 0, 1}}, {"trackingValid", true}, {"actuator01", 1.0},
+        {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+        {"profileRevision", "1"}, {"toolRevision", "1"},
+        {"captureFractions", json::array({{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}})}}};
+    const auto encoded = sample.dump();
+    REQUIRE(plv_input_batch(live, encoded.data(), static_cast<std::uint32_t>(encoded.size())) == PLV_OK);
+    REQUIRE(plv_step(live, 0.02, 1'000'000'000ULL) == PLV_OK);
+    const auto issued = poll(live);
+    REQUIRE(issued["type"] == "LiveTransferCommitted");
+    const auto exported = json::parse(read_text(live, true));
+    REQUIRE(exported["tools"].size() == 1U);
+    const auto originalId = exported["tools"][0]["inFlightParcelId"].get<std::string>();
+    REQUIRE_FALSE(originalId.empty());
+    REQUIRE(exported["tools"][0]["inFlightInventory"]["referenceVolumeM3"].get<double>() > 0.0);
+    CHECK(originalId == issued["inFlightParcelId"]);
+
+    const auto importStatus = [](const json& candidate) {
+        const auto content = candidate.dump();
+        std::uint64_t imported = 0;
+        const auto result = plv_import(content.data(), static_cast<std::uint32_t>(content.size()), &imported);
+        if (result == PLV_OK) CHECK(plv_destroy(imported) == PLV_OK);
+        else CHECK(imported == 0U);
+        return result;
+    };
+    CHECK(importStatus(exported) == PLV_OK);
+
+    auto anonymous = exported;
+    anonymous["tools"][0]["inFlightParcelId"] = "";
+    CHECK(importStatus(anonymous) == PLV_INVALID_ARGUMENT);
+
+    auto wrongBranch = exported;
+    wrongBranch["tools"][0]["inFlightParcelId"] = "other-branch/7/burette-1";
+    CHECK(importStatus(wrongBranch) == PLV_INVALID_ARGUMENT);
+
+    auto wrongTool = exported;
+    wrongTool["tools"][0]["inFlightParcelId"] = "branch-1/7/other-tool";
+    CHECK(importStatus(wrongTool) == PLV_INVALID_ARGUMENT);
+
+    auto futureSequence = exported;
+    futureSequence["tools"][0]["inFlightParcelId"] = "branch-1/999999/burette-1";
+    CHECK(importStatus(futureSequence) == PLV_INVALID_ARGUMENT);
+
+    CHECK(json::parse(read_text(live, true)) == exported);
+    CHECK(plv_destroy(live) == PLV_OK);
+}
+
 TEST_CASE("L02 accepted command history remains importable at the session size boundary") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
