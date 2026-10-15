@@ -653,6 +653,42 @@ namespace PharmaLabVR.Tests.PlayMode
             }
             yield return null;
         }
+        [UnityTest]
+        public IEnumerator P07_03_VrSnapControlsHaveSeparateButtonAndLabelHitRegions()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var presenter = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var buttons = presenter.GetComponentsInChildren<Button>(true);
+                var left = buttons.Single(button => button.name == "Snap left 30")
+                    .GetComponent<RectTransform>();
+                var right = buttons.Single(button => button.name == "Snap right 30")
+                    .GetComponent<RectTransform>();
+                var leftLabel = left.GetComponentInChildren<Text>(true).rectTransform;
+                var rightLabel = right.GetComponentInChildren<Text>(true).rectTransform;
+                Assert.That(left.anchoredPosition.y, Is.EqualTo(right.anchoredPosition.y));
+                Assert.That(left.anchoredPosition.x + left.sizeDelta.x * 0.5f,
+                    Is.LessThan(right.anchoredPosition.x - right.sizeDelta.x * 0.5f),
+                    "Tracked-ray controls cannot share an overlapping pointer hit rectangle.");
+                Assert.That(leftLabel.sizeDelta.x, Is.LessThanOrEqualTo(left.sizeDelta.x));
+                Assert.That(rightLabel.sizeDelta.x, Is.LessThanOrEqualTo(right.sizeDelta.x));
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
 
     }
 }
