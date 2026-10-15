@@ -11,6 +11,8 @@ namespace PharmaLabVR.UI
         [SerializeField] private TextAsset arabic;
         private readonly LocalizationService catalog = new LocalizationService();
         private static LocalizationCatalogHost active;
+        public static event Action CatalogChanged;
+        public static LocalizationService ActiveCatalog => active != null ? active.catalog : null;
 
         public void Configure(TextAsset en, TextAsset ar)
         {
@@ -45,7 +47,11 @@ namespace PharmaLabVR.UI
                 Debug.LogError("Missing pinned localization TextAsset for " + locale);
                 return;
             }
-            try { catalog.Load(locale, data); }
+            try
+            {
+                catalog.Load(locale, data);
+                CatalogChanged?.Invoke();
+            }
             catch (Exception error)
             {
                 // Retain last good catalog without altering language preference

@@ -31,6 +31,9 @@ namespace PharmaLabVR.Tests.EditMode
                 LanguageSelection.Select("ar");
                 Assert.That(LocalizationCatalogHost.Get("offline", "fallback"), Is.EqualTo("غير متصل"));
                 Assert.That(LanguageSelection.IsRightToLeft, Is.True);
+                Assert.That(LocalizationCatalogHost.ActiveCatalog, Is.Not.Null);
+                Assert.That(LocalizationCatalogHost.ActiveCatalog.Locale, Is.EqualTo("ar"),
+                    "Pinned live catalog must refresh after the language change.");
                 Assert.That(LocalizationCatalogHost.Get("source", "fallback"), Is.EqualTo("وعاء المصدر"));
                 Assert.That(LocalizationCatalogHost.Get("missing-pinned-key", "fallback"),
                     Is.EqualTo("fallback"));
