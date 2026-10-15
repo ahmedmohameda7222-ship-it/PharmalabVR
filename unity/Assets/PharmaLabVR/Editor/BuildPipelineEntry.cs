@@ -237,6 +237,14 @@ namespace PharmaLabVR.Editor
             toolVisual.transform.SetParent(researchTool.transform, false);
             toolVisual.transform.localPosition = new Vector3(0f, 0.25f, 0f);
             toolVisual.transform.localScale = new Vector3(0.025f, 0.25f, 0.025f);
+            var outlet = new GameObject("OutletExit").transform;
+            outlet.SetParent(researchTool.transform, false);
+            var mesh = toolVisual.GetComponent<MeshFilter>().sharedMesh;
+            outlet.localPosition = new Vector3(0f, (float)ResearchOutletGeometry.BottomLocalY(
+                toolVisual.transform.localPosition.y, mesh.bounds.min.y,
+                toolVisual.transform.localScale.y), 0f);
+            // Geometry is research-only; no certified burette calibration
+            // or guaranteed landing trajectory is implied by this marker.
             researchTool.AddComponent<DesktopGrabbable>();
             var body = researchTool.AddComponent<Rigidbody>();
             body.useGravity = false;

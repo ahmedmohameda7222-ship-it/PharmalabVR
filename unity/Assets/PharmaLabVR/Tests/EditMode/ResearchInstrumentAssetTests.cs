@@ -1,6 +1,7 @@
 using System.Linq;
 using NUnit.Framework;
 using PharmaLabVR.Tools;
+using PharmaLabVR.Input;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -126,6 +127,36 @@ namespace PharmaLabVR.Tests
                 Is.GreaterThan(0.99f));
             Assert.That(Vector3.Dot(bottleOutlet.TransformDirection(Vector3.down), Vector3.down),
                 Is.LessThan(-0.99f), "Upright closed stock bottle cannot masquerade as a downward spout.");
+        }
+
+        [Test]
+        public void P03_03_DesktopBuretteOutletMarkerCapturesReceiverAtAuthoredResearchScenePose()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var objects = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true)).ToArray();
+                var tool = objects.Single(item => item.name == "DesktopResearchTool");
+                var cylinder = tool.Find("CalibratedBody");
+                var outlet = tool.Find("OutletExit");
+                Assert.That(cylinder, Is.Not.Null);
+                Assert.That(outlet, Is.Not.Null, "Native valve has no physical outlet in generated Lab.");
+                var expectedBottomY = ResearchOutletGeometry.BottomLocalY(
+                    cylinder.localPosition.y,
+                    cylinder.GetComponent<MeshFilter>().sharedMesh.bounds.min.y,
+                    cylinder.localScale.y);
+                Assert.That(outlet.localPosition.y, Is.EqualTo(expectedBottomY).Within(1e-5),
+                    "Burette output origin must follow actual mesh transform.");
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                var hit = receiver.Estimate(tool, Vector3.zero);
+                Assert.That(hit.Length, Is.EqualTo(1),
+                    "The authored initial 50mL burette tip must geometrically reach its receiver.");
+                Assert.That(hit[0].destinationInventoryId, Is.EqualTo("receiver"));
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
         }
 
         [Test]
