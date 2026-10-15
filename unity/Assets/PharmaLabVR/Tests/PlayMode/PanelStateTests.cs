@@ -551,5 +551,64 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator P06_02_VrSettingsControlsMutateRealSharedPanelPreferences()
+        {
+            var original = SetupPreferencesSelection.Current;
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Boot.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Boot", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var panels = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(panels.Request(PanelAction.EnterVR), Is.True);
+                Assert.That(panels.Request(PanelAction.ConfirmSetup), Is.True);
+                yield return null;
+                var roots = SceneManager.GetActiveScene().GetRootGameObjects();
+                var presenter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(actions.Request(PanelAction.Pause), Is.True);
+                Assert.That(actions.Request(PanelAction.Settings), Is.True);
+                var settingButtons = presenter.GetComponentsInChildren<Button>(true);
+                Button Find(string name) => settingButtons.Single(button => button.name == name);
+                Assert.That(Find("Settings choice A").gameObject.activeInHierarchy, Is.True);
+                var initialPosture = router.Current.Setup.Posture;
+                Find("Settings choice A").onClick.Invoke();
+                Assert.That(router.Current.Setup.Posture, Is.Not.EqualTo(initialPosture));
+                var initialHand = router.Current.Setup.DominantHand;
+                Find("Settings choice B").onClick.Invoke();
+                Assert.That(router.Current.Setup.DominantHand, Is.Not.EqualTo(initialHand));
+                Find("Next settings").onClick.Invoke();
+                var startingScale = router.Current.Setup.TextScale;
+                Find("Settings choice C").onClick.Invoke();
+                Assert.That(router.Current.Setup.TextScale, Is.GreaterThan(startingScale));
+                Find("Next settings").onClick.Invoke();
+                var startingContrast = router.Current.Setup.HighContrast;
+                Find("Settings choice C").onClick.Invoke();
+                Assert.That(router.Current.Setup.HighContrast, Is.Not.EqualTo(startingContrast));
+                Find("Back").onClick.Invoke();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(router.Current.Setup.HighContrast, Is.Not.EqualTo(original.HighContrast));
+            }
+            finally
+            {
+                SetupPreferencesSelection.Select(original);
+                foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                if (scene.isLoaded)
+                    foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+            }
+            yield return null;
+        }
+
     }
 }
