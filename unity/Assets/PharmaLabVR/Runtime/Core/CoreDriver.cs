@@ -18,6 +18,7 @@ namespace PharmaLabVR.Core
         public event Action<string> SnapshotChanged;
         public event Action<LabViewModel> LabViewChanged;
         public event Action<string> NativeEventReceived;
+        public event Action NativeSessionRestored;
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
         public string StartupError { get; private set; }
@@ -282,6 +283,7 @@ namespace PharmaLabVR.Core
             IsTimeHeld = true;
             accumulator = 0.0;
             HoldChanged?.Invoke(true);
+            NativeSessionRestored?.Invoke();
             PublishSnapshot();
             return true;
         }
@@ -307,6 +309,7 @@ namespace PharmaLabVR.Core
             establishFrameClock = true;
             previous?.Dispose();
             SynchronizeInputSequences();
+            NativeSessionRestored?.Invoke();
             PublishSnapshot();
         }
 

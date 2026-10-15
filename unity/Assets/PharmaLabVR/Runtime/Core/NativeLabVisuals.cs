@@ -19,6 +19,7 @@ namespace PharmaLabVR.Core
             {
                 driver.SnapshotChanged -= drop.ApplySnapshot;
                 driver.NativeEventReceived -= drop.ApplyNativeEvent;
+                driver.NativeSessionRestored -= drop.ResetSession;
             }
             driver = core;
             var roots = core.gameObject.scene.GetRootGameObjects();
@@ -39,6 +40,7 @@ namespace PharmaLabVR.Core
             drop.Configure("research-tool", dropVisual);
             core.SnapshotChanged += drop.ApplySnapshot;
             core.NativeEventReceived += drop.ApplyNativeEvent;
+            core.NativeSessionRestored += drop.ResetSession;
             core.LabViewChanged += Apply;
         }
 
@@ -151,6 +153,7 @@ namespace PharmaLabVR.Core
             {
                 driver.SnapshotChanged -= drop.ApplySnapshot;
                 driver.NativeEventReceived -= drop.ApplyNativeEvent;
+                driver.NativeSessionRestored -= drop.ResetSession;
             }
         }
     }

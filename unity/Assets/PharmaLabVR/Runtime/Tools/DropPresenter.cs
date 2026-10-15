@@ -22,9 +22,6 @@ namespace PharmaLabVR.Tools
         public void ApplySnapshot(string snapshot)
         {
             var envelope = string.IsNullOrEmpty(snapshot) ? null : JsonUtility.FromJson<Snapshot>(snapshot);
-            if (envelope?.hold?.reason == "SessionLoad" ||
-                envelope?.hold?.reason == "CheckpointRestart")
-                state.ResetSession();
             var id = string.Empty;
             var volume = 0.0;
             if (envelope?.tools != null)
@@ -35,7 +32,15 @@ namespace PharmaLabVR.Tools
                         volume = tool.inFlightInventory.researchAdditiveVolumeM3;
                         break;
                     }
-            state.ApplySnapshot(id, volume);
+            state.ApplyNativeSnapshot(id, volume, envelope?.hold?.reason);
+            RefreshVisual();
+        }
+
+        // Called only after Native accepted a checkpoint restart or
+        // replaced the active CoreSession (not for periodic held snapshots).
+        public void ResetSession()
+        {
+            state.ResetSession();
             RefreshVisual();
         }
 

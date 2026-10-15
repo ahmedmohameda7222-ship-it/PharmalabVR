@@ -9,6 +9,7 @@ namespace PharmaLabVR.Tools
         public string ActiveParcelId { get; private set; } = string.Empty;
         public double CommittedVolumeM3 { get; private set; }
         public string LastLandedParcelId { get; private set; } = string.Empty;
+        private string lastHoldReason = string.Empty;
 
         // A deliberate Native load or checkpoint restart creates a new
         // replay epoch. An earlier landing token may validly be pending again
@@ -18,6 +19,19 @@ namespace PharmaLabVR.Tools
             ActiveParcelId = string.Empty;
             CommittedVolumeM3 = 0.0;
             LastLandedParcelId = string.Empty;
+        }
+
+        // Native may publish many snapshots while the same SessionLoad or
+        // CheckpointRestart hold remains active. Recognize each hold transition
+        // once; accepted repeat imports/restarts invoke ResetSession explicitly.
+        public bool ApplyNativeSnapshot(string parcelId, double volumeM3, string holdReason)
+        {
+            var reason = holdReason ?? string.Empty;
+            if ((reason == "SessionLoad" || reason == "CheckpointRestart") &&
+                reason != lastHoldReason)
+                ResetSession();
+            lastHoldReason = reason;
+            return ApplySnapshot(parcelId, volumeM3);
         }
 
         public bool ApplySnapshot(string parcelId, double volumeM3)
