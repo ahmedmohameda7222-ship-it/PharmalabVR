@@ -101,6 +101,19 @@ internal static class Program
             "Stationary receiver must recover on a fresh frame");
         Check(double.IsPositiveInfinity(motion.Observe(24, double.NaN, 0.01, 0.0, 0.0)),
             "Non-finite capture timestamps must fail closed");
+        // P06.02: VR stock setup must allow every supported research
+        // concentration and keep water explicitly at zero mol/L.
+        var matrix = new[] { 0.01, 0.05, 0.10 };
+        Check(ResearchConcentrationSelection.Resolve(matrix, 0, "hcl") == 0.01,
+            "XR stock choice ignored lower research concentration");
+        Check(ResearchConcentrationSelection.Resolve(matrix, 1, "nacl") == 0.05,
+            "XR stock choice ignored middle research concentration");
+        Check(ResearchConcentrationSelection.Resolve(matrix, 2, "water") == 0.0,
+            "Water must not inherit an analyte molarity");
+        var invalidMatrixIndexRejected = false;
+        try { ResearchConcentrationSelection.Resolve(matrix, 3, "hcl"); }
+        catch (ArgumentOutOfRangeException) { invalidMatrixIndexRejected = true; }
+        Check(invalidMatrixIndexRejected, "Unlisted research molarity was accepted");
         var initial = SetupPreferencesSelection.Current;
         try
         {
@@ -306,6 +319,20 @@ internal static class Program
                 "Reserve/refill commands bypassed their one-time shared route");
             Check(session.SaveCalls == 0 && session.ReviewOpens == 0,
                 "Lab instrument actions silently opened Review or created a Save");
+            var concentrationRouter = new ScreenRouter();
+            var concentrationDriver = new CoreDriver();
+            concentrationRouter.Configure(concentrationDriver);
+            var concentrationSession = new SessionController();
+            var concentrationPanels = new LabPanelController();
+            concentrationPanels.Configure(concentrationRouter, concentrationDriver, concentrationSession);
+            Check(concentrationPanels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                "VR selected 0.05 mol/L source cannot route through shared panel");
+            Check(concentrationSession.PreparedConcentration == 0.05,
+                "Native stock setup lost its selected molarity");
+            Check(concentrationPanels.Request(PanelAction.PrepareReserveStock, "water", 0.0),
+                "Research water reserve must accept explicit zero molarity");
+            Check(concentrationSession.PreparedConcentration == 0.0,
+                "Water reserve illegally inherited last acid concentration");
             Check(panels.Request(PanelAction.Inspect, "receiver"), "Inspect receiver action refused");
             Check(router.Current.ScreenId == ScreenId.Inspect, "Inspect route missing");
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
