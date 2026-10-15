@@ -29,3 +29,15 @@
 ## Ruling / next work
 
 **Ruling:** Product Owner requested source-first implementation across phases, with final Unity testing later. P03.01 remains formally Open (depends on P07.03), therefore P03.02 also **Open / NotReviewed**; this is a Native source slice, not a task completion or planner acceptance. Keep **15 VerifiedLocal / 51 Open**, **G-R1 Open**, and 66 task-level Unity checks marked **NOT_RUN**; keep PR #1 open, main untouched. Next bounded implementation: register a research stock bottle profile with guarded fill/revision rules, expose pipette command wiring through Unity CoreDriver and Shared Panel UI, and test refill/contamination after source switching without weakening pinned mass/science budgets.
+
+## Follow-up — Native prepared-stock source switch with conserved tip contamination
+
+| Checkpoint | SHA |
+|---|---|
+| Test-first RED | `659dd0eb3e4aa0e6ae84c4e4877e0498a979eda7` |
+| Functional C++ source | `482e2e2c97cd280e832d887d4bf4aa9fe023366a` |
+
+- [RED CI push 38721263996](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38721263996): **99/100 Native test cases passed**. The new named C ABI case had exactly 7 failed assertions: `SwitchPipetteSource` absent and downstream bottle/receiver material checks failed. No unrelated Native test failures.
+- [GREEN CI push 38721647508](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38721647508) / [PR 38721653481](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38721653481): real Ubuntu CTest **1/1 PASS**, Windows jobs still building at time of evidence entry.
+- Production adds `SwitchPipetteSource` only for the metered pipette profile, denied while Native held, requires an existing different prepared stock source and exact expected tool inventory and stock material revisions. Updates source identity/tool revision but does **not** consume, create or replace any represented material or clear tip contamination. The next real `AspiratePipette` mixes source aliquot with residual chloride, and `DispensePipette` produces a new clean receiver containing represented sodium **and** chloride. Native materialLedger water/Na/Cl/reference volume remains equal to pre-transfer amounts. Unknown stock is explicitly denied, after-state material ledger unchanged.
+- Remaining boundaries: bottle stock source is a represented vessel, not a separate validated physical tool profile/mesh/actuator. Research pipette 25mL capacity and 0.1mL residual remain **pending physical calibration**, and per-tick science budget throttles the amounts achievable. No C# pipette controls/VR tracked user route or Unity Player tests at latest SHA. P03.02 still **Open/NotReviewed**, no task status promotion, no PR merge.
