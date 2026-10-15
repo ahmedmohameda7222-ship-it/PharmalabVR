@@ -771,5 +771,55 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator P07_03_VrPauseLoadSavedSessionEntersNativeSessionLoadHoldWithoutSavingAgain()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var createdSave = (string)null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var dock = roots.SelectMany(root => root.GetComponentsInChildren<PharmaLabVR.Tools.ToolMount>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                session.Configure(driver, "p07-vr-load-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(driver.BeginModeChange(ApplicationMode.VirtualReality), Is.True);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(dock.TryMount(), Is.True);
+                var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(session.Save(), Is.True, session.LastError);
+                createdSave = session.LastDurableSavePath;
+                var replaced = driver.Session;
+                Assert.That(actions.Request(PanelAction.Load), Is.True, session.LastError);
+                Assert.That(replaced.IsOpen, Is.False);
+                Assert.That(driver.Session, Is.Not.SameAs(replaced));
+                Assert.That(driver.CurrentMode, Is.EqualTo("VR"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.NativeRecoveryReady, Is.False);
+                Assert.That(dock.IsMounted, Is.True);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision),
+                    "Explicit Load must not create material or observation revisions.");
+                Assert.That(session.RecordedReview, Is.Null,
+                    "Load cannot implicitly open or recompute Review.");
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(createdSave) && File.Exists(createdSave))
+                    File.Delete(createdSave);
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
     }
 }
