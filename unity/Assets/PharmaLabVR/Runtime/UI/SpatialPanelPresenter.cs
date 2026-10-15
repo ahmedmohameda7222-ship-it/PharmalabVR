@@ -280,9 +280,15 @@ namespace PharmaLabVR.UI
             SetButton("Inspect receiver", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Inspect source", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Measure", state.SupportedActions.Contains("Measure"));
-            SetButton("Open review", state.SupportedActions.Contains("Review"));
+            // Keep the Lab controls on distinct physical hit targets. While
+            // docked, Review remains reachable through Pause -> Review;
+            // once released the same slot returns to the direct Review action.
+            var dockReleaseVisible = state.ScreenId == ScreenId.Lab &&
+                panels != null && panels.CanReleaseTool;
+            SetButton("Open review", state.SupportedActions.Contains("Review") &&
+                !dockReleaseVisible);
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Lab ? 90f : 30f);
+                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
@@ -291,7 +297,7 @@ namespace PharmaLabVR.UI
             SetButton("Settings", state.SupportedActions.Contains("Settings"));
             SetButton("Back", state.SupportedActions.Contains("Back"));
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
-                panels != null && panels.CanReleaseTool);
+                dockReleaseVisible);
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
