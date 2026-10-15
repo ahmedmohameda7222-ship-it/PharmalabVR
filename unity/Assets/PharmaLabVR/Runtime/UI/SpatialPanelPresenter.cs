@@ -69,7 +69,7 @@ namespace PharmaLabVR.UI
                 typeof(CanvasScaler), typeof(TrackedDeviceGraphicRaycaster));
             panelRoot.transform.SetParent(transform, false);
             var rect = panelRoot.GetComponent<RectTransform>();
-            rect.sizeDelta = new Vector2(420f, 560f);
+            rect.sizeDelta = new Vector2(420f, 700f);
             rect.localScale = Vector3.one * 0.001f;
             rect.localPosition = new Vector3(0.36f, 1.37f, 0.95f);
             rect.localRotation = Quaternion.identity;
@@ -91,6 +91,7 @@ namespace PharmaLabVR.UI
             AddButton("Settings", -82f, PanelAction.Settings);
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
+            AddButton("Park tool", -306f, PanelAction.ParkTool);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
             AddButton("Snap left 30", -26f, PanelAction.SnapLeft);
             AddButton("Snap right 30", -26f, PanelAction.SnapRight);
@@ -302,8 +303,12 @@ namespace PharmaLabVR.UI
             // once released the same slot returns to the direct Review action.
             var dockReleaseVisible = state.ScreenId == ScreenId.Lab &&
                 panels != null && panels.CanReleaseTool;
+            var parkVisible = panels != null && panels.CanParkTool &&
+                state.SupportedActions.Contains("ParkTool");
+            buttons["Park tool"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : -306f);
             SetButton("Open review", state.SupportedActions.Contains("Review") &&
-                !dockReleaseVisible);
+                !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
@@ -315,6 +320,7 @@ namespace PharmaLabVR.UI
             SetButton("Back", state.SupportedActions.Contains("Back"));
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
                 dockReleaseVisible);
+            SetButton("Park tool", parkVisible);
             SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
             SetButton("Snap left 30", state.SupportedActions.Contains("SnapLeft"));
             SetButton("Snap right 30", state.SupportedActions.Contains("SnapRight"));

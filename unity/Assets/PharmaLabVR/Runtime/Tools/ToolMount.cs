@@ -28,6 +28,11 @@ namespace PharmaLabVR.Tools
         {
             if (IsMounted || dockAnchor == null || body == null || grabbable == null ||
                 grabbable.isSelected) return false;
+            // Do not teleport released apparatus across the laboratory.
+            // Only a deliberately returned tool, unselected by either hand,
+            // may be snapped the final few centimetres into its rack.
+            if (Vector3.Distance(transform.position, dockAnchor.position) > 0.12f)
+                return false;
             previousKinematic = body.isKinematic;
             body.isKinematic = true;
             transform.SetPositionAndRotation(dockAnchor.position, dockAnchor.rotation);

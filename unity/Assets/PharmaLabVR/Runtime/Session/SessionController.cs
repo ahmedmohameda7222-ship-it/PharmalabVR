@@ -59,6 +59,29 @@ namespace PharmaLabVR.Session
             }
         }
 
+        public bool CanParkTool
+        {
+            get
+            {
+                if (driver?.Session == null || driver.CurrentMode != "VR") return false;
+                var dock = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+                return dock != null && !dock.IsMounted;
+            }
+        }
+
+        public bool ParkToolAtDock()
+        {
+            var screen = router?.Current?.ScreenId;
+            if (!CanParkTool || (screen != ScreenId.Lab &&
+                screen != ScreenId.Pause && screen != ScreenId.Hold)) return false;
+            var mount = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+            if (mount == null || !mount.TryMount()) return false;
+            // Presentation/physics only. Do not Save, submit Native PlaceTool,
+            // update observation revisions or silently release a Native hold.
+            router.Show(screen.Value);
+            return true;
+        }
+
         public bool ReleaseToolFromDock()
         {
             if (!CanReleaseTool || router?.Current?.ScreenId != ScreenId.Lab) return false;

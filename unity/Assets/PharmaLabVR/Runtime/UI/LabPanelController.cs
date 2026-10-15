@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, Recenter, SnapLeft, SnapRight }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Recenter, SnapLeft, SnapRight }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -16,6 +16,7 @@ namespace PharmaLabVR.UI
         [SerializeField] private BootMenu boot;
         public RecordedSessionReview CurrentReview => sessions?.RecordedReview;
         public bool CanReleaseTool => sessions?.CanReleaseTool == true;
+        public bool CanParkTool => sessions?.CanParkTool == true;
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
         {
@@ -84,6 +85,8 @@ namespace PharmaLabVR.UI
                     return sessions.Save();
                 case PanelAction.ReleaseTool:
                     return sessions.ReleaseToolFromDock();
+                case PanelAction.ParkTool:
+                    return sessions.ParkToolAtDock();
                 case PanelAction.Recenter:
                     return sessions.TryRecenterView();
                 case PanelAction.SnapLeft:
