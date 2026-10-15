@@ -232,6 +232,17 @@ internal static class Program
                 "Blank persisted content cannot override safe Boot defaults");
         }
         finally { System.Globalization.CultureInfo.CurrentCulture = previousCulture; }
+        // P10.02: actual Unity AudioListener gain must be driven by the
+        // same immutable Setup preferences used by Desktop and XR panels.
+        Check(Math.Abs(AudioPreferenceRouting.Gain(
+            new LabSetupPreferences("Standing", "Right", 0.85f, 1f, true, false, false, 0.35f)) - 0.35f) < 1e-7,
+            "Audio-volume preference cannot be routed to real mixer gain");
+        Check(AudioPreferenceRouting.Gain(
+            new LabSetupPreferences("Seated", "Left", 0.75f, 1.2f, false, true, true, 0f)) == 0f,
+            "Mute must be a real zero gain, not only a labelled UI state");
+        Check(AudioPreferenceRouting.Gain(
+            new LabSetupPreferences("Seated", "Left", 0.75f, 1.2f, false, true, true, 1f)) == 1f,
+            "Full-volume option must restore a valid gain");
         var initial = SetupPreferencesSelection.Current;
         try
         {

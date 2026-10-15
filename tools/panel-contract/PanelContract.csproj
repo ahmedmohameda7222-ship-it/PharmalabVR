@@ -29,5 +29,6 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs" Link="LabPanelController.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ResearchConcentrationSelection.cs" Link="ResearchConcentrationSelection.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/SetupPreferencesCodec.cs" Link="SetupPreferencesCodec.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/AudioPreferenceRouting.cs" Link="AudioPreferenceRouting.cs" />
   </ItemGroup>
 </Project>
