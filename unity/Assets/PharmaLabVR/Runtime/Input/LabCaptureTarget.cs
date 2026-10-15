@@ -8,6 +8,7 @@ namespace PharmaLabVR.Input
         [SerializeField, Min(0.001f)] private float captureRadiusMetres = 0.08f;
         [SerializeField] private float apertureHeightMetres;
         [SerializeField, Min(0.001f)] private float maxFallMetres = 0.15f;
+        private readonly ReceiverMotionTracker trackedMotion = new ReceiverMotionTracker();
 
         public void Configure(string destinationInventoryId, float radiusMetres, float apertureHeight = 0f)
         {
@@ -18,9 +19,14 @@ namespace PharmaLabVR.Input
 
         public LabCaptureEstimate[] Estimate(Transform tool)
         {
-            // A dynamic receiver cannot be treated as a static cup.
-            // Handheld/kinematic teleports without a measured velocity remain
-            // an explicit deferred geometry-validation limitation.
+            // Both physical velocity and actual tracked transform motion
+            // must satisfy the researched static-aperture speed bound.
+            // XRI-held/kinematic bodies often report zero linearVelocity.
+            var point = transform.position;
+            var trackedSpeed = trackedMotion.Observe(Time.frameCount,
+                Time.realtimeSinceStartupAsDouble, point.x, point.y, point.z);
+            if (trackedSpeed > CaptureAdmission.MaximumReceiverSpeedMetresPerSecond)
+                return System.Array.Empty<LabCaptureEstimate>();
             var body = GetComponentInParent<Rigidbody>();
             return Estimate(tool, body != null ? body.linearVelocity : Vector3.zero);
         }
