@@ -142,6 +142,29 @@ internal static class Program
             "Invalid world position cannot enter dock.");
         Check(!ToolMountAdmission.CanMount(0.02, double.NaN, false),
             "Invalid orientation cannot enter dock.");
+        // P10.01 Desktop exact-control contract: scroll over the lab
+        // manipulates ONLY the held research tool, otherwise camera zoom.
+        Check(DesktopWheelRouting.Resolve(true, false, 120.0) == DesktopWheelTarget.HeldToolHeight,
+            "Held tool scroll must alter tool height instead of camera zoom");
+        Check(DesktopWheelRouting.Resolve(false, false, 120.0) == DesktopWheelTarget.CameraZoom,
+            "Empty-hand scroll must zoom without moving any vessel");
+        Check(DesktopWheelRouting.Resolve(true, true, 120.0) == DesktopWheelTarget.None &&
+              DesktopWheelRouting.Resolve(false, true, 120.0) == DesktopWheelTarget.None,
+            "Scroll over a UI ray target must change neither tool nor camera");
+        Check(DesktopWheelRouting.Resolve(true, false, double.NaN) == DesktopWheelTarget.None &&
+              DesktopWheelRouting.Resolve(false, false, 0.0) == DesktopWheelTarget.None,
+            "Invalid/zero wheel delta must be inert");
+        Check(Math.Abs(DesktopWheelRouting.HeightDeltaMetres(120.0) - 0.02) < 1e-10 &&
+              Math.Abs(DesktopWheelRouting.HeightDeltaMetres(-120.0) + 0.02) < 1e-10,
+            "Held scroll must change physical height by a bounded 2 cm notch");
+        Check(Math.Abs(DesktopWheelRouting.ZoomFieldOfViewDegrees(60.0, 120.0) - 55.0) < 1e-10,
+            "Empty wheel forward must zoom camera by changing FOV, never physics");
+        Check(DesktopWheelRouting.ZoomFieldOfViewDegrees(35.0, 120.0) == 35.0 &&
+              DesktopWheelRouting.ZoomFieldOfViewDegrees(85.0, -120.0) == 85.0,
+            "Camera FOV must be bounded 35 to 85 degrees");
+        Check(DesktopWheelRouting.HeightDeltaMetres(100000.0) == 0.02 &&
+              DesktopWheelRouting.HeightDeltaMetres(double.PositiveInfinity) == 0.0,
+            "Spurious/malformed scroll spikes must not teleport a held instrument");
         var initial = SetupPreferencesSelection.Current;
         try
         {
