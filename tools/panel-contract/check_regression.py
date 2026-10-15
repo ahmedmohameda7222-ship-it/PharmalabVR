@@ -24,6 +24,12 @@ MUTATIONS = [
         "Unavailable Boot falsely returned success",
         "unavailable Boot scene confirmation"
     ),
+    (
+        "case PanelAction.Recenter:\n                    return sessions.TryRecenterView();",
+        "case PanelAction.Recenter:\n                    sessions.TryRecenterView();\n                    return true;",
+        "Failed XR recenter falsely returned success",
+        "failed XR recenter false-success"
+    ),
 ]
 
 
