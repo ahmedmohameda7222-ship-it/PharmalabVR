@@ -245,6 +245,11 @@ namespace PharmaLabVR.Tests.EditorIntegration
             var majors = labels.Count(mark => int.TryParse(mark.text, out var value) &&
                 value >= 0 && value <= 50 && value % 10 == 0);
             Assert.That(majors, Is.EqualTo(6));
+            var tick = prefab.GetComponentsInChildren<MeshRenderer>(true)
+                .Single(mark => mark.name == "Graduation 10");
+            Assert.That(tick.sharedMaterial, Is.Not.Null);
+            Assert.That(AssetDatabase.Contains(tick.sharedMaterial), Is.True,
+                "The burette graduation ink must be a real reusable prefab material.");
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
             try
             {
