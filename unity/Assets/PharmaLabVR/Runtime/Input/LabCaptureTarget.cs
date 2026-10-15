@@ -18,21 +18,30 @@ namespace PharmaLabVR.Input
 
         public LabCaptureEstimate[] Estimate(Transform tool)
         {
+            // A dynamic receiver cannot be treated as a static cup.
+            // Handheld/kinematic teleports without a measured velocity remain
+            // an explicit deferred geometry-validation limitation.
+            var body = GetComponentInParent<Rigidbody>();
+            return Estimate(tool, body != null ? body.linearVelocity : Vector3.zero);
+        }
+
+        // Deterministic tracked-motion overload used in Unity regression tests.
+        public LabCaptureEstimate[] Estimate(Transform tool, Vector3 receiverVelocityMetresPerSecond)
+        {
             var outlet = tool != null ? tool.Find("OutletExit") : null;
             if (outlet == null || string.IsNullOrWhiteSpace(inventoryId))
                 return System.Array.Empty<LabCaptureEstimate>();
             var apertureUp = transform.up;
-            if (Vector3.Dot(apertureUp, Vector3.up) < 0.9f ||
-                Vector3.Dot(outlet.TransformDirection(Vector3.down), -apertureUp) < 0.85f)
-                return System.Array.Empty<LabCaptureEstimate>();
             var apertureCenter = transform.position + apertureUp * apertureHeightMetres;
-            var outletPosition = outlet.position;
-            var offset = outletPosition - apertureCenter;
+            var offset = outlet.position - apertureCenter;
             var height = Vector3.Dot(offset, apertureUp);
             var lateral = offset - apertureUp * height;
-            if (!float.IsFinite(height) || !float.IsFinite(lateral.sqrMagnitude) ||
-                height <= 0f || height > maxFallMetres ||
-                lateral.sqrMagnitude > captureRadiusMetres * captureRadiusMetres)
+            var movingSpeed = receiverVelocityMetresPerSecond.magnitude;
+            if (!CaptureAdmission.MayCapture(
+                    Vector3.Dot(apertureUp, Vector3.up),
+                    Vector3.Dot(outlet.TransformDirection(Vector3.down), -apertureUp),
+                    height, lateral.sqrMagnitude, captureRadiusMetres,
+                    maxFallMetres, movingSpeed))
                 return System.Array.Empty<LabCaptureEstimate>();
             return new[] { new LabCaptureEstimate { destinationInventoryId = inventoryId, fraction = 1f } };
         }

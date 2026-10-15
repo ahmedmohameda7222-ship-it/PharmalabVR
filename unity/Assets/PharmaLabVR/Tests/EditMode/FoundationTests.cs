@@ -67,6 +67,34 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P03_03_MovingReceiverRejectsCaptureWithoutModifyingToolOrInventory()
+        {
+            var receiver = new GameObject("moving-receiver");
+            var tool = new GameObject("burette-geometry");
+            try
+            {
+                var aperture = receiver.AddComponent<LabCaptureTarget>();
+                aperture.Configure("receiver", 0.05f);
+                var outlet = new GameObject("OutletExit");
+                outlet.transform.SetParent(tool.transform, false);
+                outlet.transform.localPosition = new Vector3(0f, -0.02f, 0f);
+                tool.transform.position = new Vector3(0f, 0.1f, 0f);
+                Assert.That(aperture.Estimate(tool.transform, Vector3.zero).Length, Is.EqualTo(1));
+                Assert.That(aperture.Estimate(tool.transform, new Vector3(0.04f, 0f, 0f)).Length,
+                    Is.Zero, "Fast receiver cannot inherit a stationary aperture hit.");
+                Assert.That(aperture.Estimate(tool.transform, new Vector3(float.NaN, 0f, 0f)).Length,
+                    Is.Zero, "Invalid tracking velocity must never admit a capture.");
+                Assert.That(aperture.Estimate(tool.transform, Vector3.zero).Length, Is.EqualTo(1),
+                    "Rejected motion must not permanently poison the stationary receiver.");
+            }
+            finally
+            {
+                Object.DestroyImmediate(tool);
+                Object.DestroyImmediate(receiver);
+            }
+        }
+
+        [Test]
         public void Q02_ResearchOrUnsupportedObservationCannotEnableCertifiedScore()
         {
             var protocol = new ProtocolDefinition { certifiedScoring = true, requiredObservables = new[] { "pH", "indicatorColor" } };
