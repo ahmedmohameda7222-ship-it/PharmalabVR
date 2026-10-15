@@ -3,6 +3,7 @@ using System.Reflection;
 using NUnit.Framework;
 using PharmaLabVR.Editor;
 using PharmaLabVR.Input;
+using PharmaLabVR.Tools;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -227,6 +228,37 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(camera.WorldToViewportPoint(
                 bench.transform.TransformPoint(new Vector3(0f, 0.48f, 0.2f))).z,
                 Is.GreaterThan(0f), "Bench must remain in front of Desktop camera.");
+        }
+
+
+        [Test]
+        public void P08_02_BuretteHasDescendingRealGraduationsAndVolumeBoundMeniscus()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            var labels = prefab.GetComponentsInChildren<TextMesh>(true);
+            var zero = labels.Single(mark => mark.text == "0");
+            var fifty = labels.Single(mark => mark.text == "50");
+            Assert.That(zero.transform.position.y, Is.GreaterThan(fifty.transform.position.y),
+                "50 ml graduation is nearer the bottom of a burette.");
+            var majors = labels.Count(mark => int.TryParse(mark.text, out var value) &&
+                value >= 0 && value <= 50 && value % 10 == 0);
+            Assert.That(majors, Is.EqualTo(6));
+            var instance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            try
+            {
+                var liquid = instance.GetComponent<LiquidPresenter>();
+                var meniscus = instance.GetComponent<MeniscusPresenter>();
+                Assert.That(meniscus, Is.Not.Null);
+                liquid.SetCommittedVolume(0.000025);
+                Assert.That(meniscus.Fill01, Is.EqualTo(0.5f).Within(0.0001f));
+                Assert.That(meniscus.Surface.gameObject.activeSelf, Is.True);
+                liquid.SetCommittedVolume(0.0);
+                Assert.That(meniscus.Surface.gameObject.activeSelf, Is.False,
+                    "Empty native state must hide the meniscus, not preserve an animation.");
+            }
+            finally { Object.DestroyImmediate(instance); }
         }
 
         private static GameObject FindInActiveScene(string name)
