@@ -1808,6 +1808,83 @@ TEST_CASE("C02 remaining frozen commands mutate atomically and checkpoint restar
     CHECK(plv_destroy(handle) == PLV_OK);
 }
 
+TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserved material") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    const auto issue = [&](const std::string& sequence, const std::string& type,
+                           const json& payload, const json& expected = json::object()) {
+        submit(handle, command(sequence, type, payload, expected));
+        return poll(handle);
+    };
+    CHECK(issue("1", "CreateVessel", {{"id", "bottle"}, {"capacityM3", 5e-5}})["accepted"] == true);
+    CHECK(issue("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 5e-5}})["accepted"] == true);
+    CHECK(issue("3", "CreateVessel", {{"id", "rinse"}, {"capacityM3", 5e-5}})["accepted"] == true);
+    CHECK(issue("4", "CreateSink", {{"id", "waste"}})["accepted"] == true);
+    CHECK(issue("5", "PrepareStock", {{"vesselId", "bottle"}, {"stockKind", "HydrochloricAcid"},
+        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 4e-5}}, {{"bottle", "0"}})["accepted"] == true);
+    CHECK(issue("6", "PrepareStock", {{"vesselId", "rinse"}, {"stockKind", "Water"},
+        {"concentrationMolPerL", 0.0}, {"referenceVolumeM3", 2e-5}}, {{"rinse", "0"}})["accepted"] == true);
+    const auto placed = issue("7", "PlaceTool", {{"toolId", "pipette"},
+        {"sourceInventoryId", "bottle"}, {"overflowSinkId", "waste"},
+        {"coordinateFrame", "lab"}, {"geometryProfileHash", "pipette-25ml-research-v1"},
+        {"profileRevision", "1"}});
+    CHECK(placed["accepted"] == true);
+    const auto before = json::parse(read_text(handle));
+    const auto actuator = issue("8", "SetActuator", {{"toolId", "pipette"},
+        {"expectedActuatorRevision", "0"}, {"actuator01", 1.0}});
+    CHECK(actuator["accepted"] == false);
+    CHECK(actuator["code"] == "PipetteRequiresMeteredAction");
+    const auto filled = issue("9", "AspiratePipette", {{"toolId", "pipette"},
+        {"expectedInventoryRevision", "0"}, {"quantityM3", 2e-5}}, {{"bottle", "1"}});
+    CHECK(filled["accepted"] == true);
+    const auto full = json::parse(read_text(handle));
+    if (!full["tools"].empty()) {
+        CHECK(full["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+              doctest::Approx(2e-5));
+        CHECK(full["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+              doctest::Approx(2e-5));
+    }
+    const auto overflow = issue("10", "AspiratePipette", {{"toolId", "pipette"},
+        {"expectedInventoryRevision", "1"}, {"quantityM3", 6e-6}}, {{"bottle", "2"}});
+    CHECK(overflow["accepted"] == false);
+    CHECK(overflow["code"] == "PipetteCapacityExceeded");
+    const auto delivered = issue("11", "DispensePipette", {{"toolId", "pipette"},
+        {"expectedInventoryRevision", "1"}, {"destinationInventoryId", "receiver"},
+        {"quantityM3", 1e-5}}, {{"receiver", "0"}});
+    CHECK(delivered["accepted"] == true);
+    const auto after = json::parse(read_text(handle));
+    if (!after["tools"].empty()) {
+        CHECK(after["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+              doctest::Approx(1e-5));
+        CHECK(after["tools"][0]["tipInventory"]["chlorideMol"].get<double>() > 0.0);
+        for (const auto& vessel : after["vessels"])
+            if (vessel["id"] == "receiver") {
+                CHECK(vessel["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+                      doctest::Approx(1e-5));
+                CHECK(vessel["inventory"]["chlorideMol"].get<double>() > 0.0);
+            }
+    }
+    for (const auto& key : {"researchAdditiveVolumeM3", "chlorideMol", "solventWaterKg"})
+        CHECK(after["materialLedger"][key].get<double>() ==
+              doctest::Approx(before["materialLedger"][key].get<double>()).epsilon(1e-10));
+    const auto rinsed = issue("12", "RinseTool", {{"toolId", "pipette"},
+        {"rinseSourceInventoryId", "rinse"}, {"wasteSinkId", "waste"},
+        {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-6}}},
+        {"expectedInventoryRevision", "2"}}, {{"rinse", "1"}});
+    CHECK(rinsed["accepted"] == true);
+    const auto cleaned = json::parse(read_text(handle));
+    if (!cleaned["tools"].empty()) {
+        CHECK(cleaned["tools"][0]["tipInventory"]["researchAdditiveVolumeM3"].get<double>() ==
+              doctest::Approx(5e-8));
+        CHECK(cleaned["sinks"][0]["inventory"]["chlorideMol"].get<double>() > 0.0);
+    }
+    for (const auto& key : {"researchAdditiveVolumeM3", "chlorideMol", "solventWaterKg"})
+        CHECK(cleaned["materialLedger"][key].get<double>() ==
+              doctest::Approx(before["materialLedger"][key].get<double>()).epsilon(1e-10));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("P03_02 rinse rejects solute-bearing stock without debiting the material ledger") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
