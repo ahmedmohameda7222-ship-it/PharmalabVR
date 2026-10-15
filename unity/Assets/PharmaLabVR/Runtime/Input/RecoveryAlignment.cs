@@ -29,7 +29,8 @@ namespace PharmaLabVR.Input
                 horizontalForward.normalized * reachDistanceMetres;
             var move = desiredEye - camera.position;
             move.y = 0f; // Floor origin and tracked eye height remain untouched.
-            if (!float.IsFinite(move.x) || !float.IsFinite(move.z) ||
+            if (float.IsNaN(move.x) || float.IsInfinity(move.x) ||
+                float.IsNaN(move.z) || float.IsInfinity(move.z) ||
                 move.sqrMagnitude > 4f) return false; // Refuse out-of-reach teleports.
             xrOrigin.transform.position += move;
             return true;
