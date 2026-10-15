@@ -65,6 +65,43 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState()
+        {
+            var root = new GameObject("dock-return-body");
+            var dock = new GameObject("dock-pose");
+            try
+            {
+                root.transform.position = new Vector3(0.04f, 0f, 0f);
+                root.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+                var rigidbody = root.AddComponent<Rigidbody>();
+                rigidbody.useGravity = false;
+                rigidbody.isKinematic = false;
+                var grab = root.AddComponent<XRGrabInteractable>();
+                var mount = root.AddComponent<ToolMount>();
+                mount.Configure(dock.transform, rigidbody, grab);
+                var oldPosition = root.transform.position;
+                var oldRotation = root.transform.rotation;
+                Assert.That(mount.TryMount(), Is.False,
+                    "A horizontal but nearby instrument must not snap through the rack.");
+                Assert.That(root.transform.position, Is.EqualTo(oldPosition));
+                Assert.That(root.transform.rotation, Is.EqualTo(oldRotation));
+                Assert.That(rigidbody.isKinematic, Is.False);
+                Assert.That(grab.enabled, Is.True);
+                Assert.That(mount.IsMounted, Is.False);
+                root.transform.rotation = dock.transform.rotation;
+                Assert.That(mount.TryMount(), Is.True);
+                Assert.That(mount.IsMounted, Is.True);
+                Assert.That(grab.enabled, Is.False);
+                Assert.That(rigidbody.isKinematic, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(root);
+                Object.DestroyImmediate(dock);
+            }
+        }
+
+        [Test]
         public void P03_03_ResearchOutletMarkersMatchActualPipetteTipAndBottleNeck()
         {
             var pipette = AssetDatabase.LoadAssetAtPath<GameObject>(

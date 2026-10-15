@@ -31,7 +31,9 @@ namespace PharmaLabVR.Tools
             // Do not teleport released apparatus across the laboratory.
             // Only a deliberately returned tool, unselected by either hand,
             // may be snapped the final few centimetres into its rack.
-            if (Vector3.Distance(transform.position, dockAnchor.position) > 0.12f)
+            var distance = Vector3.Distance(transform.position, dockAnchor.position);
+            var angle = Quaternion.Angle(transform.rotation, dockAnchor.rotation);
+            if (!ToolMountAdmission.CanMount(distance, angle, grabbable.isSelected))
                 return false;
             previousKinematic = body.isKinematic;
             body.isKinematic = true;
