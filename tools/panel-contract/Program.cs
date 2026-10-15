@@ -165,6 +165,21 @@ internal static class Program
         Check(DesktopWheelRouting.HeightDeltaMetres(100000.0) == 0.02 &&
               DesktopWheelRouting.HeightDeltaMetres(double.PositiveInfinity) == 0.0,
             "Spurious/malformed scroll spikes must not teleport a held instrument");
+        // P10.01 valid Place: never release a held tool in midair, through
+        // another object, outside the bench or dangerously tilted.
+        Check(DesktopPlacementAdmission.CanPlace(0.04, 1.0, true, false),
+            "Upright tool near the real bench should admit explicit F Place");
+        Check(!DesktopPlacementAdmission.CanPlace(0.28, 1.0, true, false),
+            "Midair F Place must keep the physical tool held");
+        Check(!DesktopPlacementAdmission.CanPlace(0.04, 1.0, false, false),
+            "Ray blocked by a vessel or non-bench surface must not place");
+        Check(!DesktopPlacementAdmission.CanPlace(0.04, 0.3, true, false),
+            "Horizontal tool must not snap into the bench");
+        Check(!DesktopPlacementAdmission.CanPlace(0.04, 1.0, true, true),
+            "Input focus on an overlay cannot release a held object");
+        Check(!DesktopPlacementAdmission.CanPlace(double.NaN, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlace(0.04, double.PositiveInfinity, true, false),
+            "Invalid physical pose must fail closed before any Rigidbody release");
         var initial = SetupPreferencesSelection.Current;
         try
         {
