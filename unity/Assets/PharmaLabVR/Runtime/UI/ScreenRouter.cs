@@ -211,8 +211,20 @@ namespace PharmaLabVR.UI
         public bool ReturnFromSettings()
         {
             if (screen != ScreenId.Settings) return false;
-            Show(beforeSettings);
-            return screen == beforeSettings;
+            var destination = beforeSettings;
+            // Settings can remain open after the asynchronous Native Hold
+            // resolves. Never restore a stale Hold just because it was the
+            // screen underneath Settings when it opened.
+            if (destination == ScreenId.Hold && driver != null && !driver.IsTimeHeld)
+            {
+                destination = beforeHold;
+                // If the Hold interrupted an earlier Settings screen, do
+                // not loop back into the same Settings or a stale Hold.
+                if (destination == ScreenId.Settings || destination == ScreenId.Hold)
+                    destination = ScreenId.Lab;
+            }
+            Show(destination);
+            return screen == destination;
         }
 
         public void UpdateSetupPreferences(LabSetupPreferences preferences)
