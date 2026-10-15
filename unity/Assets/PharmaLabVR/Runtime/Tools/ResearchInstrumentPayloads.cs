@@ -60,6 +60,22 @@ namespace PharmaLabVR.Tools
             "{\"toolId\":" + Id(toolId) + ",\"sourceInventoryId\":" + Id(nextStockId) +
             ",\"expectedInventoryRevision\":" + Revision(inventoryRevision) + "}";
 
+        // A refill transfers existing already-prepared Native stock; it never
+        // issues PrepareStock after setup or creates any new material.
+        public static string RefillFromPreparedStock(string sourceId, string destinationId,
+                                                      string overflowSinkId, double volumeM3)
+        {
+            if (sourceId == destinationId)
+                throw new ArgumentException("A Native stock bottle cannot refill itself.");
+            return "{\"sourceInventoryId\":" + Id(sourceId) +
+                   ",\"sourceRegion\":\"Homogeneous\"" +
+                   ",\"selection\":\"HomogeneousAqueousLiquid\"" +
+                   ",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":" + Volume(volumeM3) + "}" +
+                   ",\"captureFractions\":[{\"destinationInventoryId\":" + Id(destinationId) +
+                   ",\"fraction\":1.0}]" +
+                   ",\"overflowSinkId\":" + Id(overflowSinkId) + "}";
+        }
+
         public static string Rinse(string toolId, string cleanWaterSourceId, string wasteSinkId,
                                    double volumeM3, string inventoryRevision) =>
             "{\"toolId\":" + Id(toolId) + ",\"rinseSourceInventoryId\":" + Id(cleanWaterSourceId) +
