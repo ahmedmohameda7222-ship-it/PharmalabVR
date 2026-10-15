@@ -408,10 +408,10 @@
             "P03.01"
           ],
           "status": "Open",
-          "codeCommit": "d8fabed1785227a700308a839c9f256e3fe79f58",
-          "evidence": ["docs/evidence/p03-02-tip-mixing-progress.md"],
+          "codeCommit": "c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3",
+          "evidence": ["docs/evidence/p03-02-tip-mixing-progress.md", "docs/evidence/p03-02-rinse-source-progress.md"],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": ["Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open"],
+          "implementationEvidence": ["Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open", "Rinse source C ABI red 8802396 on Ubuntu 95/96 and green c7dc189 on all four native CI jobs, 1/1 CTest and 9/9 tooling per matrix; no current Unity/Player verification for new code"],
           "externalEvidence": [],
           "acceptanceScope": null,
           "blocker": null
@@ -2165,8 +2165,8 @@
       "G-R1"
     ]
   },
-  "actualHead": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
-  "functionalCodeSha": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
+  "actualHead": "c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3",
+  "functionalCodeSha": "c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3",
   "currentTask": "P06.02 Open — live recorded Review and XR panel rendered; Player input/Setup/full Review remain open",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
@@ -2187,6 +2187,7 @@
     "P06.02 remains Open at dd60197b05fc7963146cfacec98ff50fe37c4cdc: action-driven native Lab/Inspect/Measure/Pause/Hold/recorded Review routing, durable Save state and paused-setup clock correction. Native CTest 1/1, Unity EditMode 22/22, PlayMode 28/28, three Player builds Success. Actual Player Lab/Pause screenshots do not prove Inspect or VR; see p06-02-progress.md and SHA manifest.",
     "P06.02 continued at 614097bc4a5761badeb32aef69a9794066c713fe: Home/Setup mode routing, confirmed native-backed Lab load, one active XR manager binding body and hands. Native CTest 1/1, Unity PlayMode 31/31, EditMode 22/22, three Player builds Success; actual Windows Player VR-mode mirror lacks spatial panel. See p06-02-boot-xr-progress.md and SHA manifest. Next: functional Setup preferences, spatial VR presenter, Player Inspect/review before P08.01.",
     "P06.02 continued at 797b836998a45a6804d291f00dd6356d0d84a4c8: world-space VR Canvas with XR UI input and visible Editor camera render; mirrored text red at right-vector -1.0 then corrected and 32/32 PlayMode green. Native CTest 1/1 alone; one concurrent-build run failed 6/92 and needs investigation. Fresh three Player builds Success. This is not Player/headset UI interaction proof. See p06-02-spatial-progress.md and SHA manifest. Next P06.02 Setup preferences and tracked-ray journey before P08.01.",
-    "P06.02 continued at 8bba4902b97d2a031315634c7e772eca6af8d1bf: live Lab Review recorded from native export without hidden durable Save or native revision change; held Review cannot falsely return to Lab; VR Lab/Review camera renders and button-gap test. PlayMode 33/33, EditMode 22/22, CTest 1/1 isolated, three fresh builds Success. Actual WindowsDesktop Player Home clipped at 640x400; synthetic click did not prove transition. See p06-02-review-progress.md and SHA manifest. P06.02 stays Open; next tracked-ray/Player journey and Desktop Home responsiveness before P08.01."
+    "P06.02 continued at 8bba4902b97d2a031315634c7e772eca6af8d1bf: live Lab Review recorded from native export without hidden durable Save or native revision change; held Review cannot falsely return to Lab; VR Lab/Review camera renders and button-gap test. PlayMode 33/33, EditMode 22/22, CTest 1/1 isolated, three fresh builds Success. Actual WindowsDesktop Player Home clipped at 640x400; synthetic click did not prove transition. See p06-02-review-progress.md and SHA manifest. P06.02 stays Open; next tracked-ray/Player journey and Desktop Home responsiveness before P08.01.",
+    "2026-10-15 ruling: formal next task remains P06.02; user priority P03 Lab native safety subincrement. P03.02 remains Open because P03.01/P07.03 dependencies, distinct pipette/bottle and Unity/Player journeys are not verified. RinseTool rejected solute-bearing rinse source via native ABI RED 880239680456f1ecd4411c9154325b4b9f5a673d (Ubuntu 95/96, 7 assertions failed) to GREEN c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3 (4/4 CI native matrix jobs pass, 1/1 CTest each). Docs at docs/evidence/p03-02-rinse-source-progress.md; no Unity/Player/physical claim. Ledger actualHead denotes last source commit before subsequent evidence-only checkpoint."
   ]
 }
