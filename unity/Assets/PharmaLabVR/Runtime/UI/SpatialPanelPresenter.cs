@@ -92,6 +92,7 @@ namespace PharmaLabVR.UI
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddButton("Park tool", -306f, PanelAction.ParkTool);
+            AddButton("Load saved session", -306f, PanelAction.Load);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
             AddButton("Snap left 30", -26f, PanelAction.SnapLeft);
             AddButton("Snap right 30", -26f, PanelAction.SnapRight);
@@ -321,9 +322,13 @@ namespace PharmaLabVR.UI
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
                 dockReleaseVisible);
             SetButton("Park tool", parkVisible);
+            SetButton("Load saved session", state.SupportedActions.Contains("Load") &&
+                panels != null && panels.CanLoadSavedSession && !parkVisible);
             SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
             SetButton("Snap left 30", state.SupportedActions.Contains("SnapLeft"));
             SetButton("Snap right 30", state.SupportedActions.Contains("SnapRight"));
+            if (panels != null && !string.IsNullOrEmpty(panels.LastError))
+                detail.text += "\n" + panels.LastError;
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);

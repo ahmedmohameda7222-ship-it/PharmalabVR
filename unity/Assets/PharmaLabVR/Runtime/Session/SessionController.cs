@@ -69,6 +69,35 @@ namespace PharmaLabVR.Session
             }
         }
 
+        public bool CanLoadSavedSession
+        {
+            get
+            {
+                if (driver?.Session == null || driver.CurrentMode != "VR" ||
+                    !CanReleaseTool) return false;
+                var file = Path.Combine(Application.persistentDataPath, "sessions",
+                    saveName + ".plv.json");
+                return File.Exists(file);
+            }
+        }
+
+        public bool LoadSavedSession()
+        {
+            var screen = router?.Current?.ScreenId;
+            if (screen != ScreenId.Pause && screen != ScreenId.Hold) return false;
+            if (!CanLoadSavedSession)
+            {
+                LastError = "Load requires a parked VR tool and an existing saved session.";
+                router.Show(screen.Value);
+                return false;
+            }
+            var file = Path.Combine(Application.persistentDataPath, "sessions",
+                saveName + ".plv.json");
+            var result = ContinueFrom(file);
+            if (!result && router?.Current != null) router.Show(router.Current.ScreenId);
+            return result;
+        }
+
         public bool ParkToolAtDock()
         {
             var screen = router?.Current?.ScreenId;

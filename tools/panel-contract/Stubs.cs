@@ -119,6 +119,7 @@ namespace PharmaLabVR.Session
             return true;
         }
         public bool CanLoadSavedSession => LoadPermitted;
+        public string LastError => null;
         public int ParkCalls { get; private set; }
         public bool ParkToolAtDock()
         {

@@ -306,8 +306,8 @@ namespace PharmaLabVR.UI
                 ScreenId.Setup => new[] { "Home", "ConfirmSetup" },
                 ScreenId.Hold => driver != null && driver.CurrentMode == "VR" ?
                     (driver.NativeRecoveryReady ?
-                        new[] { "Save", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
-                        new[] { "Save", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
+                        new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
+                        new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
                     (driver != null && driver.NativeRecoveryReady ?
                         new[] { "Save", "Review", "Settings", "Continue" } :
                         new[] { "Save", "Review", "Settings" }),
@@ -317,7 +317,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?
-                    new[] { "Lab", "Save", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
+                    new[] { "Lab", "Save", "Load", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
                     new[] { "Lab", "Save", "Settings", "Review" },
                 ScreenId.Review => new[] { "Lab", "Settings", "Save" },
                 ScreenId.Settings => new[] { "Back", "Save" },
