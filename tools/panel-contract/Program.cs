@@ -2,6 +2,7 @@
 // This is intentionally NOT Unity scene/input, native chemistry, or headset evidence.
 using System;
 using PharmaLabVR.Core;
+using PharmaLabVR.Input;
 using PharmaLabVR.Session;
 using PharmaLabVR.UI;
 
