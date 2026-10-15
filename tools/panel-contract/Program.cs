@@ -194,6 +194,16 @@ internal static class Program
         Check(DesktopPointerRouting.Resolve(true, true, true, false, false) == DesktopPointerAction.None &&
               DesktopPointerRouting.Resolve(true, false, false, false, true) == DesktopPointerAction.None,
             "Disabled input or released button must leave both routes neutral");
+        // P03.03: generated Desktop burette outlet must physically exist
+        // at the bottom of the mesh, not at an arbitrary stock bottle tip.
+        Check(Math.Abs(ResearchOutletGeometry.BottomLocalY(0.25, -1.0, 0.25)) < 1e-12,
+            "50 mL burette geometry did not resolve to its actual cylinder foot");
+        Check(Math.Abs(ResearchOutletGeometry.BottomLocalY(0.30, -1.0, 0.25) - 0.05) < 1e-12,
+            "Mesh transform moved but outlet landmark remained at a magic world offset");
+        var invalidOutletRejected = false;
+        try { ResearchOutletGeometry.BottomLocalY(0.25, double.NaN, 0.25); }
+        catch (ArgumentOutOfRangeException) { invalidOutletRejected = true; }
+        Check(invalidOutletRejected, "Nonfinite mesh geometry cannot define a capture outlet");
         var initial = SetupPreferencesSelection.Current;
         try
         {
