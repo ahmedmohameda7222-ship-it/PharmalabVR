@@ -23,6 +23,12 @@ namespace PharmaLabVR.UI
         private Camera xrCamera;
         private bool placedWithTrackedHead;
         private int settingsPage;
+        private int instrumentPage;
+        private int researchStockIndex;
+        private static readonly string[] ResearchStockIds =
+        {
+            "nacl", "hcl", "naoh", "acetic-acid", "sodium-acetate", "water"
+        };
         private Text title;
         private Text detail;
         private Image background;
@@ -116,6 +122,26 @@ namespace PharmaLabVR.UI
             AddSettingButton("Settings choice D", -138f, 3);
             AddSettingNavigation("Next settings", -194f, 1);
             AddSettingNavigation("Previous settings", -194f, -1);
+            AddInstrumentButton("Research instruments", -306f, () => instrumentPage = 1);
+            AddInstrumentButton("Pipette aspirate 0.05 ml", 30f,
+                () => panels?.Request(PanelAction.PipetteAspirate));
+            AddInstrumentButton("Pipette dispense 0.05 ml", -26f,
+                () => panels?.Request(PanelAction.PipetteDispense));
+            AddInstrumentButton("Bottle pour 0.01 ml", -82f,
+                () => panels?.Request(PanelAction.BottlePour));
+            AddInstrumentButton("Rinse pipette", -138f,
+                () => panels?.Request(PanelAction.PipetteRinse));
+            AddInstrumentButton("Rinse bottle", -194f,
+                () => panels?.Request(PanelAction.BottleRinse));
+            AddInstrumentButton("Stock setup", -250f, () => instrumentPage = 2);
+            AddInstrumentButton("Exit tools", -306f, () => instrumentPage = 0);
+            AddInstrumentButton("Choose stock", 30f,
+                () => researchStockIndex = (researchStockIndex + 1) % ResearchStockIds.Length);
+            AddInstrumentButton("Prepare chosen stock", -26f,
+                () => panels?.Request(PanelAction.PrepareResearchStock, ResearchStockIds[researchStockIndex]));
+            AddInstrumentButton("Prepare rinse water", -82f,
+                () => panels?.Request(PanelAction.PrepareRinseWater));
+            AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
             eventObject.transform.SetParent(panelRoot.transform, false);
@@ -184,6 +210,19 @@ namespace PharmaLabVR.UI
             label.alignment = TextAnchor.MiddleCenter;
             label.text = name;
             buttons.Add(name, button);
+        }
+
+        private void AddInstrumentButton(string name, float y, Action action)
+        {
+            // Presentation-only page navigation and real shared panel requests.
+            AddButton(name, y, PanelAction.Lab);
+            var button = buttons[name];
+            button.onClick.RemoveAllListeners();
+            button.onClick.AddListener(() =>
+            {
+                action();
+                if (router?.Current != null) Present(router.Current);
+            });
         }
 
         private void AddSettingButton(string name, float y, int choice)
@@ -284,6 +323,7 @@ namespace PharmaLabVR.UI
                     new Color(0.04f, 0.17f, 0.18f) : new Color(0.14f, 0.37f, 0.39f);
             }
             if (state.ScreenId != ScreenId.Settings) settingsPage = 0;
+            if (state.ScreenId != ScreenId.Lab) instrumentPage = 0;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -331,6 +371,45 @@ namespace PharmaLabVR.UI
                 detail.text += "\n" + panels.LastError;
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
+            // A separate instrument page keeps XR ray targets from sharing
+            // hit rectangles with standard Lab/Review/Park controls.
+            if (state.ScreenId == ScreenId.Lab && instrumentPage != 0)
+            {
+                foreach (var name in new[] { "Inspect receiver", "Inspect source", "Measure",
+                    "Open review", "Pause", "Save session", "Release docked tool", "Park tool",
+                    "Research instruments" }) SetButton(name, false);
+                var mayTransfer = !driver.SourceNeedsPreparation &&
+                    !driver.IsNativePaused && !driver.IsTimeHeld;
+                var validRinse = mayTransfer && driver.RinseWaterPrepared;
+                var operating = instrumentPage == 1;
+                SetButton("Pipette aspirate 0.05 ml", operating && mayTransfer);
+                SetButton("Pipette dispense 0.05 ml", operating && mayTransfer);
+                SetButton("Bottle pour 0.01 ml", operating && mayTransfer);
+                SetButton("Rinse pipette", operating && validRinse);
+                SetButton("Rinse bottle", operating && validRinse);
+                SetButton("Stock setup", operating);
+                SetButton("Choose stock", !operating && driver.SourceNeedsPreparation);
+                SetButton("Prepare chosen stock", !operating && driver.SourceNeedsPreparation);
+                SetButton("Prepare rinse water", !operating && driver.SourceNeedsPreparation);
+                SetButton("Back to instruments", !operating);
+                SetButton("Exit tools", true);
+                var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
+                if (stockLabel != null) stockLabel.text = "Stock: " + ResearchStockIds[researchStockIndex];
+                detail.text = driver.SourceNeedsPreparation ?
+                    "Prepare a supported stock and optional rinse water before entering the Lab." :
+                    "Measured research tools · Native inventory and residuals only.";
+                if (panels != null && !string.IsNullOrEmpty(panels.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            else
+            {
+                foreach (var name in new[] { "Pipette aspirate 0.05 ml", "Pipette dispense 0.05 ml",
+                    "Bottle pour 0.01 ml", "Rinse pipette", "Rinse bottle", "Stock setup",
+                    "Choose stock", "Prepare chosen stock", "Prepare rinse water",
+                    "Back to instruments", "Exit tools" }) SetButton(name, false);
+                SetButton("Research instruments",
+                    state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
+            }
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
             else
             {
