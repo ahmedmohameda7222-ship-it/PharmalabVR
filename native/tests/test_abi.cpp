@@ -1870,6 +1870,64 @@ TEST_CASE("P03_02 switch prepared pipette source carries prior chloride into new
     CHECK(plv_destroy(h) == PLV_OK);
 }
 
+TEST_CASE("P03_02 registered 100ml stock bottle pours through revised Native inventories without valve emulation") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    const auto issue = [&](const std::string& sequence, const std::string& type,
+                           json payload, json revisions = json::object()) {
+        submit(handle, command(sequence, type, std::move(payload), std::move(revisions)));
+        return poll(handle);
+    };
+    CHECK(issue("1", "CreateVessel", {{"id", "bottle-stock"}, {"capacityM3", 1e-4}})["accepted"] == true);
+    CHECK(issue("2", "CreateVessel", {{"id", "too-large"}, {"capacityM3", 2e-4}})["accepted"] == true);
+    CHECK(issue("3", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})["accepted"] == true);
+    CHECK(issue("4", "CreateSink", {{"id", "waste"}})["accepted"] == true);
+    CHECK(issue("5", "PrepareStock", {{"vesselId", "bottle-stock"}, {"stockKind", "SodiumChloride"},
+        {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 2e-6}}, {{"bottle-stock", "0"}})["accepted"] == true);
+    const auto original = json::parse(read_text(handle));
+    const auto bad = issue("6", "PlaceTool", {{"toolId", "oversize-bottle"},
+        {"sourceInventoryId", "too-large"}, {"overflowSinkId", "waste"},
+        {"coordinateFrame", "lab"}, {"geometryProfileHash", "bottle-100ml-research-v1"},
+        {"profileRevision", "1"}});
+    CHECK(bad["accepted"] == false);
+    CHECK(json::parse(read_text(handle))["materialLedger"] == original["materialLedger"]);
+
+    const auto placed = issue("7", "PlaceTool", {{"toolId", "bottle-1"},
+        {"sourceInventoryId", "bottle-stock"}, {"overflowSinkId", "waste"},
+        {"coordinateFrame", "lab"}, {"geometryProfileHash", "bottle-100ml-research-v1"},
+        {"profileRevision", "1"}});
+    CHECK(placed["accepted"] == true);
+    if (placed["accepted"] == true) {
+        const auto actuator = issue("8", "SetActuator", {{"toolId", "bottle-1"},
+            {"expectedActuatorRevision", "0"}, {"actuator01", 1.0}});
+        CHECK(actuator["accepted"] == false);
+        CHECK(actuator["code"] == "BottleRequiresMeasuredPour");
+
+        const auto poured = issue("9", "PourBottle", {{"toolId", "bottle-1"},
+            {"destinationInventoryId", "receiver"}, {"quantityM3", 2e-8},
+            {"expectedInventoryRevision", "0"}},
+            {{"bottle-stock", "1"}, {"receiver", "0"}});
+        CHECK(poured["accepted"] == true);
+        const auto after = json::parse(read_text(handle));
+        CHECK(after["tools"][0]["geometryProfileHash"] == "bottle-100ml-research-v1");
+        CHECK(after["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
+              doctest::Approx(1.98e-6).epsilon(1e-10));
+        CHECK(after["vessels"][1]["inventory"]["chlorideMol"].get<double>() > 0.0);
+        CHECK(after["tools"][0]["inventoryRevision"] == "1");
+        CHECK(after["materialLedger"] == original["materialLedger"]);
+
+        const auto stale = issue("10", "PourBottle", {{"toolId", "bottle-1"},
+            {"destinationInventoryId", "receiver"}, {"quantityM3", 2e-8},
+            {"expectedInventoryRevision", "0"}},
+            {{"bottle-stock", "2"}, {"receiver", "1"}});
+        CHECK(stale["accepted"] == false);
+        CHECK(stale["code"] == "StaleInventoryRevision");
+        CHECK(json::parse(read_text(handle))["materialLedger"] == original["materialLedger"]);
+    }
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("P03_02 distinct 25 ml pipette aspirates aliquot and dispenses conserved material") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Bulk"})";
