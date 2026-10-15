@@ -741,6 +741,117 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 found->second.latestInput.reset();
                 outcome = {true, "Accepted", ""};
             }
+        } else if (type == "AspiratePipette") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto expectedInventoryRevision =
+                decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
+            const double quantityM3 = payload.at("quantityM3").get<double>();
+            const auto tool = context->tools.find(toolId);
+            const auto profile = plv::PipetteProfile::researchDefault();
+            if (tool == context->tools.end() || tool->second.geometryProfileHash != profile.id) {
+                outcome = {false, "InvalidPipette", "metered research pipette required"};
+            } else if (!expectedInventoryRevision ||
+                       *expectedInventoryRevision != tool->second.inventoryRevision) {
+                outcome = {false, "StaleInventoryRevision", "pipette inventory revision changed"};
+            } else if (!std::isfinite(quantityM3) || quantityM3 <= 0.0 ||
+                       tool->second.tipInventory.referenceVolumeM3 + quantityM3 > profile.capacityM3) {
+                outcome = {false, "PipetteCapacityExceeded", "aliquot exceeds pipette capacity"};
+            } else if (tool->second.inFlightInventory.referenceVolumeM3 > 0.0) {
+                outcome = {false, "InFlightOutstanding", "pending material must first land"};
+            } else {
+                const auto sourceId = tool->second.sourceInventoryId;
+                const auto source = beforeCommand.vessels.find(sourceId);
+                if (source == beforeCommand.vessels.end() ||
+                    !revisions.is_object() || revisions.size() != 1U ||
+                    !revisions.contains(sourceId) ||
+                    revision(revisions, sourceId) != source->second.materialRevision) {
+                    outcome = {false, "StaleRevision", "source stock revision mismatch"};
+                } else if (quantityM3 > source->second.inventory.referenceVolumeM3) {
+                    outcome = {false, "InsufficientSource", "prepared stock lacks aliquot"};
+                } else {
+                    auto staged = context->executor;
+                    auto state = staged.snapshot();
+                    auto& bottle = state.vessels.at(sourceId);
+                    const auto aliquot = bottle.inventory.fraction(quantityM3);
+                    auto filledTip = tool->second.tipInventory;
+                    filledTip.add(aliquot);
+                    if (!bottle.inventory.subtract(aliquot)) {
+                        outcome = {false, "PipetteLedgerError", "source debit failed"};
+                    } else {
+                        ++bottle.materialRevision;
+                        ++state.eventSequence;
+                        const std::unordered_map<std::string, double> gross{{sourceId, quantityM3}};
+                        const auto nowNs = static_cast<std::uint64_t>(
+                            std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                        outcome = staged.restore(state);
+                        if (outcome.accepted)
+                            outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                        if (outcome.accepted) {
+                            context->executor = std::move(staged);
+                            recordTransportProposal(*context, gross, nowNs);
+                            tool->second.tipInventory = std::move(filledTip);
+                            ++tool->second.inventoryRevision;
+                            tool->second.latestInput.reset();
+                        }
+                    }
+                }
+            }
+        } else if (type == "DispensePipette") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto destinationId = payload.at("destinationInventoryId").get<std::string>();
+            const auto expectedInventoryRevision =
+                decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
+            const double quantityM3 = payload.at("quantityM3").get<double>();
+            const auto tool = context->tools.find(toolId);
+            const auto profile = plv::PipetteProfile::researchDefault();
+            if (tool == context->tools.end() || tool->second.geometryProfileHash != profile.id) {
+                outcome = {false, "InvalidPipette", "metered research pipette required"};
+            } else if (!expectedInventoryRevision ||
+                       *expectedInventoryRevision != tool->second.inventoryRevision) {
+                outcome = {false, "StaleInventoryRevision", "pipette inventory revision changed"};
+            } else if (!std::isfinite(quantityM3) || quantityM3 <= 0.0 ||
+                       quantityM3 > tool->second.tipInventory.referenceVolumeM3 -
+                           profile.retainedTipVolumeM3) {
+                outcome = {false, "PipetteRetainedResidual",
+                           "represented tip residual must be rinsed, not dispensed"};
+            } else if (destinationId == tool->second.sourceInventoryId ||
+                       beforeCommand.vessels.count(destinationId) == 0U ||
+                       !revisions.is_object() || revisions.size() != 1U ||
+                       !revisions.contains(destinationId) ||
+                       revision(revisions, destinationId) !=
+                           beforeCommand.vessels.at(destinationId).materialRevision) {
+                outcome = {false, "InvalidPipetteDestination", "receiver/revision invalid"};
+            } else if (quantityM3 >
+                       beforeCommand.vessels.at(destinationId).capacityM3 -
+                           beforeCommand.vessels.at(destinationId).inventory.referenceVolumeM3) {
+                outcome = {false, "ReceiverFull", "receiver is full"};
+            } else {
+                auto remainingTip = tool->second.tipInventory;
+                const auto aliquot = remainingTip.fraction(quantityM3);
+                if (!remainingTip.subtract(aliquot)) {
+                    outcome = {false, "PipetteLedgerError", "tip debit failed"};
+                } else {
+                    auto staged = context->executor;
+                    auto state = staged.snapshot();
+                    auto& receiver = state.vessels.at(destinationId);
+                    receiver.inventory.add(aliquot);
+                    ++receiver.materialRevision;
+                    ++state.eventSequence;
+                    const std::unordered_map<std::string, double> gross{{destinationId, quantityM3}};
+                    const auto nowNs = static_cast<std::uint64_t>(
+                        std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                    outcome = staged.restore(state);
+                    if (outcome.accepted)
+                        outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                    if (outcome.accepted) {
+                        context->executor = std::move(staged);
+                        recordTransportProposal(*context, gross, nowNs);
+                        tool->second.tipInventory = std::move(remainingTip);
+                        ++tool->second.inventoryRevision;
+                        tool->second.latestInput.reset();
+                    }
+                }
+            }
         } else if (type == "DisposeContents") {
             const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
             const auto sinkId = payload.at("sinkInventoryId").get<std::string>();
