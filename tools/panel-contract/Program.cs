@@ -49,6 +49,17 @@ internal static class Program
         try { ResearchInstrumentPayloads.SwitchPipetteSource("pipette", "base", "bad-revision"); }
         catch (ArgumentException) { invalidRevisionRejected = true; }
         Check(invalidRevisionRejected, "Source switch accepted malformed tool revision");
+        var reserveRefill = ResearchInstrumentPayloads.RefillFromPreparedStock(
+            "reserve-stock", "source", "spill", 2e-8);
+        Check(reserveRefill.Contains("\"sourceInventoryId\":\"reserve-stock\"") &&
+              reserveRefill.Contains("\"destinationInventoryId\":\"source\"") &&
+              reserveRefill.Contains("\"HomogeneousAqueousLiquid\"") &&
+              reserveRefill.Contains("\"fraction\":1.0"),
+            "Bottle refill must use existing prepared stock via a real Native fixed transfer");
+        var sameStockRejected = false;
+        try { ResearchInstrumentPayloads.RefillFromPreparedStock("source", "source", "spill", 2e-8); }
+        catch (ArgumentException) { sameStockRejected = true; }
+        Check(sameStockRejected, "A bottle cannot refill itself through a fictitious stock transfer");
         var initial = SetupPreferencesSelection.Current;
         try
         {
