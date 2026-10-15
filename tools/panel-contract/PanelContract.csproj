@@ -15,6 +15,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/InteractionOwnership.cs" Link="InteractionOwnership.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopWheelRouting.cs" Link="DesktopWheelRouting.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPlacementAdmission.cs" Link="DesktopPlacementAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPointerRouting.cs" Link="DesktopPointerRouting.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureAdmission.cs" Link="CaptureAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureTargetSelection.cs" Link="CaptureTargetSelection.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ReceiverMotionTracker.cs" Link="ReceiverMotionTracker.cs" />

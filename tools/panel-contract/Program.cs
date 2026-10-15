@@ -180,6 +180,20 @@ internal static class Program
         Check(!DesktopPlacementAdmission.CanPlace(double.NaN, 1.0, true, false) &&
               !DesktopPlacementAdmission.CanPlace(0.04, double.PositiveInfinity, true, false),
             "Invalid physical pose must fail closed before any Rigidbody release");
+        // P10.01 held-tool mouse plane drag has priority over left-drag valve;
+        // both routes share exclusive ownership and obey HUD focus.
+        Check(DesktopPointerRouting.Resolve(true, true, true, false, true) == DesktopPointerAction.ToolDrag,
+            "Shift + left-drag with a held instrument must move its world pose");
+        Check(DesktopPointerRouting.Resolve(true, false, true, false, true) == DesktopPointerAction.Valve,
+            "Ordinary held left-drag must actuate only the valve");
+        Check(DesktopPointerRouting.Resolve(false, true, true, false, true) == DesktopPointerAction.None,
+            "Empty hand may not move an unowned tool by shift-click");
+        Check(DesktopPointerRouting.Resolve(true, true, true, true, true) == DesktopPointerAction.None &&
+              DesktopPointerRouting.Resolve(true, false, true, true, true) == DesktopPointerAction.None,
+            "World actions must not steal GUI input focus");
+        Check(DesktopPointerRouting.Resolve(true, true, true, false, false) == DesktopPointerAction.None &&
+              DesktopPointerRouting.Resolve(true, false, false, false, true) == DesktopPointerAction.None,
+            "Disabled input or released button must leave both routes neutral");
         var initial = SetupPreferencesSelection.Current;
         try
         {
