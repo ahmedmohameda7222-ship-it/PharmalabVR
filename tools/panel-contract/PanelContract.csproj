@@ -17,6 +17,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/RecoveryAlignmentPolicy.cs" Link="RecoveryAlignmentPolicy.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/SessionLoadAdmission.cs" Link="SessionLoadAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/DropParcelState.cs" Link="DropParcelState.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/ResearchInstrumentPayloads.cs" Link="ResearchInstrumentPayloads.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs" Link="LabPanelController.cs" />
   </ItemGroup>
 </Project>

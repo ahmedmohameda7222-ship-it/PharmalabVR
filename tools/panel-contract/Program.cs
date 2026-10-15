@@ -19,6 +19,36 @@ internal static class Program
 
     private static void Main()
     {
+        // P03.02: exercise the actual pure production payload builder through
+        // the independent .NET compiler. Unity/Native runtime execution is separate.
+        var placedBottle = ResearchInstrumentPayloads.Place("bottle-1", "source", "spill",
+            ResearchInstrumentPayloads.BottleProfile);
+        Check(placedBottle.Contains("\"geometryProfileHash\":\"bottle-100ml-research-v1\""),
+            "Bottle command lost its distinct Native geometry profile");
+        var measured = ResearchInstrumentPayloads.DispenseOrPour("bottle-1", "receiver", 2e-8, "4");
+        Check(measured.Contains("\"quantityM3\":2E-08") &&
+              measured.Contains("\"expectedInventoryRevision\":\"4\""),
+            "Measured bottle transport lost captured quantity or revision");
+        var aspirated = ResearchInstrumentPayloads.Aspirate("pipette", 5e-8, "2");
+        Check(aspirated.Contains("\"quantityM3\":5E-08") &&
+              !aspirated.Contains("destinationInventoryId"),
+            "Aspirate accidentally encoded a delivery destination");
+        var rinsed = ResearchInstrumentPayloads.Rinse("bottle-1", "rinse-water", "waste", 1e-8, "5");
+        Check(rinsed.Contains("\"rinseSourceInventoryId\":\"rinse-water\"") &&
+              rinsed.Contains("\"basis\":\"LiquidVolumeM3\""),
+            "Rinse must debit a real source using Native volume-basis payload");
+        var invalidVolumeRejected = false;
+        try { ResearchInstrumentPayloads.Aspirate("pipette", double.NaN, "2"); }
+        catch (ArgumentOutOfRangeException) { invalidVolumeRejected = true; }
+        Check(invalidVolumeRejected, "Non-finite aspiration quantity reached Native JSON builder");
+        var invalidProfileRejected = false;
+        try { ResearchInstrumentPayloads.Place("bottle-1", "source", "spill", "burette-50ml-research-v1"); }
+        catch (ArgumentException) { invalidProfileRejected = true; }
+        Check(invalidProfileRejected, "Metered action accepted burette valve profile");
+        var invalidRevisionRejected = false;
+        try { ResearchInstrumentPayloads.SwitchPipetteSource("pipette", "base", "bad-revision"); }
+        catch (ArgumentException) { invalidRevisionRejected = true; }
+        Check(invalidRevisionRejected, "Source switch accepted malformed tool revision");
         var initial = SetupPreferencesSelection.Current;
         try
         {
