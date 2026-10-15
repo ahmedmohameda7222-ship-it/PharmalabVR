@@ -40,6 +40,33 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P03_03_ResearchOutletMarkersMatchActualPipetteTipAndBottleNeck()
+        {
+            var pipette = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab");
+            var bottle = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            Assert.That(pipette, Is.Not.Null);
+            Assert.That(bottle, Is.Not.Null);
+            var tip = pipette.transform.Find("MeteredOutletTip");
+            var pipetteOutlet = pipette.transform.Find("OutletExit");
+            var bottleNeck = bottle.transform.Find("NarrowNeck");
+            var bottleOutlet = bottle.transform.Find("OutletExit");
+            Assert.That(pipetteOutlet, Is.Not.Null, "Pipette must expose a metered outlet.");
+            Assert.That(bottleOutlet, Is.Not.Null, "Research stock bottle needs its own neck outlet.");
+            var pipetteBottom = tip.localPosition.y +
+                tip.GetComponent<MeshFilter>().sharedMesh.bounds.min.y * tip.localScale.y;
+            var bottleTop = bottleNeck.localPosition.y +
+                bottleNeck.GetComponent<MeshFilter>().sharedMesh.bounds.max.y * bottleNeck.localScale.y;
+            Assert.That(pipetteOutlet.localPosition.y, Is.EqualTo(pipetteBottom).Within(1e-5));
+            Assert.That(bottleOutlet.localPosition.y, Is.EqualTo(bottleTop).Within(1e-5));
+            Assert.That(Vector3.Dot(pipetteOutlet.TransformDirection(Vector3.down), Vector3.down),
+                Is.GreaterThan(0.99f));
+            Assert.That(Vector3.Dot(bottleOutlet.TransformDirection(Vector3.down), Vector3.down),
+                Is.LessThan(-0.99f), "Upright closed stock bottle cannot masquerade as a downward spout.");
+        }
+
+        [Test]
         public void P03_02_GeneratedLabPlacesOneOfEachResearchInstrumentWithoutReplacingBurette()
         {
             var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",

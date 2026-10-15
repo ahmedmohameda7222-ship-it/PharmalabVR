@@ -193,8 +193,16 @@ namespace PharmaLabVR.Editor
             {
                 Part(root.transform, "GraduatedGlassTube", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.15f, 0f), new Vector3(0.015f, 0.135f, 0.015f), glass, true);
-                Part(root.transform, "MeteredOutletTip", PrimitiveType.Cylinder,
+                var pipetteTip = Part(root.transform, "MeteredOutletTip", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.012f, 0f), new Vector3(0.004f, 0.019f, 0.004f), glass);
+                // The real mesh bottom anchors a profile-specific point, not
+                // a magic offset inherited from the unrelated burette.
+                var pipetteOutlet = new GameObject("OutletExit").transform;
+                pipetteOutlet.SetParent(root.transform, false);
+                pipetteOutlet.localPosition = pipetteTip.transform.localPosition +
+                    Vector3.up * (pipetteTip.GetComponent<MeshFilter>().sharedMesh.bounds.min.y *
+                                  pipetteTip.transform.localScale.y);
+                pipetteOutlet.localRotation = Quaternion.identity;
                 Part(root.transform, "SuctionCollar", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.287f, 0f), new Vector3(0.022f, 0.008f, 0.022f), ink);
                 for (var ml = 0; ml <= 25; ++ml)
@@ -228,8 +236,17 @@ namespace PharmaLabVR.Editor
             {
                 Part(root.transform, "StockBottleBody", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.083f, 0f), new Vector3(0.075f, 0.075f, 0.075f), glass, true);
-                Part(root.transform, "NarrowNeck", PrimitiveType.Cylinder,
+                var bottleNeck = Part(root.transform, "NarrowNeck", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.181f, 0f), new Vector3(0.033f, 0.024f, 0.033f), glass);
+                var bottleOutlet = new GameObject("OutletExit").transform;
+                bottleOutlet.SetParent(root.transform, false);
+                bottleOutlet.localPosition = bottleNeck.transform.localPosition +
+                    Vector3.up * (bottleNeck.GetComponent<MeshFilter>().sharedMesh.bounds.max.y *
+                                  bottleNeck.transform.localScale.y);
+                // Upright closed-cap stock bottle is NOT a downward outlet.
+                // Measured pour is explicit Native command; tilt dynamics
+                // and cap opening are unvalidated and not inferred here.
+                bottleOutlet.localRotation = Quaternion.Euler(180f, 0f, 0f);
                 Part(root.transform, "ClosedResearchCap", PrimitiveType.Cylinder,
                     new Vector3(0f, 0.214f, 0f), new Vector3(0.042f, 0.012f, 0.042f), ink);
                 var label = new GameObject("100mL_Research_NotCalibrated");
