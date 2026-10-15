@@ -12,6 +12,11 @@ namespace UnityEngine
     {
         public static bool Approximately(float a, float b) => Math.Abs(a - b) < 0.00001f;
     }
+    public sealed class TextAsset
+    {
+        public string text { get; }
+        public TextAsset(string content) { text = content; }
+    }
     public static class GUILayout
     {
         public static void Label(string value) { }

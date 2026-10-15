@@ -19,6 +19,36 @@ internal static class Program
 
     private static void Main()
     {
+        // P10.03: real production catalog parser must accept formatted JSON
+        // and keep its last valid locale if a table is corrupted.
+        var localization = new LocalizationService();
+        localization.Load("ar", new UnityEngine.TextAsset(
+            "{\n  \"offline\" : \"غير متصل\" ,\n  \"mixed\" : \"NaOH 0.1 mol/L\" \n}"));
+        Check(localization.IsRightToLeft && localization.Get("offline") == "غير متصل",
+            "Formatted Arabic JSON catalog not loaded correctly");
+        Check(localization.Get("mixed") == "NaOH 0.1 mol/L",
+            "Mixed chemistry symbols and Latin units were reversed/changed");
+        var invalidLocaleRejected = false;
+        try { localization.Load("fr", new UnityEngine.TextAsset("{\"offline\":\"hors ligne\"}")); }
+        catch (ArgumentException) { invalidLocaleRejected = true; }
+        Check(invalidLocaleRejected && localization.Locale == "ar" &&
+              localization.Get("offline") == "غير متصل",
+            "Unsupported locale overwrote an accepted Arabic catalog");
+        var duplicateTranslationRejected = false;
+        try { localization.Load("en", new UnityEngine.TextAsset(
+            "{\"offline\":\"one\",\"offline\":\"two\"}")); }
+        catch (FormatException) { duplicateTranslationRejected = true; }
+        Check(duplicateTranslationRejected && localization.Locale == "ar",
+            "Duplicate keys silently overwrote verified translation values");
+        var corruptedTableRejected = false;
+        try { localization.Load("en", new UnityEngine.TextAsset("{ \"offline\": \"broken\", }")); }
+        catch (FormatException) { corruptedTableRejected = true; }
+        Check(corruptedTableRejected && localization.Get("offline") == "غير متصل",
+            "Malformed JSON destroyed the still-valid Arabic translation state");
+        localization.Load("en", new UnityEngine.TextAsset("{ \"offline\" : \"Offline\" }"));
+        Check(!localization.IsRightToLeft && localization.Get("offline") == "Offline",
+            "Switching back to English did not update live text direction/catalog");
+
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.
         var placedBottle = ResearchInstrumentPayloads.Place("bottle-1", "source", "spill",
