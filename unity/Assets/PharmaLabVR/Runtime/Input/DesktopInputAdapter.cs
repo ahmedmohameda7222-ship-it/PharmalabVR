@@ -22,6 +22,7 @@ namespace PharmaLabVR.Input
         private bool inputEnabled = true;
         private bool awaitingFocusContinue;
         public bool AwaitingFocusContinue => awaitingFocusContinue;
+        public bool HasHeldTool => heldTool != null;
 
         private void Awake() => RefreshRegisteredToolId();
 
@@ -63,22 +64,26 @@ namespace PharmaLabVR.Input
             if (awaitingFocusContinue && registeredTool != null)
                 return new[] { LabGeometryAdapter.BuildSample(heldToolId, ++sequence, nowNs, labFrame,
                     registeredTool, 0f, geometryProfileHash, true) };
-            HandlePickOrPlace();
             if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
-                // Esc is ordinary Pause. It must neither fake a tracking hold nor
-                // strand the desktop adapter in AwaitingFocusContinue.
+                // Esc always wins over F/pick and world manipulation this frame.
                 actuator = 0f;
                 coreDriver?.transform.root.GetComponentInChildren<SessionController>(true)
                     ?.RequestDesktopPause();
                 return System.Array.Empty<LabInputSample>();
             }
+            if (coreDriver != null && (coreDriver.IsNativePaused || coreDriver.IsTimeHeld))
+            {
+                actuator = 0f;
+                return System.Array.Empty<LabInputSample>();
+            }
+            HandlePickOrPlace();
             var pointerOverUi = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
             if (Mouse.current != null && ShouldAdjustActuator(pointerOverUi, Mouse.current.leftButton.isPressed))
                 actuator = Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f);
-            ManipulateHeldTool();
+            ManipulateHeldTool(pointerOverUi);
             var sampledTool = heldTool != null ? heldTool : registeredTool;
             var sampledActuator = heldTool != null ? actuator : 0f;
             return new[] { LabGeometryAdapter.BuildSample(
@@ -133,9 +138,16 @@ namespace PharmaLabVR.Input
             if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body)) body.isKinematic = true;
         }
 
-        private void ManipulateHeldTool()
+        private void ManipulateHeldTool(bool pointerOverUi)
         {
-            if (heldTool == null || Keyboard.current == null || labFrame == null) return;
+            if (heldTool == null || Keyboard.current == null || labFrame == null || pointerOverUi) return;
+            if (Mouse.current != null)
+            {
+                var delta = Mouse.current.scroll.ReadValue().y;
+                if (DesktopWheelRouting.Resolve(true, false, delta) == DesktopWheelTarget.HeldToolHeight)
+                    heldTool.position += labFrame.up *
+                        (float)DesktopWheelRouting.HeightDeltaMetres(delta);
+            }
             var translation = Vector3.zero;
             if (Keyboard.current.leftArrowKey.isPressed) translation += Vector3.left;
             if (Keyboard.current.rightArrowKey.isPressed) translation += Vector3.right;
@@ -145,8 +157,8 @@ namespace PharmaLabVR.Input
             if (Keyboard.current.pageDownKey.isPressed) translation += Vector3.down;
             heldTool.position += labFrame.TransformDirection(translation.normalized) * (0.20f * Time.unscaledDeltaTime);
             var tilt = 0f;
-            if (Keyboard.current.zKey.isPressed) tilt += 1f;
-            if (Keyboard.current.xKey.isPressed) tilt -= 1f;
+            if (Keyboard.current.qKey.isPressed) tilt += 1f;
+            if (Keyboard.current.eKey.isPressed) tilt -= 1f;
             if (!Mathf.Approximately(tilt, 0f)) heldTool.Rotate(labFrame.forward, tilt * 45f * Time.unscaledDeltaTime, Space.World);
         }
     }

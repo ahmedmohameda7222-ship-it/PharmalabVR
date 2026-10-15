@@ -11,24 +11,39 @@ namespace PharmaLabVR.Input
         [SerializeField] private float lookSensitivity = 0.12f;
         [SerializeField] private float pitchLimit = 85f;
         private float pitch;
+        private Camera sceneCamera;
+        private DesktopInputAdapter desktopInput;
 
-        private void Awake() => pitch = Mathf.DeltaAngle(0f, transform.eulerAngles.x);
+        private void Awake()
+        {
+            pitch = Mathf.DeltaAngle(0f, transform.eulerAngles.x);
+            sceneCamera = GetComponent<Camera>();
+            desktopInput = GetComponentInParent<DesktopInputAdapter>();
+        }
 
         private void Update()
         {
             if (Keyboard.current == null || Mouse.current == null) return;
+            // A UI-focused gesture must never pan or zoom the world beneath it.
+            var pointerOverUi =
+                (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue());
+            if (pointerOverUi) return;
             var movement = Vector3.zero;
             if (Keyboard.current.wKey.isPressed) movement += Vector3.forward;
             if (Keyboard.current.sKey.isPressed) movement += Vector3.back;
             if (Keyboard.current.aKey.isPressed) movement += Vector3.left;
             if (Keyboard.current.dKey.isPressed) movement += Vector3.right;
-            if (Keyboard.current.qKey.isPressed) movement += Vector3.down;
-            if (Keyboard.current.eKey.isPressed) movement += Vector3.up;
+            // Q/E exclusively tilt the held instrument; they never move camera.
             transform.Translate(movement.normalized * (moveSpeed * Time.unscaledDeltaTime), Space.Self);
+            var deltaScroll = Mouse.current.scroll.ReadValue().y;
+            if (sceneCamera != null &&
+                DesktopWheelRouting.Resolve(desktopInput != null && desktopInput.HasHeldTool,
+                    false, deltaScroll) == DesktopWheelTarget.CameraZoom)
+                sceneCamera.fieldOfView = (float)DesktopWheelRouting.ZoomFieldOfViewDegrees(
+                    sceneCamera.fieldOfView, deltaScroll);
 
-            if (!Mouse.current.rightButton.isPressed ||
-                (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
-                SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue())) return;
+            if (!Mouse.current.rightButton.isPressed) return;
             var delta = Mouse.current.delta.ReadValue() * lookSensitivity;
             pitch = Mathf.Clamp(pitch - delta.y, -pitchLimit, pitchLimit);
             transform.rotation = Quaternion.Euler(pitch, transform.eulerAngles.y + delta.x, 0f);
