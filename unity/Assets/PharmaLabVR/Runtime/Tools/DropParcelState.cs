@@ -10,6 +10,16 @@ namespace PharmaLabVR.Tools
         public double CommittedVolumeM3 { get; private set; }
         public string LastLandedParcelId { get; private set; } = string.Empty;
 
+        // A deliberate Native load or checkpoint restart creates a new
+        // replay epoch. An earlier landing token may validly be pending again
+        // in the restored, held Native snapshot.
+        public void ResetSession()
+        {
+            ActiveParcelId = string.Empty;
+            CommittedVolumeM3 = 0.0;
+            LastLandedParcelId = string.Empty;
+        }
+
         public bool ApplySnapshot(string parcelId, double volumeM3)
         {
             if (string.IsNullOrWhiteSpace(parcelId) ||
