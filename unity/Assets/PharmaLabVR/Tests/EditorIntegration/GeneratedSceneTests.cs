@@ -254,6 +254,14 @@ namespace PharmaLabVR.Tests.EditorIntegration
                 liquid.SetCommittedVolume(0.000025);
                 Assert.That(meniscus.Fill01, Is.EqualTo(0.5f).Within(0.0001f));
                 Assert.That(meniscus.Surface.gameObject.activeSelf, Is.True);
+                var filter = meniscus.Surface.GetComponent<MeshFilter>();
+                Assert.That(filter.sharedMesh, Is.Not.Null);
+                Assert.That(AssetDatabase.Contains(filter.sharedMesh), Is.True,
+                    "Prefab surface geometry must be a durable asset, not an unsaved Editor mesh.");
+                Assert.That(filter.sharedMesh.normals[0].y, Is.GreaterThan(0.5f),
+                    "Concave meniscus must face the reader from above.");
+                Assert.That(AssetDatabase.Contains(meniscus.Surface.GetComponent<MeshRenderer>().sharedMaterial),
+                    Is.True, "The meniscus material must survive a Player build.");
                 liquid.SetCommittedVolume(0.0);
                 Assert.That(meniscus.Surface.gameObject.activeSelf, Is.False,
                     "Empty native state must hide the meniscus, not preserve an animation.");
