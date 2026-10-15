@@ -307,7 +307,9 @@ namespace PharmaLabVR.UI
                 ScreenId.Hold => driver != null && driver.NativeRecoveryReady ?
                     new[] { "Save", "Review", "Settings", "Continue" } :
                     new[] { "Save", "Review", "Settings" },
-                ScreenId.Lab => new[] { "Inspect", "Measure", "Pause", "Review", "Save" },
+                ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
+                    new[] { "Inspect", "Measure", "Pause", "Review", "Save", "ReleaseTool" } :
+                    new[] { "Inspect", "Measure", "Pause", "Review", "Save" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save" },
                 ScreenId.Pause => new[] { "Lab", "Save", "Settings", "Review" },

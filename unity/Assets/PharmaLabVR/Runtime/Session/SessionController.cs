@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.UI;
+using PharmaLabVR.Tools;
 using UnityEngine;
 
 namespace PharmaLabVR.Session
@@ -45,6 +46,25 @@ namespace PharmaLabVR.Session
             panels?.Configure(router, driver, this);
             spatialPanel?.Configure(router, panels, driver);
             if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
+        }
+
+        public bool CanReleaseTool
+        {
+            get
+            {
+                if (driver == null || driver.CurrentMode != "VR") return false;
+                var dock = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+                return dock != null && dock.IsMounted;
+            }
+        }
+
+        public bool ReleaseToolFromDock()
+        {
+            if (!CanReleaseTool || router?.Current?.ScreenId != ScreenId.Lab) return false;
+            var dock = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+            if (dock == null || !dock.ReleaseFromDock()) return false;
+            router.Show(ScreenId.Lab);
+            return true;
         }
 
         public bool RequestDesktopPause()

@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using PharmaLabVR.UI;
 using PharmaLabVR.Core;
+using PharmaLabVR.Tools;
 
 namespace PharmaLabVR.Input
 {
@@ -65,6 +66,12 @@ namespace PharmaLabVR.Input
                 if (adapter is ILabInputAdapter desktopInputAdapter) desktopInputAdapter.SetEnabled(mode == ApplicationMode.Desktop);
             foreach (var adapter in xrRig.GetComponentsInChildren<MonoBehaviour>(true))
                 if (adapter is ILabInputAdapter xrInputAdapter) xrInputAdapter.SetEnabled(mode == ApplicationMode.VirtualReality);
+            if (coreDriver != null)
+                foreach (var mount in coreDriver.transform.root.GetComponentsInChildren<ToolMount>(true))
+                {
+                    if (mode == ApplicationMode.VirtualReality) mount.TryMount();
+                    else mount.ReleaseFromDock();
+                }
             Mode = mode;
             ApplySetupPreferences(SetupPreferencesSelection.Current);
             ModeChanged?.Invoke(mode);

@@ -90,6 +90,7 @@ namespace PharmaLabVR.UI
             AddButton("Continue", -194f, PanelAction.Continue);
             AddButton("Settings", -82f, PanelAction.Settings);
             AddButton("Back", -138f, PanelAction.Back);
+            AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddSettingButton("Settings choice A", 30f, 0);
             AddSettingButton("Settings choice B", -26f, 1);
             AddSettingButton("Settings choice C", -82f, 2);
@@ -281,7 +282,7 @@ namespace PharmaLabVR.UI
             SetButton("Measure", state.SupportedActions.Contains("Measure"));
             SetButton("Open review", state.SupportedActions.Contains("Review"));
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
+                new Vector2(0f, state.ScreenId == ScreenId.Lab ? 90f : 30f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
@@ -289,6 +290,8 @@ namespace PharmaLabVR.UI
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
             SetButton("Settings", state.SupportedActions.Contains("Settings"));
             SetButton("Back", state.SupportedActions.Contains("Back"));
+            SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
+                panels != null && panels.CanReleaseTool);
             buttons["Back"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Settings ? -250f : -138f);
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
