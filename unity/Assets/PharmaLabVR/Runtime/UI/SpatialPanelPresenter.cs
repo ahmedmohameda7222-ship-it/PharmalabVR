@@ -24,6 +24,7 @@ namespace PharmaLabVR.UI
         private bool placedWithTrackedHead;
         private Text title;
         private Text detail;
+        private Image background;
         private readonly Dictionary<string, Button> buttons = new();
 
         public void Configure(ScreenRouter screenRouter, LabPanelController panelController, CoreDriver coreDriver)
@@ -74,7 +75,7 @@ namespace PharmaLabVR.UI
             var canvas = panelRoot.GetComponent<Canvas>();
             canvas.renderMode = RenderMode.WorldSpace;
             canvas.worldCamera = xrCamera;
-            var background = panelRoot.AddComponent<Image>();
+            background = panelRoot.AddComponent<Image>();
             background.color = new Color(0.91f, 0.94f, 0.94f, 0.97f);
             title = CreateText("Panel title", 214f, 42f, 26, FontStyle.Bold);
             detail = CreateText("Panel detail", 126f, 112f, 20, FontStyle.Normal);
@@ -108,7 +109,12 @@ namespace PharmaLabVR.UI
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
             var tracked = head.isValid && head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var value) && value;
             var pose = xrCamera.transform;
-            panelRoot.transform.position = pose.position + pose.forward * 0.95f + pose.right * 0.25f;
+            var setup = SetupPreferencesSelection.Current;
+            var side = setup.DominantHand == "Left" ? -0.25f : 0.25f;
+            var postureOffset = setup.Posture == "Seated" ? -0.10f : 0f;
+            var benchOffset = setup.BenchHeightMeters - 0.85f;
+            panelRoot.transform.position = pose.position + pose.forward * 0.95f + pose.right * side +
+                Vector3.up * (postureOffset + benchOffset);
             panelRoot.transform.rotation = Quaternion.LookRotation(pose.forward, Vector3.up);
             placedWithTrackedHead = tracked;
         }
@@ -155,7 +161,18 @@ namespace PharmaLabVR.UI
         {
             if (panelRoot == null || driver == null) return;
             panelRoot.SetActive(driver.CurrentMode == "VR");
-            if (panelRoot.activeSelf && !placedWithTrackedHead) UpdatePlacement();
+            if (panelRoot.activeSelf) UpdatePlacement();
+            title.fontSize = Mathf.RoundToInt(26f * state.Setup.TextScale);
+            detail.fontSize = Mathf.RoundToInt(20f * state.Setup.TextScale);
+            background.color = state.Setup.HighContrast ? Color.white :
+                new Color(0.91f, 0.94f, 0.94f, 0.97f);
+            foreach (var button in buttons.Values)
+            {
+                var label = button.GetComponentInChildren<Text>(true);
+                if (label != null) label.fontSize = Mathf.RoundToInt(21f * state.Setup.TextScale);
+                button.GetComponent<Image>().color = state.Setup.HighContrast ?
+                    new Color(0.04f, 0.17f, 0.18f) : new Color(0.14f, 0.37f, 0.39f);
+            }
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -164,7 +181,9 @@ namespace PharmaLabVR.UI
                 ScreenId.Review => ReviewDetails(),
                 ScreenId.Inspect or ScreenId.Measure => state.SelectedEntityId + " · " +
                     (driver.Measurement?.DisplayValue ?? "--") + " pH · " + state.ObservationFreshness,
-                _ => "Select a vessel to inspect. Research model · " + state.SaveState
+                _ => state.Setup.CaptionsEnabled ?
+                    "Select a vessel to inspect. Research model · " + state.SaveState :
+                    "Research model · " + state.SaveState
             };
             SetButton("Inspect receiver", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Inspect source", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);

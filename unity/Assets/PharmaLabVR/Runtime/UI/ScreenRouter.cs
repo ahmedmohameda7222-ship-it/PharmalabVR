@@ -14,10 +14,128 @@ namespace PharmaLabVR.UI
         Notebook, Review, Compare, Pause, Hold, Settings, LessonBuilder, ResearchProject
     }
 
+
+    // Session-scoped presentation choices. No native inventory or scientific data is stored here.
+    public sealed class LabSetupPreferences
+    {
+        public string Posture { get; }
+        public string DominantHand { get; }
+        public float BenchHeightMeters { get; }
+        public float TextScale { get; }
+        public bool CaptionsEnabled { get; }
+        public bool ReducedMotion { get; }
+        public bool HighContrast { get; }
+        public float AudioVolume { get; }
+
+        public LabSetupPreferences(string posture, string dominantHand, float benchHeightMeters,
+            float textScale, bool captionsEnabled, bool reducedMotion, bool highContrast,
+            float audioVolume = 1f)
+        {
+            if (posture != "Seated" && posture != "Standing")
+                throw new ArgumentException("Unsupported posture.", nameof(posture));
+            if (dominantHand != "Left" && dominantHand != "Right")
+                throw new ArgumentException("Unsupported dominant hand.", nameof(dominantHand));
+            if (float.IsNaN(benchHeightMeters) || benchHeightMeters < 0.65f || benchHeightMeters > 1.05f)
+                throw new ArgumentOutOfRangeException(nameof(benchHeightMeters));
+            if (float.IsNaN(textScale) || textScale < 0.85f || textScale > 1.35f)
+                throw new ArgumentOutOfRangeException(nameof(textScale));
+            if (float.IsNaN(audioVolume) || audioVolume < 0f || audioVolume > 1f)
+                throw new ArgumentOutOfRangeException(nameof(audioVolume));
+            Posture = posture;
+            DominantHand = dominantHand;
+            BenchHeightMeters = benchHeightMeters;
+            TextScale = textScale;
+            CaptionsEnabled = captionsEnabled;
+            ReducedMotion = reducedMotion;
+            HighContrast = highContrast;
+            AudioVolume = audioVolume;
+        }
+
+        public LabSetupPreferences With(string posture = null, string dominantHand = null,
+            float? benchHeightMeters = null, float? textScale = null, bool? captionsEnabled = null,
+            bool? reducedMotion = null, bool? highContrast = null, float? audioVolume = null)
+        {
+            return new LabSetupPreferences(posture ?? Posture, dominantHand ?? DominantHand,
+                benchHeightMeters ?? BenchHeightMeters, textScale ?? TextScale,
+                captionsEnabled ?? CaptionsEnabled, reducedMotion ?? ReducedMotion,
+                highContrast ?? HighContrast, audioVolume ?? AudioVolume);
+        }
+    }
+
+    // The Boot scene is unloaded before the Lab scene is activated; this selection
+    // survives that scene transition without writing a chemistry save or PlayerPrefs.
+    public static class SetupPreferencesSelection
+    {
+        public static LabSetupPreferences Current { get; private set; } =
+            new LabSetupPreferences("Standing", "Right", 0.85f, 1f, true, false, false);
+
+        public static event Action<LabSetupPreferences> Changed;
+
+        public static void Select(LabSetupPreferences preferences)
+        {
+            Current = preferences ?? throw new ArgumentNullException(nameof(preferences));
+            Changed?.Invoke(Current);
+        }
+    }
+
+    // Same real IMGUI preference controls on Boot Setup and Desktop Settings.
+    // Placement and comfort simulation do not replace P07.03 device calibration.
+    internal static class SetupPreferenceControls
+    {
+        public static void Draw(ScreenRouter router)
+        {
+            if (router?.Current == null) return;
+            var selected = router.Current.Setup;
+            GUILayout.Label("Posture");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(selected.Posture == "Seated" ? "● Seated" : "Seated"))
+                router.UpdateSetupPreferences(selected.With(posture: "Seated"));
+            if (GUILayout.Button(selected.Posture == "Standing" ? "● Standing" : "Standing"))
+                router.UpdateSetupPreferences(selected.With(posture: "Standing"));
+            GUILayout.EndHorizontal();
+            selected = router.Current.Setup;
+            GUILayout.Label("Dominant hand");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(selected.DominantHand == "Left" ? "● Left" : "Left"))
+                router.UpdateSetupPreferences(selected.With(dominantHand: "Left"));
+            if (GUILayout.Button(selected.DominantHand == "Right" ? "● Right" : "Right"))
+                router.UpdateSetupPreferences(selected.With(dominantHand: "Right"));
+            GUILayout.EndHorizontal();
+            selected = router.Current.Setup;
+            GUILayout.Label($"Bench viewing height: {selected.BenchHeightMeters:0.00} m (0.65–1.05 m)");
+            var height = GUILayout.HorizontalSlider(selected.BenchHeightMeters, 0.65f, 1.05f);
+            if (!Mathf.Approximately(height, selected.BenchHeightMeters))
+                router.UpdateSetupPreferences(selected.With(benchHeightMeters: height));
+            selected = router.Current.Setup;
+            GUILayout.Label($"Text size: {selected.TextScale:0.00}×");
+            var scale = GUILayout.HorizontalSlider(selected.TextScale, 0.85f, 1.35f);
+            if (!Mathf.Approximately(scale, selected.TextScale))
+                router.UpdateSetupPreferences(selected.With(textScale: scale));
+            selected = router.Current.Setup;
+            var captions = GUILayout.Toggle(selected.CaptionsEnabled, "Captions / textual action hints");
+            if (captions != selected.CaptionsEnabled)
+                router.UpdateSetupPreferences(selected.With(captionsEnabled: captions));
+            selected = router.Current.Setup;
+            var motion = GUILayout.Toggle(selected.ReducedMotion, "Reduced UI motion");
+            if (motion != selected.ReducedMotion)
+                router.UpdateSetupPreferences(selected.With(reducedMotion: motion));
+            selected = router.Current.Setup;
+            var contrast = GUILayout.Toggle(selected.HighContrast, "High-contrast panel");
+            if (contrast != selected.HighContrast)
+                router.UpdateSetupPreferences(selected.With(highContrast: contrast));
+            selected = router.Current.Setup;
+            GUILayout.Label($"Audio volume: {selected.AudioVolume:0.00}");
+            var volume = GUILayout.HorizontalSlider(selected.AudioVolume, 0f, 1f);
+            if (!Mathf.Approximately(volume, selected.AudioVolume))
+                router.UpdateSetupPreferences(selected.With(audioVolume: volume));
+        }
+    }
+
     public sealed class PanelState
     {
         public ScreenId ScreenId { get; }
         public string Mode { get; }
+        public LabSetupPreferences Setup { get; }
         public string Workspace { get; }
         public string SelectedEntityId { get; }
         public string NativeRevision { get; }
@@ -30,13 +148,14 @@ namespace PharmaLabVR.UI
         public string HoldReason { get; }
         public IReadOnlyList<string> SupportedActions { get; }
 
-        internal PanelState(ScreenId screenId, string mode, string workspace, string selectedEntityId,
+        internal PanelState(ScreenId screenId, string mode, LabSetupPreferences setup, string workspace, string selectedEntityId,
             string nativeRevision, string modelIdentity, string observationValidity,
             string observationFreshness, string maturity, string saveState, bool dirty,
             string holdReason, string[] supportedActions)
         {
             ScreenId = screenId;
             Mode = mode;
+            Setup = setup;
             Workspace = workspace;
             SelectedEntityId = selectedEntityId;
             NativeRevision = nativeRevision;
@@ -87,6 +206,12 @@ namespace PharmaLabVR.UI
             Refresh();
         }
 
+        public void UpdateSetupPreferences(LabSetupPreferences preferences)
+        {
+            SetupPreferencesSelection.Select(preferences);
+            Refresh();
+        }
+
         public void SetWorkspace(string value)
         {
             if (value != "Student" && value != "Instructor" && value != "Researcher" && value != "Expert")
@@ -116,9 +241,19 @@ namespace PharmaLabVR.UI
             Refresh();
         }
 
-        private void OnEnable() { Attach(); Refresh(); }
-        private void OnDisable() => Detach();
+        private void OnEnable()
+        {
+            SetupPreferencesSelection.Changed += OnSetupChanged;
+            Attach();
+            Refresh();
+        }
+        private void OnDisable()
+        {
+            SetupPreferencesSelection.Changed -= OnSetupChanged;
+            Detach();
+        }
         private void OnDestroy() => Detach();
+        private void OnSetupChanged(LabSetupPreferences _) => Refresh();
 
         private void Attach()
         {
@@ -171,7 +306,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Settings => new[] { "Lab", "Save" },
                 _ => Array.Empty<string>()
             };
-            Current = new PanelState(screen, driver?.CurrentMode ?? pendingMode, workspace,
+            Current = new PanelState(screen, driver?.CurrentMode ?? pendingMode, SetupPreferencesSelection.Current, workspace,
                 selectedEntityId, nativeRevision, observation?.ModelId ?? string.Empty,
                 observation?.Support ?? "Unknown", observation?.Freshness ?? "Absent",
                 observation?.Maturity ?? string.Empty, saveState, dirty,

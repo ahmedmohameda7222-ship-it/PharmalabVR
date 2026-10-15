@@ -15,6 +15,12 @@ namespace PharmaLabVR.Input
         public ApplicationMode Mode { get; private set; }
         public event Action<ApplicationMode> ModeChanged;
 
+        private Camera desktopCamera;
+        private float baselineDesktopEyeHeight;
+        private bool desktopEyeHeightCaptured;
+
+        private void OnEnable() => SetupPreferencesSelection.Changed += ApplySetupPreferences;
+        private void OnDisable() => SetupPreferencesSelection.Changed -= ApplySetupPreferences;
         private void Start() => Apply(BootMenu.RequestedMode);
 
         public void Configure(GameObject desktop, GameObject xr, CoreDriver driver = null)
@@ -33,6 +39,23 @@ namespace PharmaLabVR.Input
             coreDriver?.SynchronizeInputSequences();
         }
 
+        private void ApplySetupPreferences(LabSetupPreferences setup)
+        {
+            AudioListener.volume = setup.AudioVolume;
+            if (desktopRig == null) return;
+            if (!desktopEyeHeightCaptured)
+            {
+                desktopCamera = desktopRig.GetComponentInChildren<Camera>(true);
+                if (desktopCamera == null) return;
+                baselineDesktopEyeHeight = desktopCamera.transform.localPosition.y;
+                desktopEyeHeightCaptured = true;
+            }
+            var position = desktopCamera.transform.localPosition;
+            position.y = baselineDesktopEyeHeight + (setup.BenchHeightMeters - 0.85f) +
+                (setup.Posture == "Seated" ? -0.25f : 0f);
+            desktopCamera.transform.localPosition = position;
+        }
+
         private void Apply(ApplicationMode mode)
         {
             if (desktopRig == null || xrRig == null) throw new InvalidOperationException("Both mode rigs must be assigned.");
@@ -43,6 +66,7 @@ namespace PharmaLabVR.Input
             foreach (var adapter in xrRig.GetComponentsInChildren<MonoBehaviour>(true))
                 if (adapter is ILabInputAdapter xrInputAdapter) xrInputAdapter.SetEnabled(mode == ApplicationMode.VirtualReality);
             Mode = mode;
+            ApplySetupPreferences(SetupPreferencesSelection.Current);
             ModeChanged?.Invoke(mode);
         }
     }

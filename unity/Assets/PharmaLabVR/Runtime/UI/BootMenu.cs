@@ -26,6 +26,7 @@ namespace PharmaLabVR.UI
 
         private ScreenRouter router;
         private LabPanelController panels;
+        private Vector2 setupScroll;
 
         private void Awake()
         {
@@ -70,26 +71,47 @@ namespace PharmaLabVR.UI
 
         private void OnGUI()
         {
-            var width = Mathf.Min(520f, Screen.width - 24f);
-            var area = new Rect(12f, 12f, width, 300f);
-            GUILayout.BeginArea(area, GUI.skin.box);
-            GUILayout.Label("PharmaLabVR — Research Foundation");
-            var screen = router?.Current?.ScreenId ?? ScreenId.Home;
-            if (screen == ScreenId.Home)
+            var area = new Rect(12f, 12f, Mathf.Max(1f, Mathf.Min(520f, Screen.width - 24f)),
+                Mathf.Max(1f, Screen.height - 24f));
+            var previousLabelSize = GUI.skin.label.fontSize;
+            var previousButtonSize = GUI.skin.button.fontSize;
+            try
             {
-                GUILayout.Label("Choose an interaction mode. Both modes use the same native laboratory state.");
-                if (GUILayout.Button("Desktop — mouse and keyboard", GUILayout.Height(56f))) panels?.Request(PanelAction.EnterDesktop);
-                if (GUILayout.Button("Virtual reality — OpenXR", GUILayout.Height(56f))) panels?.Request(PanelAction.EnterVR);
+                var scale = router?.Current?.Setup.TextScale ?? 1f;
+                GUI.skin.label.fontSize = Mathf.RoundToInt(14f * scale);
+                GUI.skin.button.fontSize = Mathf.RoundToInt(14f * scale);
+                GUILayout.BeginArea(area, GUI.skin.box);
+                setupScroll = GUILayout.BeginScrollView(setupScroll);
+                GUILayout.Label("PharmaLabVR — Research Foundation");
+                var screen = router?.Current?.ScreenId ?? ScreenId.Home;
+                if (screen == ScreenId.Home)
+                {
+                    GUILayout.Label("Choose an interaction mode. Both use the same native laboratory authority.");
+                    if (GUILayout.Button("Desktop — mouse and keyboard", GUILayout.Height(56f)))
+                        panels?.Request(PanelAction.EnterDesktop);
+                    if (GUILayout.Button("Virtual reality — OpenXR", GUILayout.Height(56f)))
+                        panels?.Request(PanelAction.EnterVR);
+                }
+                else if (screen == ScreenId.Setup)
+                {
+                    GUILayout.Label("Setup · " + router.Current.Mode);
+                    SetupPreferenceControls.Draw(router);
+                    GUILayout.Label("Physical reach and headset alignment still require device calibration.");
+                    if (GUILayout.Button("Enter lab", GUILayout.Height(56f)))
+                        panels?.Request(PanelAction.ConfirmSetup);
+                    if (GUILayout.Button("Back", GUILayout.Height(44f)))
+                        panels?.Request(PanelAction.Home);
+                }
+                GUILayout.Label("Research observations state support, freshness and maturity; not certified evidence.");
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
             }
-            else if (screen == ScreenId.Setup)
+            finally
             {
-                GUILayout.Label("Setup · " + router.Current.Mode);
-                GUILayout.Label("Check your posture, dominant hand, bench reach and text preference before entering the lab.");
-                if (GUILayout.Button("Enter lab", GUILayout.Height(56f))) panels?.Request(PanelAction.ConfirmSetup);
-                if (GUILayout.Button("Back", GUILayout.Height(44f))) panels?.Request(PanelAction.Home);
+                GUI.skin.label.fontSize = previousLabelSize;
+                GUI.skin.button.fontSize = previousButtonSize;
             }
-            GUILayout.Label("Scientific observations show their support, freshness, and maturity. Research output is not certified assessment evidence.");
-            GUILayout.EndArea();
         }
+
     }
 }
