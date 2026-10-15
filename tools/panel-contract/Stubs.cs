@@ -109,6 +109,16 @@ namespace PharmaLabVR.Session
         public int ReviewOpens { get; private set; }
         public bool CanReleaseTool { get; private set; } = true;
         public int ReleaseCalls { get; private set; }
+        public bool SnapPermitted { get; set; } = true;
+        public int SnapCalls { get; private set; }
+        public int LastSnapDirection { get; private set; }
+        public bool TrySnapTurn(int direction)
+        {
+            if (!SnapPermitted || (direction != -1 && direction != 1)) return false;
+            SnapCalls++;
+            LastSnapDirection = direction;
+            return true;
+        }
         public bool RecenterPermitted { get; set; } = true;
         public int RecenterCalls { get; private set; }
         public bool TryRecenterView() { if (!RecenterPermitted) return false; RecenterCalls++; return true; }

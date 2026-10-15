@@ -155,8 +155,30 @@ internal static class Program
             router.Configure(driver);
             Check(!panels.Request(PanelAction.Recenter),
                 "Running VR recenter falsely returned success");
+            Check(!panels.Request(PanelAction.SnapLeft),
+                "Unpaused VR falsely admitted a comfort snap turn");
+            Check(RecoveryAlignmentPolicy.SnapDegrees(-1) == -30 &&
+                RecoveryAlignmentPolicy.SnapDegrees(1) == 30,
+                "P07.03 snap turn must be exactly 30 degrees");
+            var rejectedInvalidSnap = false;
+            try { RecoveryAlignmentPolicy.SnapDegrees(0); }
+            catch (ArgumentOutOfRangeException) { rejectedInvalidSnap = true; }
+            Check(rejectedInvalidSnap, "Invalid snap input silently rotates the rig");
             Check(panels.Request(PanelAction.Pause), "Pause required before XR recenter");
             Check(router.Current.SupportedActions.Contains("Recenter"), "Paused VR missing Recenter");
+            Check(router.Current.SupportedActions.Contains("SnapLeft") &&
+                router.Current.SupportedActions.Contains("SnapRight"),
+                "Paused XR is missing explicit 30 degree turning controls");
+            session.SnapPermitted = false;
+            Check(!panels.Request(PanelAction.SnapRight),
+                "Refused snap turn falsely returned success");
+            session.SnapPermitted = true;
+            Check(panels.Request(PanelAction.SnapLeft) &&
+                panels.Request(PanelAction.SnapRight), "Valid snap turn rejected");
+            Check(session.SnapCalls == 2 && session.LastSnapDirection == 1,
+                "Snap turns must dispatch left -1 and right +1 exactly once");
+            Check(driver.IsNativePaused && driver.ContinueCalls == 1,
+                "Snap turns must not issue native Continue");
             session.RecenterPermitted = false;
             Check(!panels.Request(PanelAction.Recenter),
                 "Failed XR recenter falsely returned success");
