@@ -643,7 +643,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         if (context->holdActive &&
             (type == "CreateVessel" || type == "CreateSink" || type == "PrepareStock" ||
              type == "TransferFixed" || type == "DisposeContents" || type == "RinseTool" ||
-              type == "AspiratePipette" || type == "DispensePipette")) {
+              type == "AspiratePipette" || type == "DispensePipette" ||
+              type == "SwitchPipetteSource")) {
             context->recoveryReady = false;
             outcome = {false, "SessionHeld", "material operations require explicit recovery"};
         } else if (type == "CreateVessel") {
@@ -852,6 +853,41 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     }
                 }
             }
+        } else if (type == "SwitchPipetteSource") {
+            const auto toolId = payload.at("toolId").get<std::string>();
+            const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
+            const auto expectedInventoryRevision =
+                decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
+            const auto found = context->tools.find(toolId);
+            if (found == context->tools.end() ||
+                found->second.geometryProfileHash != plv::PipetteProfile::researchDefault().id) {
+                outcome = {false, "InvalidPipette", "registered metered pipette required"};
+            } else if (!expectedInventoryRevision ||
+                       *expectedInventoryRevision != found->second.inventoryRevision) {
+                outcome = {false, "StaleInventoryRevision", "pipette source selection changed"};
+            } else {
+                const auto stock = beforeCommand.vessels.find(sourceId);
+                if (stock == beforeCommand.vessels.end() ||
+                    sourceId == found->second.sourceInventoryId ||
+                    stock->second.inventory.referenceVolumeM3 <= 0.0) {
+                    outcome = {false, "InvalidPipetteSource",
+                               "attach a different existing prepared stock bottle"};
+                } else if (!revisions.is_object() || revisions.size() != 1U ||
+                           !revisions.contains(sourceId) ||
+                           revision(revisions, sourceId) != stock->second.materialRevision) {
+                    outcome = {false, "StaleRevision",
+                               "selected stock bottle has a stale material revision"};
+                } else {
+                    // Changing the stock source never disposes the old tip.
+                    // The retained residual mixes with the next aspiration;
+                    // conservation is entirely accounted by the material ledger.
+                    found->second.sourceInventoryId = sourceId;
+                    ++found->second.inventoryRevision;
+                    ++found->second.toolRevision;
+                    found->second.latestInput.reset();
+                    outcome = {true, "Accepted", ""};
+                }
+            }
         } else if (type == "DisposeContents") {
             const auto sourceId = payload.at("sourceInventoryId").get<std::string>();
             const auto sinkId = payload.at("sinkInventoryId").get<std::string>();
@@ -1040,7 +1076,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             (type == "CreateVessel" || type == "PrepareStock" || type == "TransferFixed" ||
              type == "PlaceTool" || type == "SetActuator" || type == "DisposeContents" ||
              type == "RinseTool" || type == "AspiratePipette" ||
-              type == "DispensePipette")) context->recoveryReady = false;
+              type == "DispensePipette" ||
+              type == "SwitchPipetteSource")) context->recoveryReady = false;
         if (outcome.accepted && type != "RestartCheckpoint") {
             const auto nowNs = static_cast<std::uint64_t>(
                 std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
