@@ -10,9 +10,21 @@ import re
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs"
 PROJECT = ROOT / "tools/panel-contract/PanelContract.csproj"
-GOOD = "if (driver.IsNativePaused && !driver.ContinueSession()) return false;"
-BAD = ("if (router.Current.ScreenId == ScreenId.Pause && "
-       "driver.IsNativePaused && !driver.ContinueSession()) return false;")
+MUTATIONS = [
+    (
+        "if (driver.IsNativePaused && !driver.ContinueSession()) return false;",
+        "if (router.Current.ScreenId == ScreenId.Pause && "
+        "driver.IsNativePaused && !driver.ContinueSession()) return false;",
+        "Review return failed to resume the paused authority",
+        "paused Review return"
+    ),
+    (
+        "case PanelAction.ConfirmSetup:\n                        return boot.ConfirmSetup();",
+        "case PanelAction.ConfirmSetup:\n                        boot.ConfirmSetup();\n                        return true;",
+        "Unavailable Boot falsely returned success",
+        "unavailable Boot scene confirmation"
+    ),
+]
 
 
 def exercise():
@@ -27,28 +39,28 @@ def exercise():
 
 def main():
     original = SOURCE.read_bytes()
-    text = original.decode("utf-8")
-    if text.count(GOOD) != 1:
-        raise RuntimeError("Expected native-pause guard not found exactly once")
-    try:
-        SOURCE.write_text(text.replace(GOOD, BAD), encoding="utf-8")
-        red = exercise()
-        output = red.stdout + red.stderr
-        if red.returncode == 0 or "Review return failed to resume the paused authority" not in output:
-            raise RuntimeError("Mutation was not detected: exit=" + str(red.returncode) +
-                               " output=" + output[-3000:])
-        print("RED verified: the old Review-return bypass failed the headless routing test " +
-              "(exit=" + str(red.returncode) + ")")
-    finally:
-        SOURCE.write_bytes(original)
+    content = original.decode("utf-8")
+    for good, bad, expected_diagnosis, label in MUTATIONS:
+        if content.count(good) != 1:
+            raise RuntimeError("Expected contract guard missing exactly once: " + label)
+        try:
+            SOURCE.write_text(content.replace(good, bad), encoding="utf-8")
+            red = exercise()
+            output = red.stdout + red.stderr
+            if red.returncode == 0 or expected_diagnosis not in output:
+                raise RuntimeError("Mutation not detected for " + label + "; exit=" +
+                                   str(red.returncode) + " output=" + output[-3000:])
+            print("RED verified: " + label + " (exit=" + str(red.returncode) + ")")
+        finally:
+            SOURCE.write_bytes(original)
     green = exercise()
     output = green.stdout + green.stderr
     if green.returncode != 0 or re.search(r"headless routing checks: ([1-9][0-9]*) passed", output) is None:
         raise RuntimeError("Restored GREEN failed: exit=" + str(green.returncode) +
                            " output=" + output[-3000:])
     if SOURCE.read_bytes() != original:
-        raise RuntimeError("Production source was not restored byte-for-byte")
-    print("GREEN verified: exact committed source restored; all headless routing assertions pass")
+        raise RuntimeError("Production source not restored byte-for-byte")
+    print("GREEN verified: exact source restored; all headless routing assertions pass")
 
 
 if __name__ == "__main__":
