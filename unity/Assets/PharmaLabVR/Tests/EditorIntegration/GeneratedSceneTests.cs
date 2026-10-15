@@ -371,6 +371,30 @@ namespace PharmaLabVR.Tests.EditorIntegration
             Assert.That(xr.isActiveAndEnabled, Is.False);
         }
 
+        [Test]
+        public void P07_02_XrDockedBuretteCannotBeGrabbedUntilExplicitRelease()
+        {
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var anchor = FindInActiveScene("BuretteDockAnchor");
+            var mount = tool.GetComponent<ToolMount>();
+            var grabbable = tool.GetComponent<XRGrabInteractable>();
+            var body = tool.GetComponent<Rigidbody>();
+            Assert.That(anchor, Is.Not.Null);
+            Assert.That(mount, Is.Not.Null);
+            Assert.That(mount.DockAnchor, Is.EqualTo(anchor.transform));
+            Assert.That(mount.TryMount(), Is.True);
+            Assert.That(mount.IsMounted, Is.True);
+            Assert.That(grabbable.enabled, Is.False, "A docked burette cannot be displaced by either hand.");
+            Assert.That(body.isKinematic, Is.True);
+            Assert.That(tool.transform.position, Is.EqualTo(anchor.transform.position));
+            Assert.That(mount.TryMount(), Is.False, "Duplicate mount must not reinitialize ownership.");
+            Assert.That(mount.ReleaseFromDock(), Is.True);
+            Assert.That(mount.IsMounted, Is.False);
+            Assert.That(grabbable.enabled, Is.True);
+            Assert.That(body.isKinematic, Is.False);
+            Assert.That(mount.ReleaseFromDock(), Is.False);
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
