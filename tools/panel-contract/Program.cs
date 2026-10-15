@@ -511,9 +511,12 @@ internal static class Program
             Check(interruptedSessions.SaveCalls == 0 && interruptedDriver.ContinueCalls == 0 &&
                   interruptedDriver.PauseCalls == 0,
                 "Settings Back issued Save, Pause, or Continue without user intent");
-            // Reproduce a hold that interrupts Settings, not just Hold -> Settings.
+            // Reproduce a hold interrupting a permitted Pause -> Settings
+            // navigation, not an unsupported direct Lab -> Settings shortcut.
+            Check(interruptedPanels.Request(PanelAction.Pause),
+                "Pause must be submitted before opening Settings from Lab");
             Check(interruptedPanels.Request(PanelAction.Settings),
-                "Lab Settings navigation unavailable");
+                "Paused Settings navigation unavailable");
             interruptedDriver.SetHold(true);
             Check(interruptedRouter.Current.ScreenId == ScreenId.Hold,
                 "Native Hold must supersede previously open Settings");
@@ -521,8 +524,11 @@ internal static class Program
                 "Interrupted Settings reopen failed");
             interruptedDriver.SetHold(false);
             Check(interruptedPanels.Request(PanelAction.Back) &&
-                  interruptedRouter.Current.ScreenId == ScreenId.Lab,
-                "Settings interrupted by recovered Hold returned to stale Hold/Settings");
+                  interruptedRouter.Current.ScreenId == ScreenId.Pause,
+                "Settings interrupted by recovered Hold lost the underlying Native Pause");
+            Check(interruptedDriver.IsNativePaused && interruptedDriver.ContinueCalls == 0 &&
+                  interruptedDriver.PauseCalls == 1,
+                "Hold recovery during Settings unpaused or re-paused Native authority");
 
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
