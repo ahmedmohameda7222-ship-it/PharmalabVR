@@ -397,6 +397,12 @@ namespace PharmaLabVR.UI
                 SetButton("Choose stock", !operating && driver.SourceNeedsPreparation);
                 SetButton("Prepare chosen stock", !operating && driver.SourceNeedsPreparation);
                 SetButton("Prepare rinse water", !operating && driver.SourceNeedsPreparation);
+                SetButton("Prepare reserve stock", !operating &&
+                    driver.SourceNeedsPreparation && !driver.ReserveStockPrepared);
+                SetButton("Switch pipette to reserve", !operating &&
+                    mayTransfer && driver.ReserveStockPrepared);
+                SetButton("Refill bottle 0.01 ml", !operating &&
+                    mayTransfer && driver.ReserveStockPrepared);
                 SetButton("Back to instruments", !operating);
                 SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
@@ -412,6 +418,7 @@ namespace PharmaLabVR.UI
                 foreach (var name in new[] { "Pipette aspirate 0.05 ml", "Pipette dispense 0.05 ml",
                     "Bottle pour 0.01 ml", "Rinse pipette", "Rinse bottle", "Stock setup",
                     "Choose stock", "Prepare chosen stock", "Prepare rinse water",
+                    "Prepare reserve stock", "Switch pipette to reserve", "Refill bottle 0.01 ml",
                     "Back to instruments", "Exit tools" }) SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
