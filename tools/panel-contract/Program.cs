@@ -54,6 +54,35 @@ internal static class Program
                 "A legitimately restored Native SessionLoad drop stayed invisible");
             Check(parcel.Landed("branch-1/8/burette-1"),
                 "Restored parcel must accept its own later landing exactly once");
+            // P03.01 repeated held snapshots are NOT repeated Native restores.
+            // A newer explicit restore of an older pre-landing checkpoint is.
+            var repeated = new DropParcelState();
+            Check(repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "Initial Native SessionLoad did not surface its pending parcel");
+            Check(repeated.Landed("branch-1/12/burette-1"),
+                "Landed receipt for restored parcel was ignored");
+            Check(!repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "Repeated SessionLoad snapshot erased landed-parcel suppression");
+            Check(!repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "Further held snapshots kept resurrecting an already landed parcel");
+            repeated.ResetSession(); // accepted, explicit second import while still held
+            Check(repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "Explicit same-reason Native session replacement lost saved pending parcel");
+            Check(repeated.Landed("branch-1/12/burette-1"),
+                "Second imported parcel did not acknowledge its actual landing");
+            Check(!repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "A post-replacement held snapshot incorrectly reset receipt ownership");
+            Check(repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "CheckpointRestart"),
+                "New Native checkpoint restore did not admit legitimately rewound parcel");
+            Check(repeated.Landed("branch-1/12/burette-1"),
+                "Checkpoint-restored pending drop did not land");
+            Check(!repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "CheckpointRestart"),
+                "Repeated CheckpointRestart snapshot resurrected an already landed drop");
+            Check(!repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, ""),
+                "Leaving a hold should not itself reset the parcel ledger view");
+            Check(repeated.ApplyNativeSnapshot("branch-1/12/burette-1", 5e-8, "SessionLoad"),
+                "New SessionLoad epoch after a running sample should reset the view");
+
             Check(parcel.ApplySnapshot("branch-1/9/burette-1", 5e-8),
                 "Next newly committed parcel was suppressed");
             Check(!parcel.ApplySnapshot("branch-1/9/burette-1", double.NaN),
