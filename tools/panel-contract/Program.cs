@@ -73,6 +73,18 @@ internal static class Program
             "A tool outside the receiver rim must not capture");
         Check(!CaptureAdmission.MayCapture(1.0, 1.0, 0.20, 0.001, 0.05, 0.15, 0.0),
             "An outlet above the researched maximum fall distance must not capture");
+        // P03.02: a 0.05 mL aspiration cannot dispense 0.05 mL
+        // while the Native research pipette retains 0.10 mL in its tip.
+        Check(!ResearchInstrumentPayloads.CanDispensePipette(5e-8, 5e-8),
+            "A single 0.05 mL aspiration must not imply deliverable material");
+        Check(!ResearchInstrumentPayloads.CanDispensePipette(1.49e-7, 5e-8),
+            "Aliquot above represented tip hold-up is still insufficient");
+        Check(ResearchInstrumentPayloads.CanDispensePipette(1.5e-7, 5e-8),
+            "Accumulated 0.15 mL must permit measured 0.05 mL dispense");
+        Check(!ResearchInstrumentPayloads.CanDispensePipette(double.NaN, 5e-8),
+            "Invalid Native tip snapshot cannot enable dispense");
+        Check(!ResearchInstrumentPayloads.CanDispensePipette(1e-4, double.PositiveInfinity),
+            "Unbounded requested delivery cannot enable dispense");
         var initial = SetupPreferencesSelection.Current;
         try
         {
