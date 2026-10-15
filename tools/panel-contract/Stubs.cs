@@ -119,6 +119,9 @@ namespace PharmaLabVR.Session
             return true;
         }
         public bool CanLoadSavedSession => LoadPermitted;
+        public bool DispensePermitted { get; set; } = true;
+        public bool CanPipetteDispense => DispensePermitted;
+        public double PipetteTipVolumeM3 => DispensePermitted ? 1.5e-7 : 5e-8;
         public string LastError => null;
         public int ParkCalls { get; private set; }
         public bool ParkToolAtDock()

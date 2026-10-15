@@ -8,6 +8,19 @@ namespace PharmaLabVR.Tools
     {
         public const string PipetteProfile = "pipette-25ml-research-v1";
         public const string BottleProfile = "bottle-100ml-research-v1";
+        // Mirrors the uncalibrated Native PipetteProfile research hold-up.
+        // This is only a presentation admission check; Native always decides.
+        public const double PipetteRetainedTipVolumeM3 = 1e-7;
+        public const double DefaultPipetteDispenseM3 = 5e-8;
+
+        public static bool CanDispensePipette(double nativeTipVolumeM3, double requestedM3)
+        {
+            if (double.IsNaN(nativeTipVolumeM3) || double.IsInfinity(nativeTipVolumeM3) ||
+                double.IsNaN(requestedM3) || double.IsInfinity(requestedM3))
+                return false;
+            return requestedM3 > 0.0 && nativeTipVolumeM3 >= 0.0 &&
+                   requestedM3 <= nativeTipVolumeM3 - PipetteRetainedTipVolumeM3;
+        }
 
         private static string Id(string value)
         {

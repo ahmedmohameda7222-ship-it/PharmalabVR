@@ -273,6 +273,13 @@ internal static class Program
                 "Bottle command panel routing did not reach measured pour and rinse");
             Check(session.MeteredCalls == 7,
                 "A tool command was silently swallowed or replayed more than once");
+            var meteredCount = session.MeteredCalls;
+            session.DispensePermitted = false;
+            Check(!panels.Request(PanelAction.PipetteDispense),
+                "Shared panel allowed a pipette dispense below Native retained-tip volume");
+            Check(session.MeteredCalls == meteredCount,
+                "Rejected pipette dispense was forwarded to Native.");
+            session.DispensePermitted = true;
             Check(panels.Request(PanelAction.PrepareReserveStock, "naoh"),
                 "Panel cannot prepare real reserve stock during setup");
             Check(panels.Request(PanelAction.PipetteSwitchReserve),

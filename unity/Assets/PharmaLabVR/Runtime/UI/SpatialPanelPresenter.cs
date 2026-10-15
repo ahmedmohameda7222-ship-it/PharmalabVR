@@ -389,7 +389,8 @@ namespace PharmaLabVR.UI
                 var validRinse = mayTransfer && driver.RinseWaterPrepared;
                 var operating = instrumentPage == 1;
                 SetButton("Pipette aspirate 0.05 ml", operating && mayTransfer);
-                SetButton("Pipette dispense 0.05 ml", operating && mayTransfer);
+                SetButton("Pipette dispense 0.05 ml", operating && mayTransfer &&
+                    panels != null && panels.CanPipetteDispense);
                 SetButton("Bottle pour 0.01 ml", operating && mayTransfer);
                 SetButton("Rinse pipette", operating && validRinse);
                 SetButton("Rinse bottle", operating && validRinse);
@@ -409,7 +410,10 @@ namespace PharmaLabVR.UI
                 if (stockLabel != null) stockLabel.text = "Stock: " + ResearchStockIds[researchStockIndex];
                 detail.text = driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
-                    "Measured research tools · Native inventory and residuals only.";
+                    "Measured Research tools. Pipette staged Native tip: " +
+                    ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
+                    " ml; 0.10 ml remains as research hold-up. " +
+                    "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))
                     detail.text += "\n" + panels.LastError;
             }

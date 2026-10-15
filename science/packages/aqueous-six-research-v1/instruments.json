@@ -18,7 +18,9 @@
     {
       "id": "pipette-25ml-research-v1",
       "capacityM3": 0.000025,
-      "calibration": "pending"
+      "calibration": "pending",
+      "retainedTipVolumeM3": 1e-7,
+      "residualCalibration": "synthetic-research-not-measured"
     },
     {
       "id": "receiver-250ml-research-v1",

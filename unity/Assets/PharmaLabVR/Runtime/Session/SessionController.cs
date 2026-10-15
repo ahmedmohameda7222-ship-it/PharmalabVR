@@ -290,8 +290,13 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Native Research instruments · no calibrated physical flow");
                 if (GUILayout.Button("Pipette: aspirate 0.05 ml", GUILayout.Height(32f)))
                     TryPipetteAspirate();
-                if (GUILayout.Button("Pipette: dispense 0.05 ml", GUILayout.Height(32f)))
-                    TryPipetteDispense();
+                GUILayout.Label($"Pipette tip: {PipetteTipVolumeM3 * 1e6:0.00} ml (Research retained tip 0.10 ml). " +
+                    "A 0.05 ml dispense requires at least 0.15 ml staged over repeated Native aspiration intents.");
+                var previousGuiEnabled = GUI.enabled;
+                GUI.enabled = previousGuiEnabled && CanPipetteDispense;
+                var requestedPipetteDispense = GUILayout.Button("Pipette: dispense 0.05 ml", GUILayout.Height(32f));
+                GUI.enabled = previousGuiEnabled;
+                if (requestedPipetteDispense) TryPipetteDispense();
                 if (GUILayout.Button("Bottle: pour 0.01 ml", GUILayout.Height(32f)))
                     TryBottleMeasuredPour();
                 if (driver.ReserveStockPrepared)
@@ -394,8 +399,35 @@ namespace PharmaLabVR.Session
             }
         }
 
+        public double PipetteTipVolumeM3
+        {
+            get
+            {
+                if (driver?.Session == null) return 0.0;
+                try { return ResearchPipette.RepresentedTipVolumeM3; }
+                catch (InvalidOperationException) { return 0.0; }
+            }
+        }
+
+        public bool CanPipetteDispense =>
+            driver?.Session != null && !driver.SourceNeedsPreparation &&
+            !driver.IsNativePaused && !driver.IsTimeHeld &&
+            ResearchInstrumentPayloads.CanDispensePipette(PipetteTipVolumeM3,
+                ResearchInstrumentPayloads.DefaultPipetteDispenseM3);
+
         public bool TryPipetteAspirate() => TryResearchCommand(() => ResearchPipette.Aspirate(5e-8));
-        public bool TryPipetteDispense() => TryResearchCommand(() => ResearchPipette.Dispense(5e-8));
+
+        public bool TryPipetteDispense()
+        {
+            if (!CanPipetteDispense)
+            {
+                LastError = "Pipette retained tip is 0.10 ml (Research). " +
+                    "Aspirate additional real prepared stock before dispensing 0.05 ml.";
+                return false;
+            }
+            return TryResearchCommand(() => ResearchPipette.Dispense(
+                ResearchInstrumentPayloads.DefaultPipetteDispenseM3));
+        }
         public bool TryBottleMeasuredPour() => TryResearchCommand(() => ResearchBottle.Pour(1e-8));
         public bool TryPipetteWaterRinse() => TryResearchCommand(() => ResearchPipette.Rinse(1e-8));
         public bool TryBottleWaterRinse() => TryResearchCommand(() => ResearchBottle.Rinse(1e-8));

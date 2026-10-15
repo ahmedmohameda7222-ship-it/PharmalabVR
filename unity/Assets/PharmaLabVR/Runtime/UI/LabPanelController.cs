@@ -18,6 +18,8 @@ namespace PharmaLabVR.UI
         public bool CanReleaseTool => sessions?.CanReleaseTool == true;
         public bool CanParkTool => sessions?.CanParkTool == true;
         public bool CanLoadSavedSession => sessions?.CanLoadSavedSession == true;
+        public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
+        public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
         public string LastError => sessions?.LastError;
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
@@ -74,7 +76,7 @@ namespace PharmaLabVR.UI
                 case PanelAction.PipetteAspirate:
                     return sessions.TryPipetteAspirate();
                 case PanelAction.PipetteDispense:
-                    return sessions.TryPipetteDispense();
+                    return sessions.CanPipetteDispense && sessions.TryPipetteDispense();
                 case PanelAction.PipetteRinse:
                     return sessions.TryPipetteWaterRinse();
                 case PanelAction.BottlePour:
