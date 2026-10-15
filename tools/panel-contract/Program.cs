@@ -128,6 +128,20 @@ internal static class Program
             "Blank inventory destinations cannot be admitted.");
         Check(CaptureTargetSelection.ResolveUnique(new[] { "beaker-b", "receiver" }) == null,
             "Reversing candidate enumeration must not alter ambiguous rejection.");
+        // P03.03/P07.03: return-to-dock requires a real nearby pose,
+        // not just a nearby but horizontal/invalid body.
+        Check(ToolMountAdmission.CanMount(0.05, 8.0, false),
+            "Near, aligned released instrument should mount.");
+        Check(!ToolMountAdmission.CanMount(0.05, 90.0, false),
+            "Sideways research tool must not snap through bench into dock.");
+        Check(!ToolMountAdmission.CanMount(0.18, 0.0, false),
+            "Out-of-reach tool may not teleport to dock.");
+        Check(!ToolMountAdmission.CanMount(0.05, 0.0, true),
+            "Tool gripped by either hand cannot be silently mounted.");
+        Check(!ToolMountAdmission.CanMount(double.NaN, 0.0, false),
+            "Invalid world position cannot enter dock.");
+        Check(!ToolMountAdmission.CanMount(0.02, double.NaN, false),
+            "Invalid orientation cannot enter dock.");
         var initial = SetupPreferencesSelection.Current;
         try
         {
