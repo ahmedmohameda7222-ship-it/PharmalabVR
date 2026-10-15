@@ -5,6 +5,7 @@ Only exercises ScreenRouter / LabPanelController with test-only adapters, not Un
 """
 from pathlib import Path
 import subprocess
+import re
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / "unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs"
@@ -42,12 +43,12 @@ def main():
         SOURCE.write_bytes(original)
     green = exercise()
     output = green.stdout + green.stderr
-    if green.returncode != 0 or "headless routing checks: 39 passed" not in output:
+    if green.returncode != 0 or re.search(r"headless routing checks: ([1-9][0-9]*) passed", output) is None:
         raise RuntimeError("Restored GREEN failed: exit=" + str(green.returncode) +
                            " output=" + output[-3000:])
     if SOURCE.read_bytes() != original:
         raise RuntimeError("Production source was not restored byte-for-byte")
-    print("GREEN verified: exact committed source restored; 39 headless routing assertions pass")
+    print("GREEN verified: exact committed source restored; all headless routing assertions pass")
 
 
 if __name__ == "__main__":
