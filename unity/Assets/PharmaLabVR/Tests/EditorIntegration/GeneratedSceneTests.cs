@@ -463,6 +463,35 @@ namespace PharmaLabVR.Tests.EditorIntegration
             finally { rig.SetActive(originalActive); }
         }
 
+        [Test]
+        public void P07_03_ReturnToolToDockRequiresPhysicalProximityAndFreeGrab()
+        {
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var dock = tool.GetComponent<ToolMount>();
+            var rigidbody = tool.GetComponent<Rigidbody>();
+            var grab = tool.GetComponent<XRGrabInteractable>();
+            Assert.That(dock, Is.Not.Null);
+            Assert.That(dock.IsMounted, Is.False);
+            var original = tool.transform.position;
+            var oldKinematic = rigidbody.isKinematic;
+            try
+            {
+                tool.transform.position = original + Vector3.right * 0.6f;
+                Assert.That(dock.TryMount(), Is.False,
+                    "A free tool must never teleport across the room into the dock.");
+                Assert.That(tool.transform.position.x, Is.EqualTo(original.x + 0.6f).Within(1e-5f));
+                Assert.That(rigidbody.isKinematic, Is.EqualTo(oldKinematic));
+                Assert.That(grab.enabled, Is.True);
+                tool.transform.position = original + Vector3.right * 0.06f;
+                Assert.That(dock.TryMount(), Is.True);
+                Assert.That(dock.IsMounted, Is.True);
+                Assert.That(tool.transform.position, Is.EqualTo(dock.DockAnchor.position));
+                Assert.That(grab.enabled, Is.False);
+                Assert.That(dock.ReleaseFromDock(), Is.True);
+            }
+            finally { tool.transform.position = original; }
+        }
+
         private static GameObject FindInActiveScene(string name)
         {
             return SceneManager.GetActiveScene()
