@@ -44,6 +44,27 @@ internal static class Program
             catch (ArgumentException) { invalidRejected = true; }
             Check(invalidRejected, "Invalid posture was admitted");
 
+
+            // P07.01: startup refuses a VR journey when XR is absent or the scene
+            // cannot load, but Desktop remains available without a headset.
+            var desktopAvailable = new BootLaunchAvailability(false, false, false, true);
+            Check(desktopAvailable.CanEnter(ApplicationMode.Desktop), "Headset absence blocked Desktop");
+            Check(!desktopAvailable.CanEnter(ApplicationMode.VirtualReality),
+                "Missing XR loader / headset falsely admitted VR");
+            var loaderOnly = new BootLaunchAvailability(true, true, false, true);
+            Check(!loaderOnly.CanEnter(ApplicationMode.VirtualReality),
+                "A loaded XR runtime without a present headset falsely admitted VR");
+            var headsetReady = new BootLaunchAvailability(true, true, true, true);
+            Check(headsetReady.CanEnter(ApplicationMode.VirtualReality), "Ready XR denied");
+            Check(!new BootLaunchAvailability(true, true, true, false)
+                    .CanEnter(ApplicationMode.VirtualReality), "Missing Lab scene falsely admitted VR");
+            Check(!new BootLaunchAvailability(false, false, false, false)
+                    .CanEnter(ApplicationMode.Desktop), "Missing Lab scene falsely admitted Desktop");
+            Check(loaderOnly.UnavailableReason(ApplicationMode.VirtualReality).Contains("headset"),
+                "Boot must explain why XR entry is unavailable");
+            Check(!desktopAvailable.UnavailableReason(ApplicationMode.Desktop).Contains("unavailable"),
+                "Desktop ready status was misleading");
+
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);

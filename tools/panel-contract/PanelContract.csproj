@@ -11,6 +11,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Stubs.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScreenRouter.cs" Link="ScreenRouter.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/BootLaunchAvailability.cs" Link="BootLaunchAvailability.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs" Link="LabPanelController.cs" />
   </ItemGroup>
 </Project>
