@@ -165,7 +165,9 @@ namespace PharmaLabVR.Editor
             }
             var liquidPresenter = root.AddComponent<LiquidPresenter>();
             liquidPresenter.Configure(liquid.transform, 0.00005, 0.48f, -0.24f);
-            InstrumentMeshBuilder.BuildBuretteGraduations(root.transform, 0.22f, 0.44f, 0.02f);
+            var graduationInk = CreateMaterial("GraduationInk", new Color(0.07f, 0.11f, 0.13f), 0f, 0.10f);
+            InstrumentMeshBuilder.BuildBuretteGraduations(root.transform, 0.22f, 0.44f, 0.02f,
+                graduationInk);
             var valve = root.AddComponent<ValveActuator>();
             root.AddComponent<ToolPresenter>().Configure("burette-50ml-research-v1", liquidPresenter, valve);
             root.AddComponent<Rigidbody>().isKinematic = false;
