@@ -115,7 +115,9 @@ namespace PharmaLabVR.UI
         private void Update(Func<LabSetupPreferences, LabSetupPreferences> change)
         {
             if (router?.Current?.ScreenId != ScreenId.Setup) return;
+            var oldHand = router.Current.Setup.DominantHand;
             router.UpdateSetupPreferences(change(router.Current.Setup));
+            if (oldHand != router.Current.Setup.DominantHand) placed = false;
         }
 
         private void Set(string name, bool enabled, float y)
@@ -148,7 +150,6 @@ namespace PharmaLabVR.UI
             string[] first = { "Seated", "Standing", "Left hand", "Right hand" };
             string[] second = { "Bench lower", "Bench higher", "Text larger", "Text smaller" };
             string[] third = { "Captions", "Reduced motion", "High contrast", "Audio mute" };
-            var choices = page == 0 ? first : page == 1 ? second : third;
             foreach (var item in first) Set(item, !home && page == 0, 78f - Array.IndexOf(first, item) * 56f);
             foreach (var item in second) Set(item, !home && page == 1, 78f - Array.IndexOf(second, item) * 56f);
             foreach (var item in third) Set(item, !home && page == 2, 78f - Array.IndexOf(third, item) * 56f);
@@ -180,7 +181,12 @@ namespace PharmaLabVR.UI
                 xrCamera.enabled = enable;
                 var audio = xrCamera.GetComponent<AudioListener>();
                 if (audio != null) audio.enabled = enable;
-                if (desktopCamera != null) desktopCamera.enabled = !enable;
+                if (desktopCamera != null)
+                {
+                    desktopCamera.enabled = !enable;
+                    var desktopAudio = desktopCamera.GetComponent<AudioListener>();
+                    if (desktopAudio != null) desktopAudio.enabled = !enable;
+                }
                 placed = false;
                 if (enable) Present(router.Current);
             }

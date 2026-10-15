@@ -56,6 +56,7 @@ namespace PharmaLabVR.Editor
             var menu = root.AddComponent<BootMenu>();
             var camera = new GameObject("BootCamera");
             camera.AddComponent<Camera>();
+            camera.AddComponent<AudioListener>();
             camera.transform.SetParent(root.transform, false);
             var rig = new GameObject("BootXRPlayerRig");
             rig.transform.SetParent(root.transform, false);
@@ -198,6 +199,7 @@ namespace PharmaLabVR.Editor
             desktopRig.transform.SetParent(lab.transform);
             var camera = new GameObject("DesktopCamera");
             camera.AddComponent<Camera>();
+            camera.AddComponent<AudioListener>();
             camera.AddComponent<DesktopCameraController>();
             camera.transform.SetParent(desktopRig.transform);
             camera.transform.localPosition = new Vector3(0f, 1.25f, -0.8f);
