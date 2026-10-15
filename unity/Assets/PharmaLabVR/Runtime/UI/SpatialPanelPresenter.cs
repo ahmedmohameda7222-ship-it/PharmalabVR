@@ -25,6 +25,7 @@ namespace PharmaLabVR.UI
         private int settingsPage;
         private int instrumentPage;
         private int researchStockIndex;
+        private int researchConcentrationIndex = 2;
         private static readonly string[] ResearchStockIds =
         {
             "nacl", "hcl", "naoh", "acetic-acid", "sodium-acetate", "water"
@@ -138,11 +139,19 @@ namespace PharmaLabVR.UI
             AddInstrumentButton("Choose stock", 30f,
                 () => researchStockIndex = (researchStockIndex + 1) % ResearchStockIds.Length);
             AddInstrumentButton("Prepare chosen stock", -26f,
-                () => panels?.Request(PanelAction.PrepareResearchStock, ResearchStockIds[researchStockIndex]));
+                () => panels?.Request(PanelAction.PrepareResearchStock,
+                    ResearchStockIds[researchStockIndex], SelectedResearchMolarity()));
             AddInstrumentButton("Prepare rinse water", -82f,
                 () => panels?.Request(PanelAction.PrepareRinseWater));
             AddInstrumentButton("Prepare reserve stock", -138f,
-                () => panels?.Request(PanelAction.PrepareReserveStock, ResearchStockIds[researchStockIndex]));
+                () => panels?.Request(PanelAction.PrepareReserveStock,
+                    ResearchStockIds[researchStockIndex], SelectedResearchMolarity()));
+            AddInstrumentButton("Choose concentration", -194f, () =>
+            {
+                var count = driver?.ResearchConcentrations?.Count ?? 0;
+                if (count > 0) researchConcentrationIndex =
+                    (researchConcentrationIndex + 1) % count;
+            });
             AddInstrumentButton("Switch pipette to reserve", 30f,
                 () => panels?.Request(PanelAction.PipetteSwitchReserve));
             AddInstrumentButton("Refill bottle 0.01 ml", -26f,
@@ -217,6 +226,10 @@ namespace PharmaLabVR.UI
             label.text = name;
             buttons.Add(name, button);
         }
+
+        private double SelectedResearchMolarity() =>
+            ResearchConcentrationSelection.Resolve(driver.ResearchConcentrations,
+                researchConcentrationIndex, ResearchStockIds[researchStockIndex]);
 
         private void AddInstrumentButton(string name, float y, Action action)
         {
@@ -400,6 +413,8 @@ namespace PharmaLabVR.UI
                 SetButton("Prepare rinse water", !operating && driver.SourceNeedsPreparation);
                 SetButton("Prepare reserve stock", !operating &&
                     driver.SourceNeedsPreparation && !driver.ReserveStockPrepared);
+                SetButton("Choose concentration", !operating &&
+                    driver.SourceNeedsPreparation && driver.ResearchConcentrations.Count > 0);
                 SetButton("Switch pipette to reserve", !operating &&
                     mayTransfer && driver.ReserveStockPrepared);
                 SetButton("Refill bottle 0.01 ml", !operating &&
@@ -408,6 +423,13 @@ namespace PharmaLabVR.UI
                 SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
                 if (stockLabel != null) stockLabel.text = "Stock: " + ResearchStockIds[researchStockIndex];
+                var concentrationLabel = buttons["Choose concentration"].GetComponentInChildren<Text>(true);
+                if (concentrationLabel != null && driver.ResearchConcentrations.Count > 0)
+                {
+                    var concentration = SelectedResearchMolarity();
+                    concentrationLabel.text = "Concentration: " +
+                        concentration.ToString("0.00") + " mol/L";
+                }
                 detail.text = driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
                     "Measured Research tools. Pipette staged Native tip: " +
@@ -422,7 +444,8 @@ namespace PharmaLabVR.UI
                 foreach (var name in new[] { "Pipette aspirate 0.05 ml", "Pipette dispense 0.05 ml",
                     "Bottle pour 0.01 ml", "Rinse pipette", "Rinse bottle", "Stock setup",
                     "Choose stock", "Prepare chosen stock", "Prepare rinse water",
-                    "Prepare reserve stock", "Switch pipette to reserve", "Refill bottle 0.01 ml",
+                    "Prepare reserve stock", "Choose concentration",
+                    "Switch pipette to reserve", "Refill bottle 0.01 ml",
                     "Back to instruments", "Exit tools" }) SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));

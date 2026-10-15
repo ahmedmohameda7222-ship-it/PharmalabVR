@@ -35,7 +35,7 @@ namespace PharmaLabVR.UI
             sessions = sessionController;
         }
 
-        public bool Request(PanelAction action, string entityId = null)
+        public bool Request(PanelAction action, string entityId = null, double? concentrationMolPerL = null)
         {
             if (boot != null)
             {
@@ -63,10 +63,12 @@ namespace PharmaLabVR.UI
             {
                 case PanelAction.PrepareResearchStock:
                     return !string.IsNullOrEmpty(entityId) &&
-                        sessions.SelectStock(entityId, entityId == "water" ? 0.0 : 0.1);
+                        sessions.SelectStock(entityId, entityId == "water" ? 0.0 :
+                            concentrationMolPerL ?? 0.1);
                 case PanelAction.PrepareReserveStock:
                     return !string.IsNullOrEmpty(entityId) &&
-                        sessions.TryPrepareResearchReserveStock(entityId, entityId == "water" ? 0.0 : 0.1);
+                        sessions.TryPrepareResearchReserveStock(entityId, entityId == "water" ? 0.0 :
+                            concentrationMolPerL ?? 0.1);
                 case PanelAction.PipetteSwitchReserve:
                     return sessions.TryPipetteSwitchReserve();
                 case PanelAction.BottleRefill:

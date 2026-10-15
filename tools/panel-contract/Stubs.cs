@@ -154,10 +154,12 @@ namespace PharmaLabVR.Session
         }
         public int MeteredCalls { get; private set; }
         public string PreparedStockId { get; private set; }
+        public double PreparedConcentration { get; private set; }
         public bool SelectStock(string stock, double concentration)
         {
             if (string.IsNullOrEmpty(stock)) return false;
             PreparedStockId = stock;
+            PreparedConcentration = concentration;
             MeteredCalls++;
             return true;
         }
@@ -172,6 +174,7 @@ namespace PharmaLabVR.Session
         public bool TryPrepareResearchReserveStock(string stockId, double concentration)
         {
             if (string.IsNullOrEmpty(stockId)) return false;
+            PreparedConcentration = concentration;
             MeteredCalls++;
             return true;
         }
