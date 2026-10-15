@@ -14,7 +14,7 @@ PipetteProfile PipetteProfile::researchDefault() {
 }
 
 BottleProfile BottleProfile::researchDefault() {
-    return {"bottle-100ml-research-v1", 1e-4};
+    return {"bottle-100ml-research-v1", 1e-4, 2e-8};
 }
 
 MaterialState ToolParcelState::rinse(const MaterialState& rinseParcel, double residualVolumeM3) {

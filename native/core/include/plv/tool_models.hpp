@@ -32,6 +32,7 @@ struct PipetteProfile {
 struct BottleProfile {
     std::string id;
     double capacityM3 = 1e-4; // Research 100 mL; physical calibration pending.
+    double retainedFilmVolumeM3 = 2e-8; // Synthetic 20 µL film; no experimental calibration.
     static BottleProfile researchDefault();
 };
 

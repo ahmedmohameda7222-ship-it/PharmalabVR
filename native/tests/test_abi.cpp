@@ -1912,7 +1912,7 @@ TEST_CASE("P03_02 registered 100ml stock bottle pours through revised Native inv
         const auto after = json::parse(read_text(handle));
         CHECK(after["tools"][0]["geometryProfileHash"] == "bottle-100ml-research-v1");
         CHECK(after["vessels"][0]["inventory"]["researchAdditiveVolumeM3"].get<double>() ==
-              doctest::Approx(1.98e-6).epsilon(1e-10));
+              doctest::Approx(1.96e-6).epsilon(1e-10));
         CHECK(after["vessels"][1]["inventory"]["chlorideMol"].get<double>() > 0.0);
         CHECK(after["tools"][0]["inventoryRevision"] == "1");
         CHECK(after["materialLedger"] == original["materialLedger"]);

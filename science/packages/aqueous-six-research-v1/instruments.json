@@ -32,7 +32,11 @@
         "model": "revision-bound-measured-aliquot",
         "flowCalibration": "not-validated"
       },
-      "residual": "retained-in-source-inventory; separate cleaning pending",
+      "residual": {
+        "model": "represented-mixed-film",
+        "retainedFilmVolumeM3": 2e-8,
+        "calibration": "synthetic-research-not-validated"
+      },
       "calibration": "pending"
     }
   ]

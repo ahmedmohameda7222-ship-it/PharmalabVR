@@ -754,14 +754,14 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             const auto expectedInventoryRevision =
                 decimalSequence(payload.at("expectedInventoryRevision").get<std::string>());
             const auto tool = context->tools.find(toolId);
-            if (tool == context->tools.end() ||
-                tool->second.geometryProfileHash != plv::BottleProfile::researchDefault().id) {
+            const auto profile = plv::BottleProfile::researchDefault();
+            if (tool == context->tools.end() || tool->second.geometryProfileHash != profile.id) {
                 outcome = {false, "InvalidBottle", "registered stock bottle required"};
             } else if (!expectedInventoryRevision ||
                        *expectedInventoryRevision != tool->second.inventoryRevision) {
                 outcome = {false, "StaleInventoryRevision", "stock bottle inventory revision changed"};
             } else if (!std::isfinite(quantityM3) || quantityM3 <= 0.0 ||
-                       quantityM3 > plv::BottleProfile::researchDefault().capacityM3) {
+                       quantityM3 > profile.capacityM3) {
                 outcome = {false, "InvalidBottlePour", "invalid measured research bottle aliquot"};
             } else {
                 const auto sourceId = tool->second.sourceInventoryId;
@@ -776,22 +776,50 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                            revision(revisions, destinationId) != receiver->second.materialRevision) {
                     outcome = {false, "StaleRevision", "stock bottle and receiver revisions required"};
                 } else {
-                    auto staged = context->executor;
-                    outcome = staged.transferFixed(
-                        {sourceId, plv::TransferQuantityBasis::LiquidVolumeM3, quantityM3,
-                         {{destinationId, 1.0}}, tool->second.overflowSinkId},
-                        {{sourceId, source->second.materialRevision},
-                         {destinationId, receiver->second.materialRevision}});
-                    if (outcome.accepted) {
-                        const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
-                        const auto nowNs = static_cast<std::uint64_t>(
-                            std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
-                        outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
-                        if (outcome.accepted) {
-                            context->executor = std::move(staged);
-                            recordTransportProposal(*context, gross, nowNs);
-                            ++tool->second.inventoryRevision;
-                            tool->second.latestInput.reset();
+                    // The calibrated-delivery claim is Q at the receiver, not Q
+                    // debited from the stock. Filling the bottle's first represented
+                    // film requires an additional real source debit. Old film and
+                    // fresh stock mix; the same bounded film remains in the tool.
+                    const double existingFilm = tool->second.tipInventory.referenceVolumeM3;
+                    const double filmNeeded = std::max(0.0, profile.retainedFilmVolumeM3 - existingFilm);
+                    const double debitM3 = quantityM3 + filmNeeded;
+                    if (source->second.inventory.referenceVolumeM3 < debitM3) {
+                        outcome = {false, "InsufficientSource", "bottle stock cannot cover pour and film"};
+                    } else if (quantityM3 >
+                               receiver->second.capacityM3 - receiver->second.inventory.referenceVolumeM3) {
+                        outcome = {false, "ReceiverFull", "receiver lacks measured-pour capacity"};
+                    } else {
+                        auto staged = context->executor;
+                        auto state = staged.snapshot();
+                        auto& sourceState = state.vessels.at(sourceId);
+                        auto& receiverState = state.vessels.at(destinationId);
+                        const auto stockParcel = sourceState.inventory.fraction(debitM3);
+                        auto mixed = stockParcel;
+                        mixed.add(tool->second.tipInventory);
+                        const auto retained = mixed.fraction(profile.retainedFilmVolumeM3);
+                        auto delivered = mixed;
+                        if (!sourceState.inventory.subtract(stockParcel) ||
+                            !delivered.subtract(retained)) {
+                            outcome = {false, "BottleLedgerError", "failed to stage represented bottle film"};
+                        } else {
+                            receiverState.inventory.add(delivered);
+                            ++sourceState.materialRevision;
+                            ++receiverState.materialRevision;
+                            ++state.eventSequence;
+                            outcome = staged.restore(state);
+                            if (outcome.accepted) {
+                                const auto gross = fixedTransportGross(beforeCommand, staged.snapshot());
+                                const auto nowNs = static_cast<std::uint64_t>(
+                                    std::max(0.0, beforeCommand.simulationTimeS) * 1'000'000'000.0);
+                                outcome = admitTransportProposal(*context, beforeCommand, gross, nowNs);
+                                if (outcome.accepted) {
+                                    context->executor = std::move(staged);
+                                    recordTransportProposal(*context, gross, nowNs);
+                                    tool->second.tipInventory = retained;
+                                    ++tool->second.inventoryRevision;
+                                    tool->second.latestInput.reset();
+                                }
+                            }
                         }
                     }
                 }
@@ -978,8 +1006,6 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
             if (found == context->tools.end() || !expectedInventoryRevision ||
                 *expectedInventoryRevision != found->second.inventoryRevision) {
                 outcome = {false, "StaleInventoryRevision", "tool rinse inventory revision changed"};
-            } else if (found->second.geometryProfileHash == plv::BottleProfile::researchDefault().id) {
-                outcome = {false, "BottleRinseNotImplemented", "stock bottle cleaning requires a validated protocol"};
             } else if (!basis) {
                 outcome = {false, "InvalidRinse", "unsupported rinse quantity basis"};
             } else if (found->second.inFlightInventory.referenceVolumeM3 > 0.0) {
@@ -1011,6 +1037,8 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     const double retainedCapacity =
                         found->second.geometryProfileHash == plv::PipetteProfile::researchDefault().id ?
                             plv::PipetteProfile::researchDefault().retainedTipVolumeM3 :
+                        found->second.geometryProfileHash == plv::BottleProfile::researchDefault().id ?
+                            plv::BottleProfile::researchDefault().retainedFilmVolumeM3 :
                             plv::BuretteProfile::researchDefault().dropReferenceVolumeM3;
                     const auto retained = combined.fraction(
                         std::min(retainedCapacity, combined.referenceVolumeM3));
@@ -1588,7 +1616,9 @@ std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* ne
                     ownerSnapshot.vessels.count(sourceId) == 0U || ownerSnapshot.sinks.count(sinkId) == 0U ||
                     (profile == plv::BottleProfile::researchDefault().id &&
                      (ownerSnapshot.vessels.at(sourceId).capacityM3 > plv::BottleProfile::researchDefault().capacityM3 ||
-                      tip.referenceVolumeM3 > 0.0 || residual.referenceVolumeM3 > 0.0 ||
+                      tip.referenceVolumeM3 >
+                          plv::BottleProfile::researchDefault().retainedFilmVolumeM3 + 1e-14 ||
+                      residual.referenceVolumeM3 > 0.0 ||
                       inFlight.referenceVolumeM3 > 0.0 || actuator > 0.0)) ||
                     !result.emplace(id, Context::ToolState{
                         sourceId, sinkId, frame, profile, *profileRevision, *toolRevision, *actuatorRevision,
