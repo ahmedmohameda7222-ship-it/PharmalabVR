@@ -776,6 +776,14 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                 outcome = {false, "InvalidRinse", "unsupported rinse quantity basis"};
             } else if (found->second.inFlightInventory.referenceVolumeM3 > 0.0) {
                 outcome = {false, "InFlightOutstanding", "land the in-flight parcel before rinsing"};
+            } else if (const auto source = beforeCommand.vessels.find(sourceId);
+                       source != beforeCommand.vessels.end() &&
+                       (source->second.inventory.sodiumMol > 0.0 ||
+                        source->second.inventory.chlorideMol > 0.0 ||
+                        source->second.inventory.acetateMol > 0.0)) {
+                // A rinse must consume actual water inventory. Transferring an analyte
+                // stock through the rinse route misrepresents cleaning as a wash.
+                outcome = {false, "InvalidRinseSource", "rinse requires analyte-free water inventory"};
             } else {
                 auto staged = context->executor;
                 const auto beforeRinse = staged.snapshot();
