@@ -15,7 +15,7 @@
 
 Added `RecoveryAlignmentPolicy.cs` as pure runtime admission: VR mode, Native Pause or time Hold, tracked head and parked/docked tool are ALL necessary. `ScreenRouter` surfaces explicit Recenter on VR Pause/Hold; `LabPanelController` routes it into `SessionController.TryRecenterView`. That method rechecks actual CoreDriver state, XR head tracking and `ToolMount.IsMounted` before delegating to `RecoveryAlignment` attached to the generated Lab XR rig. Camera XZ is placed approximately 0.78 m horizontally from the docked instrument; tracked eye height, lab instrument world transform and transform scales stay unchanged. The method does not call `CoreSession.Submit`, `Continue`, `Save` or any scientific recomputation. Native Core alone judges fresh neutral baselines after recenter.
 
-**Limits:** The physical reach distance is a research comfort starting value, not a device-calibrated result. No 30° snap turn, recovery after session load, reach tray or body-to-world acceptance yet. Active/undocked tool is denied rather than force-dropped. Existing source has no Unity-generated scene/model compilation evidence at this SHA.
+**Limits:** The physical reach distance is a research comfort starting value, not a device-calibrated result. 30° snap-turn source is now implemented; recovery after session load, reach tray and device-calibrated comfort remain open. Active/undocked tool is denied rather than force-dropped. Existing source has no Unity-generated scene/model compilation evidence at this SHA.
 
 ## RED/GREEN evidence
 
@@ -27,4 +27,16 @@ Added `RecoveryAlignmentPolicy.cs` as pure runtime admission: VR mode, Native Pa
 
 ## Next continuation
 
-Keep P07.03 Open and official P06.02 nextTask per existing ledger. Next development-first code increment should implement explicit, bounded snap turn and parked-tool recovery after load, then P03.01 final drop and P03.02 distinct stock/pipette models without inventing science. Leave all 66 task Unity checks at `NOT_RUN` until the coordinated Unity 6000.3.25f1 Windows/XR campaign. **15 VerifiedLocal / 51 Open, G-R1 Open, no Planner acceptance, no PR merge.**
+Keep P07.03 Open and official P06.02 nextTask per existing ledger. Next development-first code increment should implement parked-tool recovery after load, then P03.01 final drop and P03.02 distinct stock/pipette models without inventing science. Leave all 66 task Unity checks at `NOT_RUN` until the coordinated Unity 6000.3.25f1 Windows/XR campaign. **15 VerifiedLocal / 51 Open, G-R1 Open, no Planner acceptance, no PR merge.**
+
+## 30° snap-turn source continuation
+
+| Checkpoint | Evidence |
+|---|---|
+| RED C# source | `67ad3610865dffdc7ee6a4ca8e21f471c801992b` / [CI 38705071238](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38705071238), missing SnapLeft and SnapDegrees before production |
+| GREEN functional source | `43ae38ccf27fe687d928e723dc4981bea68211c6` |
+| Deferred Unity tests | `4d175b30211132d8068bb9067f2a50f314e95e4b` EditMode, `920f3c79fee73d0c08b82a22eaf80c05e3b99c69` PlayMode, neither executed |
+| Current source | `d569bf7c2d29be5caa656b46927b364c890df4a6` |
+| [GREEN routing CI](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38705554042) | 87 actual C# source-level routing assertions, three deliberate mutations RED exit134, restored GREEN; Native CI pending when noted |
+
+Bounded left/right snap actions use the existing VR held/paused + head tracked + tool docked policy, pivot the XR origin around the current head 30 degrees in either direction and never call Native Continue/Save/material/solver. VR UI snap buttons are half-width with child Text raycast targets contained within their hit areas. Unity scene geometry, real input/EventSystem, Player rendering, device reach, and headset comfort all remain **NOT_RUN**. No P07.03 acceptance or G-R1 promotion.
