@@ -590,6 +590,46 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(pendingDrop.CommittedVolumeM3, Is.GreaterThan(0d));
             Assert.That(pendingDrop.ActiveParcelId, Is.Not.Empty);
             Assert.That(tool.Find("NativePendingDrop").gameObject.activeSelf, Is.True);
+#if UNITY_EDITOR
+            var camera = children.Select(item => item.GetComponent<Camera>())
+                .First(item => item != null && item.name == "DesktopCamera");
+            var renderTarget = RenderTexture.GetTemporary(960, 600, 24);
+            var previousTarget = camera.targetTexture;
+            var previousActive = RenderTexture.active;
+            var image = new Texture2D(960, 600, TextureFormat.RGB24, false);
+            try
+            {
+                camera.targetTexture = renderTarget;
+                camera.Render();
+                RenderTexture.active = renderTarget;
+                image.ReadPixels(new Rect(0f, 0f, 960f, 600f), 0, 0);
+                image.Apply();
+                var evidenceDirectory = Path.GetFullPath(Path.Combine(Application.dataPath,
+                    "../../artifacts/evidence-p03-lab"));
+                Directory.CreateDirectory(evidenceDirectory);
+                using (var writer = new BinaryWriter(File.Create(Path.Combine(evidenceDirectory,
+                    "lab-pending-drop-editor.ppm"))))
+                {
+                    writer.Write(System.Text.Encoding.ASCII.GetBytes("P6\n960 600\n255\n"));
+                    var colors = image.GetPixels32();
+                    for (var y = 599; y >= 0; y--)
+                        for (var x = 0; x < 960; x++)
+                        {
+                            var color = colors[y * 960 + x];
+                            writer.Write(color.r);
+                            writer.Write(color.g);
+                            writer.Write(color.b);
+                        }
+                }
+            }
+            finally
+            {
+                camera.targetTexture = previousTarget;
+                RenderTexture.active = previousActive;
+                RenderTexture.ReleaseTemporary(renderTarget);
+                Object.DestroyImmediate(image);
+            }
+#endif
             Assert.That(flowing.materialLedger.researchAdditiveVolumeM3, Is.EqualTo(26e-6).Within(1e-12));
             adapter.Actuator = 0f;
             for (var attempt = 0; attempt < 30; attempt++)
