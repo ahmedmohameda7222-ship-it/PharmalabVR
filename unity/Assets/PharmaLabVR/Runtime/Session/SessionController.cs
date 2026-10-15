@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using PharmaLabVR.Core;
+using PharmaLabVR.Lab;
 using PharmaLabVR.UI;
 using PharmaLabVR.Tools;
 using PharmaLabVR.Input;
@@ -265,6 +266,30 @@ namespace PharmaLabVR.Session
                         SelectStock(stockId, stockId == "water" ? 0.0 : concentrations[selectedConcentrationIndex]);
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
+            if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.RinseWaterPrepared)
+            {
+                GUILayout.Label("Optional: prepare measured clean water before entering the live lab.");
+                if (GUILayout.Button("Prepare 1 ml rinse water (Native setup)", GUILayout.Height(32f)))
+                    TryPrepareResearchRinseWater();
+            }
+            if (screen == ScreenId.Lab && !driver.SourceNeedsPreparation)
+            {
+                GUILayout.Label("Native Research instruments · no calibrated physical flow");
+                if (GUILayout.Button("Pipette: aspirate 0.05 ml", GUILayout.Height(32f)))
+                    TryPipetteAspirate();
+                if (GUILayout.Button("Pipette: dispense 0.05 ml", GUILayout.Height(32f)))
+                    TryPipetteDispense();
+                if (GUILayout.Button("Bottle: pour 0.01 ml", GUILayout.Height(32f)))
+                    TryBottleMeasuredPour();
+                if (driver.RinseWaterPrepared)
+                {
+                    if (GUILayout.Button("Pipette: water rinse 0.01 ml", GUILayout.Height(32f)))
+                        TryPipetteWaterRinse();
+                    if (GUILayout.Button("Bottle: water rinse 0.01 ml", GUILayout.Height(32f)))
+                        TryBottleWaterRinse();
+                }
+                else GUILayout.Label("Rinse unavailable: no clean water was prepared during setup.");
+            }
             var measurement = driver.Measurement;
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Inspect source", GUILayout.Height(28f))) panels?.Request(PanelAction.Inspect, "source");
@@ -297,6 +322,73 @@ namespace PharmaLabVR.Session
             {
                 GUI.skin.label.fontSize = previousLabelSize;
                 GUI.skin.button.fontSize = previousButtonSize;
+            }
+        }
+
+        // Actions are public so Desktop and future world-space XR panels can use
+        // the same transaction/receipt boundary. They do not fabricate chemistry.
+        private PipetteActuator ResearchPipette
+        {
+            get
+            {
+                var tool = GetComponent<PipetteActuator>();
+                if (tool == null) tool = gameObject.AddComponent<PipetteActuator>();
+                tool.Configure(driver);
+                return tool;
+            }
+        }
+
+        private BottlePourActuator ResearchBottle
+        {
+            get
+            {
+                var tool = GetComponent<BottlePourActuator>();
+                if (tool == null) tool = gameObject.AddComponent<BottlePourActuator>();
+                tool.Configure(driver);
+                return tool;
+            }
+        }
+
+        private bool TryResearchCommand(Func<LabCommandReceipt> command)
+        {
+            try
+            {
+                if (driver?.Session == null || driver.SourceNeedsPreparation ||
+                    driver.IsNativePaused || driver.IsTimeHeld)
+                    throw new InvalidOperationException("Prepare stock and leave Native Pause/Hold before transfer.");
+                var receipt = command();
+                if (!receipt.Accepted)
+                    throw new InvalidOperationException("Native instrument refused: " + receipt.Code);
+                driver.RefreshAfterInstrumentCommand();
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                return false;
+            }
+        }
+
+        public bool TryPipetteAspirate() => TryResearchCommand(() => ResearchPipette.Aspirate(5e-8));
+        public bool TryPipetteDispense() => TryResearchCommand(() => ResearchPipette.Dispense(5e-8));
+        public bool TryBottleMeasuredPour() => TryResearchCommand(() => ResearchBottle.Pour(1e-8));
+        public bool TryPipetteWaterRinse() => TryResearchCommand(() => ResearchPipette.Rinse(1e-8));
+        public bool TryBottleWaterRinse() => TryResearchCommand(() => ResearchBottle.Rinse(1e-8));
+
+        public bool TryPrepareResearchRinseWater()
+        {
+            try
+            {
+                if (driver == null || !driver.TryPrepareRinseWater())
+                    throw new InvalidOperationException("Clean Native rinse water can only be prepared during setup.");
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                return false;
             }
         }
 
