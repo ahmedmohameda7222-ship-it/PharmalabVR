@@ -30,6 +30,12 @@ MUTATIONS = [
         "Failed XR recenter falsely returned success",
         "failed XR recenter false-success"
     ),
+    (
+        "case PanelAction.Load:\n                    return sessions.LoadSavedSession();",
+        "case PanelAction.Load:\n                    sessions.LoadSavedSession();\n                    return true;",
+        "Unsupported/missing saved file falsely returned Load success",
+        "failed VR Load false-success"
+    ),
 ]
 
 
