@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.XR.Interaction.Toolkit.Interactables;
 
 namespace PharmaLabVR.Tests
 {
@@ -37,6 +38,30 @@ namespace PharmaLabVR.Tests
             Assert.That(bottle.transform.Find("100mL_Research_NotCalibrated"), Is.Not.Null);
             Assert.That(pipette.GetComponentsInChildren<MeshRenderer>().Length, Is.GreaterThan(20));
             Assert.That(bottle.GetComponentsInChildren<MeshRenderer>().Length, Is.GreaterThanOrEqualTo(3));
+        }
+
+        [Test]
+        public void P07_02_ResearchToolPrefabsAllowPhysicalGripWithoutBecomingBuretteValves()
+        {
+            var paths = new[]
+            {
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab",
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab"
+            };
+            foreach (var path in paths)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Assert.That(prefab, Is.Not.Null);
+                var body = prefab.GetComponent<Rigidbody>();
+                Assert.That(body, Is.Not.Null, path);
+                Assert.That(body.isKinematic, Is.True,
+                    "Parked research tool must not fall before explicit grip.");
+                Assert.That(prefab.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+                Assert.That(prefab.GetComponentsInChildren<Collider>().Any(c => c.enabled), Is.True,
+                    "Physical XR grip requires an actual pickable collider.");
+                Assert.That(prefab.GetComponent<ValveActuator>(), Is.Null,
+                    "Grip may not silently grant burette hydraulic actuation.");
+            }
         }
 
         [Test]

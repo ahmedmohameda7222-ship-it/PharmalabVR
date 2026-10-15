@@ -219,6 +219,12 @@ namespace PharmaLabVR.Editor
                 root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
                     liquid.transform, "research-pipette", true, 25e-6, 0.25f, 0.025f);
                 root.AddComponent<PipetteActuator>();
+                // The grabbable body is a physical view. Explicit metered
+                // operations still need Native commands and valid revisions.
+                var pipetteBody = root.AddComponent<Rigidbody>();
+                pipetteBody.isKinematic = true;
+                pipetteBody.useGravity = false;
+                root.AddComponent<XRGrabInteractable>();
                 PrefabUtility.SaveAsPrefabAsset(root,
                     "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab");
             }
@@ -264,6 +270,10 @@ namespace PharmaLabVR.Editor
                 root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
                     liquid.transform, "source", false, 1e-4, 0.12f, 0.013f);
                 root.AddComponent<BottlePourActuator>();
+                var bottleBody = root.AddComponent<Rigidbody>();
+                bottleBody.isKinematic = true;
+                bottleBody.useGravity = false;
+                root.AddComponent<XRGrabInteractable>();
                 PrefabUtility.SaveAsPrefabAsset(root,
                     "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
             }
