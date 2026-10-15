@@ -15,7 +15,7 @@ class DeferredUnityRegisterTests(unittest.TestCase):
                  for task in phase["tasks"]]
         self.assertEqual(len(tasks), 66, "The canonical plan has 66 tasks; investigate changes.")
         body = REGISTER.read_text(encoding="utf-8")
-        rows = re.findall(r"^\\| (P\\d{2}\\.\\d{2}) \\|.+\\| NOT_RUN \\|$", body, re.MULTILINE)
+        rows = re.findall(r"^\| (P\d{2}\.\d{2}) \|.+\| NOT_RUN \|$", body, re.MULTILINE)
         self.assertEqual(sorted(rows), sorted(tasks))
         self.assertEqual(len(rows), len(set(rows)), "Do not duplicate deferred task rows.")
 
