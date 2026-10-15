@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-15  
 **Start of turn:** `4c5ae3ce693d4a10ceae969b523df1a68dd01805`  
-**Latest functional SHA:** `fc293fe93dfa39c6cc93b54ece011e6e71ae3919`  
+**Latest functional SHA:** `89174e8a311b283746eb6056505f3aeb75a8d480` (prior XR tracking code at `fc293fe93dfa39c6cc93b54ece011e6e71ae3919`)  
 **Branch/PR:** `feat/foundation-vr-first` / [PR #1](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/pull/1), open and unmerged.  
 **Gate/status:** No tasks newly VerifiedLocal/AcceptedPlanner; P06.02/P07.01/P07.02/P07.03 Open, G-R1 Open.
 
@@ -26,3 +26,9 @@
 **Scientific constraints:** Native ABI alone creates/transfers fluids and observations. No model/compound/calibration changes. Docking is a local presentation/physics lock, not a new scientific `PlaceTool` command, and no volume is created on release.
 
 **Next development:** Implement P07.03 recenter/reach/real neutral recovery and P03.01 burette outlet/parcel geometry, then distinct P03.02 pipette/bottle behavior and P03.03 geometry profiles. Keep real Unity execution and evidence `NOT_RUN` until the final campaign, per Product Owner directive.
+
+## Spatial panel layout follow-up
+
+- `89174e8a311b283746eb6056505f3aeb75a8d480`: After reviewing the generated VR panel positions, moved direct Review back to its original non-overlapping slot and conditionally substitutes the dock-release button only while mounted. Review remains accessible through Pause; after release, direct Review reappears. The previous +90px Review position collided with the detail text.
+- **Rendered acceptance remains NOT_RUN:** confirm button hit rectangles are distinct in Unity, action-driven ray→EventSystem routes exactly once, and a press on UI cannot actuate the valve.
+- [Last fully GREEN code-level native/headless push CI](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38701397558) and [PR](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38701402519) both succeeded on Windows/Ubuntu at `fc293fe9`, with 63/63 headless routing checks; `89174e8a311b283746eb6056505f3aeb75a8d480` has its own independent CI that must be inspected before promotion.
