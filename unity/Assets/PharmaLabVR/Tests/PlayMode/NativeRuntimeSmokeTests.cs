@@ -79,6 +79,47 @@ namespace PharmaLabVR.Tests.PlayMode
             public string freshness;
         }
 
+        [UnityTest]
+        public IEnumerator P06_02_XrSharedPanelSelectionPreparesExactNativeMolarityAndWaterReserve()
+        {
+            // This is a real Native session and panel, not the headless routing
+            // stub. Execute in the deferred Unity 6000.3.25f1 campaign.
+            var root = new GameObject("Research XR molarity route");
+            var driver = root.AddComponent<CoreDriver>();
+            var sessions = root.AddComponent<SessionController>();
+            sessions.Configure(driver);
+            try
+            {
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var panel = root.GetComponent<LabPanelController>();
+                Assert.That(panel, Is.Not.Null);
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(panel.Request(PanelAction.PrepareReserveStock, "water", 0.0), Is.True,
+                    sessions.LastError);
+                var concentration = ResearchConcentrationSelection.Resolve(driver.ResearchConcentrations,
+                    1, "hcl");
+                Assert.That(concentration, Is.EqualTo(0.05d));
+                Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", concentration), Is.True,
+                    sessions.LastError);
+                var snapshot = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                var source = snapshot.vessels.Single(item => item.id == "source").inventory;
+                var reserve = snapshot.vessels.Single(item => item.id == "reserve-stock").inventory;
+                Assert.That(source.chlorideMol, Is.EqualTo(0.05d * 0.025d).Within(1e-9),
+                    "The VR-selected molarity must reach actual Native material pools.");
+                Assert.That(source.sodiumMol, Is.EqualTo(0d).Within(1e-12));
+                Assert.That(reserve.chlorideMol, Is.EqualTo(0d).Within(1e-12),
+                    "A water reserve cannot inherit the selected acid concentration.");
+                Assert.That(reserve.researchAdditiveVolumeM3, Is.GreaterThan(0d));
+                Assert.That(snapshot.paused, Is.False,
+                    "Completing deliberate stock setup should open the running Native Lab.");
+            }
+            finally { Object.DestroyImmediate(root); }
+            yield return null;
+            for (var attempt = 0; attempt < 200 && CoreSession.PendingRetirements > 0; ++attempt)
+                yield return new WaitForSecondsRealtime(0.01f);
+            Assert.That(CoreSession.PendingRetirements, Is.Zero);
+        }
+
         private sealed class LivePourAdapter : MonoBehaviour, ILabInputAdapter
         {
             public Transform Tool;
