@@ -27,7 +27,7 @@ namespace PharmaLabVR.Core
             var dropVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             dropVisual.name = "NativePendingDrop";
             dropVisual.transform.SetParent(tool, false);
-            dropVisual.transform.localPosition = new Vector3(0f, -0.052f, 0f);
+            dropVisual.transform.localPosition = tool.Find("OutletExit").localPosition + Vector3.down * 0.009f;
             dropVisual.transform.localScale = Vector3.one * 0.006f;
             dropVisual.GetComponent<Collider>().enabled = false;
             dropVisual.GetComponent<Renderer>().material.color = new Color(0.17f, 0.60f, 0.90f, 0.9f);
@@ -92,9 +92,14 @@ namespace PharmaLabVR.Core
             Primitive(tool, "Stopcock", PrimitiveType.Cube,
                 new Vector3(0f, 0.012f, 0f), new Vector3(0.08f, 0.012f, 0.012f),
                 new Color(0.89f, 0.45f, 0.13f), false);
-            Primitive(tool, "OutletTip", PrimitiveType.Cylinder,
+            var tip = Primitive(tool, "OutletTip", PrimitiveType.Cylinder,
                 new Vector3(0f, -0.018f, 0f), new Vector3(0.005f, 0.025f, 0.005f),
                 Color.white, false);
+            var outletExit = new GameObject("OutletExit").transform;
+            outletExit.SetParent(tool, false);
+            var tipMesh = tip.GetComponent<MeshFilter>().sharedMesh;
+            outletExit.localPosition = tip.transform.localPosition +
+                Vector3.up * (tipMesh.bounds.min.y * tip.transform.localScale.y);
             if (vessel.TryGetComponent<Renderer>(out var vesselRenderer)) vesselRenderer.enabled = false;
             Primitive(vessel, "BeakerBase", PrimitiveType.Cylinder,
                 new Vector3(0f, -0.45f, 0f), new Vector3(0.52f, 0.04f, 0.52f),

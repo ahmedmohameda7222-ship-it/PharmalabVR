@@ -532,6 +532,7 @@ namespace PharmaLabVR.Tests.PlayMode
             var liquid = receiver.GetComponent<LiquidPresenter>();
             Assert.That(target, Is.Not.Null);
             Assert.That(liquid, Is.Not.Null);
+            Assert.That(target.Estimate(tool).Length, Is.EqualTo(1), "The placed scene outlet must clear the receiver rim.");
             var input = new GameObject("LivePourActionInjection");
             SceneManager.MoveGameObjectToScene(input, scene);
             var adapter = input.AddComponent<LivePourAdapter>();
@@ -564,7 +565,7 @@ namespace PharmaLabVR.Tests.PlayMode
                 if (!unrelatedCurrent) yield return new WaitForSecondsRealtime(0.01f);
             }
             Assert.That(unrelatedCurrent, Is.True, driver.Session.ReadSnapshot());
-            tool.position = receiver.position + Vector3.up * 0.08f;
+            tool.position = receiver.position + Vector3.up * 0.10f;
             Assert.That(target.Estimate(tool).Length, Is.EqualTo(1), "The scene outlet must aim into its real capture aperture.");
             Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
             adapter.Actuator = 1f;

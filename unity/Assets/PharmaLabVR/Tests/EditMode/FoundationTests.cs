@@ -32,6 +32,9 @@ namespace PharmaLabVR.Tests
             var target = receiver.AddComponent<LabCaptureTarget>();
             target.Configure("receiver", 0.05f);
             var tool = new GameObject("burette");
+            var outletExit = new GameObject("OutletExit");
+            outletExit.transform.SetParent(tool.transform, false);
+            outletExit.transform.localPosition = new Vector3(0f, -0.02f, 0f);
             tool.transform.position = receiver.transform.position;
             Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "Tool root inside receiver is not a valid outlet.");
             tool.transform.position = new Vector3(0f, 0.10f, 0f);
@@ -41,6 +44,24 @@ namespace PharmaLabVR.Tests
             tool.transform.position = new Vector3(0f, 0.10f, 0f);
             tool.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
             Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "Sideways outlet cannot land in aperture.");
+            Object.DestroyImmediate(tool);
+            Object.DestroyImmediate(receiver);
+        }
+
+        [Test]
+        public void P03_03_CaptureFollowsTheToolOutletInsteadOfAnEmbeddedOffset()
+        {
+            var receiver = new GameObject("receiver");
+            var target = receiver.AddComponent<LabCaptureTarget>();
+            target.Configure("receiver", 0.05f);
+            var tool = new GameObject("burette");
+            tool.transform.position = new Vector3(0f, 0.10f, 0f);
+            var outlet = new GameObject("OutletExit");
+            outlet.transform.SetParent(tool.transform, false);
+            outlet.transform.localPosition = new Vector3(0.10f, -0.02f, 0f);
+            Assert.That(target.Estimate(tool.transform).Length, Is.Zero, "An outlet outside the aperture must spill.");
+            outlet.transform.localPosition = new Vector3(0f, -0.02f, 0f);
+            Assert.That(target.Estimate(tool.transform).Length, Is.EqualTo(1));
             Object.DestroyImmediate(tool);
             Object.DestroyImmediate(receiver);
         }

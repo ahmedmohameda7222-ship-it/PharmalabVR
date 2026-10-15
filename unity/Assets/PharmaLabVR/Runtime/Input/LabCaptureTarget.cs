@@ -7,7 +7,6 @@ namespace PharmaLabVR.Input
         [SerializeField] private string inventoryId = "receiver";
         [SerializeField, Min(0.001f)] private float captureRadiusMetres = 0.08f;
         [SerializeField] private float apertureHeightMetres;
-        [SerializeField] private Vector3 buretteOutletLocalMetres = new(0f, -0.02f, 0f);
         [SerializeField, Min(0.001f)] private float maxFallMetres = 0.15f;
 
         public void Configure(string destinationInventoryId, float radiusMetres, float apertureHeight = 0f)
@@ -17,8 +16,9 @@ namespace PharmaLabVR.Input
             apertureHeightMetres = Mathf.Max(0f, apertureHeight);
         }
 
-        public LabCaptureEstimate[] Estimate(Transform outlet)
+        public LabCaptureEstimate[] Estimate(Transform tool)
         {
+            var outlet = tool != null ? tool.Find("OutletExit") : null;
             if (outlet == null || string.IsNullOrWhiteSpace(inventoryId))
                 return System.Array.Empty<LabCaptureEstimate>();
             var apertureUp = transform.up;
@@ -26,7 +26,7 @@ namespace PharmaLabVR.Input
                 Vector3.Dot(outlet.TransformDirection(Vector3.down), -apertureUp) < 0.85f)
                 return System.Array.Empty<LabCaptureEstimate>();
             var apertureCenter = transform.position + apertureUp * apertureHeightMetres;
-            var outletPosition = outlet.TransformPoint(buretteOutletLocalMetres);
+            var outletPosition = outlet.position;
             var offset = outletPosition - apertureCenter;
             var height = Vector3.Dot(offset, apertureUp);
             var lateral = offset - apertureUp * height;

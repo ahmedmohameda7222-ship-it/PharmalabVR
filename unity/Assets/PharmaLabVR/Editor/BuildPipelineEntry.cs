@@ -106,7 +106,7 @@ namespace PharmaLabVR.Editor
             var researchTool = new GameObject("ResearchBurette");
             researchTool.name = "DesktopResearchTool";
             researchTool.transform.SetParent(lab.transform);
-            researchTool.transform.localPosition = new Vector3(0.25f, 0.60f, 0.2f);
+            researchTool.transform.localPosition = new Vector3(0.25f, 0.63f, 0.2f);
             var toolVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             toolVisual.name = "CalibratedBody";
             toolVisual.transform.SetParent(researchTool.transform, false);
