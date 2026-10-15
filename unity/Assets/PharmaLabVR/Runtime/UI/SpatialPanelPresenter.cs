@@ -141,6 +141,12 @@ namespace PharmaLabVR.UI
                 () => panels?.Request(PanelAction.PrepareResearchStock, ResearchStockIds[researchStockIndex]));
             AddInstrumentButton("Prepare rinse water", -82f,
                 () => panels?.Request(PanelAction.PrepareRinseWater));
+            AddInstrumentButton("Prepare reserve stock", -138f,
+                () => panels?.Request(PanelAction.PrepareReserveStock, ResearchStockIds[researchStockIndex]));
+            AddInstrumentButton("Switch pipette to reserve", 30f,
+                () => panels?.Request(PanelAction.PipetteSwitchReserve));
+            AddInstrumentButton("Refill bottle 0.01 ml", -26f,
+                () => panels?.Request(PanelAction.BottleRefill));
             AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
