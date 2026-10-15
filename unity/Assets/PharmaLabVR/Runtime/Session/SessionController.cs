@@ -47,6 +47,13 @@ namespace PharmaLabVR.Session
             if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
         }
 
+        public bool RequestDesktopPause()
+        {
+            if (driver?.Session == null || driver.CurrentMode != "Desktop" ||
+                router?.Current == null || panels == null) return false;
+            return panels.Request(PanelAction.Pause);
+        }
+
         public static bool PointerOverDesktopHud(Vector2 screenPosition)
         {
             return DesktopHudBounds.Contains(new Vector2(screenPosition.x, Screen.height - screenPosition.y));

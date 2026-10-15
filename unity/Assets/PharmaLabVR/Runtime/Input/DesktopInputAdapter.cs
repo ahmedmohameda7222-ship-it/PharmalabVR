@@ -65,7 +65,15 @@ namespace PharmaLabVR.Input
                     registeredTool, 0f, geometryProfileHash, true) };
             HandlePickOrPlace();
             if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) { inputEnabled = false; awaitingFocusContinue = true; actuator = 0f; return System.Array.Empty<LabInputSample>(); }
+            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                // Esc is ordinary Pause. It must neither fake a tracking hold nor
+                // strand the desktop adapter in AwaitingFocusContinue.
+                actuator = 0f;
+                coreDriver?.transform.root.GetComponentInChildren<SessionController>(true)
+                    ?.RequestDesktopPause();
+                return System.Array.Empty<LabInputSample>();
+            }
             var pointerOverUi = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
             if (Mouse.current != null && ShouldAdjustActuator(pointerOverUi, Mouse.current.leftButton.isPressed))
