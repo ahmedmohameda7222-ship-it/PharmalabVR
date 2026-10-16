@@ -2203,3 +2203,45 @@ TEST_CASE("P11_01 explicit Native checkpoint persists actual session receipts fo
         static_cast<std::uint32_t>(checkpointPath.size())) == PLV_INVALID_HANDLE);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 Native checkpoint import validates and recovers the last intact generation") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-abi-checkpoint-reopen-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto file = (dir / "native-state.ckpt").string();
+    std::uint64_t h = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &h) == PLV_OK);
+    submit(h, command("1", "CreateVessel", {{"id","original"}, {"capacityM3",1e-5}}));
+    REQUIRE(poll(h)["accepted"].get<bool>());
+    REQUIRE(plv_checkpoint(h, file.data(), static_cast<std::uint32_t>(file.size())) == PLV_OK);
+    submit(h, command("2", "CreateVessel", {{"id","newer"}, {"capacityM3",1e-5}}));
+    REQUIRE(poll(h)["accepted"].get<bool>());
+    REQUIRE(plv_checkpoint(h, file.data(), static_cast<std::uint32_t>(file.size())) == PLV_OK);
+    REQUIRE(plv_destroy(h) == PLV_OK);
+    auto slot = fs::path(file + ".slot1");
+    REQUIRE(fs::exists(slot));
+    {
+        std::fstream corrupt(slot, std::ios::in | std::ios::out | std::ios::binary);
+        REQUIRE(corrupt.is_open());
+        corrupt.seekp(-1, std::ios::end);
+        corrupt.put('X');
+    }
+    std::uint64_t recovered = 0;
+    REQUIRE(plv_import_checkpoint(file.data(), static_cast<std::uint32_t>(file.size()), &recovered) == PLV_OK);
+    const auto restored = json::parse(read_text(recovered, true));
+    CHECK(restored["nextCommandSequence"] == "2");
+    CHECK(restored["vessels"].size() == 1);
+    CHECK(restored["vessels"][0]["id"] == "original");
+    REQUIRE(plv_destroy(recovered) == PLV_OK);
+    {
+        std::ofstream damage(file + ".slot0", std::ios::binary | std::ios::trunc);
+        damage << "bad";
+    }
+    recovered = 123;
+    CHECK(plv_import_checkpoint(file.data(), static_cast<std::uint32_t>(file.size()), &recovered) != PLV_OK);
+    CHECK(recovered == 0);
+    fs::remove_all(dir);
+}
