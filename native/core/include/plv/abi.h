@@ -39,6 +39,9 @@ PLV_API int32_t plv_export(uint64_t handle, char* out, uint32_t capacity, uint32
 // Not a background checkpoint schedule or a new scientific import pathway.
 PLV_API int32_t plv_checkpoint(uint64_t handle, const char* path, uint32_t size);
 PLV_API int32_t plv_import(const char* json, uint32_t size, uint64_t* new_handle);
+// Read latest intact recorded checkpoint, then pass bytes through the ordinary
+// scientifically validated Native importer into a NEW context.
+PLV_API int32_t plv_import_checkpoint(const char* path, uint32_t size, uint64_t* new_handle);
 
 #ifdef __cplusplus
 }

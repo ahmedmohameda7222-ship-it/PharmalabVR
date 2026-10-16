@@ -1550,6 +1550,35 @@ std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_
     }
 }
 
+
+std::int32_t plv_import_checkpoint(
+    const char* path, std::uint32_t size, std::uint64_t* newHandle) {
+    if (newHandle == nullptr) return PLV_INVALID_ARGUMENT;
+    *newHandle = 0U;
+    if (path == nullptr || size == 0U || size > 1024U ||
+        std::memchr(path, '\0', size) != nullptr)
+        return PLV_INVALID_ARGUMENT;
+    try {
+        plv::DurableCheckpointStore store(
+            std::string(path, path + size), 16U * 1024U * 1024U);
+        const auto payload = store.read();
+        if (!payload || payload->empty() ||
+            payload->size() > std::numeric_limits<std::uint32_t>::max())
+            return PLV_INVALID_ARGUMENT;
+        // This is a NEW imported Native authority. Checksum verification
+        // alone cannot bypass package validation, command receipt validation
+        // or the single-context admission rules in plv_import.
+        return plv_import(payload->data(),
+            static_cast<std::uint32_t>(payload->size()), newHandle);
+    } catch (const std::invalid_argument&) {
+        return PLV_INVALID_ARGUMENT;
+    } catch (const std::runtime_error&) {
+        return PLV_INVALID_ARGUMENT;
+    } catch (...) {
+        return PLV_INTERNAL_ERROR;
+    }
+}
+
 std::int32_t plv_import(const char* input, std::uint32_t size, std::uint64_t* new_handle) {
     if (!validInput(input, size) || new_handle == nullptr) {
         return PLV_INVALID_ARGUMENT;
