@@ -107,9 +107,9 @@ internal static class Program
                 review.CommandReceipts[1].Accepted == false &&
                 review.CommandReceipts[1].CommandType == "PrepareStock",
                 "Recorded Review did not preserve ordered real Native accepted/rejected receipts.");
-            var mismatchedReceipt = recorded.Replace(
-                @"""branchId"":""research-branch"",""commandSequence"":""2"",""type"":""CommandOutcome""",
-                @"""branchId"":""other"",""commandSequence"":""2"",""type"":""CommandOutcome""");
+            var changedDocument = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            changedDocument["commandReceipts"][0]["terminalOutcome"]["branchId"] = "other";
+            var mismatchedReceipt = changedDocument.ToJsonString();
             var mismatchRejected = false;
             try { RecordedSessionReview.FromJson(mismatchedReceipt); }
             catch (InvalidDataException) { mismatchRejected = true; }
