@@ -81,7 +81,12 @@ namespace PharmaLabVR.Session
             for (var index = 0; index < columns.Length; index++)
             {
                 if (index != 0) output.Append(',');
-                output.Append(Escape(columns[index] ?? string.Empty));
+                // The final column is generated from a finite Native double
+                // using invariant round-trip formatting, not untrusted copy.
+                // Its sign must stay numeric; spreadsheet formula protection
+                // applies only to text metadata columns.
+                output.Append(index == 17 ? (columns[index] ?? string.Empty) :
+                    Escape(columns[index] ?? string.Empty));
             }
             output.Append('\n');
         }
