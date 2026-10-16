@@ -28,7 +28,15 @@ namespace PharmaLabVR.Session
             var info = new FileInfo(path);
             if (!info.Exists || info.Length <= 0 || info.Length > 16 * 1024 * 1024)
                 throw new InvalidDataException("Recorded session is missing, empty, or oversized.");
-            return FromJson(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8));
+            try
+            {
+                return FromJson(File.ReadAllText(info.FullName,
+                    new System.Text.UTF8Encoding(false, true)));
+            }
+            catch (System.Text.DecoderFallbackException exception)
+            {
+                throw new InvalidDataException("Recorded Native session contains invalid UTF-8.", exception);
+            }
         }
 
         public static RecordedSessionReview OpenRecoverable(string path)

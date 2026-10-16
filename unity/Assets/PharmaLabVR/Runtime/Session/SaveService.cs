@@ -77,7 +77,11 @@ namespace PharmaLabVR.Session
             var info = new FileInfo(path);
             if (!info.Exists || info.Length <= 0 || info.Length > MaxSaveBytes)
                 throw new InvalidDataException("Save is missing, empty, or oversized.");
-            return CoreSession.ImportSession(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8), expectedScientificDatabasePath);
+            // Invalid UTF-8 bytes must not turn into replacement characters
+            // in Native identities, values or saved scientific metadata.
+            var strictUtf8 = new System.Text.UTF8Encoding(false, true);
+            return CoreSession.ImportSession(File.ReadAllText(info.FullName, strictUtf8),
+                expectedScientificDatabasePath);
         }
 
         private static bool IsRecoverableReadFailure(Exception error) =>
