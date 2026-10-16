@@ -25,3 +25,8 @@ This is a source-level checkpoint, not the final CodeComplete handoff. Product l
 ## Next source increment
 
 Reconcile P06.02/07 real panel input and Native recovery contracts, then P03/P08 tool/scene and P09 observable truth. Continue P11.01 ordered native journal and P11.02 event-linked durable Notebook, then P12–P24 English-only workspaces, supported providers and release packaging. Commit/CI per cohesive increment; preserve PR #1.
+
+## Additional headless source increments (2026-10-16)
+- P11.01 test `184b980` RED (failed atomic Save replacement left `.tmp`), functional `cdf0410` cleans staged file while preserving the primary error; headless SaveContract green at push 38830692265. Native journal and disk-full remain unimplemented/unverified.
+- P09.02 test `9f1bddb` RED (production classification missing), functional `8b3206f` adds scientific freshness/support/failure and nonfinite value gating plus XR status readout; `6424148` corrects the headless Unity-serialized-field compiler harness. Headless panel-contract SUCCESS at push 38831095562, full Windows/Ubuntu outcomes still require inspection. Unity status/action PlayMode test source authored and NOT_RUN.
+- Formal 66-task/15 VerifiedLocal/51 Open counts and G-R1 Open remain unchanged.
