@@ -821,5 +821,55 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator P06_02_DesktopPauseLoadSavedSessionIsExplicitAndNativeBacked()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string savedPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                session.Configure(driver, "p06-desktop-load-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(actions.Request(PanelAction.Pause), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(router.Current.SupportedActions, Does.Contain("Load"));
+                Assert.That(actions.Request(PanelAction.Load), Is.False,
+                    "A missing save must not replace the Native session.");
+                Assert.That(session.Save(), Is.True, session.LastError);
+                savedPath = session.LastDurableSavePath;
+                var previous = driver.Session;
+                var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(actions.Request(PanelAction.Load), Is.True, session.LastError);
+                Assert.That(previous.IsOpen, Is.False);
+                Assert.That(driver.Session, Is.Not.SameAs(previous));
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.NativeRecoveryReady, Is.False);
+                Assert.That(session.RecordedReview, Is.Null);
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
+                    File.Delete(savedPath);
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
     }
 }

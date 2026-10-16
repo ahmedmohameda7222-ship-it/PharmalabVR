@@ -523,6 +523,21 @@ internal static class Program
             Check(session.SaveCalls == 0, "Load silently wrote a new Save");
             driver.CurrentMode = "Desktop";
             router.Configure(driver);
+            // P06.02: Desktop Pause must use the same explicit Native-backed saved-session
+            // load route, without the VR dock prerequisite or implicit Save.
+            Check(router.Current.SupportedActions.Contains("Load"),
+                "Desktop Pause has no explicit saved-session Load action");
+            session.LoadPermitted = false;
+            Check(!panels.Request(PanelAction.Load),
+                "Missing Desktop saved session falsely returned Load success");
+            Check(session.LoadCalls == 1, "Rejected Desktop load replaced Native session");
+            session.LoadPermitted = true;
+            Check(panels.Request(PanelAction.Load),
+                "Desktop Pause did not dispatch saved-session Load");
+            Check(session.LoadCalls == 2 && session.SaveCalls == 0,
+                "Desktop load was duplicated or implicitly saved chemistry");
+            Check(driver.CurrentLabView.EventSequence == beforeLoadRevision,
+                "Desktop load routing created a synthetic Native material revision");
             Check(panels.Request(PanelAction.Settings), "Pause → Settings action refused");
             Check(router.Current.ScreenId == ScreenId.Settings, "Settings not visible");
             Check(panels.Request(PanelAction.Back), "Settings Back refused");
