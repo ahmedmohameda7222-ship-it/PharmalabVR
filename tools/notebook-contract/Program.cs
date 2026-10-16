@@ -84,6 +84,36 @@ internal static class Program
             Require(futureNoteRefused, "Portable notes included an event after the exported Native revision.");
             Require(notes.ExportBranch(path, "research-branch", "7") == "PLV-NOTEBOOK-V1\n",
                 "A new session with no notebook records cannot export a valid empty note snapshot.");
+            // P11.02: recorded-only Review must expose actual Native command
+            // receipts, not project a scripted endpoint or invent event times.
+            const string recorded = @"{""schemaVersion"":1,""branchId"":""research-branch"",
+              ""scientificPackage"":{""identity"":""minteq-test""},
+              ""observations"":[{""vesselId"":""receiver"",""observableId"":""pH"",
+              ""support"":""Supported"",""freshness"":""Current"",
+              ""computationState"":""Ready"",""valueAvailable"":true,""value"":7.1}],
+              ""commandReceipts"":[
+              {""commandSequence"":""2"",""canonicalCommand"":{""schemaVersion"":1,
+               ""branchId"":""research-branch"",""commandSequence"":""2"",""type"":""PrepareStock""},
+               ""terminalOutcome"":{""schemaVersion"":1,""branchId"":""research-branch"",
+               ""commandSequence"":""2"",""type"":""CommandOutcome"",""accepted"":false,""code"":""Rejected""}},
+              {""commandSequence"":""1"",""canonicalCommand"":{""schemaVersion"":1,
+               ""branchId"":""research-branch"",""commandSequence"":""1"",""type"":""CreateVessel""},
+               ""terminalOutcome"":{""schemaVersion"":1,""branchId"":""research-branch"",
+               ""commandSequence"":""1"",""type"":""CommandOutcome"",""accepted"":true,""code"":""Accepted""}}]}";
+            var review = RecordedSessionReview.FromJson(recorded);
+            Require(review.CommandReceipts.Count == 2 &&
+                review.CommandReceipts[0].CommandSequence == "1" &&
+                review.CommandReceipts[1].CommandSequence == "2" &&
+                review.CommandReceipts[1].Accepted == false &&
+                review.CommandReceipts[1].CommandType == "PrepareStock",
+                "Recorded Review did not preserve ordered real Native accepted/rejected receipts.");
+            var mismatchedReceipt = recorded.Replace(
+                @"""branchId"":""research-branch"",""commandSequence"":""2"",""type"":""CommandOutcome""",
+                @"""branchId"":""other"",""commandSequence"":""2"",""type"":""CommandOutcome""");
+            var mismatchRejected = false;
+            try { RecordedSessionReview.FromJson(mismatchedReceipt); }
+            catch (InvalidDataException) { mismatchRejected = true; }
+            Require(mismatchRejected, "Recorded Review admitted a foreign Native command outcome.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
