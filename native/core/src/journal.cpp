@@ -260,7 +260,9 @@ bool DirtyCheckpointPolicy::needsFlush(
                maximumDirtySimulationSeconds_;
 }
 
-void DirtyCheckpointPolicy::acknowledgeFlush() { dirty_ = false; }
+void DirtyCheckpointPolicy::acknowledgeFlush(bool checkpointDurablyWritten) {
+    if (checkpointDurablyWritten) dirty_ = false;
+}
 bool DirtyCheckpointPolicy::dirty() const { return dirty_; }
 
 ReceiptIdentityIndex::ReceiptIdentityIndex(std::size_t cacheLimit)

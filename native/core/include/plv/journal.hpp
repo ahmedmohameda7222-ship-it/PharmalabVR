@@ -59,7 +59,8 @@ public:
     void markDirty(std::uint64_t nowWallNs, double nowSimulationSeconds);
     bool needsFlush(std::uint64_t nowWallNs, double nowSimulationSeconds,
                     bool pauseRequested) const;
-    void acknowledgeFlush();
+    // Only a confirmed durable write can clear the dirty deadline.
+    void acknowledgeFlush(bool checkpointDurablyWritten);
     bool dirty() const;
 
 private:
