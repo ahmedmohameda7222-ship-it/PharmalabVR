@@ -16,6 +16,8 @@ jobs:
         run: dotnet run --project tools/panel-contract/PanelContract.csproj --configuration Release
       - name: Exercise real SaveService filesystem boundaries (headless; not Native or Unity)
         run: dotnet run --project tools/save-contract/SaveContract.csproj --configuration Release
+      - name: Exercise real durable NotebookService event-note persistence (headless)
+        run: dotnet run --project tools/notebook-contract/NotebookContract.csproj --configuration Release
       - name: Verify paused-Review regression RED then GREEN (headless)
         run: python tools/panel-contract/check_regression.py
   native:
