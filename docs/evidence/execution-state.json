@@ -1186,17 +1186,19 @@
             "P10.03"
           ],
           "status": "Open",
-          "codeCommit": "ebfef7fdbe9b7a1fa78d51444da1317530ecf341",
+          "codeCommit": "ced83f5f5087df6634428138d0cb1459699cc3fb",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "2026-10-16 P11.01 bounded filesystem slice: actual production SaveService now rejects empty/>16 MiB serialized UTF-8 exports before creating/replacing disk files, aligning Save with existing LoadOne limit. CI headless RED 1f41c2c push 38829873920 ('Oversized save was reported successful'), corrective source GREEN 8b22c59 panel-routing SUCCESS (push 38829945711); full Windows/Ubuntu/native push+PR conclusions pending at note. Headless disk tests cover backup recovery, unsafe filename, oversize preservation and no leftover temp. This is not Native journal/checkpoint/disk-full/Unity acceptance.",
             "2026-10-16 atomic-replacement disk fault: headless RED 184b980 push 38830618144 'Failed atomic replacement left an uncommitted journal temporary file' from actual SaveService; functional fix cdf0410 catches failed write/flush/replace and removes uncommitted .tmp without masking original IOException, protecting prior confirmed checkpoint. Headless green push 38830692265 panel-routing SUCCESS, full matrix separately pending at ledger write. This is not tested power-loss/Native journal or a completed P11.01.",
             "2026-10-16 recovered backup-only SaveService: RED 551a2cb headless CI push 38832226727, missing candidate method; GREEN c7b0b05 SaveService.HasSaveCandidate and SessionController Pause/Hold/GUI admission while actual Native import checks remain delegated to existing Load. Headless Native Windows/Ubuntu push 38832333024, PR 38832338221 SUCCESS. Real Unity PlayMode source authored but NOT_RUN; disk-journal/checkpoint R01–R05 still Open.",
-            "2026-10-16 strict Native saved-byte admission: RED 41dd54d push 38865238229 actual SaveService headless failure 'Invalid UTF-8 Native save was accepted rather than recovered from backup'. GREEN ebfef7f SaveService.LoadOne reads using strict UTF8Encoding(false,true), triggering original recoverable read/confirmed backup rather than replacement-decoding corrupted identity. Tests source corrected backup-only fixture at c2151f2; headless green push 38865601352; full Native matrix/Unity NOT_RUN at ledger write. P11.01 still Open: Native durable disk journal/checkpoint/faults."
+            "2026-10-16 strict Native saved-byte admission: RED 41dd54d push 38865238229 actual SaveService headless failure 'Invalid UTF-8 Native save was accepted rather than recovered from backup'. GREEN ebfef7f SaveService.LoadOne reads using strict UTF8Encoding(false,true), triggering original recoverable read/confirmed backup rather than replacement-decoding corrupted identity. Tests source corrected backup-only fixture at c2151f2; headless green push 38865601352; full Native matrix/Unity NOT_RUN at ledger write. P11.01 still Open: Native durable disk journal/checkpoint/faults.",
+            "2026-10-16 Native on-disk journal source RED d0c6574 compile missing DurableJournal in Ubuntu Native push CI 38867200142. GREEN c3ca7e3 implements bounded single-writer durable WAL, CRC-checked ordered records, fsync/_commit, restart reads, torn-tail prefix repair and complete-record corruption refusal. Push 38867581980 all 3 jobs SUCCESS, PR 38867587035 separate status. Native source and tests only, not integrated into live ABI command/receipt checkpoint lifecycle.",
+            "2026-10-16 Native persisted receipt identity variant RED 666f8a5 Ubuntu native compiler no ReceiptIdentityIndex(cacheLimit,path), CI 38867980821. GREEN ced83f5 validates canonical branch/sequence/64-hex payload hash, scans bounded disk WAL on accept, survives process reconstruction even after cache eviction, limits disk-mode working cache to <=4096, fails closed on CRC corruption and repairs unconfirmed torn tail via DurableJournal; Ubuntu Native and headless in push 38868273059 SUCCESS, Windows pending at ledger write, PR 38868280086 pending. No actual ABI creation/submission integration, Native checkpoint generation, dirty30s/30wall policy, storage fault simulation or Unity run; P11.01 Open."
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial code-first filesystem envelope: bounded UTF-8 Save and recoverable confirmed .bak retention; Native ordered checksummed journal, dirty-flush schedule, identity index, fault-injection and Unity Player acceptance remain Open.",
+          "acceptanceScope": "Partial standalone Native disk WAL and persisted receipt-identity source with restart/torn-tail/CRC tests and durable append flush; separately Native and Unity SaveService files remain. Crucially NOT integrated into live Native ABI, no transactional checkpoint/dirty flush scheduler, no actual power-loss/disk-full/rejected-identity or full Player/Unity acceptance. P11.01 Open.",
           "blocker": null
         },
         {
@@ -2261,9 +2263,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "6e162750cffbf92d0d4bc4b23090c7f647f4fb5d",
-  "functionalCodeSha": "6e162750cffbf92d0d4bc4b23090c7f647f4fb5d",
-  "currentTask": "Code-first P11.01/P11.02 strict Native save/Review UTF-8, P11.02 confirmed-backup recorded-only fallback, and P11.03 validated saved-run comparison. All formal statuses unchanged, Unity deferred.",
+  "actualHead": "ced83f5f5087df6634428138d0cb1459699cc3fb",
+  "functionalCodeSha": "ced83f5f5087df6634428138d0cb1459699cc3fb",
+  "currentTask": "P11.01 bounded Native single-writer on-disk WAL and restart-safe receipt identity under CI; integrate Native ABI/checkpoint scheduler and faults next; 66 task statuses unchanged, Unity deferred.",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2317,6 +2319,7 @@
     "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged.",
     "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged.",
     "2026-10-16 Ruling P11.03 compare saved Native checkpoint vs current recorded Review only: no inferred pH curves/chemistry, delta requires matching pinned model provenance, missing/stale suppress; compare RED 478b73f, routing RED dc23cba, GREEN eae473c and cd6676f, Unity source 587ec4e NOT_RUN. P09 stale RED 2f97d1e GREEN 44bda21 Native/headless both CI triggers SUCCESS. No G-R1 advancement, PR #1 unmerged.",
-    "2026-10-16 added P11 UTF8 hardening RED 41dd54d -> GREEN ebfef7f and headless fixture repair c2151f2, validated backup-only Review RED c6b67ee -> GREEN a2389f6, saved compare backup RED d9c71f0 -> GREEN 8e7941. Headless tests passed at c2151f2 push 38865601352; final Windows/Ubuntu CI results must be independently inspected. Source-only Unity EditMode tests authored 4356a72, NOT_RUN. P09.02, P11.01-03 and G-R1 remain Open; 15 VerifiedLocal/51 Open; PR #1 unmerged."
+    "2026-10-16 added P11 UTF8 hardening RED 41dd54d -> GREEN ebfef7f and headless fixture repair c2151f2, validated backup-only Review RED c6b67ee -> GREEN a2389f6, saved compare backup RED d9c71f0 -> GREEN 8e7941. Headless tests passed at c2151f2 push 38865601352; final Windows/Ubuntu CI results must be independently inspected. Source-only Unity EditMode tests authored 4356a72, NOT_RUN. P09.02, P11.01-03 and G-R1 remain Open; 15 VerifiedLocal/51 Open; PR #1 unmerged.",
+    "2026-10-16 P11.01 new Native disk source RED d0c6574 -> GREEN c3ca7e3 push 38867581980 native Windows/Ubuntu & panel all SUCCESS; native persisted ReceiptIdentityIndex RED 666f8a5 -> GREEN ced83f5 push 38868273059 Ubuntu/headless success Windows pending at ledger entry. New API NOT wired into live Native ABI; no actual crash/fault or Unity acceptance. 66 task counts 15 VerifiedLocal/51 Open; G-R1 Open; English-only and PR #1 unmerged."
   ]
 }
