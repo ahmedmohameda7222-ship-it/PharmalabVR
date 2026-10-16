@@ -349,8 +349,12 @@ namespace PharmaLabVR.UI
                 ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
-                ScreenId.Inspect or ScreenId.Measure => state.SelectedEntityId + " · " +
-                    (driver.Measurement?.DisplayValue ?? "--") + " pH · " + state.ObservationFreshness,
+                ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
+                    state.SelectedEntityId,
+                    driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
+                    driver.Measurement?.DisplayValue ?? "--",
+                    state.ObservationValidity, state.ObservationFreshness,
+                    state.Maturity, state.ModelIdentity),
                 _ => state.Setup.CaptionsEnabled ?
                     "Select a vessel to inspect. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState

@@ -520,11 +520,10 @@ namespace PharmaLabVR.Core
                     if (observation.vesselId == SelectedMeasurementVesselId && observation.observableId == "pH")
                     {
                         selectedFound = true;
-                        var availability = observation.support != "Supported" ? MeasurementAvailability.Unsupported :
-                            observation.computationState == "Failed" ? MeasurementAvailability.Failed :
-                            observation.freshness == "Stale" ? MeasurementAvailability.Stale :
-                            observation.freshness == "Current" && observation.computationState == "Ready" ?
-                                MeasurementAvailability.Current : MeasurementAvailability.Pending;
+                        // Native alone owns chemistry; this presentation policy
+                        // cannot expose a non-finite or unsupported value as Current.
+                        var availability = ScientificReadoutPolicy.Resolve(observation.support,
+                            observation.computationState, observation.freshness, observation.value);
                         Measurement.Present(availability,
                             observation.value.ToString("0.00", CultureInfo.InvariantCulture),
                             $"pH {SelectedMeasurementVesselId} · rev {observation.asOfMaterialRevision} · {availability} · {observation.maturity} · {observation.modelId} · package {observation.databaseIdentity}");

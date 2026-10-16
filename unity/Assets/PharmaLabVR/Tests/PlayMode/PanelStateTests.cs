@@ -208,6 +208,17 @@ namespace PharmaLabVR.Tests.PlayMode
             inspect.onClick.Invoke();
             Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Inspect));
             Assert.That(router.Current.SelectedEntityId, Is.EqualTo("receiver"));
+            var selectedDriver = roots.SelectMany(root =>
+                root.GetComponentsInChildren<CoreDriver>(true)).Single();
+            var inspectedStatus = presenter.GetComponentsInChildren<Text>(true)
+                .Single(label => label.name == "Panel detail").text;
+            Assert.That(selectedDriver.Measurement, Is.Not.Null,
+                "The XR panel needs the actual Native-backed MeasurementView.");
+            StringAssert.Contains(selectedDriver.Measurement.Availability.ToString(), inspectedStatus,
+                "XR must show the scientific availability, not only a cached freshness tag.");
+            if (selectedDriver.Measurement.Availability != MeasurementAvailability.Current)
+                StringAssert.Contains("pH receiver: --", inspectedStatus,
+                    "XR unavailable/failed/stale observations must not display a cached pH.");
             var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
             var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
             sessions.Configure(driver, "playmode-vr-review-" + System.Guid.NewGuid().ToString("N"));
