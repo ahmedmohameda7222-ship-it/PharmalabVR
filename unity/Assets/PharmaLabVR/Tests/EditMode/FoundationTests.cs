@@ -86,6 +86,36 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_02_RecordedOnlyBackupReviewOpensWithoutScientificRecompute()
+        {
+            var saved = Path.Combine(Path.GetTempPath(),
+                "plv-recorded-backup-" + Guid.NewGuid().ToString("N") + ".plv.json");
+            const string recorded = @"{""schemaVersion"":1,""branchId"":""research-branch"",
+                ""scientificPackage"":{""identity"":""unavailable-model""},
+                ""observations"":[{""vesselId"":""receiver"",""observableId"":""pH"",
+                    ""support"":""Unsupported"",""freshness"":""Absent"",
+                    ""computationState"":""Pending""}]}";
+            try
+            {
+                File.WriteAllText(saved + ".bak", recorded);
+                var review = RecordedSessionReview.OpenRecoverable(saved);
+                Assert.That(review.BranchId, Is.EqualTo("research-branch"));
+                Assert.That(review.ModelIdentity, Is.EqualTo("unavailable-model"));
+                Assert.That(review.Observations[0].DisplayValue, Is.EqualTo("--"));
+                File.WriteAllText(saved, "{\"schemaVersion\":-1}");
+                Assert.That(RecordedSessionReview.OpenRecoverable(saved).BranchId,
+                    Is.EqualTo("research-branch"));
+                File.WriteAllText(saved + ".bak", "{\"schemaVersion\":-1}");
+                Assert.Throws<InvalidDataException>(() => RecordedSessionReview.OpenRecoverable(saved));
+            }
+            finally
+            {
+                if (File.Exists(saved)) File.Delete(saved);
+                if (File.Exists(saved + ".bak")) File.Delete(saved + ".bak");
+            }
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");
