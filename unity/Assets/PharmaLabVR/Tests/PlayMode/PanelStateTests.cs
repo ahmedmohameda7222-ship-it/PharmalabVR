@@ -904,5 +904,54 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        [UnityTest]
+        public IEnumerator P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string notesPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "p11-note-" + System.Guid.NewGuid().ToString("N");
+                session.Configure(driver, name);
+                notesPath = Path.Combine(Application.persistentDataPath, "sessions", name + ".plv-notes");
+                var revision = driver.CurrentLabView.EventSequence;
+                var original = driver.Session;
+                Assert.That(actions.Request(PanelAction.AddNotebookNote, "Not yet in notebook"), Is.False);
+                Assert.That(actions.Request(PanelAction.Notebook), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(actions.Request(PanelAction.AddNotebookNote,
+                    "Prediction: prepare the receiver without changing the chemistry."), Is.True, session.LastError);
+                Assert.That(File.Exists(notesPath), Is.True);
+                var entries = session.ReadNotebookEntries();
+                Assert.That(entries.Count, Is.EqualTo(1));
+                Assert.That(entries[0].EventSequence, Is.EqualTo(revision));
+                Assert.That(entries[0].BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(driver.Session, Is.SameAs(original));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(session.LastDurableSavePath, Is.Null);
+                Assert.That(actions.Request(PanelAction.Lab), Is.True);
+            }
+            finally
+            {
+                if (notesPath != null && File.Exists(notesPath)) File.Delete(notesPath);
+                if (notesPath != null && File.Exists(notesPath + ".bak")) File.Delete(notesPath + ".bak");
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
     }
 }

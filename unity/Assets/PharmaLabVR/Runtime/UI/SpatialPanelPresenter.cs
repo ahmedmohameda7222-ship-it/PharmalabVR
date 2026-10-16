@@ -91,6 +91,7 @@ namespace PharmaLabVR.UI
             AddButton("Inspect source", -26f, PanelAction.Inspect, "source");
             AddButton("Measure", -82f, PanelAction.Measure, "receiver");
             AddButton("Open review", -138f, PanelAction.Review);
+            AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddButton("Return to lab", -138f, PanelAction.Lab);
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
@@ -349,6 +350,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
+                ScreenId.Notebook => panels?.NotebookSummary ?? "Research notebook unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
                     state.SelectedEntityId,
                     driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
@@ -375,6 +377,8 @@ namespace PharmaLabVR.UI
                 !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
+            SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("Notebook"));
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&

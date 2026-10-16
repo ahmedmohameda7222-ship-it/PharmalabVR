@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -21,6 +21,7 @@ namespace PharmaLabVR.UI
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
         public string LastError => sessions?.LastError;
+        public string NotebookSummary => sessions?.NotebookSummary ?? "Research notebook unavailable.";
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
         {
@@ -97,13 +98,18 @@ namespace PharmaLabVR.UI
                 case PanelAction.Lab:
                     if (driver.IsTimeHeld) return false;
                     if (driver.IsNativePaused && !driver.ContinueSession()) return false;
-                    if (router.Current.ScreenId == ScreenId.Review) sessions.CloseReview();
+                    if (sessions.RecordedReview != null) sessions.CloseReview();
                     router.Show(ScreenId.Lab);
                     return router.Current.ScreenId == ScreenId.Lab;
                 case PanelAction.Review:
                     if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
                     return router.Current.ScreenId == ScreenId.Review;
+                case PanelAction.Notebook:
+                    router.Show(ScreenId.Notebook);
+                    return router.Current.ScreenId == ScreenId.Notebook;
+                case PanelAction.AddNotebookNote:
+                    return sessions.AppendNotebookNote(entityId);
                 case PanelAction.Settings:
                     router.Show(ScreenId.Settings);
                     return router.Current.ScreenId == ScreenId.Settings;

@@ -331,10 +331,10 @@ namespace PharmaLabVR.UI
                         new[] { "Save", "Load", "Review", "Settings", "Continue" } :
                         new[] { "Save", "Load", "Review", "Settings" }),
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
-                    new[] { "Inspect", "Measure", "Pause", "Review", "Save", "ReleaseTool", "ParkTool",
+                    new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
                         "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill" } :
-                    new[] { "Inspect", "Measure", "Pause", "Review", "Save",
+                    new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
                         "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save" },
@@ -342,7 +342,10 @@ namespace PharmaLabVR.UI
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Lab", "Save", "Load", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
                     new[] { "Lab", "Save", "Load", "Settings", "Review" },
-                ScreenId.Review => new[] { "Lab", "Settings", "Save" },
+                ScreenId.Review => driver != null && driver.IsTimeHeld ?
+                    new[] { "Settings", "Save" } :
+                    new[] { "Lab", "Settings", "Save", "Notebook" },
+                ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save" },
                 ScreenId.Settings => new[] { "Back", "Save" },
                 _ => Array.Empty<string>()
             };

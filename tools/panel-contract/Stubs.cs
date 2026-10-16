@@ -121,6 +121,14 @@ namespace PharmaLabVR.Session
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
         public int ReviewOpens { get; private set; }
+        public int NotebookAppendCalls { get; private set; }
+        public string NotebookSummary => "Headless note stub; not a Native observation.";
+        public bool AppendNotebookNote(string note)
+        {
+            if (string.IsNullOrWhiteSpace(note)) return false;
+            NotebookAppendCalls++;
+            return true;
+        }
         public bool CanReleaseTool { get; private set; } = true;
         public bool CanParkTool => !CanReleaseTool;
         public bool ParkPermitted { get; set; } = true;

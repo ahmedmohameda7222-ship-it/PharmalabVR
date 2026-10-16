@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using PharmaLabVR.Core;
@@ -19,11 +20,13 @@ namespace PharmaLabVR.Session
         public string LastError { get; private set; }
         public RecordedSessionReview RecordedReview { get; private set; }
         private readonly SaveService saves = new();
+        private readonly NotebookService notebook = new();
         public static Rect DesktopHudBounds => new Rect(12f, 12f,
             Mathf.Max(1f, Mathf.Min(370f, Screen.width - 24f)),
             Mathf.Max(1f, Mathf.Min(620f, Screen.height - 24f)));
         private int selectedConcentrationIndex = 2;
         private Vector2 hudScrollPosition;
+        private string notebookDraft = string.Empty;
         private ScreenRouter router;
         private LabPanelController panels;
         private SpatialPanelPresenter spatialPanel;
@@ -250,6 +253,28 @@ namespace PharmaLabVR.Session
                 GUILayout.EndArea();
                 return;
             }
+            if (screen == ScreenId.Notebook)
+            {
+                GUILayout.Label("Research notebook · notes reference actual Native events.");
+                var notes = ReadNotebookEntries();
+                foreach (var note in notes.Skip(Math.Max(0, notes.Count - 5)))
+                    GUILayout.Label("Event " + note.EventSequence + " · " + note.VesselId +
+                        " · " + note.RecordedAtUtc + "\n" + note.Text);
+                GUILayout.Label("Native event revision: " + router.Current.NativeRevision +
+                    ". Notes do not change the scientific state.");
+                notebookDraft = GUILayout.TextArea(notebookDraft, GUILayout.Height(96f));
+                if (GUILayout.Button("Record note for current event", GUILayout.Height(44f)) &&
+                    panels?.Request(PanelAction.AddNotebookNote, notebookDraft) == true)
+                    notebookDraft = string.Empty;
+                if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Lab);
+                if (GUILayout.Button("Save Native session", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Save);
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
             if (screen == ScreenId.Settings)
             {
                 SetupPreferenceControls.Draw(router);
@@ -358,6 +383,9 @@ namespace PharmaLabVR.Session
             if (router?.Current?.SupportedActions.Contains("Review") == true &&
                 GUILayout.Button("Open recorded review", GUILayout.Height(44f)))
                 panels?.Request(PanelAction.Review);
+            if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
+                GUILayout.Button("Open research notebook", GUILayout.Height(44f)))
+                panels?.Request(PanelAction.Notebook);
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -496,6 +524,71 @@ namespace PharmaLabVR.Session
                 if (driver == null || !driver.TryPrepareSourceStock(stockId, concentrationMolPerL))
                     throw new InvalidOperationException("Stock selection was rejected by the native session or Research catalog.");
                 LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = exception.Message;
+                return false;
+            }
+        }
+
+
+        private string NotebookFilePath()
+        {
+            if (string.IsNullOrWhiteSpace(saveName) || Path.GetFileName(saveName) != saveName ||
+                saveName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                throw new InvalidOperationException("Notebook session filename is not safe.");
+            return Path.Combine(Application.persistentDataPath, "sessions", saveName + ".plv-notes");
+        }
+
+        public IReadOnlyList<NotebookEntry> ReadNotebookEntries()
+        {
+            try
+            {
+                if (driver?.Session == null || !driver.Session.IsOpen)
+                    throw new InvalidOperationException("No open Native session.");
+                var notes = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                LastError = null;
+                return notes;
+            }
+            catch (Exception exception)
+            {
+                LastError = "Research notebook unavailable: " + exception.Message;
+                return Array.Empty<NotebookEntry>();
+            }
+        }
+
+        public string NotebookSummary
+        {
+            get
+            {
+                var entries = ReadNotebookEntries();
+                if (entries.Count == 0) return "Research notebook: no recorded annotations.";
+                var latest = entries[entries.Count - 1];
+                var preview = latest.Text.Replace('\r', ' ').Replace('\n', ' ');
+                if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
+                return "Research notebook · " + entries.Count + " event-linked notes\n" +
+                    "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
+                    preview + "\nDesktop: write a note; XR: read recorded notes.";
+            }
+        }
+
+        public bool AppendNotebookNote(string value)
+        {
+            try
+            {
+                if (router?.Current?.ScreenId != ScreenId.Notebook ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    driver.CurrentLabView == null || driver.IsTimeHeld)
+                    throw new InvalidOperationException("Notes require an active Notebook and Native snapshot.");
+                var nativeRevision = driver.CurrentLabView.EventSequence;
+                if (nativeRevision != router.Current.NativeRevision)
+                    throw new InvalidOperationException("Native event revision changed before note commit.");
+                notebook.Append(NotebookFilePath(), driver.Session.BranchId, nativeRevision,
+                    router.Current.SelectedEntityId, value);
+                LastError = null;
+                router.Show(ScreenId.Notebook);
                 return true;
             }
             catch (Exception exception)
