@@ -114,6 +114,26 @@ internal static class Program
             try { RecordedSessionReview.FromJson(mismatchedReceipt); }
             catch (InvalidDataException) { mismatchRejected = true; }
             Require(mismatchRejected, "Recorded Review admitted a foreign Native command outcome.");
+            // P11.03: CSV is a provenance-rich export of Native observation
+            // and command receipts, not an invented pH curve/endpoint.
+            var csv = SessionExportService.RenderCsv(review);
+            Require(csv.StartsWith("schemaVersion,recordKind,branchId,") &&
+                csv.Contains("observation,research-branch,") &&
+                csv.Contains("command,research-branch,2,") &&
+                csv.Contains("PrepareStock") && csv.Contains("Rejected"),
+                "CSV omitted recorded Native values or rejected command receipts.");
+            var unsupportedJson = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            unsupportedJson["observations"][0]["support"] = "Unsupported";
+            var unavailable = SessionExportService.RenderCsv(
+                RecordedSessionReview.FromJson(unsupportedJson.ToJsonString()));
+            Require(!unavailable.Contains("7.099999") &&
+                unavailable.Split('\n')[1].EndsWith(","),
+                "Unsupported scientific pH was exported as a valid numeric result.");
+            var exportedCsv = Path.Combine(root, "native-results.csv");
+            SessionExportService.WriteCsv(exportedCsv, review);
+            Require(File.ReadAllText(exportedCsv) == csv &&
+                !File.Exists(exportedCsv + ".tmp"),
+                "Atomic scientific CSV export did not round-trip the real recorded data.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally

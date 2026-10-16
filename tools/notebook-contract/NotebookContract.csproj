@@ -15,5 +15,6 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs" Link="NotebookService.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/PortableSessionArchive.cs" Link="PortableSessionArchive.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/RecordedSessionReview.cs" Link="RecordedSessionReview.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/SessionExportService.cs" Link="SessionExportService.cs" />
   </ItemGroup>
 </Project>
