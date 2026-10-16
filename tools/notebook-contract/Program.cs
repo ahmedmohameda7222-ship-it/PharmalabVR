@@ -185,6 +185,20 @@ internal static class Program
             Require(!differentPackage.Rows[0].DeltaAvailable &&
                 differentPackage.Rows[0].CandidateDisplay == "6.70",
                 "Different scientific packages generated an unverified cross-model delta.");
+            // Confirmed backup-only recorded comparison must remain usable when
+            // the primary checkpoint is malformed, and fail closed otherwise.
+            var comparisonFile = Path.Combine(root, "compare.plv.json");
+            File.WriteAllText(comparisonFile, "{\"schemaVersion\":-1}");
+            File.WriteAllText(comparisonFile + ".bak", sourceRun.ToJsonString());
+            var fromBackup = RecordedRunComparison.CompareSaved(comparisonFile, secondRun);
+            Require(fromBackup.Rows.Count == 1 && fromBackup.Rows[0].DeltaAvailable,
+                "A real saved Native backup could not provide the recorded baseline.");
+            File.WriteAllText(comparisonFile + ".bak", "{\"schemaVersion\":-1}");
+            var refusedCorruptSavedPair = false;
+            try { RecordedRunComparison.CompareSaved(comparisonFile, secondRun); }
+            catch (InvalidDataException) { refusedCorruptSavedPair = true; }
+            Require(refusedCorruptSavedPair,
+                "Invalid primary and backup produced an invented comparison baseline.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
