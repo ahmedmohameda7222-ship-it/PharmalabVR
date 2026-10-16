@@ -61,6 +61,20 @@ internal static class Program
             Check(!File.Exists(target + ".tmp"),
                 "Failed atomic replacement left an uncommitted journal temporary file.");
             Directory.Delete(target + ".bak");
+
+            // A failed/aborted replace may leave only the last confirmed backup.
+            // SaveService.Load already recovers it, so the product's Load gate must
+            // not hide that recoverable file when the primary is absent.
+            service.Save(new CoreSession("journal:v1:backup-survivor"), root, "session");
+            service.Save(new CoreSession("journal:v1:latest"), root, "session");
+            File.Delete(target);
+            Check(SaveService.HasSaveCandidate(target),
+                "Valid backup-only Native save was hidden from the Pause/Load panel.");
+            Check(service.Load(target, "fixture-database").Serialized == "journal:v1:backup-survivor",
+                "Missing primary did not recover from the confirmed backup.");
+            File.Delete(target + ".bak");
+            Check(!SaveService.HasSaveCandidate(target),
+                "Load panel advertised a save without primary or backup.");
             Console.WriteLine("P11.01 SaveService headless filesystem checks passed: " + checks);
         }
         finally
