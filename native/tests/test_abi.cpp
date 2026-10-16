@@ -2385,3 +2385,33 @@ TEST_CASE("P11_01 dirty Pause automatically flushes and failed stage preserves p
     CHECK(plv_destroy(handle) == PLV_OK);
     fs::remove_all(directory);
 }
+
+TEST_CASE("P11_01 imported Native session can attach durable checkpoint without retiring its authority") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-resumed-autosave-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto checkpoint = (dir / "live.ckpt").string();
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t original = 0;
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    submit(original, command("1", "CreateVessel", {{"id","persisted"}, {"capacityM3",1e-5}}));
+    REQUIRE(poll(original)["accepted"].get<bool>());
+    const auto saved = read_text(original, true);
+    REQUIRE(plv_destroy(original) == PLV_OK);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(saved.data(), static_cast<std::uint32_t>(saved.size()), &imported) == PLV_OK);
+    CHECK(plv_configure_checkpoint(imported, "relative", 8) == PLV_INVALID_ARGUMENT);
+    REQUIRE(plv_configure_checkpoint(imported, checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size())) == PLV_OK);
+    REQUIRE(plv_step(imported, 0.0, 30'000'000'000ULL) == PLV_OK);
+    const plv::DurableCheckpointStore disk(checkpoint, 16U * 1024U * 1024U);
+    REQUIRE(disk.read().has_value());
+    const auto persisted = json::parse(disk.read().value());
+    CHECK(persisted["branchId"] == "branch-1");
+    CHECK(persisted["vessels"].size() == 1);
+    CHECK(persisted["nextCommandSequence"] == "2");
+    CHECK(plv_destroy(imported) == PLV_OK);
+    fs::remove_all(dir);
+}
