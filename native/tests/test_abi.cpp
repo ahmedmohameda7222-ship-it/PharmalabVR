@@ -2322,3 +2322,66 @@ TEST_CASE("P11_01 checkpoint import accepts exact installed pinned Native scient
     CHECK(plv_destroy(imported) == PLV_OK);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 configured Native checkpoint flushes dirty command at wall deadline") {
+    namespace fs = std::filesystem;
+    const auto directory = fs::temp_directory_path() /
+        ("plv-auto-checkpoint-wall-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(directory));
+    const auto path = (directory / "auto.ckpt").string();
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"}, {"checkpointPath", path}};
+    const auto encoded = config.dump();
+    std::uint64_t handle = 0;
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "stored"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 1'000'000'000ULL) == PLV_OK);
+    CHECK_FALSE(fs::exists(path + ".slot0"));
+    REQUIRE(plv_step(handle, 0.0, 30'000'000'000ULL) == PLV_OK);
+    const plv::DurableCheckpointStore store(path, 16U * 1024U * 1024U);
+    REQUIRE(store.read().has_value());
+    const auto persisted = json::parse(*store.read());
+    CHECK(persisted["vessels"].size() == 1);
+    CHECK(persisted["commandReceipts"].size() == 1);
+    CHECK(persisted["nextCommandSequence"] == "2");
+    CHECK(plv_destroy(handle) == PLV_OK);
+    fs::remove_all(directory);
+}
+
+TEST_CASE("P11_01 dirty Pause automatically flushes and failed stage preserves prior generation") {
+    namespace fs = std::filesystem;
+    const auto directory = fs::temp_directory_path() /
+        ("plv-auto-checkpoint-pause-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(directory));
+    const auto path = (directory / "auto.ckpt").string();
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"}, {"checkpointPath", path}};
+    const auto encoded = config.dump();
+    std::uint64_t handle = 0;
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "first"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 30'000'000'000ULL) == PLV_OK);
+    const plv::DurableCheckpointStore store(path, 16U * 1024U * 1024U);
+    REQUIRE(store.read().has_value());
+    const auto first = store.read().value();
+    submit(handle, command("2", "CreateVessel", {{"id", "second"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    // Make the inactive staging destination unwritable through a real OS
+    // directory; a failed checkpoint must retain first-generation data.
+    REQUIRE(fs::create_directory(path + ".slot1.tmp"));
+    submit(handle, command("3", "Pause"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK(plv_step(handle, 0.0, 30'000'000'001ULL) == PLV_INTERNAL_ERROR);
+    CHECK(store.read().value() == first);
+    fs::remove_all(path + ".slot1.tmp");
+    CHECK(plv_step(handle, 0.0, 30'000'000'002ULL) == PLV_OK);
+    REQUIRE(store.read().has_value());
+    const auto newest = json::parse(store.read().value());
+    CHECK(newest["vessels"].size() == 2);
+    CHECK(newest["commandReceipts"].size() == 3);
+    CHECK(newest["nextCommandSequence"] == "4");
+    CHECK(plv_destroy(handle) == PLV_OK);
+    fs::remove_all(directory);
+}
