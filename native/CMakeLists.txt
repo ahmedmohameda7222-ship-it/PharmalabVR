@@ -1,4 +1,5 @@
 set(PLV_CORE_SOURCES
+    core/src/checkpoint.cpp
     core/src/ideal_reference.cpp
     core/src/indicator_model.cpp
     core/src/iphreeqc_adapter.cpp

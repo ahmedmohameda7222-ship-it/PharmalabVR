@@ -3,6 +3,7 @@
 #include "plv/state_executor.hpp"
 #include "plv/tool_models.hpp"
 #include "plv/scheduler.hpp"
+#include "plv/journal.hpp"
 #include "plv/solver_worker.hpp"
 #include "plv/solver.hpp"
 #include "json.hpp"
@@ -1521,6 +1522,29 @@ std::int32_t plv_export(std::uint64_t handle, char* out, std::uint32_t capacity,
     try {
         std::lock_guard<std::mutex> lock(context->mutex);
         return copyString(exportJson(*context).dump(), out, capacity, required);
+    } catch (...) {
+        return PLV_INTERNAL_ERROR;
+    }
+}
+
+
+std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_t size) {
+    const auto context = getContext(handle);
+    if (!context) return PLV_INVALID_HANDLE;
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id())
+        return PLV_BUSY;
+    if (path == nullptr || size == 0U || size > 1024U ||
+        std::memchr(path, '\0', size) != nullptr)
+        return PLV_INVALID_ARGUMENT;
+    try {
+        const std::string destination(path, path + size);
+        std::lock_guard<std::mutex> lock(context->mutex);
+        if (!context->active.load()) return PLV_BUSY;
+        const auto encoded = exportJson(*context).dump();
+        plv::DurableCheckpointStore checkpoint(destination, 16U * 1024U * 1024U);
+        return checkpoint.write(encoded).accepted ? PLV_OK : PLV_INTERNAL_ERROR;
+    } catch (const std::invalid_argument&) {
+        return PLV_INVALID_ARGUMENT;
     } catch (...) {
         return PLV_INTERNAL_ERROR;
     }

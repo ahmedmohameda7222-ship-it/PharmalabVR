@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <deque>
 #include <memory>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -69,6 +70,21 @@ private:
     std::uint64_t startedWallNs_ = 0;
     double startedSimulationSeconds_ = 0.0;
     bool dirty_ = false;
+};
+
+// Two independently checksummed generations preserve the last confirmed
+// snapshot if a newer write is interrupted. Checkpoints contain serialized
+// Native exports; importing/validating the science package is still owned by
+// the Native ABI, never by this byte store.
+class DurableCheckpointStore {
+public:
+    DurableCheckpointStore(std::string path, std::size_t maxPayloadBytes);
+    CommandOutcome write(const std::string& nativeExport);
+    std::optional<std::string> read() const;
+
+private:
+    std::string path_;
+    std::size_t maxPayloadBytes_;
 };
 
 class ReceiptIdentityIndex {

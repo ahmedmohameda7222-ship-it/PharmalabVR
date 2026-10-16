@@ -35,6 +35,9 @@ PLV_API int32_t plv_step(uint64_t handle, double delta_s, uint64_t monotonic_now
 PLV_API int32_t plv_snapshot(uint64_t handle, char* out, uint32_t capacity, uint32_t* required);
 PLV_API int32_t plv_poll(uint64_t handle, char* out, uint32_t capacity, uint32_t* required);
 PLV_API int32_t plv_export(uint64_t handle, char* out, uint32_t capacity, uint32_t* required);
+// Explicit Native checkpoint; returns success only after durable disk commit.
+// Not a background checkpoint schedule or a new scientific import pathway.
+PLV_API int32_t plv_checkpoint(uint64_t handle, const char* path, uint32_t size);
 PLV_API int32_t plv_import(const char* json, uint32_t size, uint64_t* new_handle);
 
 #ifdef __cplusplus
