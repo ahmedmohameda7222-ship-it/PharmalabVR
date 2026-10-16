@@ -552,6 +552,12 @@ internal static class Program
                 "Notebook note was not sent to the session-owned note store.");
             Check(session.NotebookAppendCalls == 1 && session.SaveCalls == 0,
                 "Notebook note was replayed or implicitly saved Native chemistry.");
+            Check(router.Current.SupportedActions.Contains("ExportPortable"),
+                "Notebook has no explicit portable Native+notes export action.");
+            Check(panels.Request(PanelAction.ExportPortable),
+                "Notebook portable export did not reach the session-owned archive writer.");
+            Check(session.PortableExportCalls == 1 && session.SaveCalls == 0,
+                "Notebook archive export implicitly saved or repeated Native chemistry.");
             Check(panels.Request(PanelAction.Lab) && router.Current.ScreenId == ScreenId.Lab,
                 "Notebook return must preserve the active Lab session.");
             Check(driver.CurrentLabView.EventSequence == "7",
@@ -565,6 +571,12 @@ internal static class Program
                 "Live Desktop Measure unexpectedly permitted a Native session replacement");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            Check(router.Current.SupportedActions.Contains("ExportPortable"),
+                "Native Pause does not expose portable Export.");
+            Check(panels.Request(PanelAction.ExportPortable),
+                "Native Pause refused its explicit research archive Export.");
+            Check(session.PortableExportCalls == 2 && session.SaveCalls == 0,
+                "Portable Export caused an unintended Native Save or duplicate command.");
             driver.CurrentMode = "VR";
             router.Configure(driver);
             Check(router.Current.SupportedActions.Contains("Load"),
