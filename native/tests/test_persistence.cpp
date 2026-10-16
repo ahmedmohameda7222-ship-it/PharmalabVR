@@ -268,3 +268,27 @@ TEST_CASE("P11_01 both damaged checkpoint slots fail closed") {
     CHECK_FALSE(checkpoint.write(R"({"generation":3})").accepted);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 real filesystem checkpoint stage refusal retains verified previous generation") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-ckpt-stage-refusal-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto path = (dir / "state.ckpt").string();
+    DurableCheckpointStore store(path, 2048);
+    const std::string first = R"({"branchId":"research","eventSequence":"1"})";
+    const std::string second = R"({"branchId":"research","eventSequence":"2"})";
+    REQUIRE(store.write(first).accepted);
+    REQUIRE(fs::create_directory(path + ".slot1.tmp"));
+    const auto failure = store.write(second);
+    CHECK_FALSE(failure.accepted);
+    CHECK(failure.code == "CheckpointWriteFailed");
+    CHECK(store.read().value() == first);
+    CHECK(fs::exists(path + ".slot0"));
+    CHECK_FALSE(fs::exists(path + ".slot1"));
+    fs::remove(path + ".slot1.tmp");
+    REQUIRE(store.write(second).accepted);
+    CHECK(store.read().value() == second);
+    fs::remove_all(dir);
+}
