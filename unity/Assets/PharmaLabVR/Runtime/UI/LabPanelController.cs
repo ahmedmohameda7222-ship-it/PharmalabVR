@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -119,6 +119,8 @@ namespace PharmaLabVR.UI
                     return sessions.Save();
                 case PanelAction.ExportPortable:
                     return sessions.ExportPortableSession();
+                case PanelAction.ExportCsv:
+                    return sessions.ExportRecordedCsv();
                 case PanelAction.ReleaseTool:
                     return sessions.ReleaseToolFromDock();
                 case PanelAction.ParkTool:

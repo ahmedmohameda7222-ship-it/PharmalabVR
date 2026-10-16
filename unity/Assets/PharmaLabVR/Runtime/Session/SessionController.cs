@@ -18,6 +18,7 @@ namespace PharmaLabVR.Session
         [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
         public string LastPortableArchivePath { get; private set; }
+        public string LastCsvExportPath { get; private set; }
         public string LastError { get; private set; }
         public RecordedSessionReview RecordedReview { get; private set; }
         private readonly SaveService saves = new();
@@ -260,6 +261,11 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Settings);
+                if (GUILayout.Button("Export recorded observations + commands (CSV)", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportCsv);
+                if (!string.IsNullOrEmpty(LastCsvExportPath))
+                    GUILayout.Label("CSV written: " + LastCsvExportPath);
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;
@@ -609,6 +615,27 @@ namespace PharmaLabVR.Session
             catch (Exception exception)
             {
                 LastError = exception.Message;
+                return false;
+            }
+        }
+
+        public bool ExportRecordedCsv()
+        {
+            LastCsvExportPath = null;
+            try
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
+                    throw new InvalidOperationException("CSV export requires an open recorded Native Review.");
+                var notesPath = NotebookFilePath(); // Enforces safe session file naming.
+                var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv-results.csv");
+                SessionExportService.WriteCsv(target, RecordedReview);
+                LastCsvExportPath = target;
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Recorded CSV export failed: " + error.Message;
                 return false;
             }
         }

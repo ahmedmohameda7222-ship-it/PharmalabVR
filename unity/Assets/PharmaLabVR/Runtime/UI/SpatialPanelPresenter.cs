@@ -93,6 +93,7 @@ namespace PharmaLabVR.UI
             AddButton("Open review", -138f, PanelAction.Review);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
+            AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
             AddButton("Return to lab", -138f, PanelAction.Lab);
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
@@ -382,10 +383,13 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("Notebook"));
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
                 state.SupportedActions.Contains("ExportPortable"));
+            SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("ExportCsv"));
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
-                state.ScreenId != ScreenId.Settings && state.ScreenId != ScreenId.Notebook);
+                state.ScreenId != ScreenId.Settings &&
+                state.ScreenId != ScreenId.Notebook && state.ScreenId != ScreenId.Review);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
             SetButton("Settings", state.SupportedActions.Contains("Settings"));
             SetButton("Back", state.SupportedActions.Contains("Back"));

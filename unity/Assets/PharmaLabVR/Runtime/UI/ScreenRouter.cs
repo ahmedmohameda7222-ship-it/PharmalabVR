@@ -343,8 +343,8 @@ namespace PharmaLabVR.UI
                     new[] { "Lab", "Save", "Load", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
                     new[] { "Lab", "Save", "Load", "ExportPortable", "Settings", "Review" },
                 ScreenId.Review => driver != null && driver.IsTimeHeld ?
-                    new[] { "Settings", "Save" } :
-                    new[] { "Lab", "Settings", "Save", "Notebook" },
+                    new[] { "Settings", "Save", "ExportCsv" } :
+                    new[] { "Lab", "Settings", "Save", "Notebook", "ExportCsv" },
                 ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save", "ExportPortable" },
                 ScreenId.Settings => new[] { "Back", "Save" },
                 _ => Array.Empty<string>()

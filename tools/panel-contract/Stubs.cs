@@ -123,6 +123,12 @@ namespace PharmaLabVR.Session
         public int ReviewOpens { get; private set; }
         public int NotebookAppendCalls { get; private set; }
         public int PortableExportCalls { get; private set; }
+        public int CsvExportCalls { get; private set; }
+        public bool ExportRecordedCsv()
+        {
+            CsvExportCalls++;
+            return true;
+        }
         public bool ExportPortableSession()
         {
             PortableExportCalls++;
