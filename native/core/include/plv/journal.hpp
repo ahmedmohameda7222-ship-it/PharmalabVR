@@ -49,6 +49,27 @@ private:
     std::size_t maxTotalBytes_;
 };
 
+// Pure scheduling policy. Only the Native checkpoint writer may call
+// acknowledgeFlush, after an actual successful durable checkpoint write.
+// Clock inputs are supplied by the owner (monotonic wall and simulation).
+class DirtyCheckpointPolicy {
+public:
+    DirtyCheckpointPolicy(std::uint64_t maximumDirtyWallNs,
+                          double maximumDirtySimulationSeconds);
+    void markDirty(std::uint64_t nowWallNs, double nowSimulationSeconds);
+    bool needsFlush(std::uint64_t nowWallNs, double nowSimulationSeconds,
+                    bool pauseRequested) const;
+    void acknowledgeFlush();
+    bool dirty() const;
+
+private:
+    std::uint64_t maximumDirtyWallNs_;
+    double maximumDirtySimulationSeconds_;
+    std::uint64_t startedWallNs_ = 0;
+    double startedSimulationSeconds_ = 0.0;
+    bool dirty_ = false;
+};
+
 class ReceiptIdentityIndex {
 public:
     explicit ReceiptIdentityIndex(std::size_t cacheLimit);

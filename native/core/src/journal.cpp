@@ -3,6 +3,7 @@
 #include <limits>
 #include <cstdio>
 #include <algorithm>
+#include <cmath>
 #include <charconv>
 #include <unordered_set>
 #include <utility>
@@ -219,6 +220,48 @@ bool readReceiptRecord(const std::string& payload,
     return true;
 }
 }  // namespace
+
+
+DirtyCheckpointPolicy::DirtyCheckpointPolicy(
+    std::uint64_t maximumDirtyWallNs, double maximumDirtySimulationSeconds)
+    : maximumDirtyWallNs_(maximumDirtyWallNs),
+      maximumDirtySimulationSeconds_(maximumDirtySimulationSeconds) {
+    if (maximumDirtyWallNs_ == 0 ||
+        !std::isfinite(maximumDirtySimulationSeconds_) ||
+        maximumDirtySimulationSeconds_ <= 0.0) {
+        throw std::invalid_argument("invalid dirty checkpoint flush thresholds");
+    }
+}
+
+void DirtyCheckpointPolicy::markDirty(
+    std::uint64_t nowWallNs, double nowSimulationSeconds) {
+    if (!std::isfinite(nowSimulationSeconds) || nowSimulationSeconds < 0.0) {
+        throw std::invalid_argument("dirty simulation clock must be finite and nonnegative");
+    }
+    // Repeated edits never postpone the original dirty deadline.
+    if (!dirty_) {
+        startedWallNs_ = nowWallNs;
+        startedSimulationSeconds_ = nowSimulationSeconds;
+        dirty_ = true;
+    }
+}
+
+bool DirtyCheckpointPolicy::needsFlush(
+    std::uint64_t nowWallNs, double nowSimulationSeconds, bool pauseRequested) const {
+    if (!dirty_) return false;
+    if (pauseRequested) return true;
+    // A backwards/discontinuous clock is not a reason to defer durability.
+    if (!std::isfinite(nowSimulationSeconds) || nowSimulationSeconds < 0.0 ||
+        nowWallNs < startedWallNs_ || nowSimulationSeconds < startedSimulationSeconds_) {
+        return true;
+    }
+    return nowWallNs - startedWallNs_ >= maximumDirtyWallNs_ ||
+           nowSimulationSeconds - startedSimulationSeconds_ >=
+               maximumDirtySimulationSeconds_;
+}
+
+void DirtyCheckpointPolicy::acknowledgeFlush() { dirty_ = false; }
+bool DirtyCheckpointPolicy::dirty() const { return dirty_; }
 
 ReceiptIdentityIndex::ReceiptIdentityIndex(std::size_t cacheLimit)
     : cacheLimit_(cacheLimit) {}
