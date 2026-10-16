@@ -617,6 +617,12 @@ internal static class Program
                 "Settings Back unpaused the operating authority");
             Check(panels.Request(PanelAction.Review), "Paused Review refused");
             Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
+            Check(router.Current.SupportedActions.Contains("ExportCsv"),
+                "Recorded Review did not expose a native-observation CSV export.");
+            Check(panels.Request(PanelAction.ExportCsv),
+                "Recorded Review CSV export did not reach the session writer.");
+            Check(session.CsvExportCalls == 1 && session.SaveCalls == 0,
+                "CSV export duplicated an operation or implicitly saved Native chemistry.");
             Check(panels.Request(PanelAction.Lab), "Recorded Review return refused");
             Check(router.Current.ScreenId == ScreenId.Lab && !driver.IsNativePaused,
                 "Review return failed to resume the paused authority");
