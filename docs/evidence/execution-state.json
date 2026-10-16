@@ -746,7 +746,7 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": "186c9ae891d62a32666fd91150220819ba9ad53f",
+          "codeCommit": "c7b0b05d0fb335180b7c936ed4b21ff72f547abb",
           "evidence": [
             "docs/evidence/p06-02-progress.md",
             "docs/evidence/artifact-manifest-p06-02.json",
@@ -777,7 +777,8 @@
             "P06.02 paged VR Setup/Settings UI source: Unity test authored, XR tracked-ray/Player not executed",
             "2026-10-15 P06.02 XR stock-concentration source slice: original XR panel hardcoded 0.1mol/L while Desktop supported 0.01/0.05/0.10 matrix; regression headless RED e4c694af missing ResearchConcentrationSelection, production GREEN b9563914 adds supported-index selector and water=0, passes concentration in shared LabPanelController.Request Optional<double> for PrepareResearchStock/PrepareReserveStock; C# panel stub tests actual forwarded 0.05mol/L and reserved-water=0, external Native remains authoritative. Unity real-Native PlayMode P06_02_XrSharedPanelSelectionPreparesExactNativeMolarityAndWaterReserve authored bca5bc84 NOT_RUN. Green headless at b956391 in push 38800663203; Windows/Ubuntu native CI pending at ledger write. Full P06.02 Open/NotReviewed.",
             "2026-10-16 P06.02 transient Native Hold/Settings state routing safety: headless RED 9818e55 runtime assertion 'Resolved Native Hold was resurrected by Settings Back', intermediate attempt 05f85ee exposed test's unsupported Lab→Settings path; valid Pause→Settings interrupted by native Hold RED c7e199 runtime assertion 'lost underlying Native Pause'. Final ScreenRouter 467477a captures beforeInterruptedSettings on hold entry and resolves destination based on actual Native held/paused state without Save/Continue/Pause side effects; headless GREEN push 38816878655. Native Windows/Ubuntu pending at documentation authoring; PlayMode/Editor XR NOT_RUN.",
-            "2026-10-16 Desktop saved-session load: headless RED d0c3ebe (run 38829295610, assertion 'Desktop Pause has no explicit saved-session Load action'), GREEN 182b7b6 (push 38829380659 and PR 38829386957, 3/3 jobs each SUCCESS). Native session-load admission now permits Desktop from Pause/Hold without a VR dock, preserves the VR dock prerequisite and no implicit Save/receipt/revision; old unguarded Desktop live Lab GUI ContinueFrom shortcut removed at 186c9ae; actual Unity PlayMode P06_02_DesktopPauseLoadSavedSessionIsExplicitAndNativeBacked source authored, NOT_RUN. P06.02 remains Open/NotReviewed."
+            "2026-10-16 Desktop saved-session load: headless RED d0c3ebe (run 38829295610, assertion 'Desktop Pause has no explicit saved-session Load action'), GREEN 182b7b6 (push 38829380659 and PR 38829386957, 3/3 jobs each SUCCESS). Native session-load admission now permits Desktop from Pause/Hold without a VR dock, preserves the VR dock prerequisite and no implicit Save/receipt/revision; old unguarded Desktop live Lab GUI ContinueFrom shortcut removed at 186c9ae; actual Unity PlayMode P06_02_DesktopPauseLoadSavedSessionIsExplicitAndNativeBacked source authored, NOT_RUN. P06.02 remains Open/NotReviewed.",
+            "2026-10-16 P06.02 + P11.01 Pause/Hold saved-session backup admission: source RED 551a2cb (missing SaveService.HasSaveCandidate in headless actual service) push 38832226727; GREEN c7b0b05 allows a confirmed .bak alone to advertise Load and delegates real validation/import to SaveService.Load. Shared Desktop/VR Pause/Hold safety remains, Desktop unguarded Lab load absent. Unity PlayMode existing Desktop Load test extended to missing primary/valid backup; NOT_RUN. GitHub push 38832333024 and PR 38832338221 all three jobs SUCCESS. P06.02 remains Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial: native-backed routing and recorded Review; new Boot/Settings posture/hand/bench-view/text/caption/motion/contrast/audio preference state and presentation wiring, paused-Review native Continue guard, Back from Settings and dynamic Desktop HUD bounds. 39 headless C# routing assertions and an intentionally mutated Review-return RED/GREEN at 37440f1 verify source logic against test adapters only. New Unity PlayMode tests authored but never executed at this SHA; no Unity compile/render, Desktop Player or injected tracked-ray action proof. Full VR Settings parity, real UI input journeys, scene references, physical geometry/reach, English-only UI completeness and P06.02 acceptance remain open.",
@@ -1051,14 +1052,15 @@
             "P09.01"
           ],
           "status": "Open",
-          "codeCommit": "8b3206fe9726e395ef6b878b4cc7a8cf5df3c5ff",
+          "codeCommit": "b9877134810944ce086e499d227a9c047195b4e9",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "2026-10-16 bounded source P09.02: headless RED 9f1bddb2 compile failure (ScientificReadoutPolicy missing) in CI push 38830901208; functional 8b3206f adds pure real production ScientificReadoutPolicy.Resolve and Describe; CoreDriver rejects nonfinite Current Ready pH as Failed, XR Inspect/Measure shows explicit Supported/Failed/Pending/Stale/Unsupported and masks non-current numeric readout. Headless compilation links actual MeasurementView, test harness compiler CS0649 warning suppression isolated to headless project at 6424148. Headless panel-routing SUCCESS at push 38831095562; complete Windows/Ubuntu Native + Unity Editor/Player/XR status separate; new Unity PlayMode assertions authored NOT_RUN."
+            "2026-10-16 bounded source P09.02: headless RED 9f1bddb2 compile failure (ScientificReadoutPolicy missing) in CI push 38830901208; functional 8b3206f adds pure real production ScientificReadoutPolicy.Resolve and Describe; CoreDriver rejects nonfinite Current Ready pH as Failed, XR Inspect/Measure shows explicit Supported/Failed/Pending/Stale/Unsupported and masks non-current numeric readout. Headless compilation links actual MeasurementView, test harness compiler CS0649 warning suppression isolated to headless project at 6424148. Headless panel-routing SUCCESS at push 38831095562; complete Windows/Ubuntu Native + Unity Editor/Player/XR status separate; new Unity PlayMode assertions authored NOT_RUN.",
+            "2026-10-16 Native-to-Unity absent pH numeric contract RED a73a486: Ubuntu Native CTest fail 102/103 (two missing valueAvailable assertions), headless compiler no Resolve overload, push run 38831808106. GREEN b987713 adds Native observation valueAvailable true only with represented finite numeric; Unity CoreDriver requires this flag before Current, recorded-only Review requires it before DisplayValue; Native snapshot Current positive test and real Unity EditMode regression source authored. Windows/Ubuntu/headless push run 38831951505 and PR 38831956251 SUCCESS. No Unity Editor/Player/XR executed at these commits, P09.02 Open."
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial code-first Native-observation UI truth: a finite Ready Supported Current value alone is displayable, nonfinite failures and stale/unsupported states suppress XR readout. Full J03 state UX, actual optical science provider verification, rendered Unity status controls, Player/XR verification Open.",
+          "acceptanceScope": "Partial P09.02 Native scientific observation truth: explicit finite-value presence emitted by real Native ABI and required by Unity current pH/recorded Review; no missing pH projected as 0.00 by JsonUtility. Earlier freshness/support status gating remains. Full state UX, model support and actual Unity UI/Player tests Open.",
           "blocker": null
         }
       ],
@@ -1183,12 +1185,13 @@
             "P10.03"
           ],
           "status": "Open",
-          "codeCommit": "cdf0410a281b90eeda76cb42d79046f50a1d3820",
+          "codeCommit": "c7b0b05d0fb335180b7c936ed4b21ff72f547abb",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "2026-10-16 P11.01 bounded filesystem slice: actual production SaveService now rejects empty/>16 MiB serialized UTF-8 exports before creating/replacing disk files, aligning Save with existing LoadOne limit. CI headless RED 1f41c2c push 38829873920 ('Oversized save was reported successful'), corrective source GREEN 8b22c59 panel-routing SUCCESS (push 38829945711); full Windows/Ubuntu/native push+PR conclusions pending at note. Headless disk tests cover backup recovery, unsafe filename, oversize preservation and no leftover temp. This is not Native journal/checkpoint/disk-full/Unity acceptance.",
-            "2026-10-16 atomic-replacement disk fault: headless RED 184b980 push 38830618144 'Failed atomic replacement left an uncommitted journal temporary file' from actual SaveService; functional fix cdf0410 catches failed write/flush/replace and removes uncommitted .tmp without masking original IOException, protecting prior confirmed checkpoint. Headless green push 38830692265 panel-routing SUCCESS, full matrix separately pending at ledger write. This is not tested power-loss/Native journal or a completed P11.01."
+            "2026-10-16 atomic-replacement disk fault: headless RED 184b980 push 38830618144 'Failed atomic replacement left an uncommitted journal temporary file' from actual SaveService; functional fix cdf0410 catches failed write/flush/replace and removes uncommitted .tmp without masking original IOException, protecting prior confirmed checkpoint. Headless green push 38830692265 panel-routing SUCCESS, full matrix separately pending at ledger write. This is not tested power-loss/Native journal or a completed P11.01.",
+            "2026-10-16 recovered backup-only SaveService: RED 551a2cb headless CI push 38832226727, missing candidate method; GREEN c7b0b05 SaveService.HasSaveCandidate and SessionController Pause/Hold/GUI admission while actual Native import checks remain delegated to existing Load. Headless Native Windows/Ubuntu push 38832333024, PR 38832338221 SUCCESS. Real Unity PlayMode source authored but NOT_RUN; disk-journal/checkpoint R01–R05 still Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial code-first filesystem envelope: bounded UTF-8 Save and recoverable confirmed .bak retention; Native ordered checksummed journal, dirty-flush schedule, identity index, fault-injection and Unity Player acceptance remain Open.",
@@ -1209,12 +1212,14 @@
             "P11.01"
           ],
           "status": "Open",
-          "codeCommit": null,
+          "codeCommit": "f6b18f09145602590c4aaaf81dc59b539085aba4",
           "evidence": [],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "2026-10-16 bounded P11.02 code-first: RED test-only 88d8931 links production NotebookService path and fails headless when absent (push 38832765547); GREEN 8c5c3d2 adds UTF-8 max-1MiB checksummed line store for 512 notes, atomic replacement with prior confirmed backup, fail-closed corruption/unsafe edit, English-only note validation, branch/vessel/Native eventSequence/time provenance. HEADLESS .NET notebook tests and Native Windows/Ubuntu push 38832952576 + PR 38832957789 SUCCESS. Further routing RED 6471d31 headless compile missing Notebook actions; 1cd320b integrates actual CoreSession.BranchId, SessionController add/read, Desktop note entry, XR read-only note summary via Review, shared PanelAction/ScreenRouter, Unity PlayMode P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision source NOT_RUN. 6850255/f6b18f fix error preservation and actual decoded Arabic-script negative test. Headless panel-routing green at 1cd320b push 38833340015; final Windows/Ubuntu at f6b18f pending at evidence authoring. Local note file is NOT bundled into portable session export, no actual XR typed note entry, no event-list Review/notebook branch-fork UX or Unity/Player evidence; P11.02 Open."
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Partial P11.02: session-bound recorded research note creation from real current Native branch/event revision; local checksummed note store with backup and provenance; Desktop write UI, XR Review read-only summary, headless tests. Missing portable Save/Load note bundling, structured event Review/fork, XR text entry, actual Unity and Player evidence. Open/NotReviewed.",
           "blocker": null
         },
         {
@@ -2247,9 +2252,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "6424148cb2c084bac62451d852ea81762e89c27a",
-  "functionalCodeSha": "6424148cb2c084bac62451d852ea81762e89c27a",
-  "currentTask": "Code-first P06.02 Desktop Pause/Hold load, P11.01 save atomic fault cleanup and P09.02 scientific readout safety committed; English-only; formal tasks remain Open; Unity verification deferred",
+  "actualHead": "f6b18f09145602590c4aaaf81dc59b539085aba4",
+  "functionalCodeSha": "f6b18f09145602590c4aaaf81dc59b539085aba4",
+  "currentTask": "Code-first Native pH availability/backup-only restore and session-linked Notebook P11.02 implemented in bounded scope; all 66 official statuses unchanged; Unity final campaign NOT_RUN",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2298,6 +2303,7 @@
     "2026-10-16 user explicitly rejected ALL Arabic in PharmaLabVR product, selected English-only. This direct user product decision overrides legacy P10.03 bilingual/RTL instructions. Reverted the nine newly authored multilingual source commits without rewriting history; preserved preceding accepted source and green P10.02 at baseline 7edf9b95. New functional HEAD 18c06baa removes Arabic translations/fonts/RTLTMPro/selection/LocalizedLabel, removes RTL asmdef reference and enforces en-only catalog with strict source tests. No Unity Editor/PlayMode/Player/XR run. CI at 18c06baa headless success, Native Windows/Ubuntu pending. P10.03 Open, 15 VerifiedLocal/51 Open, 66 Unity NOT_RUN, G-R1 Open, PR #1 open, formal nextTask P06.02 unchanged.",
     "2026-10-16 owner reiterated ENGLISH-ONLY product UI. Functional source 18c06baa removed Arabic/RTL assets and runtime switches; incremental 24ac6ca8 rejects Arabic Unicode ranges in English copy values/keys with atomic failure, adds headless regression; CI exact final functional SHA pending at note. Formal P10.03 Open/NotReviewed, 66 deferred Unity NOT_RUN, G-R1 Open, PR #1 unmerged, nextTask P06.02 unchanged.",
     "2026-10-16 continuation: started from GitHub fafee12, preserved owner English-only policy; source test RED d0c3ebe → GREEN 182b7b6, P11 filesystem RED 1f41c2c → green panel routing at 8b22c59; unguarded live Desktop loading removed at 186c9ae. Canonical English-only spec corrections at 1417741. No Unity Editor/Player/XR executed; ledger 15 VerifiedLocal / 51 Open and G-R1 Open; final local Codex campaign deferred. PR #1 unmerged.",
-    "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1."
+    "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1.",
+    "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion."
   ]
 }
