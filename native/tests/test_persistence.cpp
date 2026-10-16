@@ -122,3 +122,60 @@ TEST_CASE("R02 disk journal rejects CRC corruption and over-capacity append with
     CHECK(fs::file_size(path) == corruptedSize);
     fs::remove_all(directory);
 }
+
+TEST_CASE("R05 durable Native receipt identities reject replays across process restarts") {
+    namespace fs = std::filesystem;
+    const auto directory = fs::temp_directory_path() /
+        ("plv-receipt-index-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(directory));
+    const auto path = directory / "receipts.wal";
+    {
+        ReceiptIdentityIndex first(2, path.string());
+        CHECK(first.accept("branch-A", 1, std::string(64, 'a')));
+        CHECK(first.accept("branch-A", 2, std::string(64, 'b')));
+        CHECK(first.accept("branch-A", 3, std::string(64, 'c')));
+        CHECK(first.cachedCount() <= 2);
+    }
+    {
+        ReceiptIdentityIndex restarted(2, path.string());
+        const auto originalLength = fs::file_size(path);
+        CHECK_FALSE(restarted.accept("branch-A", 1, std::string(64, 'a')));
+        CHECK_FALSE(restarted.accept("branch-A", 1, std::string(64, 'f')));
+        CHECK(fs::file_size(path) == originalLength);
+        CHECK(restarted.accept("branch-B", 1, std::string(64, 'a')));
+        CHECK(restarted.accept("branch-A", 4, std::string(64, 'd')));
+        CHECK(restarted.cachedCount() <= 2);
+    }
+    {
+        ReceiptIdentityIndex secondRestart(2, path.string());
+        CHECK_FALSE(secondRestart.accept("branch-B", 1, std::string(64, 'a')));
+        CHECK_FALSE(secondRestart.accept("branch-A", 4, std::string(64, 'd')));
+    }
+    fs::remove_all(directory);
+}
+
+TEST_CASE("R05 torn receipt does not turn into a durable replay identity") {
+    namespace fs = std::filesystem;
+    const auto directory = fs::temp_directory_path() /
+        ("plv-receipt-torn-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(directory));
+    const auto path = directory / "receipts.wal";
+    {
+        ReceiptIdentityIndex first(2, path.string());
+        CHECK(first.accept("branch-A", 1, std::string(64, 'a')));
+        CHECK(first.accept("branch-A", 2, std::string(64, 'b')));
+    }
+    fs::resize_file(path, fs::file_size(path) - 3);
+    {
+        ReceiptIdentityIndex recovered(2, path.string());
+        CHECK_FALSE(recovered.accept("branch-A", 1, std::string(64, 'a')));
+        CHECK(recovered.accept("branch-A", 2, std::string(64, 'b')));
+    }
+    {
+        ReceiptIdentityIndex afterRepair(2, path.string());
+        CHECK_FALSE(afterRepair.accept("branch-A", 2, std::string(64, 'b')));
+    }
+    fs::remove_all(directory);
+}
