@@ -938,7 +938,7 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries.Count, Is.EqualTo(1));
                 Assert.That(entries[0].EventSequence, Is.EqualTo(revision));
                 Assert.That(entries[0].BranchId, Is.EqualTo(driver.Session.BranchId));
-                Assert.That(actions.Request(PanelAction.AddNotebookNote, "\\u0639"), Is.False,
+                Assert.That(actions.Request(PanelAction.AddNotebookNote, "\u0639"), Is.False,
                     "English-only notebook should not accept Arabic-script entries.");
                 var rejectedMessage = session.LastError;
                 Assert.That(rejectedMessage, Is.Not.Null.And.Not.Empty);
