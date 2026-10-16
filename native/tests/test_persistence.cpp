@@ -211,3 +211,60 @@ TEST_CASE("R04 dirty Native state flushes before pause and on time discontinuity
     policy.acknowledgeFlush(true);
     CHECK_FALSE(policy.needsFlush(60'000'000'000ULL, 42.0, true));
 }
+
+TEST_CASE("P11_01 Native two-slot checkpoint retains previous committed generation") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-checkpoint-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto path = (dir / "state.ckpt").string();
+    {
+        DurableCheckpointStore checkpoint(path, 4096);
+        CHECK_FALSE(checkpoint.read().has_value());
+        REQUIRE(checkpoint.write(R"({"generation":1,"value":"first"})").accepted);
+        CHECK(checkpoint.read().value() == R"({"generation":1,"value":"first"})");
+        REQUIRE(checkpoint.write(R"({"generation":2,"value":"second"})").accepted);
+        CHECK(checkpoint.read().value() == R"({"generation":2,"value":"second"})");
+        // A rejected oversized write must not retire a previously confirmed slot.
+        CHECK_FALSE(checkpoint.write(std::string(4097, 'x')).accepted);
+        CHECK(checkpoint.read().value() == R"({"generation":2,"value":"second"})");
+    }
+    {
+        DurableCheckpointStore restarted(path, 4096);
+        REQUIRE(restarted.read().has_value());
+        CHECK(restarted.read().value() == R"({"generation":2,"value":"second"})");
+        // Corrupt the newest slot; only the independently validated older
+        // generation is allowed as a recorded recovery candidate.
+        auto newest = fs::path(path + ".slot1");
+        REQUIRE(fs::exists(newest));
+        std::fstream damaged(newest, std::ios::in | std::ios::out | std::ios::binary);
+        REQUIRE(damaged.is_open());
+        damaged.seekp(-1, std::ios::end);
+        damaged.put('!');
+        damaged.close();
+        CHECK(restarted.read().value() == R"({"generation":1,"value":"first"})");
+        REQUIRE(restarted.write(R"({"generation":3,"value":"third"})").accepted);
+        CHECK(restarted.read().value() == R"({"generation":3,"value":"third"})");
+    }
+    fs::remove_all(dir);
+}
+
+TEST_CASE("P11_01 both damaged checkpoint slots fail closed") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-checkpoint-bad-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto path = (dir / "state.ckpt").string();
+    DurableCheckpointStore checkpoint(path, 4096);
+    REQUIRE(checkpoint.write(R"({"generation":1})").accepted);
+    REQUIRE(checkpoint.write(R"({"generation":2})").accepted);
+    for (const auto& suffix : {".slot0", ".slot1"}) {
+        std::ofstream damaged(path + suffix, std::ios::binary | std::ios::trunc);
+        damaged << "corrupted";
+    }
+    CHECK_THROWS_AS(checkpoint.read(), std::runtime_error);
+    CHECK_FALSE(checkpoint.write(R"({"generation":3})").accepted);
+    fs::remove_all(dir);
+}

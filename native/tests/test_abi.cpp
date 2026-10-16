@@ -1,5 +1,6 @@
 #include "doctest.h"
 #include "plv/abi.h"
+#include "plv/journal.hpp"
 #include "json.hpp"
 
 #include <array>
@@ -9,6 +10,8 @@
 #include <thread>
 #include <atomic>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <unordered_map>
 
 namespace {
@@ -2166,4 +2169,37 @@ TEST_CASE("P09_02 missing Native pH number must not deserialize as a real pH zer
     CHECK(snapshot["observations"][0].at("valueAvailable") == false);
     CHECK_FALSE(snapshot["observations"][0].contains("value"));
     CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("P11_01 explicit Native checkpoint persists actual session receipts for verified import") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-abi-checkpoint-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto checkpointPath = (dir / "native-state.ckpt").string();
+    std::uint64_t original = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &original) == PLV_OK);
+    submit(original, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(original)["accepted"].get<bool>());
+    REQUIRE(plv_checkpoint(original, checkpointPath.data(),
+        static_cast<std::uint32_t>(checkpointPath.size())) == PLV_OK);
+    const auto nativeBefore = json::parse(read_text(original, true));
+    const plv::DurableCheckpointStore disk(checkpointPath, 16U * 1024U * 1024U);
+    const auto bytes = disk.read();
+    REQUIRE(bytes.has_value());
+    const auto recorded = json::parse(*bytes);
+    CHECK(recorded["branchId"] == nativeBefore["branchId"]);
+    CHECK(recorded["commandReceipts"] == nativeBefore["commandReceipts"]);
+    CHECK(recorded["nextCommandSequence"] == "2");
+    std::uint64_t restored = 0;
+    // Import remains the scientific authority for validating a saved snapshot.
+    REQUIRE(plv_destroy(original) == PLV_OK);
+    REQUIRE(plv_import(bytes->data(), static_cast<std::uint32_t>(bytes->size()), &restored) == PLV_OK);
+    CHECK(json::parse(read_text(restored, true))["nextCommandSequence"] == "2");
+    CHECK(plv_destroy(restored) == PLV_OK);
+    CHECK(plv_checkpoint(0, checkpointPath.data(),
+        static_cast<std::uint32_t>(checkpointPath.size())) == PLV_INVALID_HANDLE);
+    fs::remove_all(dir);
 }
