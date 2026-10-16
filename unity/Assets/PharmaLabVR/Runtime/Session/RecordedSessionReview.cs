@@ -142,6 +142,7 @@ namespace PharmaLabVR.Session
             public string computationState;
             public string modelId;
             public string databaseIdentity;
+            public string maturity;
             public double value;
             public bool valueAvailable;
 
