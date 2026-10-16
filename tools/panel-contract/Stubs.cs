@@ -122,6 +122,12 @@ namespace PharmaLabVR.Session
         public int SaveCalls { get; private set; }
         public int ReviewOpens { get; private set; }
         public int NotebookAppendCalls { get; private set; }
+        public int PortableExportCalls { get; private set; }
+        public bool ExportPortableSession()
+        {
+            PortableExportCalls++;
+            return true;
+        }
         public string NotebookSummary => "Headless note stub; not a Native observation.";
         public bool AppendNotebookNote(string note)
         {

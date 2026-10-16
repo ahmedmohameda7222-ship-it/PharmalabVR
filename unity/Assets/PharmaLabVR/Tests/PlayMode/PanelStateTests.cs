@@ -938,6 +938,16 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries.Count, Is.EqualTo(1));
                 Assert.That(entries[0].EventSequence, Is.EqualTo(revision));
                 Assert.That(entries[0].BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(actions.Request(PanelAction.ExportPortable), Is.True, session.LastError);
+                Assert.That(session.LastPortableArchivePath, Is.Not.Null.And.Not.Empty);
+                var archive = PortableSessionArchive.Read(session.LastPortableArchivePath);
+                Assert.That(archive.BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(archive.EventSequence, Is.EqualTo(revision));
+                Assert.That(archive.NotebookSnapshot, Does.Contain("PLV-NOTEBOOK-V1"));
+                Assert.That(archive.NativeJson, Does.Contain("\"branchId\""));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(session.LastDurableSavePath, Is.Null,
+                    "Portable archive export must not silently mark Native Save completed.");
                 Assert.That(actions.Request(PanelAction.AddNotebookNote, "\u0639"), Is.False,
                     "English-only notebook should not accept Arabic-script entries.");
                 var rejectedMessage = session.LastError;
@@ -954,6 +964,13 @@ namespace PharmaLabVR.Tests.PlayMode
             {
                 if (notesPath != null && File.Exists(notesPath)) File.Delete(notesPath);
                 if (notesPath != null && File.Exists(notesPath + ".bak")) File.Delete(notesPath + ".bak");
+                if (notesPath != null)
+                {
+                    var archivePath = Path.Combine(Path.GetDirectoryName(notesPath),
+                        Path.GetFileNameWithoutExtension(notesPath) + ".plvpack");
+                    if (File.Exists(archivePath)) File.Delete(archivePath);
+                    if (File.Exists(archivePath + ".bak")) File.Delete(archivePath + ".bak");
+                }
                 foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
                 SceneManager.UnloadSceneAsync(scene);
             }

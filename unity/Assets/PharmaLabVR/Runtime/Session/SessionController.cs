@@ -17,6 +17,7 @@ namespace PharmaLabVR.Session
         [SerializeField] private string saveName = "autosave";
         [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
+        public string LastPortableArchivePath { get; private set; }
         public string LastError { get; private set; }
         public RecordedSessionReview RecordedReview { get; private set; }
         private readonly SaveService saves = new();
@@ -228,6 +229,10 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();
+                if (GUILayout.Button("Export portable session + notebook", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportPortable);
+                if (!string.IsNullOrEmpty(LastPortableArchivePath))
+                    GUILayout.Label("Portable archive written: " + LastPortableArchivePath);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -270,6 +275,10 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save Native session", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Save);
+                if (GUILayout.Button("Export portable session + notebook", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportPortable);
+                if (!string.IsNullOrEmpty(LastPortableArchivePath))
+                    GUILayout.Label("Portable archive written: " + LastPortableArchivePath);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -594,6 +603,39 @@ namespace PharmaLabVR.Session
             catch (Exception exception)
             {
                 LastError = exception.Message;
+                return false;
+            }
+        }
+
+        public bool ExportPortableSession()
+        {
+            LastPortableArchivePath = null;
+            try
+            {
+                if (router?.Current == null ||
+                    (router.Current.ScreenId != ScreenId.Pause &&
+                     router.Current.ScreenId != ScreenId.Notebook) ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    driver.CurrentLabView == null)
+                    throw new InvalidOperationException("Portable export requires Pause/Notebook and an open Native session.");
+                // The Native export and lab view must identify the same revision.
+                // The archive validates exact Native branch and revision before writing.
+                var branch = driver.Session.BranchId;
+                var revision = driver.CurrentLabView.EventSequence;
+                if (revision != router.Current.NativeRevision)
+                    throw new InvalidOperationException("Native revision changed before archive export.");
+                var notesPath = NotebookFilePath();
+                var notes = notebook.ExportBranch(notesPath, branch, revision);
+                var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plvpack");
+                PortableSessionArchive.Write(target, driver.Session.ExportSession(),
+                    notes, branch, revision);
+                LastPortableArchivePath = target;
+                LastError = null;
+                return true;
+            }
+            catch (Exception exception)
+            {
+                LastError = "Portable export failed: " + exception.Message;
                 return false;
             }
         }
