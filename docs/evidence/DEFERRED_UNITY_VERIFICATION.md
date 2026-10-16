@@ -224,3 +224,9 @@
 
 ### P11.03 portable archive actual Unity checks — NOT_RUN
 Run `P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision` and `P06_02_VrPanelRoutesInspectThroughSharedNativeState` source at `5dcca1efdb2da9782ab6be1a06efb51f900168ef`, including real Desktop Notebook/Pause and XR Review→Notebook→Export button. Verify `.plvpack` strict round-trip, explicit Native branch/event identity, note provenance and zero implicit ordinary Save/material mutation; inspect XR ray hitboxes/overlap and English-only text. **Unity EditMode/PlayMode/Player/XR NOT_RUN.** Portable import, Note+Native transactional restoration, CSV/Compare still unimplemented.
+
+### Recorded Review receipts and scientific CSV (P11.02/P11.03) — NOT_RUN in Unity
+- Execute real Unity EditMode `P11_02_RecordedReviewHasOnlyValidatedNativeCommandReceipts`: Deserialize Native-like receipt arrays, sort by canonical sequence, reject branch/sequence/terminal mismatch and duplicates, preserve scientific observation valueAvailable. No fabricated event times; inspect English-only Desktop/XR Review labels.
+- Execute PlayMode `P06_02_VrPanelRoutesInspectThroughSharedNativeState` amended at `2a621058d5d7eca93317965341682ff8520d267a` for XR recorded Review `Export results CSV`. Ensure world panel button is hittable/nonoverlapping, CSV file contains actual Native branch and schema, and Native session Save/material revision unchanged. Screenshot/result XML/Player logs mandatory.
+- Run real WindowsDesktop CSV export click path, reload `*.plv-results.csv` with strict column count and decimal round trip, verify unsupported/stale/failed blank value and negative finite signed numeric pH, no formula injection. Test actual Native scientific record under IPhreeqc; headless JSON reflection mirror is NOT actual Unity JsonUtility acceptance.
+- P11.03 acceptance still requires two-run Compare, archive import, session branch/fork and final Unity campaign. NOT_RUN.
