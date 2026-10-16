@@ -38,6 +38,9 @@ PLV_API int32_t plv_export(uint64_t handle, char* out, uint32_t capacity, uint32
 // Explicit Native checkpoint; returns success only after durable disk commit.
 // Not a background checkpoint schedule or a new scientific import pathway.
 PLV_API int32_t plv_checkpoint(uint64_t handle, const char* path, uint32_t size);
+// Attach a new durable automatic checkpoint destination to an existing owner-
+// thread Native context, including a scientifically validated imported one.
+PLV_API int32_t plv_configure_checkpoint(uint64_t handle, const char* path, uint32_t size);
 PLV_API int32_t plv_import(const char* json, uint32_t size, uint64_t* new_handle);
 // Read latest intact recorded checkpoint, then pass bytes through the ordinary
 // scientifically validated Native importer into a NEW context.

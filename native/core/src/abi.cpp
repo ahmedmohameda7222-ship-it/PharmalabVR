@@ -1599,6 +1599,40 @@ std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_
 }
 
 
+std::int32_t plv_configure_checkpoint(
+    std::uint64_t handle, const char* path, std::uint32_t size) {
+    const auto context = getContext(handle);
+    if (!context) return PLV_INVALID_HANDLE;
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id())
+        return PLV_BUSY;
+    if (path == nullptr || size == 0U || size > 1024U ||
+        std::memchr(path, '\0', size) != nullptr)
+        return PLV_INVALID_ARGUMENT;
+    try {
+        const std::string destination(path, path + size);
+        const std::filesystem::path file(destination);
+        if (!file.is_absolute() || file.parent_path().empty() ||
+            !std::filesystem::is_directory(file.parent_path()))
+            return PLV_INVALID_ARGUMENT;
+        plv::DurableCheckpointStore validated(destination, 16U * 1024U * 1024U);
+        std::lock_guard<std::mutex> lock(context->mutex);
+        if (!context->active.load()) return PLV_BUSY;
+        context->automaticCheckpointPath = destination;
+        // A newly attached or restored session needs a new confirmed
+        // snapshot. Retargeting never prematurely acknowledges an old dirty
+        // deadline and never rewrites the scientific Native authority.
+        context->dirtyCheckpoint.markDirty(context->lastMonotonicNowNs,
+            context->executor.snapshot().simulationTimeS);
+        return PLV_OK;
+    } catch (const std::invalid_argument&) {
+        return PLV_INVALID_ARGUMENT;
+    } catch (const std::filesystem::filesystem_error&) {
+        return PLV_INVALID_ARGUMENT;
+    } catch (...) {
+        return PLV_INTERNAL_ERROR;
+    }
+}
+
 std::int32_t plv_import_checkpoint(
     const char* path, std::uint32_t size, std::uint64_t* newHandle) {
     if (newHandle == nullptr) return PLV_INVALID_ARGUMENT;
