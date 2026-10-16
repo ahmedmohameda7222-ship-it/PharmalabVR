@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
+#include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -51,6 +52,9 @@ private:
 class ReceiptIdentityIndex {
 public:
     explicit ReceiptIdentityIndex(std::size_t cacheLimit);
+    // Optional disk-backed identity history; cache size is capped at 4096.
+    // Every acceptance is durably journaled before entering working memory.
+    ReceiptIdentityIndex(std::size_t cacheLimit, std::string journalPath);
     bool accept(const std::string& branchId, std::uint64_t sequence, const std::string& payloadHash);
     std::size_t cachedCount() const;
 
@@ -58,6 +62,7 @@ private:
     std::size_t cacheLimit_;
     std::deque<std::string> cacheOrder_;
     std::unordered_map<std::string, std::string> durableIdentities_;
+    std::unique_ptr<DurableJournal> durableJournal_;
 };
 
 }  // namespace plv

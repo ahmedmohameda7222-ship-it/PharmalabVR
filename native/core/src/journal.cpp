@@ -2,6 +2,10 @@
 
 #include <limits>
 #include <cstdio>
+#include <algorithm>
+#include <charconv>
+#include <unordered_set>
+#include <utility>
 #include <filesystem>
 #include <fstream>
 #include <stdexcept>
@@ -169,22 +173,111 @@ CommandOutcome DurableJournal::append(const std::string& payload) {
     }
 }
 
-ReceiptIdentityIndex::ReceiptIdentityIndex(std::size_t cacheLimit) : cacheLimit_(cacheLimit) {}
+namespace {
+bool canonicalBranch(const std::string& branch) {
+    if (branch.empty() || branch.size() > 128) return false;
+    for (unsigned char ch : branch) {
+        if ((ch >= 'a' && ch <= 'z') ||
+            (ch >= 'A' && ch <= 'Z') ||
+            (ch >= '0' && ch <= '9') || ch == '-' || ch == '_' || ch == '.') continue;
+        return false;
+    }
+    return true;
+}
+
+bool canonicalDigest(const std::string& digest) {
+    if (digest.size() != 64) return false;
+    for (unsigned char ch : digest) {
+        if ((ch >= '0' && ch <= '9') ||
+            (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F')) continue;
+        return false;
+    }
+    return true;
+}
+
+// The journal record is CRC-framed by DurableJournal. Restrict all fields to
+// canonical ASCII tokens so tab-separated receipt identities are unambiguous.
+bool readReceiptRecord(const std::string& payload,
+                       std::string& key, std::string& digest) {
+    if (payload.compare(0, 3, "R1\t") != 0) return false;
+    const auto first = payload.find('\t', 3);
+    if (first == std::string::npos) return false;
+    const auto second = payload.find('\t', first + 1);
+    if (second == std::string::npos || payload.find('\t', second + 1) != std::string::npos)
+        return false;
+    const auto branch = payload.substr(3, first - 3);
+    const auto sequenceText = payload.substr(first + 1, second - first - 1);
+    digest = payload.substr(second + 1);
+    std::uint64_t sequence = 0;
+    const auto parsed = std::from_chars(sequenceText.data(),
+                                        sequenceText.data() + sequenceText.size(), sequence);
+    if (!canonicalBranch(branch) || !canonicalDigest(digest) ||
+        sequence == 0 || parsed.ec != std::errc() ||
+        parsed.ptr != sequenceText.data() + sequenceText.size() ||
+        sequenceText != std::to_string(sequence)) return false;
+    key = branch + ":" + sequenceText;
+    return true;
+}
+}  // namespace
+
+ReceiptIdentityIndex::ReceiptIdentityIndex(std::size_t cacheLimit)
+    : cacheLimit_(cacheLimit) {}
+
+ReceiptIdentityIndex::ReceiptIdentityIndex(std::size_t cacheLimit, std::string journalPath)
+    : cacheLimit_(std::min<std::size_t>(cacheLimit, 4096)),
+      durableJournal_(std::make_unique<DurableJournal>(std::move(journalPath), 256)) {
+    const auto recovery = durableJournal_->recover();
+    if (recovery.corruptTail) {
+        throw std::runtime_error("receipt identity journal has a corrupt record");
+    }
+    std::unordered_set<std::string> seen;
+    for (const auto& receipt : recovery.records) {
+        std::string identity;
+        std::string digest;
+        if (!readReceiptRecord(receipt, identity, digest) ||
+            !seen.insert(identity).second) {
+            throw std::runtime_error("receipt identity journal is invalid or duplicated");
+        }
+    }
+    // No unbounded memory index is retained on restart: old receipts are
+    // checked against the bounded WAL before any new identity is recorded.
+}
 
 bool ReceiptIdentityIndex::accept(
     const std::string& branchId,
     std::uint64_t sequence,
     const std::string& payloadHash) {
     const auto identity = branchId + ":" + std::to_string(sequence);
-    if (durableIdentities_.count(identity) != 0) {
-        return false;
+    if (durableIdentities_.count(identity) != 0) return false;
+    if (durableJournal_) {
+        if (!canonicalBranch(branchId) || !canonicalDigest(payloadHash) ||
+            sequence == 0) return false;
+        try {
+            const auto recovered = durableJournal_->recover();
+            if (recovered.corruptTail) return false;
+            for (const auto& payload : recovered.records) {
+                std::string recordedIdentity;
+                std::string recordedDigest;
+                if (!readReceiptRecord(payload, recordedIdentity, recordedDigest) ||
+                    recordedIdentity == identity) return false;
+            }
+            const auto record = "R1\t" + branchId + "\t" +
+                                std::to_string(sequence) + "\t" + payloadHash;
+            if (!durableJournal_->append(record).accepted) return false;
+        } catch (const std::exception&) {
+            return false;
+        }
     }
     durableIdentities_.emplace(identity, payloadHash);
     if (cacheLimit_ > 0) {
         cacheOrder_.push_back(identity);
         while (cacheOrder_.size() > cacheLimit_) {
+            const auto evicted = cacheOrder_.front();
             cacheOrder_.pop_front();
+            if (durableJournal_) durableIdentities_.erase(evicted);
         }
+    } else if (durableJournal_) {
+        durableIdentities_.erase(identity);
     }
     return true;
 }
