@@ -18,3 +18,9 @@ The disk-mode overload of `ReceiptIdentityIndex(cacheLimit,journalPath)` commits
 ## Explicit remaining acceptance
 
 This is **not yet called by `plv_create`, `plv_submit_command` or the Native session checkpoint path**. It therefore does not establish persistence of a real chemistry command across application crashes or material-state replay consistency. No cross-process file lock, power-loss emulation, actual disk-full test, atomic native session checkpoint, 30s wall/sim dirty policy, full import mismatch behavior, or integrated Unity Player/XR test has been delivered. Ongoing R01–R05 P11.01 remains Open; G-R1 Open, PR #1 unmerged.
+
+## R04 first-dirty checkpoint scheduling policy (source-level only)
+
+RED Native `905193749614b9834de1ee6ab9b5bf1c7dbbb06a` failed at compile due to missing `DirtyCheckpointPolicy` ([push 38868695259](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38868695259)). GREEN `a6e0096ad9f5903a1fda625e7f03e112db1e0602` introduces monotonic supplied wall nanoseconds and simulation seconds and a **first-dirty** deadline that repeated edits cannot postpone. It returns true on the first reached **30s wall / 30s simulation** limit, pause while dirty, backwards clock or nonfinite elapsed simulation. Explicit `acknowledgeFlush()` is only for use after an actual successful checkpoint; the source does not call it autonomously. [Push 38868969993](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38868969993) and [PR 38868977342](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38868977342) status must be rechecked before calling GREEN CI verified.
+
+**Correction to earlier "unimplemented" sentence:** the pure **decision policy** now exists, but *no actual Native checkpoint-writer integration or 30-second checkpoint persistence proof* exists. Continue R01–R05 with current Native ABI submission/receipt pathway; do not treat this as task completion.
