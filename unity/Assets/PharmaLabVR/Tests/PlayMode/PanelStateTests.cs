@@ -270,6 +270,19 @@ namespace PharmaLabVR.Tests.PlayMode
                 Object.DestroyImmediate(reviewPixels);
             }
 #endif
+            var csvButton = presenter.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "Export results CSV");
+            Assert.That(csvButton.gameObject.activeInHierarchy, Is.True);
+            csvButton.onClick.Invoke();
+            Assert.That(sessions.LastCsvExportPath, Is.Not.Null.And.Not.Empty,
+                sessions.LastError);
+            var csvBytes = File.ReadAllText(sessions.LastCsvExportPath);
+            StringAssert.StartsWith("schemaVersion,recordKind,branchId,", csvBytes);
+            StringAssert.Contains(driver.Session.BranchId, csvBytes);
+            Assert.That(sessions.LastDurableSavePath, Is.Null);
+            File.Delete(sessions.LastCsvExportPath);
+            if (File.Exists(sessions.LastCsvExportPath + ".bak"))
+                File.Delete(sessions.LastCsvExportPath + ".bak");
             // P11.03: XR controller UI follows Review -> Notebook and exports an
             // immutable Native snapshot + exact branch notebook, without Save.
             var notebook = presenter.GetComponentsInChildren<Button>(true)
