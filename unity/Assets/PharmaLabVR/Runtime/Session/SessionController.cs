@@ -548,9 +548,9 @@ namespace PharmaLabVR.Session
             {
                 if (driver?.Session == null || !driver.Session.IsOpen)
                     throw new InvalidOperationException("No open Native session.");
-                var notes = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
-                LastError = null;
-                return notes;
+                // Reading a healthy notebook must not erase an earlier failed
+                // note-commit error before Desktop/XR has rendered it.
+                return notebook.Read(NotebookFilePath(), driver.Session.BranchId);
             }
             catch (Exception exception)
             {
