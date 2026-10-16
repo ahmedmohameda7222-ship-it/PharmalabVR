@@ -62,3 +62,8 @@ Reconcile P06.02/07 real panel input and Native recovery contracts, then P03/P08
 
 ## P11.01 checkpoint failed-ack boundary (2026-10-16)
 - Dirty deadline policy `a6e0096`: both push CI 38868969993 and PR 38868977342 all three headless/Native jobs SUCCESS. RED `cd58454` compiler missing explicit failed-flush acknowledgment, GREEN `314f264` has `acknowledgeFlush(bool)`; false leaves first-dirty retry due, true clears. R01–R05 actual ABI disk commit still NOT IMPLEMENTED or NOT_RUN; P11.01 Open, G-R1 Open.
+
+## 2026-10-17 — P11.01 real explicit Native checkpoint boundary (source-only)
+- TDD RED `acada39` missing Native checkpoint API and source; GREEN `ef05640` alternating SHA256-framed fsynced checkpoint generations and `plv_checkpoint` on actual immutable Native exported state; push 38968858274 + PR 38968863788 all Windows/Ubuntu/headless jobs SUCCESS.
+- TDD RED `45acc10` missing import API; GREEN `a2e7bea` uses last intact generation and native validated `plv_import` only, push 38969553032 all jobs SUCCESS. Unity P/Invoke and CoreSession source plus Unity EditMode journey authored `b70341c` NOT_RUN. Actual stage fault regression `a110c5e` new Native CI pending at note.
+- No automatic checkpoint policy integration, real app crash transaction guarantee or Unity/Player/XR evidence; task P11.01 and G-R1 remain Open, PR #1 unmerged, permanently English-only. Full evidence at `p11-01-native-checkpoint-boundary.md`.
