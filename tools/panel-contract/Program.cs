@@ -538,6 +538,24 @@ internal static class Program
                 "Research water reserve must accept explicit zero molarity");
             Check(concentrationSession.PreparedConcentration == 0.0,
                 "Water reserve illegally inherited last acid concentration");
+            // P11.02: Notebook navigation and note creation are presentation
+            // commands linked to a captured Native event; no Save or chemistry.
+            Check(router.Current.SupportedActions.Contains("Notebook"),
+                "Lab has no supported notebook entry route.");
+            Check(!panels.Request(PanelAction.AddNotebookNote, "Should not be recorded"),
+                "Note append bypassed the Notebook panel admission.");
+            Check(panels.Request(PanelAction.Notebook) && router.Current.ScreenId == ScreenId.Notebook,
+                "Shared Native-backed screen router did not open Notebook.");
+            Check(router.Current.SupportedActions.Contains("AddNotebookNote"),
+                "Notebook does not expose an explicit event-linked note action.");
+            Check(panels.Request(PanelAction.AddNotebookNote, "Prediction before addition"),
+                "Notebook note was not sent to the session-owned note store.");
+            Check(session.NotebookAppendCalls == 1 && session.SaveCalls == 0,
+                "Notebook note was replayed or implicitly saved Native chemistry.");
+            Check(panels.Request(PanelAction.Lab) && router.Current.ScreenId == ScreenId.Lab,
+                "Notebook return must preserve the active Lab session.");
+            Check(driver.CurrentLabView.EventSequence == "7",
+                "Writing an annotation fabricated an authoritative Native material revision.");
             Check(panels.Request(PanelAction.Inspect, "receiver"), "Inspect receiver action refused");
             Check(router.Current.ScreenId == ScreenId.Inspect, "Inspect route missing");
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
