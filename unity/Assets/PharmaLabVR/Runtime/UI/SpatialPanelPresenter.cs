@@ -94,6 +94,7 @@ namespace PharmaLabVR.UI
             AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
+            AddButton("Compare saved", -194f, PanelAction.CompareSaved);
             AddButton("Return to lab", -138f, PanelAction.Lab);
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
@@ -353,6 +354,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
                 ScreenId.Notebook => panels?.NotebookSummary ?? "Research notebook unavailable.",
+                ScreenId.Compare => panels?.ComparisonSummary ?? "Recorded comparison unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
                     state.SelectedEntityId,
                     driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
@@ -385,6 +387,9 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
+            SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("CompareSaved") &&
+                panels != null && panels.CanCompareSaved);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&

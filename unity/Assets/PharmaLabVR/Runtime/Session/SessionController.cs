@@ -21,6 +21,7 @@ namespace PharmaLabVR.Session
         public string LastCsvExportPath { get; private set; }
         public string LastError { get; private set; }
         public RecordedSessionReview RecordedReview { get; private set; }
+        public RecordedRunComparison CurrentComparison { get; private set; }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
         public static Rect DesktopHudBounds => new Rect(12f, 12f,
@@ -263,8 +264,44 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Export recorded observations + commands (CSV)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
+                var comparisonEnabled = GUI.enabled;
+                GUI.enabled = comparisonEnabled && CanCompareSaved;
+                var requestComparison = GUILayout.Button("Compare with last saved Native checkpoint",
+                    GUILayout.Height(44f));
+                GUI.enabled = comparisonEnabled;
+                if (requestComparison) panels?.Request(PanelAction.CompareSaved);
                 if (!string.IsNullOrEmpty(LastCsvExportPath))
                     GUILayout.Label("CSV written: " + LastCsvExportPath);
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Compare)
+            {
+                GUILayout.Label("Two recorded Native runs · no recomputation");
+                if (CurrentComparison == null) GUILayout.Label("Comparison unavailable.");
+                else
+                {
+                    GUILayout.Label("Saved baseline branch: " + CurrentComparison.BaselineBranchId);
+                    GUILayout.Label("Review candidate branch: " + CurrentComparison.CandidateBranchId);
+                    GUILayout.Label("Baseline package: " + CurrentComparison.BaselineModelIdentity);
+                    GUILayout.Label("Candidate package: " + CurrentComparison.CandidateModelIdentity);
+                    foreach (var row in CurrentComparison.Rows)
+                    {
+                        var difference = row.DeltaAvailable ?
+                            row.Delta.ToString("+0.00;-0.00;0.00",
+                                System.Globalization.CultureInfo.InvariantCulture) : "--";
+                        GUILayout.Label(row.VesselId + " " + row.ObservableId + " · saved " +
+                            row.BaselineDisplay + " (" + row.BaselineStatus + ") vs review " +
+                            row.CandidateDisplay + " (" + row.CandidateStatus + ") · Δ " +
+                            difference + "\n" + row.DeltaReason);
+                    }
+                }
+                if (GUILayout.Button("Back to recorded review", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Review);
+                if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Lab);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -691,6 +728,77 @@ namespace PharmaLabVR.Session
             }
         }
 
+        private string SavedNativePath()
+        {
+            var notesPath = NotebookFilePath(); // Validate safe session naming.
+            return Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv.json");
+        }
+
+        public bool CanCompareSaved
+        {
+            get
+            {
+                if (RecordedReview == null) return false;
+                try { return SaveService.HasSaveCandidate(SavedNativePath()); }
+                catch (ArgumentException) { return false; }
+                catch (InvalidOperationException) { return false; }
+            }
+        }
+
+        public string ComparisonSummary
+        {
+            get
+            {
+                var comparison = CurrentComparison;
+                if (comparison == null) return "No recorded run comparison is open.";
+                var summary = "Saved " + comparison.BaselineBranchId + " vs review " +
+                    comparison.CandidateBranchId + " (recorded; no recomputation)";
+                var shown = 0;
+                foreach (var row in comparison.Rows)
+                {
+                    if (shown++ >= 2) break;
+                    var difference = row.DeltaAvailable ?
+                        row.Delta.ToString("+0.00;-0.00;0.00",
+                            System.Globalization.CultureInfo.InvariantCulture) : "--";
+                    summary += "\n" + row.VesselId + " pH: " + row.BaselineDisplay +
+                        " (" + row.BaselineStatus + ") / " + row.CandidateDisplay +
+                        " (" + row.CandidateStatus + ") · Δ " + difference;
+                }
+                if (comparison.Rows.Count == 0) summary += "\nNo common or recorded observations.";
+                return summary;
+            }
+        }
+
+        public bool OpenSavedComparison()
+        {
+            CurrentComparison = null;
+            try
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
+                    throw new InvalidOperationException("Compare requires an open recorded Review.");
+                var path = SavedNativePath();
+                if (!SaveService.HasSaveCandidate(path))
+                    throw new InvalidDataException("No confirmed saved Native checkpoint is available.");
+                RecordedSessionReview baseline;
+                try { baseline = RecordedSessionReview.Open(path); }
+                catch (Exception error) when (error is InvalidDataException ||
+                                              error is IOException || error is ArgumentException)
+                {
+                    // A saved checkpoint backup is a real second recorded source.
+                    // Never substitute a fabricated baseline or alter live Native.
+                    baseline = RecordedSessionReview.Open(path + ".bak");
+                }
+                CurrentComparison = RecordedRunComparison.Compare(baseline, RecordedReview);
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Saved recorded comparison unavailable: " + error.Message;
+                return false;
+            }
+        }
+
         public bool OpenReview()
         {
             if (RecordedReview != null) return true;
@@ -708,12 +816,17 @@ namespace PharmaLabVR.Session
             }
         }
 
-        public void CloseReview() => RecordedReview = null;
+        public void CloseReview()
+        {
+            RecordedReview = null;
+            CurrentComparison = null;
+        }
 
         public bool ContinueFrom(string path)
         {
             CoreSession imported = null;
             RecordedReview = null;
+            CurrentComparison = null;
             try
             {
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");

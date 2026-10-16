@@ -124,6 +124,14 @@ namespace PharmaLabVR.Session
         public int NotebookAppendCalls { get; private set; }
         public int PortableExportCalls { get; private set; }
         public int CsvExportCalls { get; private set; }
+        public int SavedCompareCalls { get; private set; }
+        public bool CanCompareSaved => true;
+        public string ComparisonSummary => "Recorded Native baseline and candidate.";
+        public bool OpenSavedComparison()
+        {
+            SavedCompareCalls++;
+            return true;
+        }
         public bool ExportRecordedCsv()
         {
             CsvExportCalls++;
