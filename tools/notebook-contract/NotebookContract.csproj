@@ -6,6 +6,8 @@
     <Nullable>disable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Native identity fields are populated by Unity JsonUtility or the headless equivalent. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />

@@ -78,10 +78,12 @@ internal static class Program
             try { PortableSessionArchive.Write(packed, native, notesForEight, "foreign-branch", "8"); }
             catch (InvalidDataException) { mismatchedBranchRefused = true; }
             Require(mismatchedBranchRefused, "Portable archive accepted a foreign declared Native branch.");
-            var missingRevisionRefused = false;
-            try { notes.ExportBranch(path, "research-branch", "7"); }
-            catch (InvalidDataException) { missingRevisionRefused = true; }
-            Require(missingRevisionRefused, "Notebook export accepted a missing primary or later Native event.");
+            var futureNoteRefused = false;
+            try { NotebookService.ValidatePortableSnapshot(notesForEight, "research-branch", "7"); }
+            catch (InvalidDataException) { futureNoteRefused = true; }
+            Require(futureNoteRefused, "Portable notes included an event after the exported Native revision.");
+            Require(notes.ExportBranch(path, "research-branch", "7") == "PLV-NOTEBOOK-V1\n",
+                "A new session with no notebook records cannot export a valid empty note snapshot.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
