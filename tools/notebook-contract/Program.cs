@@ -51,6 +51,37 @@ internal static class Program
             catch (InvalidDataException) { rejectedUnsafeOverwrite = true; }
             Require(rejectedUnsafeOverwrite,
                 "Tampered current notebook was silently replaced instead of failing closed.");
+            // P11.03: one portable artifact must contain a real Native-export
+            // byte payload together with only the selected Native branch's notes.
+            // It must not depend on another local sidecar file after export.
+            File.WriteAllText(path, file);
+            var packed = Path.Combine(root, "portable.plvpack");
+            const string native = "{\"schemaVersion\":1,\"branchId\":\"research-branch\",\"eventSequence\":\"8\"}";
+            var notesForEight = notes.ExportBranch(path, "research-branch", "8");
+            PortableSessionArchive.Write(packed, native, notesForEight, "research-branch", "8");
+            File.Delete(path);
+            File.Delete(path + ".bak");
+            var recovered = PortableSessionArchive.Read(packed);
+            Require(recovered.BranchId == "research-branch" && recovered.EventSequence == "8" &&
+                recovered.NativeJson == native && recovered.NotebookSnapshot == notesForEight,
+                "Portable archive did not round-trip Native bytes and selected notes.");
+            Require(recovered.NotebookSnapshot.Contains("PLV-NOTEBOOK-V1"),
+                "Portable archive silently dropped notes.");
+            var bytes = File.ReadAllBytes(packed);
+            bytes[bytes.Length - 1] ^= 0x01;
+            File.WriteAllBytes(packed, bytes);
+            var corruptRefused = false;
+            try { PortableSessionArchive.Read(packed); }
+            catch (InvalidDataException) { corruptRefused = true; }
+            Require(corruptRefused, "Corrupt portable archive passed checksum verification.");
+            var mismatchedBranchRefused = false;
+            try { PortableSessionArchive.Write(packed, native, notesForEight, "foreign-branch", "8"); }
+            catch (InvalidDataException) { mismatchedBranchRefused = true; }
+            Require(mismatchedBranchRefused, "Portable archive accepted a foreign declared Native branch.");
+            var missingRevisionRefused = false;
+            try { notes.ExportBranch(path, "research-branch", "7"); }
+            catch (InvalidDataException) { missingRevisionRefused = true; }
+            Require(missingRevisionRefused, "Notebook export accepted a missing primary or later Native event.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
