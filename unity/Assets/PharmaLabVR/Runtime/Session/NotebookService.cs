@@ -115,14 +115,54 @@ namespace PharmaLabVR.Session
             return result.AsReadOnly();
         }
 
+        // Export only source-validated, branch-matching event annotations. Never
+        // silently package a corrupted primary or an unconfirmed backup as current.
+        public string ExportBranch(string path, string branchId, string maxEventSequence)
+        {
+            ValidatePath(path);
+            ValidateId(branchId, nameof(branchId));
+            ValidateRevision(maxEventSequence);
+            var fullPath = Path.GetFullPath(path);
+            if (!File.Exists(fullPath) && File.Exists(fullPath + ".bak"))
+                throw new InvalidDataException("Recover the notebook backup before portable export.");
+            var entries = ReadStrict(fullPath);
+            var limit = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var selected = new List<NotebookEntry>();
+            foreach (var item in entries)
+                if (item.BranchId == branchId &&
+                    ulong.Parse(item.EventSequence, CultureInfo.InvariantCulture) <= limit)
+                    selected.Add(item);
+            return Serialize(selected);
+        }
+
+        public static void ValidatePortableSnapshot(string snapshot, string branchId,
+            string maxEventSequence)
+        {
+            ValidateId(branchId, nameof(branchId));
+            ValidateRevision(maxEventSequence);
+            var limit = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var entries = ParseStrict(snapshot);
+            foreach (var item in entries)
+                if (item.BranchId != branchId ||
+                    ulong.Parse(item.EventSequence, CultureInfo.InvariantCulture) > limit)
+                    throw new InvalidDataException("Portable notes do not match the Native branch/revision.");
+        }
+
         private static List<NotebookEntry> ReadStrict(string path)
         {
-            var result = new List<NotebookEntry>();
-            if (!File.Exists(path)) return result;
+            if (!File.Exists(path)) return new List<NotebookEntry>();
             var file = new FileInfo(path);
             if (file.Length <= 0 || file.Length > MaximumFileBytes)
                 throw new InvalidDataException("Notebook is empty or oversized.");
-            var content = File.ReadAllText(path, StrictUtf8);
+            return ParseStrict(File.ReadAllText(path, StrictUtf8));
+        }
+
+        private static List<NotebookEntry> ParseStrict(string content)
+        {
+            var result = new List<NotebookEntry>();
+            if (string.IsNullOrEmpty(content) ||
+                StrictUtf8.GetByteCount(content) > MaximumFileBytes)
+                throw new InvalidDataException("Notebook snapshot is empty or oversized.");
             if (!content.StartsWith(Header, StringComparison.Ordinal) ||
                 !content.EndsWith("\n", StringComparison.Ordinal))
                 throw new InvalidDataException("Notebook header or committed tail is invalid.");
