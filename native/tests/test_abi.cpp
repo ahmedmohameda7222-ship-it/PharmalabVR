@@ -2415,3 +2415,43 @@ TEST_CASE("P11_01 imported Native session can attach durable checkpoint without 
     CHECK(plv_destroy(imported) == PLV_OK);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 auto checkpoint cannot overwrite a foreign Native branch history") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-auto-branch-boundary-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto checkpoint = (dir / "branch.ckpt").string();
+    const std::string originalConfig = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t original = 0;
+    REQUIRE(plv_create(originalConfig.data(),
+        static_cast<std::uint32_t>(originalConfig.size()), &original) == PLV_OK);
+    REQUIRE(plv_checkpoint(original, checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size())) == PLV_OK);
+    REQUIRE(plv_destroy(original) == PLV_OK);
+    const plv::DurableCheckpointStore store(checkpoint, 16U * 1024U * 1024U);
+    REQUIRE(store.read().has_value());
+    const auto confirmed = store.read().value();
+
+    const std::string foreignConfig = R"({"schemaVersion":1,"branchId":"branch-2"})";
+    std::uint64_t foreign = 0;
+    REQUIRE(plv_create(foreignConfig.data(),
+        static_cast<std::uint32_t>(foreignConfig.size()), &foreign) == PLV_OK);
+    CHECK(plv_checkpoint(foreign, checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size())) == PLV_INVALID_ARGUMENT);
+    CHECK(plv_configure_checkpoint(foreign, checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size())) == PLV_INVALID_ARGUMENT);
+    CHECK(store.read().value() == confirmed);
+    REQUIRE(plv_destroy(foreign) == PLV_OK);
+
+    const json attached = {{"schemaVersion",1}, {"branchId","branch-2"},
+                           {"checkpointPath",checkpoint}};
+    const auto bad = attached.dump();
+    foreign = 0;
+    CHECK(plv_create(bad.data(), static_cast<std::uint32_t>(bad.size()),
+                     &foreign) == PLV_INVALID_ARGUMENT);
+    if (foreign != 0) CHECK(plv_destroy(foreign) == PLV_OK);
+    CHECK(store.read().value() == confirmed);
+    fs::remove_all(dir);
+}
