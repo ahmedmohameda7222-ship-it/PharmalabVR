@@ -1186,7 +1186,7 @@
             "P10.03"
           ],
           "status": "Open",
-          "codeCommit": "ced83f5f5087df6634428138d0cb1459699cc3fb",
+          "codeCommit": "a6e0096ad9f5903a1fda625e7f03e112db1e0602",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
@@ -1195,10 +1195,11 @@
             "2026-10-16 recovered backup-only SaveService: RED 551a2cb headless CI push 38832226727, missing candidate method; GREEN c7b0b05 SaveService.HasSaveCandidate and SessionController Pause/Hold/GUI admission while actual Native import checks remain delegated to existing Load. Headless Native Windows/Ubuntu push 38832333024, PR 38832338221 SUCCESS. Real Unity PlayMode source authored but NOT_RUN; disk-journal/checkpoint R01–R05 still Open.",
             "2026-10-16 strict Native saved-byte admission: RED 41dd54d push 38865238229 actual SaveService headless failure 'Invalid UTF-8 Native save was accepted rather than recovered from backup'. GREEN ebfef7f SaveService.LoadOne reads using strict UTF8Encoding(false,true), triggering original recoverable read/confirmed backup rather than replacement-decoding corrupted identity. Tests source corrected backup-only fixture at c2151f2; headless green push 38865601352; full Native matrix/Unity NOT_RUN at ledger write. P11.01 still Open: Native durable disk journal/checkpoint/faults.",
             "2026-10-16 Native on-disk journal source RED d0c6574 compile missing DurableJournal in Ubuntu Native push CI 38867200142. GREEN c3ca7e3 implements bounded single-writer durable WAL, CRC-checked ordered records, fsync/_commit, restart reads, torn-tail prefix repair and complete-record corruption refusal. Push 38867581980 all 3 jobs SUCCESS, PR 38867587035 separate status. Native source and tests only, not integrated into live ABI command/receipt checkpoint lifecycle.",
-            "2026-10-16 Native persisted receipt identity variant RED 666f8a5 Ubuntu native compiler no ReceiptIdentityIndex(cacheLimit,path), CI 38867980821. GREEN ced83f5 validates canonical branch/sequence/64-hex payload hash, scans bounded disk WAL on accept, survives process reconstruction even after cache eviction, limits disk-mode working cache to <=4096, fails closed on CRC corruption and repairs unconfirmed torn tail via DurableJournal; Ubuntu Native and headless in push 38868273059 SUCCESS, Windows pending at ledger write, PR 38868280086 pending. No actual ABI creation/submission integration, Native checkpoint generation, dirty30s/30wall policy, storage fault simulation or Unity run; P11.01 Open."
+            "2026-10-16 Native persisted receipt identity variant RED 666f8a5 Ubuntu native compiler no ReceiptIdentityIndex(cacheLimit,path), CI 38867980821. GREEN ced83f5 validates canonical branch/sequence/64-hex payload hash, scans bounded disk WAL on accept, survives process reconstruction even after cache eviction, limits disk-mode working cache to <=4096, fails closed on CRC corruption and repairs unconfirmed torn tail via DurableJournal; Ubuntu Native and headless in push 38868273059 SUCCESS, Windows pending at ledger write, PR 38868280086 pending. No actual ABI creation/submission integration, Native checkpoint generation, dirty30s/30wall policy, storage fault simulation or Unity run; P11.01 Open.",
+            "2026-10-16 Native R04 dirty checkpoint policy RED 9051937: Ubuntu Native Build failed 'DirtyCheckpointPolicy was not declared' in push 38868695259. GREEN a6e0096 adds Native pure DirtyCheckpointPolicy with monotonic wall-nanosecond and simulation-seconds first-dirty threshold and earlier-of-30s admission, pause and backward time discontinuity forcing needFlush, explicit acknowledgeFlush only for successful checkpoint. CI Native/headless push 38868969993, PR 38868977342 underway at entry. Pure policy NOT wired to actual checkpoint disk writes or ABI time boundaries; cannot claim journal checkpoint completion."
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial standalone Native disk WAL and persisted receipt-identity source with restart/torn-tail/CRC tests and durable append flush; separately Native and Unity SaveService files remain. Crucially NOT integrated into live Native ABI, no transactional checkpoint/dirty flush scheduler, no actual power-loss/disk-full/rejected-identity or full Player/Unity acceptance. P11.01 Open.",
+          "acceptanceScope": "Partial Native core single-writer fsynced disk WAL, bounded restart-safe receipt identities, and pure first-dirty/earlier-of-wall-simulation flush-admission policy (source/test). Not integrated into ABI command execution, atomic checkpoint disk commits or receipt Save/Load; real crash/disk-full/rejected identity scenarios and Unity Player/VR remain Open. R01–R05/P11.01 and G-R1 NOT accepted.",
           "blocker": null
         },
         {
@@ -2263,9 +2264,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "ced83f5f5087df6634428138d0cb1459699cc3fb",
-  "functionalCodeSha": "ced83f5f5087df6634428138d0cb1459699cc3fb",
-  "currentTask": "P11.01 bounded Native single-writer on-disk WAL and restart-safe receipt identity under CI; integrate Native ABI/checkpoint scheduler and faults next; 66 task statuses unchanged, Unity deferred.",
+  "actualHead": "a6e0096ad9f5903a1fda625e7f03e112db1e0602",
+  "functionalCodeSha": "a6e0096ad9f5903a1fda625e7f03e112db1e0602",
+  "currentTask": "P11.01 Native durability source: WAL fsync, persisted receipt identity, first-dirty policy; headless/Native CI underway for R04; ABI and checkpoint writer integration next, Unity deferred.",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2320,6 +2321,7 @@
     "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged.",
     "2026-10-16 Ruling P11.03 compare saved Native checkpoint vs current recorded Review only: no inferred pH curves/chemistry, delta requires matching pinned model provenance, missing/stale suppress; compare RED 478b73f, routing RED dc23cba, GREEN eae473c and cd6676f, Unity source 587ec4e NOT_RUN. P09 stale RED 2f97d1e GREEN 44bda21 Native/headless both CI triggers SUCCESS. No G-R1 advancement, PR #1 unmerged.",
     "2026-10-16 added P11 UTF8 hardening RED 41dd54d -> GREEN ebfef7f and headless fixture repair c2151f2, validated backup-only Review RED c6b67ee -> GREEN a2389f6, saved compare backup RED d9c71f0 -> GREEN 8e7941. Headless tests passed at c2151f2 push 38865601352; final Windows/Ubuntu CI results must be independently inspected. Source-only Unity EditMode tests authored 4356a72, NOT_RUN. P09.02, P11.01-03 and G-R1 remain Open; 15 VerifiedLocal/51 Open; PR #1 unmerged.",
-    "2026-10-16 P11.01 new Native disk source RED d0c6574 -> GREEN c3ca7e3 push 38867581980 native Windows/Ubuntu & panel all SUCCESS; native persisted ReceiptIdentityIndex RED 666f8a5 -> GREEN ced83f5 push 38868273059 Ubuntu/headless success Windows pending at ledger entry. New API NOT wired into live Native ABI; no actual crash/fault or Unity acceptance. 66 task counts 15 VerifiedLocal/51 Open; G-R1 Open; English-only and PR #1 unmerged."
+    "2026-10-16 P11.01 new Native disk source RED d0c6574 -> GREEN c3ca7e3 push 38867581980 native Windows/Ubuntu & panel all SUCCESS; native persisted ReceiptIdentityIndex RED 666f8a5 -> GREEN ced83f5 push 38868273059 Ubuntu/headless success Windows pending at ledger entry. New API NOT wired into live Native ABI; no actual crash/fault or Unity acceptance. 66 task counts 15 VerifiedLocal/51 Open; G-R1 Open; English-only and PR #1 unmerged.",
+    "2026-10-16 P11.01 R04 source-level RED 9051937 native missing policy, GREEN a6e0096 pure DirtyCheckpointPolicy 30sim/30wall earliest flush, pause/clock discontinuity require flush; actual checkpoint writer/ABI remains unimplemented. R05 persisted index push 38868273059 + PR 38868280086 all three CI jobs SUCCESS. 66 statuses unchanged, 15 VerifiedLocal/51 Open, G-R1 Open, English-only, PR #1 unmerged."
   ]
 }
