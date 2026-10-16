@@ -135,6 +135,20 @@ internal static class Program
                 RecordedSessionReview.FromJson(lowPhJson.ToJsonString()));
             Require(lowPhCsv.Split('\n')[1].EndsWith(",-0.5"),
                 "A finite scientific CSV value lost its numeric sign during escaping.");
+            // P09.02/P11.02: the recorded-only Review must never display
+            // stale numeric pH even if Native retains a finite historical value.
+            var staleDocument = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            staleDocument["observations"][0]["freshness"] = "Stale";
+            var staleReview = RecordedSessionReview.FromJson(staleDocument.ToJsonString());
+            Require(staleReview.Observations[0].DisplayValue == "--",
+                "Recorded-only Review showed stale Native pH as a current number.");
+            var failedDocument = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            failedDocument["observations"][0]["computationState"] = "Failed";
+            Require(RecordedSessionReview.FromJson(failedDocument.ToJsonString())
+                .Observations[0].DisplayValue == "--",
+                "Recorded-only Review displayed a failed scientific calculation.");
+            Require(review.Observations[0].DisplayValue == "7.10",
+                "A valid Current Native observation lost its recorded numeric display.");
             var exportedCsv = Path.Combine(root, "native-results.csv");
             SessionExportService.WriteCsv(exportedCsv, review);
             Require(File.ReadAllText(exportedCsv) == csv &&
