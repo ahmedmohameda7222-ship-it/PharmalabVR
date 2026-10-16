@@ -6,6 +6,8 @@
     <Nullable>disable</Nullable>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Inspector-serialized TMP fields are assigned by Unity, not the headless constructor. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
