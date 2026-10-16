@@ -21,10 +21,32 @@ namespace PharmaLabVR.Session
             Directory.CreateDirectory(directory);
             var target = Path.Combine(directory, name + ".plv.json");
             var temporary = target + ".tmp";
-            using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
-            { stream.Write(bytes, 0, bytes.Length); stream.Flush(true); }
-            if (File.Exists(target)) File.Replace(temporary, target, target + ".bak", true); else File.Move(temporary, target);
-            return target;
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write,
+                    FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                if (File.Exists(target))
+                    File.Replace(temporary, target, target + ".bak", true);
+                else
+                    File.Move(temporary, target);
+                return target;
+            }
+            catch
+            {
+                // Failed flush/replace must not publish an uncommitted export.
+                // Preserve the original I/O failure if temp cleanup also fails.
+                try
+                {
+                    if (File.Exists(temporary)) File.Delete(temporary);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
 
         public CoreSession Load(string path, string expectedScientificDatabasePath)
