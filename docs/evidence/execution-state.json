@@ -1212,11 +1212,12 @@
             "P11.01"
           ],
           "status": "Open",
-          "codeCommit": "f6b18f09145602590c4aaaf81dc59b539085aba4",
+          "codeCommit": "5b3f615fcbe4de2f9ddb8ae413d05cb6a363fb15",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "2026-10-16 bounded P11.02 code-first: RED test-only 88d8931 links production NotebookService path and fails headless when absent (push 38832765547); GREEN 8c5c3d2 adds UTF-8 max-1MiB checksummed line store for 512 notes, atomic replacement with prior confirmed backup, fail-closed corruption/unsafe edit, English-only note validation, branch/vessel/Native eventSequence/time provenance. HEADLESS .NET notebook tests and Native Windows/Ubuntu push 38832952576 + PR 38832957789 SUCCESS. Further routing RED 6471d31 headless compile missing Notebook actions; 1cd320b integrates actual CoreSession.BranchId, SessionController add/read, Desktop note entry, XR read-only note summary via Review, shared PanelAction/ScreenRouter, Unity PlayMode P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision source NOT_RUN. 6850255/f6b18f fix error preservation and actual decoded Arabic-script negative test. Headless panel-routing green at 1cd320b push 38833340015; final Windows/Ubuntu at f6b18f pending at evidence authoring. Local note file is NOT bundled into portable session export, no actual XR typed note entry, no event-list Review/notebook branch-fork UX or Unity/Player evidence; P11.02 Open."
+            "2026-10-16 bounded P11.02 code-first: RED test-only 88d8931 links production NotebookService path and fails headless when absent (push 38832765547); GREEN 8c5c3d2 adds UTF-8 max-1MiB checksummed line store for 512 notes, atomic replacement with prior confirmed backup, fail-closed corruption/unsafe edit, English-only note validation, branch/vessel/Native eventSequence/time provenance. HEADLESS .NET notebook tests and Native Windows/Ubuntu push 38832952576 + PR 38832957789 SUCCESS. Further routing RED 6471d31 headless compile missing Notebook actions; 1cd320b integrates actual CoreSession.BranchId, SessionController add/read, Desktop note entry, XR read-only note summary via Review, shared PanelAction/ScreenRouter, Unity PlayMode P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision source NOT_RUN. 6850255/f6b18f fix error preservation and actual decoded Arabic-script negative test. Headless panel-routing green at 1cd320b push 38833340015; final Windows/Ubuntu at f6b18f pending at evidence authoring. Local note file is NOT bundled into portable session export, no actual XR typed note entry, no event-list Review/notebook branch-fork UX or Unity/Player evidence; P11.02 Open.",
+            "2026-10-16 real Native recorded-only Review command receipt increment: TDD RED 2aa54ec headless absent CommandReceipts, functional 52f6b28 parses validated Native commandReceipts with branch/sequence/accepted/code and sorts canonical sequences without inventing times or chemistry; 5b3f615 corrects structured negative fixture. Headless+Native push 38837189584 and PR 38837193147 all jobs SUCCESS. Desktop Review lists last 8, XR displays latest command; real Unity EditMode P11_02_RecordedReviewHasOnlyValidatedNativeCommandReceipts authored NOT_RUN. Full material event timeline/Review navigation and branching remain Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial P11.02: session-bound recorded research note creation from real current Native branch/event revision; local checksummed note store with backup and provenance; Desktop write UI, XR Review read-only summary, headless tests. Missing portable Save/Load note bundling, structured event Review/fork, XR text entry, actual Unity and Player evidence. Open/NotReviewed.",
@@ -1236,14 +1237,15 @@
             "P11.02"
           ],
           "status": "Open",
-          "codeCommit": "5dcca1efdb2da9782ab6be1a06efb51f900168ef",
+          "codeCommit": "861c5f17ffaaefb817afa496e66542b4359a88f7",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
-            "2026-10-16 bounded P11.03 export-only .plvpack: source RED 283c764 CI 38835618652 absent production archive class; codec eecfc7f/b4fdfca native+notebook validated SHA256 framed archive roundtrip and corruption/foreign-branch/future-event rejection, push 38835970031 and PR 38835975327 all 3 jobs SUCCESS. UI route RED 97777da CI 38836029552 no ExportPortable enum; production 2516188 Desktop Pause/Notebook and XR Notebook export via shared controller; XR Unity test source 5dcca1e, NOT_RUN. Full Native CI current-source pending; no archive import, CSV, two-run compare or actual Unity evidence; P11.03 Open."
+            "2026-10-16 bounded P11.03 export-only .plvpack: source RED 283c764 CI 38835618652 absent production archive class; codec eecfc7f/b4fdfca native+notebook validated SHA256 framed archive roundtrip and corruption/foreign-branch/future-event rejection, push 38835970031 and PR 38835975327 all 3 jobs SUCCESS. UI route RED 97777da CI 38836029552 no ExportPortable enum; production 2516188 Desktop Pause/Notebook and XR Notebook export via shared controller; XR Unity test source 5dcca1e, NOT_RUN. Full Native CI current-source pending; no archive import, CSV, two-run compare or actual Unity evidence; P11.03 Open.",
+            "2026-10-16 truthful CSV source: RED test 90eb99b missing production SessionExportService; GREEN 8b2b306 versioned single CSV for Native observation status/model/database/material revision and real accepted/rejected command receipts, numerics only Supported+Current+Ready+valueAvailable+finite, atomically persisted. Push 38837554257, PR 38837559911 all jobs SUCCESS. Panel ExportCsv RED 049cae7 absent enum; functional c65f21d Desktop+XR Review explicit export, source XR PlayMode test 2a62105 NOT_RUN. Sign fidelity RED 2ad97766 headless error 'A finite scientific CSV value lost its numeric sign during escaping', functional GREEN 861c5f1 leaves invariant signed numeric pH intact while shielding untrusted text. Latest push 38837994278 headless SUCCESS, full Windows/Ubuntu Native and PR conclusions pending at evidence write. Full P11.03 Open: no archive import, separate selected-run Compare, Unity and device evidence."
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial export-only portable .plvpack from real Native JSON and event-linked branch notebook; strict bounded checksummed atomic write; Desktop Pause/Notebook and XR Notebook control. NO import transaction/CSV/comparison/recompute or Unity Editor/Player/XR evidence; Open.",
+          "acceptanceScope": "Partial P11.03 code-first: checksum-validated Native+Notebook portable .plvpack EXPORT ONLY and versioned Native recorded observation/command CSV with availability/provenance; explicit Desktop/XR export routes. No .plvpack import, no two-run Compare, no certified curves or real Unity/Player/XR action evidence. Open/NotReviewed.",
           "blocker": null
         }
       ],
@@ -2254,9 +2256,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "172341b32cb7c856dc0be424366a55db7a326d46",
-  "functionalCodeSha": "172341b32cb7c856dc0be424366a55db7a326d46",
-  "currentTask": "Code-first P11.03 portable export-only Native+Notebook archive; formal 66 tasks unchanged, Unity deferred, no portable import or Compare",
+  "actualHead": "55c42259ded9ec9c4a9a540ffea66ed07ed9169a",
+  "functionalCodeSha": "55c42259ded9ec9c4a9a540ffea66ed07ed9169a",
+  "currentTask": "Code-first P11.02 Native-command recorded Review and P11.03 provenance CSV + export-only archive; 66 formal statuses unchanged, Unity deferred",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2307,6 +2309,7 @@
     "2026-10-16 continuation: started from GitHub fafee12, preserved owner English-only policy; source test RED d0c3ebe → GREEN 182b7b6, P11 filesystem RED 1f41c2c → green panel routing at 8b22c59; unguarded live Desktop loading removed at 186c9ae. Canonical English-only spec corrections at 1417741. No Unity Editor/Player/XR executed; ledger 15 VerifiedLocal / 51 Open and G-R1 Open; final local Codex campaign deferred. PR #1 unmerged.",
     "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1.",
     "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion.",
-    "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged."
+    "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged."
   ]
 }
