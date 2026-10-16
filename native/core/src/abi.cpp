@@ -535,6 +535,9 @@ bool flushAutomaticCheckpoint(Context& context, std::uint64_t monotonicNowNs) {
         return true;
     try {
         plv::DurableCheckpointStore store(context.automaticCheckpointPath, 16U * 1024U * 1024U);
+        if (!checkpointIdentityMatches(context.automaticCheckpointPath,
+            context.executor.snapshot().branchId,
+            context.databasePath, context.databaseIdentity)) return false;
         const bool written = store.write(exportJson(context).dump()).accepted;
         context.dirtyCheckpoint.acknowledgeFlush(written);
         return written;
@@ -544,7 +547,25 @@ bool flushAutomaticCheckpoint(Context& context, std::uint64_t monotonicNowNs) {
     }
 }
 
-}  // namespace
+// A recorded checkpoint slot is branch and pinned-science scoped. The
+// checksummed container is not a cross-branch destination: writing into an
+// unrelated session's two-slot history would destroy its recovery evidence.
+bool checkpointIdentityMatches(const std::string& destination,
+    const std::string& branch, const std::string& databasePath,
+    const std::string& databaseIdentity) {
+    plv::DurableCheckpointStore disk(destination, 16U * 1024U * 1024U);
+    const auto existing = disk.read();
+    if (!existing) return true;
+    const auto saved = json::parse(*existing);
+    if (!saved.is_object() || !saved.contains("scientificPackage") ||
+        !saved.at("scientificPackage").is_object()) return false;
+    const auto& science = saved.at("scientificPackage");
+    return saved.value("branchId", std::string{}) == branch &&
+           science.value("path", std::string{}) == databasePath &&
+           science.value("identity", std::string{}) == databaseIdentity;
+}
+
+ }  // namespace
 
 extern "C" {
 
@@ -584,6 +605,8 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
                 automaticCheckpointPath.find(static_cast<char>(0)) != std::string::npos)
                 return PLV_INVALID_ARGUMENT;
             plv::DurableCheckpointStore validated(automaticCheckpointPath, 16U * 1024U * 1024U);
+            if (!checkpointIdentityMatches(automaticCheckpointPath,
+                branch, databasePath, databaseIdentity)) return PLV_INVALID_ARGUMENT;
         }
         std::lock_guard<std::mutex> lock(registryMutex);
         if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
@@ -1587,6 +1610,10 @@ std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_
         if (!context->active.load()) return PLV_BUSY;
         const auto encoded = exportJson(*context).dump();
         plv::DurableCheckpointStore checkpoint(destination, 16U * 1024U * 1024U);
+        if (!checkpointIdentityMatches(destination,
+            context->executor.snapshot().branchId,
+            context->databasePath, context->databaseIdentity))
+            return PLV_INVALID_ARGUMENT;
         const bool written = checkpoint.write(encoded).accepted;
         if (written && destination == context->automaticCheckpointPath)
             context->dirtyCheckpoint.acknowledgeFlush(true);
@@ -1616,6 +1643,10 @@ std::int32_t plv_configure_checkpoint(
             return PLV_INVALID_ARGUMENT;
         plv::DurableCheckpointStore validated(destination, 16U * 1024U * 1024U);
         std::lock_guard<std::mutex> lock(context->mutex);
+        if (!checkpointIdentityMatches(destination,
+            context->executor.snapshot().branchId,
+            context->databasePath, context->databaseIdentity))
+            return PLV_INVALID_ARGUMENT;
         if (!context->active.load()) return PLV_BUSY;
         context->automaticCheckpointPath = destination;
         // A newly attached or restored session needs a new confirmed
