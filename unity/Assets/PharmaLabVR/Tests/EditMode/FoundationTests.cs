@@ -144,6 +144,32 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_01_AutomaticNativeCheckpointPersistsDirtySessionWithoutExplicitSave()
+        {
+            var directory = Path.Combine(Path.GetTempPath(),
+                "plv-auto-native-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var pinned = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                var path = Path.Combine(directory, "auto.ckpt");
+                using var core = new CoreSession("native-auto-test", "Desktop",
+                    pinned, ScientificPackage.DatabaseSha256, "Precision", path);
+                Assert.That(core.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"receiver\",\"capacityM3\":0.00001}"),
+                    Does.Contain("\"accepted\":true"));
+                core.Step(0.0, 1_000_000_000UL);
+                Assert.That(File.Exists(path + ".slot0"), Is.False);
+                core.Step(0.0, 30_000_000_000UL);
+                Assert.That(File.Exists(path + ".slot0"), Is.True,
+                    "Native did not persist its first-dirty wall deadline.");
+                Assert.That(File.ReadAllText(path + ".slot0"),
+                    Does.Contain(core.ExportSession()));
+            }
+            finally { Directory.Delete(directory, true); }
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");

@@ -17,7 +17,7 @@ namespace PharmaLabVR.Core
         public static int PendingRetirements => CoreSafeHandle.PendingRetirements;
 
         public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "",
-            string scienceBudgetMode = "Precision")
+            string scienceBudgetMode = "Precision", string automaticCheckpointPath = "")
         {
             if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
             if (scienceBudgetMode != "Precision" && scienceBudgetMode != "Bulk")
@@ -25,7 +25,18 @@ namespace PharmaLabVR.Core
             if (!string.IsNullOrEmpty(databasePath) || !string.IsNullOrEmpty(databaseIdentity))
                 ScientificPackage.VerifyPinnedFile(databasePath, databaseIdentity);
             if (NativeMethods.AbiVersion() != 1) throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
-            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"}}");
+            string checkpointFragment = "";
+            if (!string.IsNullOrEmpty(automaticCheckpointPath))
+            {
+                if (automaticCheckpointPath.Length > 1024 ||
+                    automaticCheckpointPath.IndexOfAny(new[] { '\0', '\r', '\n' }) >= 0 ||
+                    !Path.IsPathRooted(automaticCheckpointPath) ||
+                    !Directory.Exists(Path.GetDirectoryName(automaticCheckpointPath)))
+                    throw new ArgumentException("Checkpoint path requires an existing absolute parent.",
+                        nameof(automaticCheckpointPath));
+                checkpointFragment = ",\"checkpointPath\":\"" + Escape(automaticCheckpointPath) + "\"";
+            }
+            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"{checkpointFragment}}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
             this.branchId = branchId;
             nextCommandSequence = 1;
