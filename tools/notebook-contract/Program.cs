@@ -154,6 +154,37 @@ internal static class Program
             Require(File.ReadAllText(exportedCsv) == csv &&
                 !File.Exists(exportedCsv + ".tmp"),
                 "Atomic scientific CSV export did not round-trip the real recorded data.");
+            // P11.03: compare two *recorded* Native-backed snapshots; no
+            // invented interpolation, model conversion or stale numeric delta.
+            var sourceRun = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            sourceRun["observations"][0]["modelId"] = "IPhreeqc-research";
+            sourceRun["observations"][0]["databaseIdentity"] = "minteq-test";
+            var candidateRun = System.Text.Json.Nodes.JsonNode.Parse(sourceRun.ToJsonString());
+            candidateRun["branchId"] = "second-run";
+            candidateRun["commandReceipts"] = null;
+            candidateRun["observations"][0]["value"] = 6.7;
+            var firstRun = RecordedSessionReview.FromJson(sourceRun.ToJsonString());
+            var secondRun = RecordedSessionReview.FromJson(candidateRun.ToJsonString());
+            var compared = RecordedRunComparison.Compare(firstRun, secondRun);
+            Require(compared.Rows.Count == 1 &&
+                compared.Rows[0].BaselineDisplay == "7.10" &&
+                compared.Rows[0].CandidateDisplay == "6.70" &&
+                compared.Rows[0].DeltaAvailable &&
+                Math.Abs(compared.Rows[0].Delta - (-0.4)) < 1e-10,
+                "Two authentic supported Native observations did not compare correctly.");
+            candidateRun["observations"][0]["freshness"] = "Stale";
+            var staleComparison = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(candidateRun.ToJsonString()));
+            Require(staleComparison.Rows[0].CandidateDisplay == "--" &&
+                !staleComparison.Rows[0].DeltaAvailable,
+                "Stale recorded Native pH was turned into an invented comparison delta.");
+            candidateRun["observations"][0]["freshness"] = "Current";
+            candidateRun["scientificPackage"]["identity"] = "different-model-database";
+            var differentPackage = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(candidateRun.ToJsonString()));
+            Require(!differentPackage.Rows[0].DeltaAvailable &&
+                differentPackage.Rows[0].CandidateDisplay == "6.70",
+                "Different scientific packages generated an unverified cross-model delta.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
