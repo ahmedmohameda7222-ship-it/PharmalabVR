@@ -107,6 +107,20 @@ internal static class Program
                 review.CommandReceipts[1].Accepted == false &&
                 review.CommandReceipts[1].CommandType == "PrepareStock",
                 "Recorded Review did not preserve ordered real Native accepted/rejected receipts.");
+            // P11.02: recorded-only Review must reject malformed UTF-8 instead
+            // of presenting a silently changed Native identity.
+            var invalidReviewFile = Path.Combine(root, "bad-encoding.plv.json");
+            var utf8Identity = System.Text.Encoding.UTF8.GetBytes(
+                "{\"schemaVersion\":1,\"branchId\":\"branchA\",\"scientificPackage\":{\"identity\":\"db\"},\"observations\":[]}");
+            var letter = Array.IndexOf(utf8Identity, (byte)'A');
+            Require(letter >= 0, "Invalid UTF-8 fixture has no target byte.");
+            utf8Identity[letter] = 0xff;
+            File.WriteAllBytes(invalidReviewFile, utf8Identity);
+            var invalidUtf8Rejected = false;
+            try { RecordedSessionReview.Open(invalidReviewFile); }
+            catch (InvalidDataException) { invalidUtf8Rejected = true; }
+            Require(invalidUtf8Rejected,
+                "Recorded-only Review accepted a malformed UTF-8 Native branch ID.");
             var changedDocument = System.Text.Json.Nodes.JsonNode.Parse(recorded);
             changedDocument["commandReceipts"][0]["terminalOutcome"]["branchId"] = "other";
             var mismatchedReceipt = changedDocument.ToJsonString();

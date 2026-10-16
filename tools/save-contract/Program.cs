@@ -29,6 +29,15 @@ internal static class Program
             File.WriteAllText(target, "corrupt");
             Check(service.Load(target, "fixture-database").Serialized == "journal:v1:first",
                 "Corrupt primary did not recover from the confirmed backup.");
+            // P11.01: invalid UTF-8 must not be transformed into a seemingly
+            // valid Native session payload by permissive replacement decoding.
+            var malformed = System.Text.Encoding.UTF8.GetBytes("journal:v1:");
+            var malformedBytes = new byte[malformed.Length + 1];
+            Array.Copy(malformed, malformedBytes, malformed.Length);
+            malformedBytes[malformed.Length] = 0xff;
+            File.WriteAllBytes(target, malformedBytes);
+            Check(service.Load(target, "fixture-database").Serialized == "journal:v1:first",
+                "Invalid UTF-8 Native save was accepted rather than recovered from backup.");
             File.WriteAllText(target, "journal:v1:confirmed");
             var rejectedPath = false;
             try { service.Save(new CoreSession("journal:v1:bad"), root, "../outside"); }
