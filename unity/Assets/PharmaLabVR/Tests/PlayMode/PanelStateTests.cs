@@ -842,6 +842,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
                 Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
                 session.Configure(driver, "p06-desktop-load-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(router.Current.SupportedActions, Does.Not.Contain("Load"));
+                Assert.That(actions.Request(PanelAction.Load), Is.False,
+                    "A running Desktop laboratory must not replace its Native session.");
                 Assert.That(actions.Request(PanelAction.Pause), Is.True);
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Load"));

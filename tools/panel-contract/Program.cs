@@ -503,6 +503,8 @@ internal static class Program
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
             Check(panels.Request(PanelAction.Measure, "receiver"), "Measure action refused");
             Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
+            Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0,
+                "Live Desktop Measure unexpectedly permitted a Native session replacement");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
             driver.CurrentMode = "VR";
