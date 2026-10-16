@@ -12,10 +12,15 @@ namespace PharmaLabVR.Session
         {
             if (session == null || !session.IsOpen) throw new InvalidOperationException("No open native session.");
             ValidateName(name);
+            // Validate the exact UTF-8 byte envelope before creating any file or
+            // replacing the last confirmed save. LoadOne enforces the same bound.
+            // Never report success for a Native export that cannot be re-imported.
+            var bytes = System.Text.Encoding.UTF8.GetBytes(session.ExportSession());
+            if (bytes.Length == 0 || bytes.Length > MaxSaveBytes)
+                throw new InvalidDataException("Native session export is empty or exceeds the 16 MiB save limit.");
             Directory.CreateDirectory(directory);
             var target = Path.Combine(directory, name + ".plv.json");
             var temporary = target + ".tmp";
-            var bytes = System.Text.Encoding.UTF8.GetBytes(session.ExportSession());
             using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
             { stream.Write(bytes, 0, bytes.Length); stream.Flush(true); }
             if (File.Exists(target)) File.Replace(temporary, target, target + ".bak", true); else File.Move(temporary, target);
