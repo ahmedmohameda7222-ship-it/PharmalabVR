@@ -45,6 +45,22 @@ internal static class Program
             Check(File.ReadAllText(target) == "journal:v1:confirmed",
                 "Oversized save damaged the last confirmed session.");
             Check(!File.Exists(target + ".tmp"), "Oversized save left a temporary file.");
+
+            // Emulate a filesystem that denies backup replacement after export
+            // and temp-file staging. The last confirmed checkpoint must survive
+            // and a failed Save must not leave a misleading partial .tmp.
+            File.Delete(target + ".bak");
+            Directory.CreateDirectory(target + ".bak");
+            var replacementDenied = false;
+            try { service.Save(new CoreSession("journal:v1:failed-replacement"), root, "session"); }
+            catch (Exception exception) when (exception is IOException || exception is UnauthorizedAccessException)
+            { replacementDenied = true; }
+            Check(replacementDenied, "An obstructed backup replacement was reported as a durable Save.");
+            Check(File.ReadAllText(target) == "journal:v1:confirmed",
+                "Failed atomic replacement corrupted the last confirmed checkpoint.");
+            Check(!File.Exists(target + ".tmp"),
+                "Failed atomic replacement left an uncommitted journal temporary file.");
+            Directory.Delete(target + ".bak");
             Console.WriteLine("P11.01 SaveService headless filesystem checks passed: " + checks);
         }
         finally
