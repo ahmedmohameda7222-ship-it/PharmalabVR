@@ -1236,12 +1236,14 @@
             "P11.02"
           ],
           "status": "Open",
-          "codeCommit": null,
+          "codeCommit": "5dcca1efdb2da9782ab6be1a06efb51f900168ef",
           "evidence": [],
           "plannerStatus": "NotReviewed",
-          "implementationEvidence": [],
+          "implementationEvidence": [
+            "2026-10-16 bounded P11.03 export-only .plvpack: source RED 283c764 CI 38835618652 absent production archive class; codec eecfc7f/b4fdfca native+notebook validated SHA256 framed archive roundtrip and corruption/foreign-branch/future-event rejection, push 38835970031 and PR 38835975327 all 3 jobs SUCCESS. UI route RED 97777da CI 38836029552 no ExportPortable enum; production 2516188 Desktop Pause/Notebook and XR Notebook export via shared controller; XR Unity test source 5dcca1e, NOT_RUN. Full Native CI current-source pending; no archive import, CSV, two-run compare or actual Unity evidence; P11.03 Open."
+          ],
           "externalEvidence": [],
-          "acceptanceScope": null,
+          "acceptanceScope": "Partial export-only portable .plvpack from real Native JSON and event-linked branch notebook; strict bounded checksummed atomic write; Desktop Pause/Notebook and XR Notebook control. NO import transaction/CSV/comparison/recompute or Unity Editor/Player/XR evidence; Open.",
           "blocker": null
         }
       ],
@@ -2252,9 +2254,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "f6b18f09145602590c4aaaf81dc59b539085aba4",
-  "functionalCodeSha": "f6b18f09145602590c4aaaf81dc59b539085aba4",
-  "currentTask": "Code-first Native pH availability/backup-only restore and session-linked Notebook P11.02 implemented in bounded scope; all 66 official statuses unchanged; Unity final campaign NOT_RUN",
+  "actualHead": "172341b32cb7c856dc0be424366a55db7a326d46",
+  "functionalCodeSha": "172341b32cb7c856dc0be424366a55db7a326d46",
+  "currentTask": "Code-first P11.03 portable export-only Native+Notebook archive; formal 66 tasks unchanged, Unity deferred, no portable import or Compare",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2304,6 +2306,7 @@
     "2026-10-16 owner reiterated ENGLISH-ONLY product UI. Functional source 18c06baa removed Arabic/RTL assets and runtime switches; incremental 24ac6ca8 rejects Arabic Unicode ranges in English copy values/keys with atomic failure, adds headless regression; CI exact final functional SHA pending at note. Formal P10.03 Open/NotReviewed, 66 deferred Unity NOT_RUN, G-R1 Open, PR #1 unmerged, nextTask P06.02 unchanged.",
     "2026-10-16 continuation: started from GitHub fafee12, preserved owner English-only policy; source test RED d0c3ebe → GREEN 182b7b6, P11 filesystem RED 1f41c2c → green panel routing at 8b22c59; unguarded live Desktop loading removed at 186c9ae. Canonical English-only spec corrections at 1417741. No Unity Editor/Player/XR executed; ledger 15 VerifiedLocal / 51 Open and G-R1 Open; final local Codex campaign deferred. PR #1 unmerged.",
     "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1.",
-    "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion."
+    "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion.",
+    "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged."
   ]
 }
