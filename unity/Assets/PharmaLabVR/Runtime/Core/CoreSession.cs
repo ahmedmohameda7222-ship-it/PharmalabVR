@@ -95,6 +95,22 @@ namespace PharmaLabVR.Core
         public string ReadSnapshot() => ReadBuffer(NativeMethods.Snapshot, false);
         public string ExportSession() => ReadBuffer(NativeMethods.Export, false);
 
+        // Explicit fsynced Native snapshot checkpoint. The runtime must never
+        // equate this with automatic P11.01 journal/checkpoint scheduling.
+        public void WriteNativeCheckpoint(string absolutePath)
+        {
+            if (!IsOpen) throw new ObjectDisposedException(nameof(CoreSession));
+            if (string.IsNullOrWhiteSpace(absolutePath) ||
+                absolutePath.IndexOf('\0') >= 0 ||
+                !Path.IsPathRooted(absolutePath))
+                throw new ArgumentException("A valid absolute Native checkpoint path is required.",
+                    nameof(absolutePath));
+            var bytes = Utf8(absolutePath);
+            if (bytes.Length == 0 || bytes.Length > 1024)
+                throw new ArgumentOutOfRangeException(nameof(absolutePath));
+            Ensure(NativeMethods.Checkpoint(handle, bytes, (uint)bytes.Length), "checkpoint");
+        }
+
         public IReadOnlyList<string> PollEvents()
         {
             var events = new List<string>();

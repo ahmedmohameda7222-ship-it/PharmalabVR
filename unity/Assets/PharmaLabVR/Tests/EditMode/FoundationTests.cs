@@ -116,6 +116,34 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_01_ExplicitNativeCheckpointPersistsRealNativeExportWithoutChemistryMutation()
+        {
+            var dir = Path.Combine(Path.GetTempPath(),
+                "plv-native-ckpt-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                var pinned = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                using var core = new CoreSession("native-checkpoint-test", "Desktop",
+                    pinned, ScientificPackage.DatabaseSha256);
+                Assert.That(core.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"receiver\",\"capacityM3\":0.00001}"),
+                    Does.Contain("\"accepted\":true"));
+                var exportBefore = core.ExportSession();
+                var destination = Path.Combine(dir, "native.ckpt");
+                core.WriteNativeCheckpoint(destination);
+                Assert.That(File.Exists(destination + ".slot0"), Is.True);
+                StringAssert.Contains(exportBefore, File.ReadAllText(destination + ".slot0"));
+                Assert.That(core.ExportSession(), Is.EqualTo(exportBefore),
+                    "Explicit checkpoint must not advance Native event or material revision.");
+                core.WriteNativeCheckpoint(destination);
+                Assert.That(File.Exists(destination + ".slot1"), Is.True);
+                Assert.That(core.ExportSession(), Is.EqualTo(exportBefore));
+            }
+            finally { Directory.Delete(dir, true); }
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");

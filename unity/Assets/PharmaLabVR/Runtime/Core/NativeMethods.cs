@@ -109,5 +109,8 @@ namespace PharmaLabVR.Core
 
         [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "plv_import")]
         internal static extern NativeStatus Import(byte[] json, uint size, out CoreSafeHandle handle);
+
+        [DllImport(Library, CallingConvention = CallingConvention.Cdecl, EntryPoint = "plv_checkpoint")]
+        internal static extern NativeStatus Checkpoint(CoreSafeHandle handle, byte[] path, uint size);
     }
 }
