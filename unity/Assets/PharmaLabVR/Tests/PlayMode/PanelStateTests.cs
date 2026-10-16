@@ -996,6 +996,19 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
                 Assert.That(session.LastDurableSavePath, Is.Null);
                 Assert.That(actions.Request(PanelAction.Lab), Is.True);
+                // P11.03 two-run recorded comparison uses the real Native
+                // durable checkpoint and current, unmutated Native Review.
+                Assert.That(session.Save(), Is.True, session.LastError);
+                Assert.That(actions.Request(PanelAction.Review), Is.True, session.LastError);
+                Assert.That(actions.Request(PanelAction.CompareSaved), Is.True, session.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Compare));
+                Assert.That(session.CurrentComparison, Is.Not.Null);
+                Assert.That(session.CurrentComparison.BaselineBranchId, Is.EqualTo(original.BranchId));
+                Assert.That(session.CurrentComparison.CandidateBranchId, Is.EqualTo(original.BranchId));
+                Assert.That(driver.Session, Is.SameAs(original));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(actions.Request(PanelAction.Review), Is.True);
+                Assert.That(actions.Request(PanelAction.Lab), Is.True);
             }
             finally
             {
@@ -1007,6 +1020,10 @@ namespace PharmaLabVR.Tests.PlayMode
                         Path.GetFileNameWithoutExtension(notesPath) + ".plvpack");
                     if (File.Exists(archivePath)) File.Delete(archivePath);
                     if (File.Exists(archivePath + ".bak")) File.Delete(archivePath + ".bak");
+                    var checkpoint = Path.Combine(Path.GetDirectoryName(notesPath),
+                        Path.GetFileNameWithoutExtension(notesPath) + ".plv.json");
+                    if (File.Exists(checkpoint)) File.Delete(checkpoint);
+                    if (File.Exists(checkpoint + ".bak")) File.Delete(checkpoint + ".bak");
                 }
                 foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
                 SceneManager.UnloadSceneAsync(scene);

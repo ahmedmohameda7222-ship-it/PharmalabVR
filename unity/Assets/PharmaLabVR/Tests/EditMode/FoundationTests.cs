@@ -61,6 +61,31 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_03_RecordedRunComparisonNeverComputesDeltaForStaleOrDifferentModels()
+        {
+            const string source = @"{""schemaVersion"":1,""branchId"":""run-a"",
+                ""scientificPackage"":{""identity"":""minteq-pinned""},
+                ""observations"":[{""vesselId"":""receiver"",""observableId"":""pH"",
+                    ""support"":""Supported"",""freshness"":""Current"",
+                    ""computationState"":""Ready"",""modelId"":""IPhreeqc-research"",
+                    ""databaseIdentity"":""minteq-pinned"",""valueAvailable"":true,""value"":7.1}]}";
+            var current = RecordedSessionReview.FromJson(source);
+            var differentBranch = source.Replace("run-a", "run-b").Replace("7.1", "6.7");
+            var comparable = RecordedRunComparison.Compare(current,
+                RecordedSessionReview.FromJson(differentBranch));
+            Assert.That(comparable.Rows[0].DeltaAvailable, Is.True);
+            Assert.That(comparable.Rows[0].Delta, Is.EqualTo(-0.4).Within(0.000001));
+            var stale = RecordedRunComparison.Compare(current, RecordedSessionReview.FromJson(
+                differentBranch.Replace("Current", "Stale")));
+            Assert.That(stale.Rows[0].CandidateDisplay, Is.EqualTo("--"));
+            Assert.That(stale.Rows[0].DeltaAvailable, Is.False);
+            var otherModel = RecordedRunComparison.Compare(current, RecordedSessionReview.FromJson(
+                differentBranch.Replace("minteq-pinned", "another-science-db")));
+            Assert.That(otherModel.Rows[0].DeltaAvailable, Is.False);
+            Assert.That(otherModel.Rows[0].CandidateDisplay, Is.EqualTo("6.70"));
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");
