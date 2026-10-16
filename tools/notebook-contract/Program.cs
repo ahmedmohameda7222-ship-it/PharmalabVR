@@ -215,12 +215,13 @@ internal static class Program
             Require(recordedBackup.BranchId == "research-branch" &&
                 recordedBackup.Observations[0].DisplayValue == "7.10",
                 "Confirmed saved backup was unavailable for recorded-only Review.");
-            File.WriteAllText(comparisonFile + ".bak", "{\"schemaVersion\":-1}");
+            File.WriteAllText(comparisonFile + ".bak", sourceRun.ToJsonString());
             File.Delete(comparisonFile);
             var onlyBackup = RecordedSessionReview.OpenRecoverable(comparisonFile);
             Require(onlyBackup.BranchId == "research-branch",
                 "A missing primary prevented confirmed backup-only recorded Review.");
             File.WriteAllText(comparisonFile, "{\"schemaVersion\":-1}");
+            File.WriteAllText(comparisonFile + ".bak", "{\"schemaVersion\":-1}");
             var refusedCorruptSavedPair = false;
             try { RecordedRunComparison.CompareSaved(comparisonFile, secondRun); }
             catch (InvalidDataException) { refusedCorruptSavedPair = true; }
