@@ -170,6 +170,35 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_01_ImportedNativeSessionCanResumeAutomaticCheckpointPersistence()
+        {
+            var directory = Path.Combine(Path.GetTempPath(),
+                "plv-native-resume-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var pinned = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                string originalExport;
+                using (var original = new CoreSession("native-resume-test", "Desktop",
+                    pinned, ScientificPackage.DatabaseSha256))
+                {
+                    Assert.That(original.SubmitOrdered("CreateVessel",
+                        "{\"id\":\"receiver\",\"capacityM3\":0.00001}"),
+                        Does.Contain("\"accepted\":true"));
+                    originalExport = original.ExportSession();
+                }
+                using var restored = CoreSession.ImportSession(originalExport, pinned);
+                var checkpoint = Path.Combine(directory, "resumed.ckpt");
+                restored.ConfigureAutomaticCheckpoint(checkpoint);
+                restored.Step(0.0, 30_000_000_000UL);
+                Assert.That(File.Exists(checkpoint + ".slot0"), Is.True);
+                Assert.That(File.ReadAllText(checkpoint + ".slot0"),
+                    Does.Contain("\"branchId\":\"native-resume-test\""));
+            }
+            finally { Directory.Delete(directory, true); }
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");

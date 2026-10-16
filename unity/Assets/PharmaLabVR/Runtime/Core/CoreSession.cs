@@ -106,6 +106,19 @@ namespace PharmaLabVR.Core
         public string ReadSnapshot() => ReadBuffer(NativeMethods.Snapshot, false);
         public string ExportSession() => ReadBuffer(NativeMethods.Export, false);
 
+        public void ConfigureAutomaticCheckpoint(string absolutePath)
+        {
+            if (string.IsNullOrEmpty(absolutePath) || absolutePath.Length > 1024 ||
+                absolutePath.IndexOfAny(new[] { '\0', '\r', '\n' }) >= 0 ||
+                !Path.IsPathRooted(absolutePath) ||
+                !Directory.Exists(Path.GetDirectoryName(absolutePath)))
+                throw new ArgumentException("Checkpoint path requires an existing absolute parent.",
+                    nameof(absolutePath));
+            var bytes = Utf8(absolutePath);
+            Ensure(NativeMethods.ConfigureCheckpoint(handle, bytes, (uint)bytes.Length),
+                "configure automatic checkpoint");
+        }
+
         // Explicit fsynced Native snapshot checkpoint. The runtime must never
         // equate this with automatic P11.01 journal/checkpoint scheduling.
         public void WriteNativeCheckpoint(string absolutePath)

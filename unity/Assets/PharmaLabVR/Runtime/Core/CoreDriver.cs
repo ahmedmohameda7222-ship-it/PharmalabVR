@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using PharmaLabVR.Input;
 using PharmaLabVR.Lab;
 using PharmaLabVR.Tools;
@@ -12,6 +13,8 @@ namespace PharmaLabVR.Core
     public sealed class CoreDriver : MonoBehaviour
     {
         [SerializeField] private string branchId = "local-session";
+        [SerializeField] private bool automaticNativeCheckpointing = true;
+        public string AutomaticCheckpointPath { get; private set; }
         [SerializeField] private ScienceBudgetProfile scienceBudgetProfile = ScienceBudgetProfile.Precision;
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
         public enum ScienceBudgetProfile { Precision, Bulk }
@@ -75,8 +78,10 @@ namespace PharmaLabVR.Core
                 stockIds.Clear();
                 foreach (var stock in stockCatalog.stocks) stockIds.Add(stock.id);
                 var initialMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ? "VR" : "Desktop";
+                var checkpointPath = automaticNativeCheckpointing ? NativeCheckpointPathFor(branchId) : "";
                 Session = new CoreSession(branchId, initialMode, databasePath, ScientificPackage.DatabaseSha256,
-                    scienceBudgetProfile.ToString());
+                    scienceBudgetProfile.ToString(), checkpointPath);
+                AutomaticCheckpointPath = checkpointPath;
                 ScientificDatabasePath = databasePath;
                 BootstrapResearchSession();
                 Measurement = GetComponent<MeasurementView>();
@@ -303,8 +308,16 @@ namespace PharmaLabVR.Core
                     mount != null, mount != null && mount.IsMounted))
                 throw new InvalidOperationException(
                     "Load refused: saved mode must match current mode and VR tool must be docked.");
+            // Attach the imported Native authority to its own branch's writer
+            // before disposing the previous session. A failure preserves the old
+            // active context and never silently disables periodic persistence.
+            var checkpointPath = automaticNativeCheckpointing ?
+                NativeCheckpointPathFor(replacement.BranchId) : "";
+            if (automaticNativeCheckpointing)
+                replacement.ConfigureAutomaticCheckpoint(checkpointPath);
             var previous = Session;
             Session = replacement;
+            AutomaticCheckpointPath = checkpointPath;
             accumulator = 0.0;
             establishFrameClock = true;
             previous?.Dispose();
@@ -323,6 +336,21 @@ namespace PharmaLabVR.Core
                     foreach (var watermark in state.inputWatermarks)
                         if (ulong.TryParse(watermark.sampleSequence, out var sequence))
                             adapter.AdvanceSequence(watermark.toolId, sequence);
+        }
+
+        private static string NativeCheckpointPathFor(string branch)
+        {
+            if (string.IsNullOrEmpty(branch) || branch.Length > 64)
+                throw new ArgumentException("Native session branch identity is invalid.");
+            foreach (var value in branch)
+                if (!((value >= 'a' && value <= 'z') ||
+                      (value >= 'A' && value <= 'Z') ||
+                      (value >= '0' && value <= '9') ||
+                       value == '.' || value == '_' || value == '-'))
+                    throw new ArgumentException("Native checkpoint branch path is unsafe.");
+            var directory = Path.Combine(Application.persistentDataPath, "sessions");
+            Directory.CreateDirectory(directory);
+            return Path.Combine(directory, "native-" + branch + ".plv-checkpoint");
         }
 
         private void BootstrapResearchSession()
