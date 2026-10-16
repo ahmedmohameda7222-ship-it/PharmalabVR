@@ -129,6 +129,12 @@ internal static class Program
             Require(!unavailable.Contains("7.099999") &&
                 unavailable.Split('\n')[1].EndsWith(","),
                 "Unsupported scientific pH was exported as a valid numeric result.");
+            var lowPhJson = System.Text.Json.Nodes.JsonNode.Parse(recorded);
+            lowPhJson["observations"][0]["value"] = -0.5;
+            var lowPhCsv = SessionExportService.RenderCsv(
+                RecordedSessionReview.FromJson(lowPhJson.ToJsonString()));
+            Require(lowPhCsv.Split('\n')[1].EndsWith(",-0.5"),
+                "A finite scientific CSV value lost its numeric sign during escaping.");
             var exportedCsv = Path.Combine(root, "native-results.csv");
             SessionExportService.WriteCsv(exportedCsv, review);
             Require(File.ReadAllText(exportedCsv) == csv &&
