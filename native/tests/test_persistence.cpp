@@ -189,7 +189,11 @@ TEST_CASE("R04 Native dirty checkpoint requires earlier of wall or simulation th
     policy.markDirty(35'000'000'000ULL, 30.0);
     CHECK_FALSE(policy.needsFlush(39'000'000'000ULL, 34.9, false));
     CHECK(policy.needsFlush(40'000'000'000ULL, 34.9, false));
-    policy.acknowledgeFlush();
+    // R01/R04: a failed disk flush may not clear dirty state or defer retry.
+    policy.acknowledgeFlush(false);
+    CHECK(policy.dirty());
+    CHECK(policy.needsFlush(40'000'000'001ULL, 34.9, false));
+    policy.acknowledgeFlush(true);
     CHECK_FALSE(policy.dirty());
     CHECK_FALSE(policy.needsFlush(41'000'000'000ULL, 36.0, false));
     policy.markDirty(100'000'000'000ULL, 20.0);
@@ -204,6 +208,6 @@ TEST_CASE("R04 dirty Native state flushes before pause and on time discontinuity
     CHECK(policy.needsFlush(49'000'000'999ULL, 12.001, false));
     CHECK(policy.needsFlush(50'000'000'001ULL, 11.99, false));
     CHECK(policy.dirty());
-    policy.acknowledgeFlush();
+    policy.acknowledgeFlush(true);
     CHECK_FALSE(policy.needsFlush(60'000'000'000ULL, 42.0, true));
 }
