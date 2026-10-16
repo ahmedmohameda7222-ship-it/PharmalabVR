@@ -482,8 +482,14 @@ namespace PharmaLabVR.UI
             var values = recorded.Observations.Take(3)
                 .Select(observation => observation.vesselId + " pH " +
                     observation.DisplayValue + " · " + observation.freshness);
+            var latest = recorded.CommandReceipts.Count == 0 ? "No command receipts." :
+                "Cmd #" + recorded.CommandReceipts[recorded.CommandReceipts.Count - 1].CommandSequence +
+                " " + recorded.CommandReceipts[recorded.CommandReceipts.Count - 1].CommandType +
+                " · " + (recorded.CommandReceipts[recorded.CommandReceipts.Count - 1].Accepted ?
+                    "Accepted" : recorded.CommandReceipts[recorded.CommandReceipts.Count - 1].OutcomeCode);
             return "Recorded · no recomputation\n" +
-                (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values));
+                (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values)) +
+                "\n" + latest;
         }
     }
 }

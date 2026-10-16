@@ -246,6 +246,12 @@ namespace PharmaLabVR.Session
                     GUILayout.Label("Recorded-only review · no model recomputation");
                     GUILayout.Label("Saved branch: " + RecordedReview.BranchId);
                     GUILayout.Label("Saved model identity: " + RecordedReview.ModelIdentity);
+                    GUILayout.Label("Native command receipts (ordered; no synthetic timestamps): " +
+                        RecordedReview.CommandReceipts.Count);
+                    foreach (var receipt in RecordedReview.CommandReceipts.Skip(
+                        Math.Max(0, RecordedReview.CommandReceipts.Count - 8)))
+                        GUILayout.Label("#" + receipt.CommandSequence + " " + receipt.CommandType +
+                            " · " + (receipt.Accepted ? "Accepted" : receipt.OutcomeCode));
                     foreach (var observation in RecordedReview.Observations)
                         GUILayout.Label($"Recorded {observation.vesselId} pH: {observation.DisplayValue} " +
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");

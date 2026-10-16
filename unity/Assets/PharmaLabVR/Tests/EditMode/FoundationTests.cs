@@ -34,6 +34,30 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_02_RecordedReviewHasOnlyValidatedNativeCommandReceipts()
+        {
+            const string json = @"{""schemaVersion"":1,""branchId"":""branch-test"",
+                ""scientificPackage"":{""identity"":""minteq.v4.dat""},
+                ""observations"":[],
+                ""commandReceipts"":[
+                  {""commandSequence"":""2"",
+                   ""canonicalCommand"":{""schemaVersion"":1,""branchId"":""branch-test"",
+                     ""commandSequence"":""2"",""type"":""PrepareStock""},
+                   ""terminalOutcome"":{""schemaVersion"":1,""branchId"":""branch-test"",
+                     ""commandSequence"":""2"",""type"":""CommandOutcome"",""accepted"":false,""code"":""Rejected""}},
+                  {""commandSequence"":""1"",
+                   ""canonicalCommand"":{""schemaVersion"":1,""branchId"":""branch-test"",
+                     ""commandSequence"":""1"",""type"":""CreateVessel""},
+                   ""terminalOutcome"":{""schemaVersion"":1,""branchId"":""branch-test"",
+                     ""commandSequence"":""1"",""type"":""CommandOutcome"",""accepted"":true,""code"":""Accepted""}}]}";
+            var history = RecordedSessionReview.FromJson(json);
+            Assert.That(history.CommandReceipts.Count, Is.EqualTo(2));
+            Assert.That(history.CommandReceipts[0].CommandSequence, Is.EqualTo("1"));
+            Assert.That(history.CommandReceipts[1].CommandType, Is.EqualTo("PrepareStock"));
+            Assert.That(history.CommandReceipts[1].Accepted, Is.False);
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");
