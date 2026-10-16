@@ -779,16 +779,7 @@ namespace PharmaLabVR.Session
                 var path = SavedNativePath();
                 if (!SaveService.HasSaveCandidate(path))
                     throw new InvalidDataException("No confirmed saved Native checkpoint is available.");
-                RecordedSessionReview baseline;
-                try { baseline = RecordedSessionReview.Open(path); }
-                catch (Exception error) when (error is InvalidDataException ||
-                                              error is IOException || error is ArgumentException)
-                {
-                    // A saved checkpoint backup is a real second recorded source.
-                    // Never substitute a fabricated baseline or alter live Native.
-                    baseline = RecordedSessionReview.Open(path + ".bak");
-                }
-                CurrentComparison = RecordedRunComparison.Compare(baseline, RecordedReview);
+                CurrentComparison = RecordedRunComparison.CompareSaved(path, RecordedReview);
                 LastError = null;
                 return true;
             }

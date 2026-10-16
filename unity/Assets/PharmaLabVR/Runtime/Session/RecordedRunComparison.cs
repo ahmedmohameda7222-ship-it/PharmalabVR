@@ -92,6 +92,24 @@ namespace PharmaLabVR.Session
             }
         }
 
+        public static RecordedRunComparison CompareSaved(string savedPath,
+            RecordedSessionReview candidate)
+        {
+            if (string.IsNullOrWhiteSpace(savedPath))
+                throw new ArgumentException("Saved Native checkpoint path is required.", nameof(savedPath));
+            if (candidate == null) throw new ArgumentNullException(nameof(candidate));
+            RecordedSessionReview baseline;
+            try { baseline = RecordedSessionReview.Open(savedPath); }
+            catch (Exception error) when (error is InvalidDataException ||
+                                          error is IOException || error is ArgumentException)
+            {
+                // Only an independently validated confirmed backup may substitute
+                // for a damaged/missing primary; never invent recorded observations.
+                baseline = RecordedSessionReview.Open(savedPath + ".bak");
+            }
+            return Compare(baseline, candidate);
+        }
+
         public static RecordedRunComparison Compare(RecordedSessionReview baseline,
             RecordedSessionReview candidate)
         {
