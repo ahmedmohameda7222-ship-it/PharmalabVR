@@ -1,0 +1,11 @@
+# P11.01 — automatic Native checkpoint source increment
+
+Date: 2026-10-17. **Formal status Open/NotReviewed**; 15 VerifiedLocal/51 Open, G-R1 Open. English-only; PR #1 unmerged.
+
+The real Native `plv_create` accepts an opt-in `checkpointPath`. Command terminal receipts and physics time advances mark first-dirty; the Native owner-thread step drives an earlier-of-30-second-wall/simulation `DirtyCheckpointPolicy` flush through the two-slot SHA-256 writer. Paused steps also attempt durable flush. Failed staging leaves the confirmed generation and dirty deadline intact for retry. Explicit durable `plv_checkpoint` to the same path acknowledges successful writes.
+
+The new `plv_configure_checkpoint` API can bind an imported Native context to its own writer. Unity `CoreSession` exposes optional config and the attach method; `CoreDriver` enables branch-scoped checkpoints on startup and reattaches to an imported branch before swapping owned sessions. Real Unity tests are **authored but NOT_RUN**.
+
+Observed RED/GREEN: missing scheduled write `bc6b869` (Ubuntu Native TEST failure, run 38979615044) -> `211597a` (push 38979944474 and PR 38979948907 all three CI jobs SUCCESS); missing restore attach method `55253f5` (Ubuntu Native compile failure 38980569790) -> `0003452` (push 38980720307 and PR 38980723546 all three SUCCESS). Unity C# source `8a5189b` and `169f14c` Native/headless workflow checks passed, **not a Unity Editor execution**. Cross-branch checkpoint overwrite regression `012120f` failed in Ubuntu push 38980975749; guarded source `c7b5670` and forward declaration `2ed69b1` check branch plus scientific package path/identity before initial attachment, retarget, scheduled and explicit writes. Its Ubuntu/headless CI passed and Windows remained pending at evidence time.
+
+**Critical unresolved boundary:** If checkpoint persistence fails after a physics tick has already committed, the current end-of-step path may return `PLV_INTERNAL_ERROR` even though simulation time advanced. That is not a rollback; a caller must not interpret it as proof the tick never executed. Add fail-closed Storage Hold/receipt semantics with Native fault test before P11.01 acceptance. Native WAL command/receipt atomicity, actual disk-full and power interruption, Windows durability guarantees, and the final Unity/Player/XR verification campaign remain Open.
