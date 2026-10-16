@@ -194,6 +194,14 @@ internal static class Program
             Require(fromBackup.Rows.Count == 1 && fromBackup.Rows[0].DeltaAvailable,
                 "A real saved Native backup could not provide the recorded baseline.");
             File.WriteAllText(comparisonFile + ".bak", "{\"schemaVersion\":-1}");
+            // P11.02: missing scientific packages must still allow a recorded
+            // Review from the confirmed backup, never a forced Native restore.
+            File.WriteAllText(comparisonFile + ".bak", sourceRun.ToJsonString());
+            var recordedBackup = RecordedSessionReview.OpenRecoverable(comparisonFile);
+            Require(recordedBackup.BranchId == "research-branch" &&
+                recordedBackup.Observations[0].DisplayValue == "7.10",
+                "Confirmed saved backup was unavailable for recorded-only Review.");
+            File.WriteAllText(comparisonFile + ".bak", "{\"schemaVersion\":-1}");
             var refusedCorruptSavedPair = false;
             try { RecordedRunComparison.CompareSaved(comparisonFile, secondRun); }
             catch (InvalidDataException) { refusedCorruptSavedPair = true; }
