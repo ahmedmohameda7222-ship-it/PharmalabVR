@@ -1,7 +1,7 @@
 # PharmaLabVR premium pharmaceutical laboratory platform
 
 ## Intent and audience
-The human's latest scope is a fully functional, high-quality virtual pharmaceutical laboratory useful to pharmacy learners, pharmacists/expert users, instructors, researchers and universities. It is not restricted to a burette demonstration or a single class. It combines laboratory operation, deep scientific understanding, course authoring and reproducible research exploration. VR is primary; native Windows Desktop is a complete additional mode using the same authority. English and Arabic are first-class.
+The human's latest scope is a fully functional, high-quality virtual pharmaceutical laboratory useful to pharmacy learners, pharmacists/expert users, instructors, researchers and universities. It is not restricted to a burette demonstration or a single class. It combines laboratory operation, deep scientific understanding, course authoring and reproducible research exploration. VR is primary; native Windows Desktop is a complete additional mode using the same authority. The permanent shipping UI/content policy is English-only across every workspace, desktop and VR release.
 
 ## Product decision
 Create a modular pharmaceutical laboratory campus with one consistent premium workstation system and a broad expandable compound reference library. Build a genuinely complete first analytical bay, then add independently qualified stations/providers. All chemical compounds/all possible laboratory operations is the long-term breadth aspiration, not a finite verified capability or a universal solver promise. Never advertise unsupported compounds as simulated merely because their names exist. Every station/experiment reports what its model can predict and the evidence maturity.
@@ -18,7 +18,7 @@ Expert/pharmacist: minimal guidance open station, compound/equipment search, qui
 Persistent room/bench/equipment; correct profile-derived scale; meaningful grab/mount/pour/measure/rinse/dispose; consequential spills/contamination; source-based chemistry/observations; clear unsupported/failure/hold states; pause/recenter/settings/help; durable sessions/history/review/forks/export. Compound library, instrument model registry and experiment packs are data-driven. Tasks/styles must work on real runtime paths and actual UI actions. No compulsory cloud account. Local versioned coursepacks and anonymous IDs support an institutional pilot without adding a cloud dependency.
 
 ## Release ladder
-R1: premium fully operating analytical bay, supported six-stock free lab +two ungraded Research lessons, Arabic/English, durableReview, instrument reading and builds.
+R1: premium fully operating analytical bay, supported six-stock free lab +two ungraded Research lessons, English-only UI, durable Review, instrument reading and builds.
 R2: verified catalog, concept-learning toolkit, complete teacher/research/expert workspaces and localcoursepacks.
 R3: separately evidenced analytical/physical/organic/formulation/pharmacognosy/biochemical/microbiology station packs. Ship working packs incrementally; missing scientific data/device validation stays named pending. A room preview or lesson text alone is not a functional pack.
 The commercial-quality demo can be prepared for supported R1/R2 capabilities. Experimental/calibration/device/participant gates cannot be erased by premium graphics. Final planner review checks exact artifacts and advertised scope; no automatic PRmerge.

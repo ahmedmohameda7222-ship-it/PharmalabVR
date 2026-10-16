@@ -1,10 +1,10 @@
 # First usable release: priority override
 
-This document refines execution priority without deleting the expanded roadmap or original95 contracts. The original archive is preserved. P18–P22 are expansion phases; none may begin before the first-release gate is verified. The human delegated product decisions to the planner, so the implementation chat follows this scope without asking the human to choose features again.
+This document refines execution priority without deleting the expanded roadmap or original95 contracts. The original archive is preserved. P18–P22 are expansion phases. Source scaffolding and legitimately evidenced data/provider development may proceed under the code-first owner decision; G-R1 release acceptance and unsupported scientific capability promotion remain blocked until first-release evidence is verified. The human delegated product decisions to the planner, so the implementation chat follows this scope without asking the human to choose features again.
 
 ## First-release audience and scope
 Primary: pharmacy learners and instructors/university laboratory teaching. Expert mode provides independent supported operation. Initial researcher value is bounded comparison/export under the declared model, not a universal pharmaceutical research platform.
-Working bay and chemistry; complete VR/Desktop journeys; bilingual accessibility; supported free/guided practice; predict/observe/explain/compare; durable notebook/Review; limited teacher lesson authoring/attempt review; supported-material search/coverage; real exact-build evidence.
+Working bay and chemistry; complete VR/Desktop journeys; English-only accessibility; supported free/guided practice; predict/observe/explain/compare; durable notebook/Review; limited teacher lesson authoring/attempt review; supported-material search/coverage; real exact-build evidence.
 
 Full P00–P16 scope remains mandatory within its evidence limits. P17 uses the supported initial pack and a modest verified reference seed; downloading a huge chemical catalog is not a release prerequisite. P23.01–P23.03 complete actual teacher/expert/research workspace journeys within the same supported laboratory. P23.04 real participant/institutional pilot remains an external evidence gate where participants are absent.
 
@@ -12,7 +12,7 @@ Full P00–P16 scope remains mandatory within its evidence limits. P17 uses the 
 1. Learner cold-starts, sets up, selects/prepares, manipulates/mounts, reads/delivers/measures, encounters consequential error, recovers, saves/loads and reviews.
 2. Instructor creates and exports/reimports a supported lesson, previews it and reviews the actual attempt with feedback.
 3. Expert compares two actual runs and exports material/observation units, model and source identities.
-4. Real functional-build images/input journey, appropriate native/Unity tests, bilingual views and originalcase scopes accompany the report. Physical/experimental/participant claims remain separate.
+4. Real functional-build images/input journey, appropriate native/Unity tests, English-only views and original case scopes accompany the report. Physical/experimental/participant claims remain separate.
 
 Write docs/evidence/first-release-gate.json with codeSHA and actual evidence for each journey. Mark VerifiedLocal only if implemented software and its required local evidence pass; never substitute a mockup/build/helper. Planner acceptance remains separate. Once this evidence is produced, proceed with eligible expansion tasks without waiting for a new aesthetics/feature vote. If a code test fails, fix it; if true external evidence is missing, report exact scope and continue independently.
 
