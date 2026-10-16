@@ -7,13 +7,13 @@ namespace PharmaLabVR.UI
     public static class ScientificReadoutPolicy
     {
         public static MeasurementAvailability Resolve(string support,
-            string computationState, string freshness, double value)
+            string computationState, string freshness, double value, bool valueAvailable)
         {
             if (support != "Supported") return MeasurementAvailability.Unsupported;
             if (computationState == "Failed") return MeasurementAvailability.Failed;
             if (freshness == "Stale") return MeasurementAvailability.Stale;
             if (freshness == "Current" && computationState == "Ready")
-                return double.IsFinite(value) ?
+                return valueAvailable && double.IsFinite(value) ?
                     MeasurementAvailability.Current : MeasurementAvailability.Failed;
             return MeasurementAvailability.Pending;
         }

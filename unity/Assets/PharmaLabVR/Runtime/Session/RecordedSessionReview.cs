@@ -66,9 +66,13 @@ namespace PharmaLabVR.Session
             public string modelId;
             public string databaseIdentity;
             public double value;
+            public bool valueAvailable;
 
-            public string DisplayValue => support == "Supported" && computationState == "Ready" &&
-                double.IsFinite(value) ? value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "--";
+            // JsonUtility maps a missing number to 0.0. An explicitly present,
+            // Native-confirmed number is required before displaying recorded pH.
+            public string DisplayValue => valueAvailable && support == "Supported" &&
+                computationState == "Ready" && double.IsFinite(value) ?
+                value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "--";
         }
     }
 }

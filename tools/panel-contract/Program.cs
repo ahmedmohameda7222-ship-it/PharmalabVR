@@ -57,7 +57,7 @@ internal static class Program
 
         // P09.02: a Native Current pH is displayable only when the model
         // reports Supported + Ready + Current and a finite numeric value.
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 7.13) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 7.13, true) ==
               MeasurementAvailability.Current,
             "Valid finite current Native pH was suppressed.");
         Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 0.0, false) ==
@@ -66,22 +66,22 @@ internal static class Program
         Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 0.0, true) ==
               MeasurementAvailability.Current,
             "Valid numeric pH zero was confused with an omitted Native value.");
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.NaN) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.NaN, true) ==
               MeasurementAvailability.Failed,
             "NaN pH was promoted as a current scientific measurement.");
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.PositiveInfinity) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.PositiveInfinity, true) ==
               MeasurementAvailability.Failed,
             "Infinite pH was promoted as a current scientific measurement.");
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Failed", "Current", 7.13) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Failed", "Current", 7.13, true) ==
               MeasurementAvailability.Failed,
             "Native failed computation displayed a current result.");
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Stale", 7.13) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Stale", 7.13, true) ==
               MeasurementAvailability.Stale,
             "Native stale observation lost its freshness label.");
-        Check(ScientificReadoutPolicy.Resolve("Unsupported", "Ready", "Current", 7.13) ==
+        Check(ScientificReadoutPolicy.Resolve("Unsupported", "Ready", "Current", 7.13, true) ==
               MeasurementAvailability.Unsupported,
             "Unsupported chemistry produced a readout.");
-        Check(ScientificReadoutPolicy.Resolve("Supported", "Pending", "Absent", 0) ==
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Pending", "Absent", 0, false) ==
               MeasurementAvailability.Pending,
             "Pending real scientific result was fabricated.");
         var truthView = new MeasurementView();

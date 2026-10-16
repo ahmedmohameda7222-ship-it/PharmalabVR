@@ -373,7 +373,7 @@ json contextSnapshotJson(const Context& context) {
             {"databaseIdentity", context.databaseIdentity},
             {"asOfMaterialRevision", record ? std::to_string(record->solvedRevision) : "0"},
             {"support", vessel.inventory.referenceVolumeM3 <= 0.0 ? "Unsupported" : "Supported"},
-            {"freshness", "Absent"}, {"computationState", "Pending"}
+            {"freshness", "Absent"}, {"computationState", "Pending"}, {"valueAvailable", false}
         };
         if (vessel.inventory.referenceVolumeM3 <= 0.0) {
             observation["computationState"] = "Absent";
@@ -385,7 +385,10 @@ json contextSnapshotJson(const Context& context) {
                 record->freshness == plv::ObservationFreshness::Stale ? "Stale" : "Pending";
             observation["computationState"] = record->freshness == plv::ObservationFreshness::Pending
                 ? "Pending" : record->succeeded ? "Ready" : "Failed";
-            if (record->succeeded && std::isfinite(record->value)) observation["value"] = record->value;
+            if (record->succeeded && std::isfinite(record->value)) {
+                observation["value"] = record->value;
+                observation["valueAvailable"] = true;
+            }
             if (solved != context.scienceResults.end()) {
                 observation["engineVersion"] = solved->second.engineVersion;
                 observation["databaseIdentity"] = solved->second.databaseIdentity;

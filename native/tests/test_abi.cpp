@@ -127,8 +127,13 @@ TEST_CASE("P01_02 repeated real engine create import and destroy releases handle
         for (int attempt = 0; attempt < 200 && !current; ++attempt) {
             REQUIRE(plv_step(original, 0.0, 1'000'000'000ULL) == PLV_OK);
             const auto snapshot = json::parse(read_text(original));
-            for (const auto& observation : snapshot["observations"])
-                current |= observation.value("vesselId", "") == "acid" && observation.value("freshness", "") == "Current";
+            for (const auto& observation : snapshot["observations"]) {
+                if (observation.value("vesselId", "") != "acid" ||
+                    observation.value("freshness", "") != "Current") continue;
+                CHECK(observation.value("valueAvailable", false));
+                CHECK(observation.contains("value"));
+                current = true;
+            }
             if (!current) std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
         REQUIRE(current);

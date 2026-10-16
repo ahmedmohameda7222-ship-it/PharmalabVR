@@ -17,14 +17,20 @@ namespace PharmaLabVR.Tests
         [Test]
         public void P09_02_RecordedObservationsNeedExplicitNativeNumericPresence()
         {
-            const string missing = "{\\"schemaVersion\\":1,\\"branchId\\":\\"branch-1\\"," +
-                "\\"scientificPackage\\":{\\"identity\\":\\"fixture\\"}," +
-                "\\"observations\\":[{\\"vesselId\\":\\"receiver\\",\\"observableId\\":\\"pH\\"," +
-                "\\"support\\":\\"Supported\\",\\"freshness\\":\\"Current\\"," +
-                "\\"computationState\\":\\"Ready\\",\\"value\\":0}]}";
-            var stored = RecordedSessionReview.FromJson(missing);
-            Assert.That(stored.Observations[0].DisplayValue, Is.EqualTo("--"),
-                "Missing Native numeric presence must not render a fabricated recorded pH zero.");
+            // Existing Native exports lacking a finite 'value' must not acquire
+            // a fictitious pH zero when JsonUtility defaults the double to 0.0.
+            const string missing = @"{""schemaVersion"":1,""branchId"":""branch-1"",
+                ""scientificPackage"":{""identity"":""fixture""},
+                ""observations"":[{""vesselId"":""receiver"",""observableId"":""pH"",
+                ""support"":""Supported"",""freshness"":""Current"",
+                ""computationState"":""Ready"",""value"":0}]}";
+            var missingReview = RecordedSessionReview.FromJson(missing);
+            Assert.That(missingReview.Observations[0].DisplayValue, Is.EqualTo("--"),
+                "Missing Native numeric presence must not render fabricated pH 0.");
+            var present = missing.Replace(@"""value"":0", @"""valueAvailable"":true,""value"":0");
+            var actualZero = RecordedSessionReview.FromJson(present);
+            Assert.That(actualZero.Observations[0].DisplayValue, Is.EqualTo("0.00"),
+                "A present finite zero and an omitted pH field must remain distinct.");
         }
 
         [Test]

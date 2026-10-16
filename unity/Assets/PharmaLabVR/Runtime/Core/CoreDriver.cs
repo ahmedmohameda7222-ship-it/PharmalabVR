@@ -523,7 +523,8 @@ namespace PharmaLabVR.Core
                         // Native alone owns chemistry; this presentation policy
                         // cannot expose a non-finite or unsupported value as Current.
                         var availability = ScientificReadoutPolicy.Resolve(observation.support,
-                            observation.computationState, observation.freshness, observation.value);
+                            observation.computationState, observation.freshness,
+                            observation.value, observation.valueAvailable);
                         Measurement.Present(availability,
                             observation.value.ToString("0.00", CultureInfo.InvariantCulture),
                             $"pH {SelectedMeasurementVesselId} · rev {observation.asOfMaterialRevision} · {availability} · {observation.maturity} · {observation.modelId} · package {observation.databaseIdentity}");
@@ -614,6 +615,7 @@ namespace PharmaLabVR.Core
             public string asOfMaterialRevision;
             public string databaseIdentity;
             public double value;
+            public bool valueAvailable;
         }
 
         [Serializable]
