@@ -1052,12 +1052,13 @@
             "P09.01"
           ],
           "status": "Open",
-          "codeCommit": "b9877134810944ce086e499d227a9c047195b4e9",
+          "codeCommit": "44bda21d803fdef087ed8f4a0958d78b63751836",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "2026-10-16 bounded source P09.02: headless RED 9f1bddb2 compile failure (ScientificReadoutPolicy missing) in CI push 38830901208; functional 8b3206f adds pure real production ScientificReadoutPolicy.Resolve and Describe; CoreDriver rejects nonfinite Current Ready pH as Failed, XR Inspect/Measure shows explicit Supported/Failed/Pending/Stale/Unsupported and masks non-current numeric readout. Headless compilation links actual MeasurementView, test harness compiler CS0649 warning suppression isolated to headless project at 6424148. Headless panel-routing SUCCESS at push 38831095562; complete Windows/Ubuntu Native + Unity Editor/Player/XR status separate; new Unity PlayMode assertions authored NOT_RUN.",
-            "2026-10-16 Native-to-Unity absent pH numeric contract RED a73a486: Ubuntu Native CTest fail 102/103 (two missing valueAvailable assertions), headless compiler no Resolve overload, push run 38831808106. GREEN b987713 adds Native observation valueAvailable true only with represented finite numeric; Unity CoreDriver requires this flag before Current, recorded-only Review requires it before DisplayValue; Native snapshot Current positive test and real Unity EditMode regression source authored. Windows/Ubuntu/headless push run 38831951505 and PR 38831956251 SUCCESS. No Unity Editor/Player/XR executed at these commits, P09.02 Open."
+            "2026-10-16 Native-to-Unity absent pH numeric contract RED a73a486: Ubuntu Native CTest fail 102/103 (two missing valueAvailable assertions), headless compiler no Resolve overload, push run 38831808106. GREEN b987713 adds Native observation valueAvailable true only with represented finite numeric; Unity CoreDriver requires this flag before Current, recorded-only Review requires it before DisplayValue; Native snapshot Current positive test and real Unity EditMode regression source authored. Windows/Ubuntu/headless push run 38831951505 and PR 38831956251 SUCCESS. No Unity Editor/Player/XR executed at these commits, P09.02 Open.",
+            "2026-10-16 stale recorded pH regression RED 2f97d1e at Native-linked headless notebook contract push 38862918814 'Recorded-only Review showed stale Native pH as a current number'. GREEN 44bda21 gates RecordedSessionReview.DisplayValue on Supported + Ready + Current + valueAvailable + finite; CI push 38863039090 and PR 38863044223 3/3 jobs SUCCESS. Unity EditMode regression source authored, NOT_RUN. Partial scientific presentation truth; P09.02 Open."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial P09.02 Native scientific observation truth: explicit finite-value presence emitted by real Native ABI and required by Unity current pH/recorded Review; no missing pH projected as 0.00 by JsonUtility. Earlier freshness/support status gating remains. Full state UX, model support and actual Unity UI/Player tests Open.",
@@ -1237,15 +1238,16 @@
             "P11.02"
           ],
           "status": "Open",
-          "codeCommit": "861c5f17ffaaefb817afa496e66542b4359a88f7",
+          "codeCommit": "587ec4ec1b1fd4b4b88cd2fbbc9b3ad5a2e882b0",
           "evidence": [],
           "plannerStatus": "NotReviewed",
           "implementationEvidence": [
             "2026-10-16 bounded P11.03 export-only .plvpack: source RED 283c764 CI 38835618652 absent production archive class; codec eecfc7f/b4fdfca native+notebook validated SHA256 framed archive roundtrip and corruption/foreign-branch/future-event rejection, push 38835970031 and PR 38835975327 all 3 jobs SUCCESS. UI route RED 97777da CI 38836029552 no ExportPortable enum; production 2516188 Desktop Pause/Notebook and XR Notebook export via shared controller; XR Unity test source 5dcca1e, NOT_RUN. Full Native CI current-source pending; no archive import, CSV, two-run compare or actual Unity evidence; P11.03 Open.",
-            "2026-10-16 truthful CSV source: RED test 90eb99b missing production SessionExportService; GREEN 8b2b306 versioned single CSV for Native observation status/model/database/material revision and real accepted/rejected command receipts, numerics only Supported+Current+Ready+valueAvailable+finite, atomically persisted. Push 38837554257, PR 38837559911 all jobs SUCCESS. Panel ExportCsv RED 049cae7 absent enum; functional c65f21d Desktop+XR Review explicit export, source XR PlayMode test 2a62105 NOT_RUN. Sign fidelity RED 2ad97766 headless error 'A finite scientific CSV value lost its numeric sign during escaping', functional GREEN 861c5f1 leaves invariant signed numeric pH intact while shielding untrusted text. Latest push 38837994278 headless SUCCESS, full Windows/Ubuntu Native and PR conclusions pending at evidence write. Full P11.03 Open: no archive import, separate selected-run Compare, Unity and device evidence."
+            "2026-10-16 truthful CSV source: RED test 90eb99b missing production SessionExportService; GREEN 8b2b306 versioned single CSV for Native observation status/model/database/material revision and real accepted/rejected command receipts, numerics only Supported+Current+Ready+valueAvailable+finite, atomically persisted. Push 38837554257, PR 38837559911 all jobs SUCCESS. Panel ExportCsv RED 049cae7 absent enum; functional c65f21d Desktop+XR Review explicit export, source XR PlayMode test 2a62105 NOT_RUN. Sign fidelity RED 2ad97766 headless error 'A finite scientific CSV value lost its numeric sign during escaping', functional GREEN 861c5f1 leaves invariant signed numeric pH intact while shielding untrusted text. Latest push 38837994278 headless SUCCESS, full Windows/Ubuntu Native and PR conclusions pending at evidence write. Full P11.03 Open: no archive import, separate selected-run Compare, Unity and device evidence.",
+            "2026-10-16 bounded recorded saved-run comparison: RED headless 478b73f source missing RecordedRunComparison (push 38863229291). GREEN eae473c pure record-side comparison with strict real pH Supported/Ready/Current/finite availability and matching database + model provenance before delta; absolute unavailability and scientific-package mismatch suppress delta; Native Windows/Ubuntu + headless push 38863465109, PR 38863471270 3/3 SUCCESS. UI routing RED dc23cba fails absent CompareSaved action at 38863540678; GREEN cd6676f SessionController compare recorded current Review against confirmed saved Native .plv.json with .bak fallback (no chemistry replay), shared Desktop/XR Compare screen, headless panel routing SUCCESS 38863790282, full native pending at ledger write. Unity PlayMode/Editor test source 587ec4e authored NOT_RUN. Arbitrary run selection, archive restore, complete comparison UI and Unity verification Open."
           ],
           "externalEvidence": [],
-          "acceptanceScope": "Partial P11.03 code-first: checksum-validated Native+Notebook portable .plvpack EXPORT ONLY and versioned Native recorded observation/command CSV with availability/provenance; explicit Desktop/XR export routes. No .plvpack import, no two-run Compare, no certified curves or real Unity/Player/XR action evidence. Open/NotReviewed.",
+          "acceptanceScope": "Partial code-first: portable .plvpack export-only, Native recorded CSV and saved-baseline vs current-Review side-by-side pH comparison with finite Current status and matching scientific model/database/package required before signed delta. No arbitrary run selection or portable import, complete Compare/branch UX, actual Unity/Player/XR verification. P11.03 Open.",
           "blocker": null
         }
       ],
@@ -2256,9 +2258,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "55c42259ded9ec9c4a9a540ffea66ed07ed9169a",
-  "functionalCodeSha": "55c42259ded9ec9c4a9a540ffea66ed07ed9169a",
-  "currentTask": "Code-first P11.02 Native-command recorded Review and P11.03 provenance CSV + export-only archive; 66 formal statuses unchanged, Unity deferred",
+  "actualHead": "ed241d59f7e70be66914b26ddd0de60b0b0b82ab",
+  "functionalCodeSha": "ed241d59f7e70be66914b26ddd0de60b0b0b82ab",
+  "currentTask": "Code-first P09.02 stale recorded-value safety and P11.03 recorded saved-run provenance comparison. 66 formal task statuses unchanged; Unity campaign deferred, English-only.",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
@@ -2310,6 +2312,7 @@
     "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1.",
     "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion.",
     "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged.",
-    "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged."
+    "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-16 Ruling P11.03 compare saved Native checkpoint vs current recorded Review only: no inferred pH curves/chemistry, delta requires matching pinned model provenance, missing/stale suppress; compare RED 478b73f, routing RED dc23cba, GREEN eae473c and cd6676f, Unity source 587ec4e NOT_RUN. P09 stale RED 2f97d1e GREEN 44bda21 Native/headless both CI triggers SUCCESS. No G-R1 advancement, PR #1 unmerged."
   ]
 }
