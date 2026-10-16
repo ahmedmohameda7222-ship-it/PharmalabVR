@@ -68,12 +68,13 @@ struct Context {
     };
 
     explicit Context(std::string branch, std::string databasePath = {}, std::string databaseIdentity = {},
-                     std::string budgetMode = "Precision")
+                     std::string budgetMode = "Precision", std::string automaticCheckpointPath = {})
         : executor(std::move(branch)),
           scheduler(budgetMode == "Bulk" ? plv::SchedulerLimits{5e-7, 200'000'000ULL, 16U}
                                          : plv::SchedulerLimits{5e-8, 100'000'000ULL, 16U}),
           scienceBudgetMode(std::move(budgetMode)),
-          databasePath(std::move(databasePath)), databaseIdentity(std::move(databaseIdentity)) {
+          databasePath(std::move(databasePath)), databaseIdentity(std::move(databaseIdentity)),
+           automaticCheckpointPath(std::move(automaticCheckpointPath)) {
         if (!this->databasePath.empty()) {
             worker = std::make_unique<plv::SolverWorker>(16U,
                 [path = this->databasePath, identity = this->databaseIdentity,
@@ -89,6 +90,8 @@ struct Context {
     std::string scienceBudgetMode;
     std::string databasePath;
     std::string databaseIdentity;
+    std::string automaticCheckpointPath;
+    plv::DirtyCheckpointPolicy dirtyCheckpoint{30'000'000'000ULL, 30.0};
     std::unordered_map<std::string, plv::SolveResult> scienceResults;
     std::deque<std::string> events;
     std::unordered_map<std::uint64_t, std::pair<std::string, std::string>> receipts;
@@ -523,6 +526,24 @@ plv::SessionSnapshot parseSnapshot(const json& parsed) {
     }
     return snapshot;
 }
+// Called only under the session lock; a failed checkpoint leaves the dirty
+// deadline due and is retried on the next owner-thread step.
+bool flushAutomaticCheckpoint(Context& context, std::uint64_t monotonicNowNs) {
+    if (context.automaticCheckpointPath.empty()) return true;
+    if (!context.dirtyCheckpoint.needsFlush(monotonicNowNs,
+          context.executor.snapshot().simulationTimeS, context.executor.paused()))
+        return true;
+    try {
+        plv::DurableCheckpointStore store(context.automaticCheckpointPath, 16U * 1024U * 1024U);
+        const bool written = store.write(exportJson(context).dump()).accepted;
+        context.dirtyCheckpoint.acknowledgeFlush(written);
+        return written;
+    } catch (const std::exception&) {
+        context.dirtyCheckpoint.acknowledgeFlush(false);
+        return false;
+    }
+}
+
 }  // namespace
 
 extern "C" {
@@ -557,11 +578,19 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
         if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
         const auto budgetMode = parsed.value("scienceBudgetMode", "Precision");
         if (budgetMode != "Precision" && budgetMode != "Bulk") return PLV_INVALID_ARGUMENT;
+        const auto automaticCheckpointPath = parsed.value("checkpointPath", std::string{});
+        if (!automaticCheckpointPath.empty()) {
+            if (automaticCheckpointPath.size() > 1024U ||
+                automaticCheckpointPath.find(static_cast<char>(0)) != std::string::npos)
+                return PLV_INVALID_ARGUMENT;
+            plv::DurableCheckpointStore validated(automaticCheckpointPath, 16U * 1024U * 1024U);
+        }
         std::lock_guard<std::mutex> lock(registryMutex);
         if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
         for (const auto& [existingHandle, existing] : contexts)
             if (existing->active.load()) return PLV_BUSY;
-        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity, budgetMode);
+        auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity,
+                                                 budgetMode, automaticCheckpointPath);
         context->mode = initialMode;
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
@@ -1180,6 +1209,9 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         context->receipts.emplace(*sequence, std::make_pair(canonical, serializedOutcome));
         ++context->nextCommandSequence;
         context->events.push_back(serializedOutcome);
+        if (!context->automaticCheckpointPath.empty())
+            context->dirtyCheckpoint.markDirty(context->lastMonotonicNowNs,
+                context->executor.snapshot().simulationTimeS);
         return PLV_OK;
     } catch (const json::exception&) {
         return PLV_INVALID_ARGUMENT;
@@ -1289,6 +1321,10 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         return PLV_OK;
     }
     context->lastMonotonicNowNs = monotonic_now_ns;
+    // The due write is attempted even while paused/held; failure prevents
+    // further step progression without incorrectly clearing dirty state.
+    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns))
+        return PLV_INTERNAL_ERROR;
     const auto simulationNowNs = static_cast<std::uint64_t>(
         std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
     collectScience(*context, simulationNowNs);
@@ -1483,6 +1519,10 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         offerChangedScience(*context, beforeTick, proposedTimeNs);
     }
     for (auto& event : stagedEvents) context->events.push_back(std::move(event));
+    if (delta_s > 0.0 && !context->automaticCheckpointPath.empty())
+        context->dirtyCheckpoint.markDirty(monotonic_now_ns, beforeTick.simulationTimeS);
+    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns))
+        return PLV_INTERNAL_ERROR;
     return PLV_OK;
 }
 
@@ -1547,7 +1587,10 @@ std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_
         if (!context->active.load()) return PLV_BUSY;
         const auto encoded = exportJson(*context).dump();
         plv::DurableCheckpointStore checkpoint(destination, 16U * 1024U * 1024U);
-        return checkpoint.write(encoded).accepted ? PLV_OK : PLV_INTERNAL_ERROR;
+        const bool written = checkpoint.write(encoded).accepted;
+        if (written && destination == context->automaticCheckpointPath)
+            context->dirtyCheckpoint.acknowledgeFlush(true);
+        return written ? PLV_OK : PLV_INTERNAL_ERROR;
     } catch (const std::invalid_argument&) {
         return PLV_INVALID_ARGUMENT;
     } catch (...) {
