@@ -617,6 +617,17 @@ internal static class Program
                 "Settings Back unpaused the operating authority");
             Check(panels.Request(PanelAction.Review), "Paused Review refused");
             Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
+            Check(router.Current.SupportedActions.Contains("CompareSaved"),
+                "Review cannot explicitly compare with a recorded saved checkpoint.");
+            Check(panels.Request(PanelAction.CompareSaved),
+                "Compare action did not use session-owned recorded source data.");
+            Check(router.Current.ScreenId == ScreenId.Compare &&
+                session.SavedCompareCalls == 1 && session.SaveCalls == 0,
+                "Compare mutated Native chemistry, implicitly saved or missed the Compare route.");
+            Check(panels.Request(PanelAction.Review) &&
+                router.Current.ScreenId == ScreenId.Review,
+                "Comparing recorded data lost the original Review navigation.");
+
             Check(router.Current.SupportedActions.Contains("ExportCsv"),
                 "Recorded Review did not expose a native-observation CSV export.");
             Check(panels.Request(PanelAction.ExportCsv),
