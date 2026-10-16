@@ -31,6 +31,9 @@ namespace PharmaLabVR.Tests
             var actualZero = RecordedSessionReview.FromJson(present);
             Assert.That(actualZero.Observations[0].DisplayValue, Is.EqualTo("0.00"),
                 "A present finite zero and an omitted pH field must remain distinct.");
+            var stale = present.Replace(@"""freshness"":""Current""", @"""freshness"":""Stale""");
+            Assert.That(RecordedSessionReview.FromJson(stale).Observations[0].DisplayValue,
+                Is.EqualTo("--"), "Stale recorded scientific pH must never be labeled current.");
         }
 
         [Test]

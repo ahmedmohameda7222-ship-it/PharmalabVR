@@ -149,6 +149,7 @@ namespace PharmaLabVR.Session
             // JsonUtility maps a missing number to 0.0. An explicitly present,
             // Native-confirmed number is required before displaying recorded pH.
             public string DisplayValue => valueAvailable && support == "Supported" &&
+                freshness == "Current" &&
                 computationState == "Ready" && double.IsFinite(value) ?
                 value.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) : "--";
         }
