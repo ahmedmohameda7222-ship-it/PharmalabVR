@@ -55,6 +55,40 @@ internal static class Program
         Check(trailingCommaDenied && englishUi.Get("offline") == "Offline",
             "A malformed product copy table was accepted.");
 
+        // P09.02: a Native Current pH is displayable only when the model
+        // reports Supported + Ready + Current and a finite numeric value.
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 7.13) ==
+              MeasurementAvailability.Current,
+            "Valid finite current Native pH was suppressed.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.NaN) ==
+              MeasurementAvailability.Failed,
+            "NaN pH was promoted as a current scientific measurement.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.PositiveInfinity) ==
+              MeasurementAvailability.Failed,
+            "Infinite pH was promoted as a current scientific measurement.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Failed", "Current", 7.13) ==
+              MeasurementAvailability.Failed,
+            "Native failed computation displayed a current result.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Stale", 7.13) ==
+              MeasurementAvailability.Stale,
+            "Native stale observation lost its freshness label.");
+        Check(ScientificReadoutPolicy.Resolve("Unsupported", "Ready", "Current", 7.13) ==
+              MeasurementAvailability.Unsupported,
+            "Unsupported chemistry produced a readout.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Pending", "Absent", 0) ==
+              MeasurementAvailability.Pending,
+            "Pending real scientific result was fabricated.");
+        var truthView = new MeasurementView();
+        truthView.Present(MeasurementAvailability.Failed, "7.13", "Native pH failure");
+        Check(truthView.DisplayValue == "--",
+            "Failed scientific readout displayed a previous numeric value.");
+        var staleXrLabel = ScientificReadoutPolicy.Describe("receiver",
+            MeasurementAvailability.Stale, "7.13", "Supported", "Stale",
+            "Research", "IPhreeqc-research");
+        Check(staleXrLabel.Contains("Stale") && staleXrLabel.Contains("--") &&
+              !staleXrLabel.Contains("7.13") && staleXrLabel.Contains("IPhreeqc-research"),
+            "XR status label implied a current value for stale Native chemistry.");
+
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.
         var placedBottle = ResearchInstrumentPayloads.Place("bottle-1", "source", "spill",

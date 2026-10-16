@@ -12,6 +12,8 @@
     <Compile Include="Stubs.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScreenRouter.cs" Link="ScreenRouter.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LocalizationService.cs" Link="LocalizationService.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/MeasurementView.cs" Link="MeasurementView.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScientificReadoutPolicy.cs" Link="ScientificReadoutPolicy.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/BootLaunchAvailability.cs" Link="BootLaunchAvailability.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/InteractionOwnership.cs" Link="InteractionOwnership.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopWheelRouting.cs" Link="DesktopWheelRouting.cs" />

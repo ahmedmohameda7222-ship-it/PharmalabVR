@@ -3,6 +3,14 @@
 using System;
 using System.Collections.Generic;
 
+namespace TMPro
+{
+    public sealed class TMP_Text
+    {
+        public string text { get; set; }
+    }
+}
+
 namespace UnityEngine
 {
     [AttributeUsage(AttributeTargets.Field)]
