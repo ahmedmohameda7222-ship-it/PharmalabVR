@@ -2137,3 +2137,28 @@ TEST_CASE("P03_02 bottle film is conserved through measured pours and real water
     CHECK(afterWash["tools"][0]["inventoryRevision"] == "2");
     CHECK(plv_destroy(handle) == PLV_OK);
 }
+
+TEST_CASE("P09_02 missing Native pH number must not deserialize as a real pH zero") {
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t handle = 0;
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel",
+        {{"id", "source"}, {"capacityM3", 2e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto snapshot = json::parse(read_text(handle));
+    REQUIRE(snapshot["observations"].size() == 1);
+    CHECK(snapshot["observations"][0].at("valueAvailable") == false);
+    CHECK_FALSE(snapshot["observations"][0].contains("value"));
+
+    submit(handle, command("2", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.1}, {"referenceVolumeM3", 1e-5}}, {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    snapshot = json::parse(read_text(handle));
+    REQUIRE(snapshot["observations"].size() == 1);
+    CHECK(snapshot["observations"][0].at("support") == "Supported");
+    CHECK(snapshot["observations"][0].at("computationState") == "Failed");
+    CHECK(snapshot["observations"][0].at("valueAvailable") == false);
+    CHECK_FALSE(snapshot["observations"][0].contains("value"));
+    CHECK(plv_destroy(handle) == PLV_OK);
+}

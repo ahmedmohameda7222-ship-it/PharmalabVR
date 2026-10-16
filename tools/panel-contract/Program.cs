@@ -60,6 +60,12 @@ internal static class Program
         Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 7.13) ==
               MeasurementAvailability.Current,
             "Valid finite current Native pH was suppressed.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 0.0, false) ==
+              MeasurementAvailability.Failed,
+            "Missing Native pH value became a fabricated valid 0.00 after Unity deserialization.");
+        Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", 0.0, true) ==
+              MeasurementAvailability.Current,
+            "Valid numeric pH zero was confused with an omitted Native value.");
         Check(ScientificReadoutPolicy.Resolve("Supported", "Ready", "Current", double.NaN) ==
               MeasurementAvailability.Failed,
             "NaN pH was promoted as a current scientific measurement.");

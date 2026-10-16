@@ -15,6 +15,19 @@ namespace PharmaLabVR.Tests
     public sealed class FoundationTests
     {
         [Test]
+        public void P09_02_RecordedObservationsNeedExplicitNativeNumericPresence()
+        {
+            const string missing = "{\\"schemaVersion\\":1,\\"branchId\\":\\"branch-1\\"," +
+                "\\"scientificPackage\\":{\\"identity\\":\\"fixture\\"}," +
+                "\\"observations\\":[{\\"vesselId\\":\\"receiver\\",\\"observableId\\":\\"pH\\"," +
+                "\\"support\\":\\"Supported\\",\\"freshness\\":\\"Current\\"," +
+                "\\"computationState\\":\\"Ready\\",\\"value\\":0}]}";
+            var stored = RecordedSessionReview.FromJson(missing);
+            Assert.That(stored.Observations[0].DisplayValue, Is.EqualTo("--"),
+                "Missing Native numeric presence must not render a fabricated recorded pH zero.");
+        }
+
+        [Test]
         public void G01_IdenticalWorldGeometryProducesIdenticalLabSample()
         {
             var lab = new GameObject("lab"); var tool = new GameObject("tool");
