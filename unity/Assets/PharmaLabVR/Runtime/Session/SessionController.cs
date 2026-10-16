@@ -832,7 +832,7 @@ namespace PharmaLabVR.Session
             catch (ScientificPackageMismatchException exception)
             {
                 imported?.Dispose();
-                try { RecordedReview = RecordedSessionReview.Open(path); }
+                try { RecordedReview = RecordedSessionReview.OpenRecoverable(path); }
                 catch (Exception reviewError)
                 {
                     LastError = "Live resume blocked and recorded review unavailable: " + reviewError.Message;

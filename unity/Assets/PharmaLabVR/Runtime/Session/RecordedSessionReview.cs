@@ -31,6 +31,20 @@ namespace PharmaLabVR.Session
             return FromJson(File.ReadAllText(info.FullName, System.Text.Encoding.UTF8));
         }
 
+        public static RecordedSessionReview OpenRecoverable(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Native saved Review path is required.", nameof(path));
+            try { return Open(path); }
+            catch (Exception primary) when (primary is InvalidDataException ||
+                                           primary is IOException || primary is ArgumentException)
+            {
+                // Read-only recovery only: never overwrite, replay or migrate
+                // Native state. Both paths pass exactly the same record validator.
+                return Open(path + ".bak");
+            }
+        }
+
         public static RecordedSessionReview FromJson(string json)
         {
             if (string.IsNullOrEmpty(json) ||
