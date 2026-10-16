@@ -270,6 +270,30 @@ namespace PharmaLabVR.Tests.PlayMode
                 Object.DestroyImmediate(reviewPixels);
             }
 #endif
+            // P11.03: XR controller UI follows Review -> Notebook and exports an
+            // immutable Native snapshot + exact branch notebook, without Save.
+            var notebook = presenter.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "Open notebook");
+            Assert.That(notebook.gameObject.activeInHierarchy, Is.True);
+            notebook.onClick.Invoke();
+            Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+            var exportArchive = presenter.GetComponentsInChildren<Button>(true)
+                .Single(button => button.name == "Export archive");
+            Assert.That(exportArchive.gameObject.activeInHierarchy, Is.True);
+            var nativeBeforeArchive = driver.CurrentLabView.EventSequence;
+            exportArchive.onClick.Invoke();
+            Assert.That(sessions.LastPortableArchivePath, Is.Not.Null.And.Not.Empty,
+                sessions.LastError);
+            var exported = PortableSessionArchive.Read(sessions.LastPortableArchivePath);
+            Assert.That(exported.BranchId, Is.EqualTo(driver.Session.BranchId));
+            Assert.That(exported.EventSequence, Is.EqualTo(nativeBeforeArchive));
+            Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeBeforeArchive));
+            Assert.That(sessions.LastDurableSavePath, Is.Null,
+                "XR archive export must not misreport ordinary Native Save completion.");
+            if (File.Exists(sessions.LastPortableArchivePath))
+                File.Delete(sessions.LastPortableArchivePath);
+            if (File.Exists(sessions.LastPortableArchivePath + ".bak"))
+                File.Delete(sessions.LastPortableArchivePath + ".bak");
             foreach (var root in roots) Object.DestroyImmediate(root);
             yield return null;
         }
