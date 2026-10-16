@@ -4,6 +4,7 @@
 #include "plv/tool_models.hpp"
 #include "plv/scheduler.hpp"
 #include "plv/journal.hpp"
+#include "plv/sha256.hpp"
 #include "plv/solver_worker.hpp"
 #include "plv/solver.hpp"
 #include "json.hpp"
@@ -14,6 +15,10 @@
 #include <cmath>
 #include <cstring>
 #include <deque>
+#include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <system_error>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -1565,11 +1570,50 @@ std::int32_t plv_import_checkpoint(
         if (!payload || payload->empty() ||
             payload->size() > std::numeric_limits<std::uint32_t>::max())
             return PLV_INVALID_ARGUMENT;
-        // This is a NEW imported Native authority. Checksum verification
-        // alone cannot bypass package validation, command receipt validation
-        // or the single-context admission rules in plv_import.
+
+        // Never retire an existing live context as an implicit side effect
+        // of opening a recorded checkpoint. The user must explicitly close
+        // their active session before creating a new Native authority.
+        {
+            std::lock_guard<std::mutex> lock(registryMutex);
+            for (const auto& item : contexts)
+                if (item.second->active.load()) return PLV_BUSY;
+        }
+
+        // The ordinary Native importer validates schema/material/receipts,
+        // but it initializes the scientific worker lazily. A checksum-valid
+        // container cannot promote a missing or unpinned database to a live
+        // scientific session. Check the exact pinned package bytes now.
+        const auto record = json::parse(*payload);
+        if (record.contains("scientificPackage")) {
+            const auto& package = record.at("scientificPackage");
+            if (!package.is_object()) return PLV_INVALID_ARGUMENT;
+            const auto databasePath = package.at("path").get<std::string>();
+            const auto databaseIdentity = package.at("identity").get<std::string>();
+            if (databasePath.empty() != databaseIdentity.empty())
+                return PLV_INVALID_ARGUMENT;
+            if (!databasePath.empty()) {
+                constexpr auto pinned =
+                    "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7";
+                if (databaseIdentity != pinned) return PLV_INVALID_ARGUMENT;
+                std::error_code fileError;
+                const auto length = std::filesystem::file_size(databasePath, fileError);
+                if (fileError || length == 0U || length > 32U * 1024U * 1024U)
+                    return PLV_INVALID_ARGUMENT;
+                std::ifstream input(databasePath, std::ios::binary);
+                const std::string databaseBytes{
+                    std::istreambuf_iterator<char>{input},
+                    std::istreambuf_iterator<char>{}};
+                if (input.bad() || databaseBytes.size() != length ||
+                    plv::sha256Hex(databaseBytes) != databaseIdentity)
+                    return PLV_INVALID_ARGUMENT;
+            }
+        }
+        // New Native authority; all existing plv_import validations still run.
         return plv_import(payload->data(),
             static_cast<std::uint32_t>(payload->size()), newHandle);
+    } catch (const json::exception&) {
+        return PLV_INVALID_ARGUMENT;
     } catch (const std::invalid_argument&) {
         return PLV_INVALID_ARGUMENT;
     } catch (const std::runtime_error&) {
