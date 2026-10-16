@@ -74,8 +74,12 @@ namespace PharmaLabVR.Session
         {
             get
             {
-                if (driver?.Session == null || driver.CurrentMode != "VR" ||
-                    !CanReleaseTool) return false;
+                if (driver?.Session == null) return false;
+                // The dock is a VR-only safety prerequisite. Desktop has no
+                // physical tool dock, but still loads only via Pause/Hold.
+                if (driver.CurrentMode == "VR" && !CanReleaseTool) return false;
+                if (driver.CurrentMode != "VR" && driver.CurrentMode != "Desktop")
+                    return false;
                 var file = Path.Combine(Application.persistentDataPath, "sessions",
                     saveName + ".plv.json");
                 return File.Exists(file);
@@ -88,7 +92,9 @@ namespace PharmaLabVR.Session
             if (screen != ScreenId.Pause && screen != ScreenId.Hold) return false;
             if (!CanLoadSavedSession)
             {
-                LastError = "Load requires a parked VR tool and an existing saved session.";
+                LastError = driver?.CurrentMode == "VR"
+                    ? "Load requires a parked VR tool and an existing saved session."
+                    : "Load requires an existing saved session.";
                 router.Show(screen.Value);
                 return false;
             }
@@ -198,6 +204,9 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Continue", GUILayout.Height(44f))) panels?.Request(PanelAction.Continue);
                 GUI.enabled = true;
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanLoadSavedSession;
+                if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = true;
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
@@ -210,6 +219,9 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Session paused. Material and simulation time are frozen.");
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanLoadSavedSession;
+                if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = true;
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();
