@@ -2245,3 +2245,30 @@ TEST_CASE("P11_01 Native checkpoint import validates and recovers the last intac
     CHECK(recovered == 0);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 checkpoint import refuses missing pinned scientific package without a live handle") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-abi-unknown-science-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    auto saved = json::parse(read_text(handle, true));
+    REQUIRE(plv_destroy(handle) == PLV_OK);
+    // The container checksum is genuine, but scientific bytes are missing.
+    // A future solve must not be admitted as if pinned IPhreeqc were present.
+    const std::string invalidDatabase = (dir / "not-installed-minteq.v4.dat").string();
+    saved["scientificPackage"] = {
+        {"path", invalidDatabase},
+        {"identity", "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7"}};
+    const auto diskPath = (dir / "forged-snapshot.ckpt").string();
+    plv::DurableCheckpointStore store(diskPath, 16U * 1024U * 1024U);
+    REQUIRE(store.write(saved.dump()).accepted);
+    handle = 55;
+    CHECK(plv_import_checkpoint(diskPath.data(),
+        static_cast<std::uint32_t>(diskPath.size()), &handle) == PLV_INVALID_ARGUMENT);
+    CHECK(handle == 0U);
+    fs::remove_all(dir);
+}
