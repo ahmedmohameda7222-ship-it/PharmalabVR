@@ -179,3 +179,31 @@ TEST_CASE("R05 torn receipt does not turn into a durable replay identity") {
     }
     fs::remove_all(directory);
 }
+
+TEST_CASE("R04 Native dirty checkpoint requires earlier of wall or simulation threshold") {
+    DirtyCheckpointPolicy policy(30'000'000'000ULL, 30.0);
+    CHECK_FALSE(policy.dirty());
+    CHECK_FALSE(policy.needsFlush(10'000'000'000ULL, 5.0, false));
+    policy.markDirty(10'000'000'000ULL, 5.0);
+    CHECK(policy.dirty());
+    policy.markDirty(35'000'000'000ULL, 30.0);
+    CHECK_FALSE(policy.needsFlush(39'000'000'000ULL, 34.9, false));
+    CHECK(policy.needsFlush(40'000'000'000ULL, 34.9, false));
+    policy.acknowledgeFlush();
+    CHECK_FALSE(policy.dirty());
+    CHECK_FALSE(policy.needsFlush(41'000'000'000ULL, 36.0, false));
+    policy.markDirty(100'000'000'000ULL, 20.0);
+    CHECK_FALSE(policy.needsFlush(101'000'000'000ULL, 49.9, false));
+    CHECK(policy.needsFlush(101'000'000'000ULL, 50.0, false));
+}
+
+TEST_CASE("R04 dirty Native state flushes before pause and on time discontinuity") {
+    DirtyCheckpointPolicy policy(30'000'000'000ULL, 30.0);
+    policy.markDirty(50'000'000'000ULL, 12.0);
+    CHECK(policy.needsFlush(50'000'000'001ULL, 12.001, true));
+    CHECK(policy.needsFlush(49'000'000'999ULL, 12.001, false));
+    CHECK(policy.needsFlush(50'000'000'001ULL, 11.99, false));
+    CHECK(policy.dirty());
+    policy.acknowledgeFlush();
+    CHECK_FALSE(policy.needsFlush(60'000'000'000ULL, 42.0, true));
+}
