@@ -526,6 +526,10 @@ plv::SessionSnapshot parseSnapshot(const json& parsed) {
     }
     return snapshot;
 }
+bool checkpointIdentityMatches(const std::string& destination,
+    const std::string& branch, const std::string& databasePath,
+    const std::string& databaseIdentity);
+
 // Called only under the session lock; a failed checkpoint leaves the dirty
 // deadline due and is retried on the next owner-thread step.
 bool flushAutomaticCheckpoint(Context& context, std::uint64_t monotonicNowNs) {
@@ -565,7 +569,7 @@ bool checkpointIdentityMatches(const std::string& destination,
            science.value("identity", std::string{}) == databaseIdentity;
 }
 
- }  // namespace
+}  // namespace
 
 extern "C" {
 
