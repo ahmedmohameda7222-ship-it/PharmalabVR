@@ -2293,3 +2293,32 @@ TEST_CASE("P11_01 checkpoint import may not silently replace an active Native se
     CHECK(plv_destroy(active) == PLV_OK);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 checkpoint import accepts exact installed pinned Native scientific package") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-abi-checkpoint-pinned-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto path = (dir / "pinned.ckpt").string();
+    const json config = {
+        {"schemaVersion", 1},
+        {"branchId", "branch-1"},
+        {"databasePath", PLV_MINTEQ_DATABASE},
+        {"databaseIdentity", "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7"}};
+    const auto encoded = config.dump();
+    std::uint64_t original = 0;
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &original) == PLV_OK);
+    REQUIRE(plv_checkpoint(original, path.data(),
+        static_cast<std::uint32_t>(path.size())) == PLV_OK);
+    REQUIRE(plv_destroy(original) == PLV_OK);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import_checkpoint(path.data(),
+        static_cast<std::uint32_t>(path.size()), &imported) == PLV_OK);
+    const auto recovered = json::parse(read_text(imported, true));
+    CHECK(recovered["scientificPackage"]["identity"] ==
+        "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7");
+    CHECK(recovered["branchId"] == "branch-1");
+    CHECK(plv_destroy(imported) == PLV_OK);
+    fs::remove_all(dir);
+}
