@@ -2272,3 +2272,24 @@ TEST_CASE("P11_01 checkpoint import refuses missing pinned scientific package wi
     CHECK(handle == 0U);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 checkpoint import may not silently replace an active Native session") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-abi-checkpoint-active-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const std::string checkpoint = (dir / "active.ckpt").string();
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t active = 0;
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &active) == PLV_OK);
+    REQUIRE(plv_checkpoint(active, checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size())) == PLV_OK);
+    std::uint64_t attempted = 42;
+    CHECK(plv_import_checkpoint(checkpoint.data(),
+        static_cast<std::uint32_t>(checkpoint.size()), &attempted) == PLV_BUSY);
+    CHECK(attempted == 0);
+    CHECK(json::parse(read_text(active, true))["branchId"] == "branch-1");
+    CHECK(plv_destroy(active) == PLV_OK);
+    fs::remove_all(dir);
+}
