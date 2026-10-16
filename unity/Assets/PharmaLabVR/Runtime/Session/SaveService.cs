@@ -49,6 +49,13 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Admission checks candidate existence only; the actual Load path performs
+        // size, format, package and Native import verification. A valid confirmed
+        // backup remains available if an interrupted replacement lost its primary.
+        public static bool HasSaveCandidate(string path) =>
+            !string.IsNullOrWhiteSpace(path) &&
+            (File.Exists(path) || File.Exists(path + ".bak"));
+
         public CoreSession Load(string path, string expectedScientificDatabasePath)
         {
             if (path == null) throw new ArgumentNullException(nameof(path));

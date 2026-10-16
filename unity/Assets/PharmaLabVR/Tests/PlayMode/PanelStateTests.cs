@@ -875,9 +875,27 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 Assert.That(driver.NativeRecoveryReady, Is.False);
                 Assert.That(session.RecordedReview, Is.Null);
+
+                // Repeat an explicit Save to establish the confirmed .bak.
+                // If an interrupted write loses the primary, the Pause/Hold
+                // Load action must still admit the surviving Native backup.
+                Assert.That(session.Save(), Is.True, session.LastError);
+                Assert.That(session.Save(), Is.True, session.LastError);
+                Assert.That(File.Exists(savedPath + ".bak"), Is.True);
+                File.Delete(savedPath);
+                Assert.That(session.CanLoadSavedSession, Is.True,
+                    "A confirmed backup alone must remain discoverable.");
+                var nextPrevious = driver.Session;
+                Assert.That(actions.Request(PanelAction.Load), Is.True, session.LastError);
+                Assert.That(nextPrevious.IsOpen, Is.False);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(session.RecordedReview, Is.Null);
             }
             finally
             {
+                if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath + ".bak"))
+                    File.Delete(savedPath + ".bak");
                 if (!string.IsNullOrEmpty(savedPath) && File.Exists(savedPath))
                     File.Delete(savedPath);
                 foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);

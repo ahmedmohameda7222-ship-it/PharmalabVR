@@ -82,7 +82,7 @@ namespace PharmaLabVR.Session
                     return false;
                 var file = Path.Combine(Application.persistentDataPath, "sessions",
                     saveName + ".plv.json");
-                return File.Exists(file);
+                return SaveService.HasSaveCandidate(file);
             }
         }
 
@@ -351,7 +351,7 @@ namespace PharmaLabVR.Session
             // Live Lab never performs an unguarded Native context replacement.
             // Saved-session restore is an explicit Pause/Hold panel action, where
             // recovery baselines and (for VR) parked tool admission are enforced.
-            if (File.Exists(savedPath))
+            if (SaveService.HasSaveCandidate(savedPath))
                 GUILayout.Label("To load a saved session, pause the lab first.");
             if (GUILayout.Button("Create checkpoint", GUILayout.Height(30f))) CreateCheckpoint();
             if (GUILayout.Button("Restart checkpoint", GUILayout.Height(30f))) RestartCheckpoint();
