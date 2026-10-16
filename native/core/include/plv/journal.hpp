@@ -30,6 +30,24 @@ private:
     std::vector<std::uint8_t> bytes_;
 };
 
+// Disk-backed, bounded append-only record stream. The owning Native session
+// must enforce a single writer; no simultaneous cross-process append is assumed.
+// A torn trailing record is discarded at the next append, while CRC corruption
+// in a complete record fails closed. A successful append flushes through the OS
+// file descriptor before reporting acceptance.
+class DurableJournal {
+public:
+    explicit DurableJournal(std::string path, std::size_t maxRecordBytes,
+                            std::size_t maxTotalBytes = 32U * 1024U * 1024U);
+    JournalRecovery recover() const;
+    CommandOutcome append(const std::string& payload);
+
+private:
+    std::string path_;
+    std::size_t maxRecordBytes_;
+    std::size_t maxTotalBytes_;
+};
+
 class ReceiptIdentityIndex {
 public:
     explicit ReceiptIdentityIndex(std::size_t cacheLimit);
