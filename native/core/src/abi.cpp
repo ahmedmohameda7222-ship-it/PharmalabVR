@@ -530,6 +530,15 @@ bool checkpointIdentityMatches(const std::string& destination,
     const std::string& branch, const std::string& databasePath,
     const std::string& databaseIdentity);
 
+// Storage failures must never be presented as rejected committed ticks.
+// The existing neutral-input recovery protocol governs manual continuation.
+void enterStorageHold(Context& context) {
+    context.holdActive = true;
+    context.holdReason = "Storage";
+    context.recoveryReady = false;
+    for (auto& item : context.tools) item.second.latestInput.reset();
+}
+
 // Called only under the session lock; a failed checkpoint leaves the dirty
 // deadline due and is retried on the next owner-thread step.
 bool flushAutomaticCheckpoint(Context& context, std::uint64_t monotonicNowNs) {
@@ -1348,10 +1357,11 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
         return PLV_OK;
     }
     context->lastMonotonicNowNs = monotonic_now_ns;
-    // The due write is attempted even while paused/held; failure prevents
-    // further step progression without incorrectly clearing dirty state.
-    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns))
+    // A pre-tick storage failure has not committed simulation time.
+    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns)) {
+        enterStorageHold(*context);
         return PLV_INTERNAL_ERROR;
+    }
     const auto simulationNowNs = static_cast<std::uint64_t>(
         std::max(0.0, context->executor.snapshot().simulationTimeS) * 1'000'000'000.0);
     collectScience(*context, simulationNowNs);
@@ -1548,8 +1558,13 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     for (auto& event : stagedEvents) context->events.push_back(std::move(event));
     if (delta_s > 0.0 && !context->automaticCheckpointPath.empty())
         context->dirtyCheckpoint.markDirty(monotonic_now_ns, beforeTick.simulationTimeS);
-    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns))
-        return PLV_INTERNAL_ERROR;
+    if (!flushAutomaticCheckpoint(*context, monotonic_now_ns)) {
+        // Material, events and simulation time already committed. Do not report
+        // a rejected tick that the client might replay. Hold further transport
+        // until an explicit storage recovery and neutral-input admission.
+        enterStorageHold(*context);
+        return PLV_OK;
+    }
     return PLV_OK;
 }
 
