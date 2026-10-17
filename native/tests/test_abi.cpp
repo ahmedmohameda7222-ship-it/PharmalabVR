@@ -2546,12 +2546,19 @@ TEST_CASE("P11_01 Native checkpoint import preserves idempotent terminal receipt
     CHECK(conflict["accepted"] == false);
     CHECK(conflict["code"] == "CommandIdentityConflict");
     CHECK(json::parse(read_text(restored, true))["nextCommandSequence"] == "2");
+    // Import intentionally establishes SessionLoad Hold. Receipt identity
+    // survives the restart, but no new material command can execute until
+    // explicit neutral-input recovery.
     submit(restored, command("2", "CreateVessel",
         {{"id", "next"}, {"capacityM3", 1e-5}}));
-    CHECK(poll(restored)["accepted"] == true);
+    const auto heldOutcome = poll(restored);
+    CHECK(heldOutcome["accepted"] == false);
+    CHECK(heldOutcome["code"] == "SessionHeld");
     const auto after = json::parse(read_text(restored, true));
     CHECK(after["nextCommandSequence"] == "3");
-    CHECK(after["vessels"].size() == 2);
+    CHECK(after["vessels"].size() == 1);
+    CHECK(after["hold"]["active"] == true);
+    CHECK(after["hold"]["reason"] == "SessionLoad");
     REQUIRE(plv_destroy(restored) == PLV_OK);
     fs::remove_all(dir);
 }
