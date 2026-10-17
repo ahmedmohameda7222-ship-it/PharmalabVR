@@ -15,6 +15,46 @@ namespace PharmaLabVR.Tests
     public sealed class FoundationTests
     {
         [Test]
+        public void P11_01_ManagedCheckpointImportIsolatedFromOriginalNativeAuthority()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "plv-native-import-" +
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            var path = Path.Combine(root, "live.ckpt");
+            CoreSession original = null;
+            try
+            {
+                original = new CoreSession("managed-recovery");
+                var firstReceipt = original.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"source\",\"capacityM3\":0.00001}");
+                StringAssert.Contains("\"accepted\":true", firstReceipt);
+                original.WriteNativeCheckpoint(path);
+                using (var recovered = CoreSession.ImportNativeCheckpoint(path))
+                {
+                    Assert.That(recovered.BranchId, Is.EqualTo(original.BranchId));
+                    Assert.That(recovered.ExportSession(), Is.EqualTo(original.ExportSession()),
+                        "Checkpoint import must preserve exact Native export content.");
+                    var restoredReceipt = recovered.SubmitOrdered("CreateVessel",
+                        "{\"id\":\"receiver\",\"capacityM3\":0.00001}");
+                    StringAssert.Contains("\"accepted\":true", restoredReceipt);
+                    Assert.That(recovered.ExportSession(), Is.Not.EqualTo(original.ExportSession()),
+                        "Recovered Native handle mutated the active original context.");
+                }
+                Assert.That(original.IsOpen, Is.True,
+                    "Disposing the restored context must not retire the original.");
+                Assert.Throws<ArgumentException>(() =>
+                    CoreSession.ImportNativeCheckpoint("relative.ckpt"));
+                Assert.Throws<ScientificPackageMismatchException>(() =>
+                    CoreSession.ImportNativeCheckpoint(path, "different-installed-science.dat"));
+            }
+            finally
+            {
+                original?.Dispose();
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+
+        [Test]
         public void P09_02_RecordedObservationsNeedExplicitNativeNumericPresence()
         {
             // Existing Native exports lacking a finite 'value' must not acquire
