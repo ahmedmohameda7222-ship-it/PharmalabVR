@@ -72,6 +72,61 @@ namespace PharmaLabVR.Core
             return new CoreSession(imported, envelope.branchId, nextSequence);
         }
 
+        // Creates an independent Native authority from the last checksum-verified
+        // checkpoint generation. Does not replace the active CoreDriver session.
+        // The native importer enforces its own scientific-package requirements;
+        // this wrapper also enforces the installation's pinned database.
+        public static CoreSession ImportNativeCheckpoint(string absolutePath,
+            string expectedScientificDatabasePath = null)
+        {
+            if (string.IsNullOrWhiteSpace(absolutePath) ||
+                absolutePath.IndexOfAny(new[] { '\0', '\r', '\n' }) >= 0 ||
+                !Path.IsPathRooted(absolutePath))
+                throw new ArgumentException("A valid absolute checkpoint path is required.",
+                    nameof(absolutePath));
+            if (NativeMethods.AbiVersion() != 1)
+                throw new NotSupportedException("PharmaLabVR native ABI mismatch.");
+            var bytes = Utf8(absolutePath);
+            if (bytes.Length == 0 || bytes.Length > 1024)
+                throw new ArgumentOutOfRangeException(nameof(absolutePath));
+            Ensure(NativeMethods.ImportCheckpoint(bytes, (uint)bytes.Length, out var restored),
+                "import checkpoint");
+            // The newly created context is owned here until full managed
+            // admission succeeds; an invalid package must never leak a handle.
+            var candidate = new CoreSession(restored, string.Empty, 0);
+            try
+            {
+                var serialized = candidate.ExportSession();
+                var package = JsonUtility.FromJson<ScientificPackageEnvelope>(serialized)
+                    ?.scientificPackage;
+                if (package == null)
+                    throw new ScientificPackageMismatchException("Checkpoint scientific package is absent.");
+                if (expectedScientificDatabasePath != null &&
+                    package.path != expectedScientificDatabasePath)
+                    throw new ScientificPackageMismatchException(
+                        "Checkpoint scientific package does not match this installation.");
+                if (!string.IsNullOrEmpty(package.path) ||
+                    !string.IsNullOrEmpty(package.identity))
+                    ScientificPackage.VerifyPinnedFile(package.path, package.identity);
+                else if (expectedScientificDatabasePath != null)
+                    throw new ScientificPackageMismatchException(
+                        "Checkpoint has no pinned scientific database.");
+                var envelope = JsonUtility.FromJson<SessionEnvelope>(serialized);
+                if (envelope == null || string.IsNullOrWhiteSpace(envelope.branchId) ||
+                    !ulong.TryParse(envelope.nextCommandSequence,
+                        System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        out var next) || next == 0)
+                    throw new InvalidDataException("Native checkpoint session identity is invalid.");
+                return new CoreSession(restored, envelope.branchId, next);
+            }
+            catch
+            {
+                candidate.Dispose();
+                throw;
+            }
+        }
+
         public string SubmitOrdered(string type, string payloadJson = "{}", string expectedMaterialRevisionsJson = "{}")
         {
             var sequence = nextCommandSequence.ToString();
