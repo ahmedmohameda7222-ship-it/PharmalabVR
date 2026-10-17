@@ -120,3 +120,16 @@
 
 ## 2026-10-17 — P11.01 Native automatic checkpoint continuation
 Native session creation can opt in via `checkpointPath`; owner-thread `plv_step` flushes at the earlier first-dirty 30-second wall/simulation deadline and on a paused step, retaining dirty state after failed disk stage. Imported Native contexts support `plv_configure_checkpoint` to attach a writer without replacing science authority; Unity `CoreDriver` now authors the startup and post-load path. RED/green native CI: `bc6b869`→`211597a` (push 38979944474/PR 38979948907 SUCCESS), `55253f5`→`0003452` (push 38980720307/PR 38980723546 SUCCESS). Unity EditMode sources `8a5189b`, `169f14c` **NOT_RUN**. Cross-branch guard `012120f`→`2ed69b1`: Ubuntu/headless passing with Windows pending. **Next safety priority:** post-tick checkpoint write failure currently risks an error return after committed simulation time; add Native fault regression and explicit Storage Hold semantics before acceptance. Full Native command receipt WAL atomicity, power-loss and actual Unity are Open.
+
+## 2026-10-17 — P11.01 checkpoint Storage Hold after already-committed tick
+
+
+**Ruling:** Native step error codes must not suggest an uncommitted tick when the authoritative Native physics tick, simulation clock, tool state and event queue have already advanced. A storage write failure **after** that commit returns `PLV_OK` for the committed tick, sets snapshot `hold.active=true`, `hold.reason="Storage"`, `hold.recoveryReady=false`, and neutralizes tool inputs. A failed **pre-tick** checkpoint retry returns `PLV_INTERNAL_ERROR` without an additional tick and also enters Storage Hold. A successful follow-up checkpoint does not auto-release this Hold; the owner must explicitly `Continue` after neutral-input recovery.
+
+- RED `54544b698123e1e35d7006d3ca42a895837dbaca`: Native Ubuntu CI [38989173479](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38989173479) ran the real 30-second simulation threshold with `.slot1.tmp` occupied by an OS directory. Four assertions failed: the post-commit tick returned 7 rather than 0, and Storage Hold state was absent. The previous confirmed slot survived, demonstrating the failure is a real disk-stage error.
+- GREEN `38b09e95c3c6daf54a97e5f4470cc0098ceb62c2`: fixes the false rejection after commit and prevents further progression. Push [38989373304](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38989373304) native Ubuntu and headless SUCCESS; Windows/PR still pending at checkpoint writing.
+- Real Unity EditMode source `b87ed9ad4b657dca4dbf80e3f056ab3b60a666a9` authored **NOT_RUN**, linking through actual `CoreSession` and installed pinned model.
+- Native explicit `Continue` admission regression `ad4f57178a2fde7e26fa687906bf8d8095217944` authored for rejected premature recovery and successful neutral Continue after durable retry; source CI pending.
+
+This supersedes the earlier "critical unresolved" post-commit ambiguity note above **for the represented stage-failure scenario only**. Actual process crash, arbitrary disk-full/power cut, WAL receipt atomicity and integrated Unity execution remain **Open**, and P11.01/G-R1 are **not accepted**.
+
