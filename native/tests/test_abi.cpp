@@ -2455,3 +2455,52 @@ TEST_CASE("P11_01 auto checkpoint cannot overwrite a foreign Native branch histo
     CHECK(store.read().value() == confirmed);
     fs::remove_all(dir);
 }
+
+TEST_CASE("P11_01 post-tick checkpoint failure reports committed simulation and Storage Hold") {
+    namespace fs = std::filesystem;
+    const auto directory = fs::temp_directory_path() /
+        ("plv-post-tick-storage-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(directory));
+    const auto path = (directory / "auto.ckpt").string();
+    const json config = {{"schemaVersion", 1}, {"branchId", "branch-1"},
+                         {"checkpointPath", path}};
+    const auto encoded = config.dump();
+    std::uint64_t handle = 0;
+    REQUIRE(plv_create(encoded.data(), static_cast<std::uint32_t>(encoded.size()), &handle) == PLV_OK);
+    // First generation stays confirmed while the second staging slot is blocked.
+    REQUIRE(plv_checkpoint(handle, path.data(), static_cast<std::uint32_t>(path.size())) == PLV_OK);
+    const plv::DurableCheckpointStore store(path, 16U * 1024U * 1024U);
+    const auto confirmed = store.read();
+    REQUIRE(confirmed.has_value());
+    submit(handle, command("1", "CreateVessel",
+                           {{"id", "receiver"}, {"capacityM3", 1e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(fs::create_directory(path + ".slot1.tmp"));
+    for (std::uint64_t tick = 1; tick <= 1499U; ++tick) {
+        REQUIRE(plv_step(handle, 0.020, tick * 1'000'000ULL) == PLV_OK);
+    }
+    CHECK_FALSE(json::parse(read_text(handle, false))["hold"]["active"].get<bool>());
+    // Pre-tick is not due; this tick *commits* the 30-second simulation
+    // threshold, then checkpoint stage fails. Returning a rejected step here
+    // would invite callers to submit the committed tick twice.
+    CHECK(plv_step(handle, 0.021, 1'500'000'000ULL) == PLV_OK);
+    const auto snapshot = json::parse(read_text(handle, false));
+    CHECK(snapshot["simulationTimeS"].get<double>() > 30.0);
+    CHECK(snapshot["hold"]["active"] == true);
+    CHECK(snapshot["hold"]["reason"] == "Storage");
+    CHECK(snapshot["hold"]["recoveryReady"] == false);
+    CHECK(store.read().value() == *confirmed);
+    // A failed earlier write may never unblock progression until it succeeds.
+    CHECK(plv_step(handle, 0.020, 1'501'000'000ULL) == PLV_INTERNAL_ERROR);
+    CHECK(json::parse(read_text(handle, false))["simulationTimeS"] ==
+          snapshot["simulationTimeS"]);
+    fs::remove_all(path + ".slot1.tmp");
+    CHECK(plv_step(handle, 0.0, 1'502'000'000ULL) == PLV_OK);
+    const auto persisted = json::parse(*store.read());
+    CHECK(persisted["simulationTimeS"] == snapshot["simulationTimeS"]);
+    CHECK(json::parse(read_text(handle, false))["hold"]["active"] == true);
+    // Storage Hold cannot silently resume transport after disk repair.
+    REQUIRE(plv_destroy(handle) == PLV_OK);
+    fs::remove_all(directory);
+}
