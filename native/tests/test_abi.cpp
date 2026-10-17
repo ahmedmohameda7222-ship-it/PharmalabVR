@@ -2515,3 +2515,43 @@ TEST_CASE("P11_01 post-tick checkpoint failure reports committed simulation and 
     REQUIRE(plv_destroy(handle) == PLV_OK);
     fs::remove_all(directory);
 }
+
+TEST_CASE("P11_01 Native checkpoint import preserves idempotent terminal receipt and rejects identity mutation") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-receipt-replay-restore-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto path = (dir / "receipts.ckpt").string();
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1"})";
+    std::uint64_t live = 0;
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &live) == PLV_OK);
+    const auto first = command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 1e-5}});
+    submit(live, first);
+    const auto initialReceipt = poll(live);
+    REQUIRE(initialReceipt["accepted"] == true);
+    REQUIRE(plv_checkpoint(live, path.data(), static_cast<std::uint32_t>(path.size())) == PLV_OK);
+    REQUIRE(plv_destroy(live) == PLV_OK);
+    std::uint64_t restored = 0;
+    REQUIRE(plv_import_checkpoint(path.data(), static_cast<std::uint32_t>(path.size()), &restored) == PLV_OK);
+    const auto before = json::parse(read_text(restored, true));
+    CHECK(before["nextCommandSequence"] == "2");
+    submit(restored, first);
+    const auto repeatedReceipt = poll(restored);
+    CHECK(repeatedReceipt == initialReceipt);
+    CHECK(json::parse(read_text(restored, true))["nextCommandSequence"] == "2");
+    auto altered = command("1", "CreateVessel", {{"id", "different"}, {"capacityM3", 1e-5}});
+    submit(restored, altered);
+    const auto conflict = poll(restored);
+    CHECK(conflict["accepted"] == false);
+    CHECK(conflict["code"] == "CommandIdentityConflict");
+    CHECK(json::parse(read_text(restored, true))["nextCommandSequence"] == "2");
+    submit(restored, command("2", "CreateVessel",
+        {{"id", "next"}, {"capacityM3", 1e-5}}));
+    CHECK(poll(restored)["accepted"] == true);
+    const auto after = json::parse(read_text(restored, true));
+    CHECK(after["nextCommandSequence"] == "3");
+    CHECK(after["vessels"].size() == 2);
+    REQUIRE(plv_destroy(restored) == PLV_OK);
+    fs::remove_all(dir);
+}
