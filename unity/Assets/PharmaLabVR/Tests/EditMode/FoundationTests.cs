@@ -32,12 +32,19 @@ namespace PharmaLabVR.Tests
                 using (var recovered = CoreSession.ImportNativeCheckpoint(path))
                 {
                     Assert.That(recovered.BranchId, Is.EqualTo(original.BranchId));
-                    Assert.That(recovered.ExportSession(), Is.EqualTo(original.ExportSession()),
-                        "Checkpoint import must preserve exact Native export content.");
+                    var beforeOriginal = original.ExportSession();
+                    var restoredBefore = recovered.ExportSession();
+                    StringAssert.Contains("\"id\":\"source\"", restoredBefore);
+                    StringAssert.Contains("\"nextCommandSequence\":\"2\"", restoredBefore);
+                    // Native import establishes SessionLoad Hold, even when the
+                    // checkpoint bytes themselves were fully validated.
+                    StringAssert.Contains("\"reason\":\"SessionLoad\"", restoredBefore);
                     var restoredReceipt = recovered.SubmitOrdered("CreateVessel",
                         "{\"id\":\"receiver\",\"capacityM3\":0.00001}");
-                    StringAssert.Contains("\"accepted\":true", restoredReceipt);
-                    Assert.That(recovered.ExportSession(), Is.Not.EqualTo(original.ExportSession()),
+                    StringAssert.Contains("\"code\":\"SessionHeld\"", restoredReceipt);
+                    StringAssert.Contains("\"nextCommandSequence\":\"3\"",
+                        recovered.ExportSession());
+                    Assert.That(original.ExportSession(), Is.EqualTo(beforeOriginal),
                         "Recovered Native handle mutated the active original context.");
                 }
                 Assert.That(original.IsOpen, Is.True,
