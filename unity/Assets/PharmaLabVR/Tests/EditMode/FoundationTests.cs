@@ -170,6 +170,47 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void P11_01_StorageHoldIdentifiesCommittedNativeTickAfterFailedAutoCheckpoint()
+        {
+            var directory = Path.Combine(Path.GetTempPath(),
+                "plv-storage-hold-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            try
+            {
+                var pinned = ScientificPackage.PrepareLocal(Application.streamingAssetsPath);
+                var path = Path.Combine(directory, "auto.ckpt");
+                using var core = new CoreSession("native-storage-test", "Desktop",
+                    pinned, ScientificPackage.DatabaseSha256, "Precision", path);
+                core.WriteNativeCheckpoint(path);
+                var previous = File.ReadAllText(path + ".slot0");
+                Assert.That(core.SubmitOrdered("CreateVessel",
+                    "{\"id\":\"receiver\",\"capacityM3\":0.00001}"),
+                    Does.Contain("\"accepted\":true"));
+                Directory.CreateDirectory(path + ".slot1.tmp");
+                for (ulong tick = 1; tick <= 1499UL; ++tick)
+                    core.Step(0.02, tick * 1_000_000UL);
+                // The 1500th tick crossed the 30s simulation threshold; the
+                // storage failure must not misreport a committed tick as rejected.
+                core.Step(0.021, 1_500_000_000UL);
+                var committed = core.ReadSnapshot();
+                StringAssert.Contains("\"reason\":\"Storage\"", committed);
+                StringAssert.Contains("\"active\":true", committed);
+                Assert.That(File.ReadAllText(path + ".slot0"), Is.EqualTo(previous),
+                    "Failed Native staging overwrote the last confirmed checkpoint.");
+                Assert.Throws<InvalidOperationException>(() =>
+                    core.Step(0.02, 1_501_000_000UL));
+                Assert.That(core.ReadSnapshot(), Is.EqualTo(committed),
+                    "A failed pre-tick durability retry must not advance simulation.");
+                Directory.Delete(path + ".slot1.tmp");
+                core.Step(0.0, 1_502_000_000UL);
+                StringAssert.Contains("\"reason\":\"Storage\"", core.ReadSnapshot());
+                Assert.That(File.Exists(path + ".slot1"), Is.True,
+                    "Storage recovery did not durably retry its real Native snapshot.");
+            }
+            finally { Directory.Delete(directory, true); }
+        }
+
+        [Test]
         public void P11_01_ImportedNativeSessionCanResumeAutomaticCheckpointPersistence()
         {
             var directory = Path.Combine(Path.GetTempPath(),
