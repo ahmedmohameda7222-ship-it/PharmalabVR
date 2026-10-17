@@ -133,3 +133,10 @@ Native session creation can opt in via `checkpointPath`; owner-thread `plv_step`
 
 This supersedes the earlier "critical unresolved" post-commit ambiguity note above **for the represented stage-failure scenario only**. Actual process crash, arbitrary disk-full/power cut, WAL receipt atomicity and integrated Unity execution remain **Open**, and P11.01/G-R1 are **not accepted**.
 
+
+## 2026-10-17 — P11.01 checkpoint receipt replay + isolated managed import
+- Current base before continuation `55de6037172ce117049df25646f39085e9c50733`, push/PR CI **SUCCESS**. It already includes Native Storage Hold, auto checkpoint and explicit neutral recovery. Do not repeat that work.
+- `4f95a51f4497e2372a5356a3f154e1e98f27a893`: real Native ABI CTest source for restoring a checksum-verified checkpoint, repeating accepted terminal receipt verbatim without replay/mutation, refusing altered canonical command identity at the same sequence and accepting the next new ordered identity. [Push CI 38991805609](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38991805609), [PR CI 38991808200](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38991808200), pending at checkpoint entry.
+- `3c63e1a963e3bf52681f68268adcc85758aedf12`: Unity `NativeMethods.ImportCheckpoint` P/Invoke, `CoreSession.ImportNativeCheckpoint` independent imported context, compares installed pinned-science package and validates Native branch/next command sequence before releasing ownership; active CoreDriver session is **not** swapped.
+- `9786c072d069587859ec1a40004769ea57de1011`: authored Unity EditMode test for physical checkpoint, branch/sequence continuation, original session isolation and mismatched pinned science. **NOT_RUN**, [push CI 38991917553](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38991917553), [PR CI 38991920939](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38991920939) pending at entry.
+- P11.01/ G-R1 still OPEN; no claim of atomic real command WAL, power-loss reliability or full Unity acceptance. 66 official rows remain 15 VerifiedLocal/51 Open, English-only forever, PR #1 unmerged.
