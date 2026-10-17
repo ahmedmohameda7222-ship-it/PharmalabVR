@@ -28,7 +28,21 @@
     },
     {
       "id": "U02",
-      "status": "Open"
+      "status": "PartialCodeImplemented_PendingSupabaseAuthAndUnity",
+      "codeCommit": "e871ada682734bfe2e703b74381aa8aed99a97c6",
+      "redCommit": "6fde5ba5ac595b9011940bec73d2247cd659e510",
+      "headlessTests": "34 source-linked assertions passed on Linux in Native CI at e871ada6; no PostgreSQL/Unity tested",
+      "files": [
+        "unity/Assets/PharmaLabVR/Runtime/University/UniversityMembershipSession.cs",
+        "tools/university-contract/Program.cs",
+        "unity/Assets/PharmaLabVR/Tests/EditMode/UniversityMembershipSessionTests.cs"
+      ],
+      "remaining": [
+        "Backend-authenticated gateway",
+        "Real invitations and membership revocation server RPCs",
+        "Real PostgreSQL RLS validation",
+        "Unity EditMode/Player integration"
+      ]
     },
     {
       "id": "U03",
