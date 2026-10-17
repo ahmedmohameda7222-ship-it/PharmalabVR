@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "workstream": "PharmaLabVR multi-university",
+  "createdDate": "2026-10-17",
+  "ownerProvisioning": "NOT_PROVISIONED",
+  "databaseApplied": false,
+  "originalLedger": "docs/evidence/execution-state.json",
+  "originalLedgerTaskCount": 66,
+  "universityReleaseGate": {
+    "id": "G-U1",
+    "status": "Open",
+    "reason": "No real PostgreSQL RLS, Auth, Storage or pilot verification"
+  },
+  "tasks": [
+    {
+      "id": "U01",
+      "status": "CodeImplemented_PendingPostgresVerification",
+      "files": [
+        "supabase/migrations/20261017000000_university_core.sql",
+        "supabase/migrations/20261017000100_university_rls.sql",
+        "supabase/security-tests/tenant_isolation.sql"
+      ],
+      "limitations": [
+        "SQL fixture not run against Supabase or PostgreSQL",
+        "RLS policy review and additional server roles required",
+        "No project provisioned"
+      ]
+    },
+    {
+      "id": "U02",
+      "status": "Open"
+    },
+    {
+      "id": "U03",
+      "status": "Open"
+    },
+    {
+      "id": "U04",
+      "status": "Open"
+    },
+    {
+      "id": "U05",
+      "status": "Open"
+    }
+  ],
+  "immutableDecisions": [
+    "English-only product",
+    "Native C++17/IPhreeqc is scientific authority",
+    "No deployment without owner authorization",
+    "PR #1 remains open"
+  ]
+}
