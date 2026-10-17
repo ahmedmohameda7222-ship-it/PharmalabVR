@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "id": "mixed-acid-titration-research",
+  "maturity": "Research",
+  "certifiedScoring": false,
+  "requiredObservables": ["pH", "volume"],
+  "optionalUnsupportedObservables": ["indicatorColor", "localMixing"],
+  "tracks": ["cumulativeDeliveredVolumeM3", "stageDeliveredVolumeM3"],
+  "limitations": ["The first endpoint is not forced to equal HCl exactly.", "Refilling the burette does not reset material history.", "Indicator persistence and optical mixtures require independent data."]
+}

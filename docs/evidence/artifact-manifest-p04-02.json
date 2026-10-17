@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
+  "scope": "P04.02 task-scoped Native/Unity tests and three Player builds; no physical VR or Android device journey. Artifacts copied to ignored immutable-for-this-round directory.",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p04-02/native-p04-02.txt",
+      "sha256": "0EC21929E657EB848A7E4F55D146F1728534DCE510AFF019CE1F2745B96638D9",
+      "bytes": 313,
+      "result": "Native Release 73/73; 15480/15480 assertions"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/ctest-p04-02.txt",
+      "sha256": "11E0E2E81F6C15A0E2EBA94A11A1C506A1BE3F25404E8B6C8A0C74DD3E7F4853",
+      "bytes": 456,
+      "result": "CTest 1/1"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/PlayMode.xml",
+      "sha256": "5B872086A0620739F239E728AB04A98BE80D04BE9C9C3A811521D2B2F137F459",
+      "bytes": 21058,
+      "result": "Unity Lab scene PlayMode 21/21, source/receiver/model mismatch journeys"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/EditMode.xml",
+      "sha256": "30876BABD5FD247DD70E8CEFBFBDE4DDCBC48D8E602AB79766F86949F83D0247",
+      "bytes": 20528,
+      "result": "Unity EditMode 22/22"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/unity-WindowsDesktop.log",
+      "sha256": "BDA790149D2841AB34546437746B046BBDA72ED792887957928EE0609045A8C3",
+      "bytes": 344667,
+      "result": "WindowsDesktop Player build Success"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/unity-WindowsVR.log",
+      "sha256": "A261DE904BC17BA4CB9A9867888902BB4472D3F937F923275575538263BD050A",
+      "bytes": 434880,
+      "result": "WindowsVR Player build Success; no headset run"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/unity-AndroidVR.log",
+      "sha256": "7406519B5E23D1E980ED3C95744976ED66CD317A29789A749EEB1837C2E567AB",
+      "bytes": 386400,
+      "result": "AndroidVR IL2CPP build Success; no device install"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/pharmalab_core.dll",
+      "sha256": "652D63A853242F10D5BE53275847A6C3C2E51C27303B3B2A8764345916F9F7FB",
+      "bytes": 2279424,
+      "result": "Windows native Player plugin"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/PharmaLabVR.Runtime.dll",
+      "sha256": "FC8E01FB39FF734FC308FCC72E82344FF7649AA082E9451CF002D9BED2B59C09",
+      "bytes": 69120,
+      "result": "Windows managed Player runtime"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/PharmaLabVR-research.apk",
+      "sha256": "907DF9262886C5DC3A722A940160CC5C9DD62BBD1F66507AA594B8AAA1463F14",
+      "bytes": 43604038,
+      "result": "AndroidVR APK with ARM64 native plugin and minteq"
+    },
+    {
+      "path": "artifacts/evidence-p04-02/minteq.v4.dat",
+      "sha256": "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7",
+      "bytes": 334121,
+      "result": "Pinned minteq package bytes"
+    }
+  ],
+  "externalGates": [
+    "Physical headset/controller",
+    "Android installation and performance",
+    "Independent experimental scientific validation",
+    "Controlled long Player workload",
+    "Human factors"
+  ]
+}

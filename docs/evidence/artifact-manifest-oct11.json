@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "697a3115ad077ef3d8c61a82dcde64800ebc5f93",
+  "testedHeadBeforeEvidenceCommit": "2fd461396150adf7c30da86faf2cd4c1842e4ba3",
+  "scope": "Local Windows build and test artifacts; files under artifacts/ are ignored by Git and stay on this laptop.",
+  "artifacts": [
+    {"path":"artifacts/test-results/native-oct11-live-flight.txt","sha256":"D2BF04A516D46E6B239F60BFD9C4F9850D4E7E973130506208D3BC67D08F90CE","result":"Native Release 70/70, 15461 assertions at test head 2fd4613"},
+    {"path":"artifacts/test-results/ctest-oct11-current.txt","sha256":"752F630597FCB324AF88E144016E6C2DB32B22537FEE363E21F7EAD0313C2993","result":"CTest 1/1 at test head 2fd4613"},
+    {"path":"artifacts/test-results/PlayMode.xml","sha256":"316E419A69B1C5CAE4BF1E49917A31BFC1A260CB16D53BC0049AADD5A3A8894D","result":"Unity PlayMode 17/17 with scene-injected pour on staged 697a311 DLL"},
+    {"path":"artifacts/logs/unity-WindowsDesktop.log","sha256":"8ADBA65513988CF544364BB26932299E5BE17F1C326620F7D5B6887608858C88","result":"WindowsDesktop build Success at 697a311"},
+    {"path":"artifacts/WindowsDesktop/PharmaLabVR_Data/Managed/PharmaLabVR.Runtime.dll","sha256":"FEEF6C00D896998C42E9893FAC13E5B20A604F9908634AF3A906FC5D2CB88511","result":"Current Desktop runtime assembly"},
+    {"path":"artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll","sha256":"4587C8408A6A5A4A53761A9946BBA522DCEA56A784B818231B91FA40EFDDB3CE","result":"Desktop native plugin at 697a311"},
+    {"path":"artifacts/logs/unity-WindowsVR.log","sha256":"475E8ABC5110EDFE58A31E4FE1184A1145116C92279821BAA0B668BAA577CDAD","result":"Earlier 696bd9a WindowsVR Success; no headset run or current-code build"},
+    {"path":"artifacts/WindowsVR/PharmaLabVR_Data/Managed/PharmaLabVR.Runtime.dll","sha256":"104C03E24C0A047407AF3DB90D9F078D27748063F66544F02269985D717D7D75","result":"Current WindowsVR runtime assembly"},
+    {"path":"artifacts/logs/unity-AndroidVR.log","sha256":"2937A6B3747B33C14AAFC0595631C3A503319562F9D87B8AC1E4639D084CFB52","result":"Earlier 696bd9a AndroidVR Success; no current-code build/device install"},
+    {"path":"artifacts/AndroidVR/PharmaLabVR-research.apk","sha256":"D936005D840D80A6B956E1A4DE51DE8480EFE88F668A67BE835CB6D1BCD03482","result":"Earlier 696bd9a ARM64 IL2CPP/native/minteq; minteq SHA-256 AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7"},
+    {"path":"artifacts/screenshots/p02-01-player-boot.png","sha256":"7254FC27195D50726D8576806415C000DA8EF6E40A5769ECC5A62FCBA7CD1957","result":"Earlier c9a58ea Player Boot only; not current-code lab journey"}
+  ],
+  "ciAtFunctionalCode": [
+    {"runId":38106030334,"result":"success"},
+    {"runId":38106027582,"result":"success"}
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "observables": {
+    "pH": {
+      "support":"Supported",
+      "computation":"OnDemandWithPendingCurrentStaleFailedStates",
+      "model":"IPhreeqc-minteq-v4-research",
+      "maturity":"Research",
+      "databaseSha256":"AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7",
+      "temperatureC":25,
+      "maxRepresentedPoolMolPerKgWater":1.0,
+      "poolIds":["sodium","chloride","acetate"],
+      "experimentalValidation":"EvidenceMissing",
+      "scope":"Only the declared six-stock homogeneous aqueous Research profile; the 1.0 mol/kgw limit is a conservative software admission ceiling above the 0.1 mol/L stock matrix, not a physical calibration."
+    },
+    "indicatorColor": {"support":"Unsupported","reason":"No validated preparation or optical calibration supplied"},
+    "localMixing": {"support":"Unsupported","reason":"No tracer calibration supplied"},
+    "volume": {"support":"Approximate","reason":"Additive reference convention, not measured solution density"}
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "PharmaLabVR.EditModeTests",
+  "references": ["PharmaLabVR.Runtime"],
+  "optionalUnityReferences": ["TestAssemblies"],
+  "includePlatforms": ["Editor"]
+}

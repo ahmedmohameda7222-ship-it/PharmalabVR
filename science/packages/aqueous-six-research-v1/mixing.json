@@ -1,0 +1,7 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {"id": "homogeneous", "support": "Approximate", "regions": 1},
+    {"id": "local-research", "support": "Unsupported", "reason": "No independently supplied tracer calibration."}
+  ]
+}

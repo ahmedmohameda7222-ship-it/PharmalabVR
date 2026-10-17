@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "d8fabed1785227a700308a839c9f256e3fe79f58",
+  "unityEditor": "6000.3.25f1",
+  "profile": "Research",
+  "verification": {
+    "nativeRelease": "94/94 cases; 16059/16059 assertions",
+    "ctest": "1/1",
+    "unityPlayMode": "33/33",
+    "unityEditMode": "23/23",
+    "WindowsDesktop": "Build Finished, Result: Success",
+    "WindowsVR": "Build Finished, Result: Success",
+    "AndroidVR": "Build Finished, Result: Success",
+    "ciAtFunctionalSha": "4/4 native jobs completed SUCCESS"
+  },
+  "sha256": {
+    "artifacts/test-results/native-p03-02-tip-mixing.txt": "EA1E210E6613E269CD46D9FF9BD692BAA785A2A611723599820CCCA0AFF44F36",
+    "artifacts/test-results/PlayMode.xml": "139E93372C8B7C570F72DC57EA99BED0B6BDB26E557FBD72FC4C39E4F058EC9A",
+    "artifacts/test-results/EditMode.xml": "856641C9CC2EFA0291DB3CF05AE0F0E1EBBC2DC9437FC963176C811EC40B4296",
+    "artifacts/WindowsDesktop/PharmaLabVR.exe": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+    "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll": "8AF7801BFAD73A75CB3D6D5C5187F10924E8D9136BBA8DE38A70F363BEBC2565",
+    "artifacts/WindowsVR/PharmaLabVR.exe": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+    "artifacts/WindowsVR/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll": "8AF7801BFAD73A75CB3D6D5C5187F10924E8D9136BBA8DE38A70F363BEBC2565",
+    "artifacts/AndroidVR/PharmaLabVR-research.apk": "A3AFA752D1B11011DD4668F26A3654B732A423A10F704A23B3C46E8350CCAA80",
+    "apk:lib/arm64-v8a/libpharmalab_core.so": "D848489655C18D3939646797C8D71747E548C3282AD79134D4F67A7729BAD75B",
+    "apk:assets/science/minteq.v4.dat": "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7",
+    "artifacts/logs/unity-WindowsDesktop.log": "9EFE6E10081F89A12C213FD477F895BB2B60B2A55B4A2F1A22DB0833BCE0FFC2",
+    "artifacts/logs/unity-WindowsVR.log": "368269C7B8B401211E53112A41F956D2653E47C7F3BFFFE3028FBCF186741104",
+    "artifacts/logs/unity-AndroidVR.log": "0DB8A342E5B5C12348278769C27EC805198467A218241CA0CBBC192DBAA92FC6"
+  },
+  "scope": "ABI material contamination regression and current-code test/build artifacts. The earlier Editor Lab screenshot predates this code; no current-code Player or physical device journey is claimed."
+}

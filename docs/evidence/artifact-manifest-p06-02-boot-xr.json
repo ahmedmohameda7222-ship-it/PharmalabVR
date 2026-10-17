@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "614097bc4a5761badeb32aef69a9794066c713fe",
+  "scope": "P06.02 continued: Boot/Setup action path and single XR manager; Research local software evidence, no physical VR or spatial UI acceptance",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/PlayMode.xml",
+      "sha256": "E465DA8DA9FFF3200C68310A60768D0883DE3B18FBF23282AD197ADD0E9E7942",
+      "bytes": 28263
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/EditMode.xml",
+      "sha256": "B8E0A06CBFDBA76CA6306645B51A92900ACDE431AED8A5A87D4924CB5E4E6949",
+      "bytes": 20529
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/LastTest.log",
+      "sha256": "D0DCE76C3906FE28B27D06620CD0CFBD327133B46AF4BC2BF257310EEF434E0A",
+      "bytes": 1623
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/unity-WindowsDesktop.log",
+      "sha256": "DB0FC490CDD38A160FDE96D86E4D5CF266E6FEBBFD8B3B558B05F3317EFE27F1",
+      "bytes": 394165
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/unity-WindowsVR.log",
+      "sha256": "32AAE67572165036C95E0B1C8430D855E6CE13493B949423EC1EF164AA934A52",
+      "bytes": 381433
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/unity-AndroidVR.log",
+      "sha256": "4D4D3D8EF5CC069C139C52AC511E1ECAC8D2CB3DA29FD78052CE6D61700AC800",
+      "bytes": 383722
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/windows-vr-manager-fixed.log",
+      "sha256": "591CC2B4620B35EF89306B5BFEA486421CFD8DF0EE76674283CF21CFF861A855",
+      "bytes": 2891
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/windows-home.png",
+      "sha256": "F30B9305E0F2E0A7E874891C969CC6633835C6F6F77B67979DACE0C65C94A651",
+      "bytes": 52704
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/windows-vr-setup.png",
+      "sha256": "B890EBCC1F60C54DF4B3BBE3223BF5FF045650946949EDA36DEBC2592F917365",
+      "bytes": 47735
+    },
+    {
+      "path": "artifacts/evidence-p06-02-boot-xr/windows-vr-lab.png",
+      "sha256": "5381378AECB0F0504BC8F6A24469F0D5109B642F48FD5920D6C4F899B00B856D",
+      "bytes": 30778
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll",
+      "sha256": "42077007A296666D1A4FFD7894AB11135A001460FB5D3BA4768603C73698172E",
+      "bytes": 2287104
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/AndroidVR/PharmaLabVR-research.apk",
+      "sha256": "40610EF9C85C8D446018F02A5C269AE55778BCDBB518497C2BFD88EFA697DC14",
+      "bytes": 43637818
+    }
+  ]
+}

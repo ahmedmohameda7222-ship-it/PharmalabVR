@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "aqueous-six-research-v1",
+  "maturity": "Research",
+  "temperatureK": 298.15,
+  "pressurePa": 101325,
+  "atmosphere": "closed",
+  "mixing": "homogeneous",
+  "volumeConvention": "additive-prepared-solution-volume",
+  "nominalSolventDensityKgPerM3": 1000,
+  "supportedPools": ["sodium", "chloride", "acetate"],
+  "unsupported": ["heating", "gas-exchange", "precipitation", "redox", "kinetics"],
+  "certifiedAssessment": false
+}

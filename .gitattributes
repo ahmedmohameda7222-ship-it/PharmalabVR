@@ -11,3 +11,5 @@
 *.meta text eol=lf
 *.png binary
 *.ttf binary
+third_party/iphreeqc-source/database/minteq.v4.dat binary
+unity/Assets/StreamingAssets/science/minteq.v4.dat binary

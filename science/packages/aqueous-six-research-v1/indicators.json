@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "capability": "indicatorColor",
+  "support": "Unsupported",
+  "preparations": [],
+  "theoreticalFractionModel": {
+    "availableWhen": ["indicatorQuantityMol", "solventMassKg", "pKa", "provenance"],
+    "maturity": "Research",
+    "opticalColorValidated": false
+  },
+  "reason": "No independently validated indicator preparation and optical calibration are supplied."
+}

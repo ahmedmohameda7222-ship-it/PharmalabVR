@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "8bba4902b97d2a031315634c7e772eca6af8d1bf",
+  "scope": "P06.02 partial live recorded Review; Editor XR camera renders and actual WindowsDesktop Home only; no Player Review or physical headset acceptance",
+  "artifactProvenance": {
+    "vr-lab-render-editor.png": "Unity PlayMode XR Camera RenderTexture",
+    "vr-review-render-editor.png": "Unity PlayMode XR Camera RenderTexture after Review button callback",
+    "windows-desktop-home-screen.png": "actual WindowsDesktop Player Home window capture at functional SHA; UI clipped in 640x400 client",
+    "windows-desktop-after-debug-click.png": "same actual Player Home after synthetic mouse attempt; no transition proven"
+  },
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p06-02-review/PlayMode.xml",
+      "sha256": "867E0B2AC704A1BBEDC4892749010C06DDF33BDE0C01E3B565B706F4D93F4A73",
+      "bytes": 29874
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/PlayMode.log",
+      "sha256": "4B6F21783685F5837F64981F329755FEDB1F180E13219B6584A762B5F708C289",
+      "bytes": 70149
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/EditMode.xml",
+      "sha256": "5639779BF667CF8846E66817B5BDCF46466B137C20E59ABA8CE94E74FC9BCC35",
+      "bytes": 20523
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/EditMode.log",
+      "sha256": "5B46A742B793F2C2166D45EDFAEAC644F89EE728512376F41CC2B5369EB6BC7B",
+      "bytes": 96901
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/LastTest.log",
+      "sha256": "ECDEEBA24BCF4B13DC9F5BE2B572CCA54710BD332496C90CE635ACE1867B5F00",
+      "bytes": 1623
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/vr-lab-render-editor.png",
+      "sha256": "22740DCFB371C910BB78542A68DC7C15366DBDD80E3F067EC06F41AF3BFA5B5C",
+      "bytes": 21232
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/vr-review-render-editor.png",
+      "sha256": "B73EF89638A2521F3C0A43046BE3C0061455047EBAEF1FA04A8965F3A9E126EA",
+      "bytes": 19551
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/windows-desktop-home-screen.png",
+      "sha256": "924F1FFD9942840D04999B2598F212F97EF9F9FEC3C3BB4BCB01AAC8679AE116",
+      "bytes": 58282
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/windows-desktop-after-debug-click.png",
+      "sha256": "7ADA04AE2506A5376E117B7A9FCC538FCE4AA18A08006100185077770012DAD6",
+      "bytes": 60027
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/windows-desktop-player.log",
+      "sha256": "2C2D7B85CBF77D088B057DD9E42074CC7EC12BDEB5761F478301A351FF52BF63",
+      "bytes": 2563
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/player-ui.ps1",
+      "sha256": "36E7B8AE2AFD85D3A7BF1E03D36113BA738BD605202B8900331CE99239F8FFFF",
+      "bytes": 2450
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/unity-WindowsDesktop.log",
+      "sha256": "0A7CCC6F597EE91842FD61134973BE2EC7EE0348790730EF2F7A3BC315EC7074",
+      "bytes": 422421
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/unity-WindowsVR.log",
+      "sha256": "BE97420B5AD529AC8603C5BE8C3A644730C2A8614CB122F1F53B54FC54FC55B4",
+      "bytes": 415486
+    },
+    {
+      "path": "artifacts/evidence-p06-02-review/unity-AndroidVR.log",
+      "sha256": "56972799ED38516C22DCBC784FC6657EDDED596432352FF4F4C504197BDC3FCD",
+      "bytes": 384039
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll",
+      "sha256": "42077007A296666D1A4FFD7894AB11135A001460FB5D3BA4768603C73698172E",
+      "bytes": 2287104
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/AndroidVR/PharmaLabVR-research.apk",
+      "sha256": "44A3E141317729A3998841EB4442CAA322ABDD5EEF00D0B2D58FC473E3F0102F",
+      "bytes": 43943356
+    }
+  ]
+}

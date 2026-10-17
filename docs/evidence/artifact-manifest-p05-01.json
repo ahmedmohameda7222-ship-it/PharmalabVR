@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "be2864faa29ce02bb4497ffcfe5560a530e9ca48",
+  "testedHeadBeforeEvidenceCommit": "51069018c917a61f22bdc8ee16a274e8f159661d",
+  "scope": "P05.01 software admission only; no headset, full Player journey, or experimental validation",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p05-01/ctest-p05-01.txt",
+      "sha256": "E87551700C4B116A00357D4DD0FFDC813A933AF541CB5C3260F00D40AE4E7FED",
+      "bytes": 456
+    },
+    {
+      "path": "artifacts/evidence-p05-01/EditMode.xml",
+      "sha256": "520F085E430AFA0D99DDDDB4BC533EF09D183AD0A8D582D47E47B8747B602DC1",
+      "bytes": 20524
+    },
+    {
+      "path": "artifacts/evidence-p05-01/libpharmalab_core.so",
+      "sha256": "D6B27B9F70B7AB9829FDFDF449453E9F061EAA61947D90FA177E817A932E517C",
+      "bytes": 48204240
+    },
+    {
+      "path": "artifacts/evidence-p05-01/native-p05-01.txt",
+      "sha256": "C4EDBC68D4FEDBE1489A98F695E796D1ECC4C75910CB1AC3909583494F000905",
+      "bytes": 724
+    },
+    {
+      "path": "artifacts/evidence-p05-01/pharmalab_core.dll",
+      "sha256": "EAB2DBC011A00A3D1337351D32CD1D9716EE38B8877B2916F93EF3D39223CA4F",
+      "bytes": 2285056
+    },
+    {
+      "path": "artifacts/evidence-p05-01/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/evidence-p05-01/PlayMode.xml",
+      "sha256": "F2A6C5168BE4CE50F25E25D353104417ADB5B79D7A92CB66D7F5A2954122D09A",
+      "bytes": 20989
+    },
+    {
+      "path": "artifacts/evidence-p05-01/unity-WindowsDesktop.log",
+      "sha256": "09B0FD36CCA649A7DA8B19ABADCC6858E71077C7226819299B46374EAA8FF9E3",
+      "bytes": 395770
+    }
+  ]
+}

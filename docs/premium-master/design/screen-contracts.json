@@ -1,0 +1,444 @@
+[
+  {
+    "id": "Home",
+    "ar": "الرئيسية",
+    "title": "Choose your workspace",
+    "titleAr": "اختر مساحة العمل",
+    "actions": [
+      "Enter VR",
+      "Continue session",
+      "Use Desktop",
+      "Settings"
+    ],
+    "actionsAr": [
+      "دخول الواقع الافتراضي",
+      "متابعة الجلسة",
+      "استخدام الكمبيوتر",
+      "الإعدادات"
+    ],
+    "notes": [
+      "Student · Instructor · Researcher · Expert",
+      "Offline · Research model"
+    ],
+    "notesAr": [
+      "طالب · مدرس · باحث · مستخدم خبير",
+      "دون اتصال · نموذج بحثي"
+    ]
+  },
+  {
+    "id": "Setup",
+    "ar": "الإعداد",
+    "title": "Make the bench yours",
+    "titleAr": "اضبط المعمل ليناسبك",
+    "actions": [
+      "Seated / Standing",
+      "Left / Right hand",
+      "Position bench",
+      "Confirm reach"
+    ],
+    "actionsAr": [
+      "جلوس / وقوف",
+      "اليد اليسرى / اليمنى",
+      "ضبط موقع الطاولة",
+      "تأكيد سهولة الوصول"
+    ],
+    "notes": [
+      "Bench height 0.80 m — prototype default",
+      "Text scale · captions · audio"
+    ],
+    "notesAr": [
+      "ارتفاع الطاولة 0.80 m — قيمة تصميم أولية",
+      "حجم النص · نصوص الإرشاد · الصوت"
+    ]
+  },
+  {
+    "id": "Stations",
+    "ar": "المعامل",
+    "title": "Your laboratory campus",
+    "titleAr": "مساحات المعمل",
+    "actions": [
+      "Analytical bay",
+      "Physical pharmacy",
+      "Formulation",
+      "View all stations"
+    ],
+    "actionsAr": [
+      "المعمل التحليلي",
+      "الصيدلة الفيزيائية",
+      "التركيبات",
+      "عرض كل المعامل"
+    ],
+    "notes": [
+      "Each station has a declared model and coverage",
+      "Future packs do not imply current support"
+    ],
+    "notesAr": [
+      "لكل معمل نموذج ونطاق دعم محدد",
+      "الوحدات القادمة ليست إمكانيات متاحة الآن"
+    ]
+  },
+  {
+    "id": "Lab",
+    "ar": "المعمل",
+    "title": "Quiet workspace. Real technique.",
+    "titleAr": "مساحة هادئة وتدريب عملي",
+    "actions": [
+      "Inspect selection",
+      "Read instrument",
+      "Open library",
+      "Pause"
+    ],
+    "actionsAr": [
+      "فحص العنصر المختار",
+      "قراءة الأداة",
+      "فتح المكتبة",
+      "إيقاف مؤقت"
+    ],
+    "notes": [
+      "Grip body · captured valve action · independent receiver",
+      "No permanent numeric reading answers"
+    ],
+    "notesAr": [
+      "إمساك الأداة · تحكم مستقل في الصمام والوعاء",
+      "بدون إجابات رقمية دائمة لقراءة التدريج"
+    ]
+  },
+  {
+    "id": "CompoundLibrary",
+    "ar": "المركبات",
+    "title": "Find a material",
+    "titleAr": "ابحث عن مادة",
+    "actions": [
+      "Search name or formula",
+      "Current-pack filter",
+      "View sources",
+      "Inspect preparation"
+    ],
+    "actionsAr": [
+      "بحث بالاسم أو الصيغة",
+      "المواد المدعومة حاليًا",
+      "عرض المصادر",
+      "فحص التحضير"
+    ],
+    "notes": [
+      "Compound identity ≠ prepared mixture",
+      "Reference only / Supported research / Data pending"
+    ],
+    "notesAr": [
+      "هوية المركّب تختلف عن تركيب المحلول",
+      "مرجع فقط / بحثي مدعوم / بيانات غير متاحة بعد"
+    ]
+  },
+  {
+    "id": "Prepare",
+    "ar": "التحضير",
+    "title": "Prepare deliberately",
+    "titleAr": "حضّر المادة بخطوات واضحة",
+    "actions": [
+      "Choose supported stock",
+      "Select vessel",
+      "Inspect concentration",
+      "Confirm preparation"
+    ],
+    "actionsAr": [
+      "اختيار مادة مدعومة",
+      "اختيار الوعاء",
+      "فحص التركيز",
+      "تأكيد التحضير"
+    ],
+    "notes": [
+      "Initial research points: 0.01 / 0.05 / 0.1 mol/L",
+      "No automatic endpoint or dosing shortcut"
+    ],
+    "notesAr": [
+      "نقاط البحث الأولية: 0.01 / 0.05 / 0.1 mol/L",
+      "بدون تحديد تلقائي لنقطة النهاية أو جرعة مختصرة"
+    ]
+  },
+  {
+    "id": "Inspect",
+    "ar": "الفحص",
+    "title": "Inspect the selected sample",
+    "titleAr": "افحص العينة المختارة",
+    "actions": [
+      "Contents",
+      "Observations",
+      "Model and assumptions",
+      "Measure"
+    ],
+    "actionsAr": [
+      "المحتويات",
+      "الملاحظات",
+      "النموذج والافتراضات",
+      "القياس"
+    ],
+    "notes": [
+      "Selected vessel and material revision are explicit",
+      "Value · units · freshness · source · maturity"
+    ],
+    "notesAr": [
+      "الوعاء وإصدار حالته محددان",
+      "القيمة · الوحدة · حداثة النتيجة · المصدر · نضج النموذج"
+    ]
+  },
+  {
+    "id": "Measure",
+    "ar": "القياس",
+    "title": "Read, then record",
+    "titleAr": "اقرأ الأداة ثم سجّل",
+    "actions": [
+      "Magnify instrument",
+      "Enter your reading",
+      "Inspect supported pH",
+      "Return to bench"
+    ],
+    "actionsAr": [
+      "تكبير الأداة",
+      "إدخال القراءة",
+      "فحص pH المدعوم",
+      "العودة للطاولة"
+    ],
+    "notes": [
+      "Magnification preserves scale and meniscus task",
+      "Reading is not automatically filled"
+    ],
+    "notesAr": [
+      "التكبير يحافظ على مهمة قراءة التدريج والمنيسكوس",
+      "القراءة لا تُملأ تلقائيًا"
+    ]
+  },
+  {
+    "id": "Learn",
+    "ar": "التعلم",
+    "title": "Predict. Observe. Explain.",
+    "titleAr": "توقّع، ولاحظ، وفسّر",
+    "actions": [
+      "Write prediction",
+      "Record observation",
+      "Show a hint",
+      "Compare attempts"
+    ],
+    "actionsAr": [
+      "كتابة التوقع",
+      "تسجيل الملاحظة",
+      "عرض تلميح",
+      "مقارنة المحاولات"
+    ],
+    "notes": [
+      "Explanations use supported current observations",
+      "Help and assistance are recorded"
+    ],
+    "notesAr": [
+      "التفسير يعتمد على ملاحظات حديثة ومدعومة",
+      "المساعدة المستخدمة مسجلة"
+    ]
+  },
+  {
+    "id": "Notebook",
+    "ar": "الملاحظات",
+    "title": "Keep the reasoning",
+    "titleAr": "احتفظ بخطوات التفكير",
+    "actions": [
+      "Add hypothesis",
+      "Link an event",
+      "Add conclusion",
+      "Export notes"
+    ],
+    "actionsAr": [
+      "إضافة فرضية",
+      "ربط بحدث",
+      "إضافة استنتاج",
+      "تصدير الملاحظات"
+    ],
+    "notes": [
+      "Notes reference actual runs and events",
+      "Saving / Saved / Save failed states"
+    ],
+    "notesAr": [
+      "الملاحظات مرتبطة بمحاولات وأحداث فعلية",
+      "جارٍ الحفظ / تم الحفظ / تعذر الحفظ"
+    ]
+  },
+  {
+    "id": "Review",
+    "ar": "المراجعة",
+    "title": "Understand the attempt",
+    "titleAr": "افهم ما حدث في المحاولة",
+    "actions": [
+      "Recorded timeline",
+      "Model details",
+      "Recompute explicitly",
+      "Checkpoint branch"
+    ],
+    "actionsAr": [
+      "الأحداث المسجلة",
+      "تفاصيل النموذج",
+      "إعادة الحساب",
+      "فرع من نقطة حفظ"
+    ],
+    "notes": [
+      "Spills, refills, assistance and observations remain visible",
+      "Recorded results never silently become a new model"
+    ],
+    "notesAr": [
+      "الانسكاب وإعادة الملء والمساعدة والملاحظات ظاهرة",
+      "النتائج القديمة لا تتغير لنموذج جديد دون طلب"
+    ]
+  },
+  {
+    "id": "Compare",
+    "ar": "المقارنة",
+    "title": "Compare actual runs",
+    "titleAr": "قارن محاولات فعلية",
+    "actions": [
+      "Choose two runs",
+      "Parameter differences",
+      "Valid observation plots",
+      "Export data"
+    ],
+    "actionsAr": [
+      "اختيار محاولتين",
+      "فروق المعلمات",
+      "رسوم الملاحظات الصالحة",
+      "تصدير البيانات"
+    ],
+    "notes": [
+      "Unavailable or stale values remain visible gaps",
+      "Units, assumptions and model versions accompany export"
+    ],
+    "notesAr": [
+      "النتائج القديمة وغير المتاحة تبقى واضحة",
+      "الوحدات والافتراضات وإصدارات النموذج مرفقة"
+    ]
+  },
+  {
+    "id": "Pause",
+    "ar": "الإيقاف",
+    "title": "Pause without losing state",
+    "titleAr": "توقف مع الحفاظ على الحالة",
+    "actions": [
+      "Continue",
+      "Save",
+      "Recenter",
+      "Restart checkpoint"
+    ],
+    "actionsAr": [
+      "متابعة",
+      "حفظ",
+      "إعادة تمركز",
+      "العودة لنقطة حفظ"
+    ],
+    "notes": [
+      "Material and simulation are frozen",
+      "Save success appears only after durable completion"
+    ],
+    "notesAr": [
+      "المادة وزمن المحاكاة متوقفان",
+      "نجاح الحفظ يظهر بعد اكتمال الكتابة الدائمة"
+    ]
+  },
+  {
+    "id": "Hold",
+    "ar": "التعافي",
+    "title": "Material preserved",
+    "titleAr": "الكميات محفوظة",
+    "actions": [
+      "Show parked tools",
+      "Align and re-grab",
+      "Neutral controls",
+      "Continue when eligible"
+    ],
+    "actionsAr": [
+      "عرض الأدوات المتوقفة",
+      "المحاذاة والإمساك مجددًا",
+      "إعادة التحكم للوضع المحايد",
+      "المتابعة عند الاستعداد"
+    ],
+    "notes": [
+      "Tracking / Focus / Time / Calculation / Storage reasons",
+      "Blocked calculation has no fake Continue"
+    ],
+    "notesAr": [
+      "أسباب التتبع / الإدخال / الزمن / الحساب / التخزين",
+      "لا توجد متابعة وهمية عند تعطل الحساب"
+    ]
+  },
+  {
+    "id": "Settings",
+    "ar": "الإعدادات",
+    "title": "Comfort and clarity",
+    "titleAr": "الراحة ووضوح العرض",
+    "actions": [
+      "Language and text scale",
+      "Controls and handedness",
+      "Captions and audio",
+      "Graphics preset"
+    ],
+    "actionsAr": [
+      "اللغة وحجم النص",
+      "التحكم واليد المفضلة",
+      "نصوص الإرشاد والصوت",
+      "جودة الرسوم"
+    ],
+    "notes": [
+      "Presentation options never change chemistry",
+      "Every setting affects the real runtime"
+    ],
+    "notesAr": [
+      "إعدادات العرض لا تغير الكيمياء",
+      "كل إعداد يؤثر في التشغيل الفعلي"
+    ]
+  },
+  {
+    "id": "LessonBuilder",
+    "ar": "بناء تجربة",
+    "title": "Teach an actual skill",
+    "titleAr": "درّس مهارة فعلية",
+    "actions": [
+      "Objective and capability",
+      "Steps, questions and hints",
+      "Rubric and student preview",
+      "Export course pack"
+    ],
+    "actionsAr": [
+      "الهدف والقدرة المطلوبة",
+      "الخطوات والأسئلة والتلميحات",
+      "التقييم ومعاينة الطالب",
+      "تصدير حزمة المقرر"
+    ],
+    "notes": [
+      "A teacher can author instructions, not chemical outcomes",
+      "Capability gaps prevent unsupported certified grading"
+    ],
+    "notesAr": [
+      "المدرس يكتب التعليمات ولا يفرض نتيجة كيميائية",
+      "نقص القدرة يمنع تقييمًا معتمدًا غير مدعوم"
+    ]
+  },
+  {
+    "id": "ResearchProject",
+    "ar": "المشروع البحثي",
+    "title": "A reproducible experiment",
+    "titleAr": "تجربة قابلة لإعادة الإنتاج",
+    "actions": [
+      "Hypothesis and variables",
+      "Model conditions",
+      "Repeat and compare",
+      "Export provenance"
+    ],
+    "actionsAr": [
+      "الفرضية والمتغيرات",
+      "شروط النموذج",
+      "تكرار ومقارنة",
+      "تصدير مصادر النتائج"
+    ],
+    "notes": [
+      "Simulated and measured data are distinct",
+      "Parameter changes must pass coverage checks"
+    ],
+    "notesAr": [
+      "البيانات المحاكاة والمقاسة منفصلة",
+      "تغيير المعلمات يخضع لحدود النموذج"
+    ]
+  }
+]

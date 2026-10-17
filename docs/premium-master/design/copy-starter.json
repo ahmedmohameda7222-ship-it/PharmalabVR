@@ -1,0 +1,222 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Starter UI copy, not full localization acceptance",
+  "entries": {
+    "app.subtitle": {
+      "en": "Virtual pharmaceutical laboratory",
+      "ar": "معمل صيدلي افتراضي"
+    },
+    "home.enterVR": {
+      "en": "Enter VR",
+      "ar": "دخول الواقع الافتراضي"
+    },
+    "home.desktop": {
+      "en": "Use Desktop",
+      "ar": "استخدام الكمبيوتر"
+    },
+    "home.continue": {
+      "en": "Continue session",
+      "ar": "متابعة الجلسة"
+    },
+    "home.openLab": {
+      "en": "Open Lab",
+      "ar": "المعمل الحر"
+    },
+    "home.guided": {
+      "en": "Guided practice",
+      "ar": "تدريب موجّه"
+    },
+    "home.review": {
+      "en": "Review sessions",
+      "ar": "مراجعة الجلسات"
+    },
+    "workspace.student": {
+      "en": "Student",
+      "ar": "طالب"
+    },
+    "workspace.instructor": {
+      "en": "Instructor",
+      "ar": "مدرس"
+    },
+    "workspace.researcher": {
+      "en": "Researcher",
+      "ar": "باحث"
+    },
+    "workspace.expert": {
+      "en": "Expert",
+      "ar": "مستخدم خبير"
+    },
+    "nav.library": {
+      "en": "Compound library",
+      "ar": "مكتبة المركبات"
+    },
+    "nav.notebook": {
+      "en": "Lab notebook",
+      "ar": "دفتر المعمل"
+    },
+    "nav.help": {
+      "en": "Help",
+      "ar": "المساعدة"
+    },
+    "nav.pause": {
+      "en": "Pause",
+      "ar": "إيقاف مؤقت"
+    },
+    "setup.title": {
+      "en": "Set up your workspace",
+      "ar": "إعداد مساحة العمل"
+    },
+    "setup.seated": {
+      "en": "Seated",
+      "ar": "جلوس"
+    },
+    "setup.standing": {
+      "en": "Standing",
+      "ar": "وقوف"
+    },
+    "setup.hand": {
+      "en": "Dominant hand",
+      "ar": "اليد المفضلة"
+    },
+    "setup.height": {
+      "en": "Bench height",
+      "ar": "ارتفاع الطاولة"
+    },
+    "setup.confirm": {
+      "en": "Confirm comfortable reach",
+      "ar": "تأكيد سهولة الوصول"
+    },
+    "prepare.title": {
+      "en": "Prepare material",
+      "ar": "تحضير المادة"
+    },
+    "prepare.vessel": {
+      "en": "Target vessel",
+      "ar": "الوعاء المستهدف"
+    },
+    "inspect.title": {
+      "en": "Inspect sample",
+      "ar": "فحص العينة"
+    },
+    "measure.title": {
+      "en": "Read the instrument",
+      "ar": "قراءة الأداة"
+    },
+    "learn.predict": {
+      "en": "What do you expect?",
+      "ar": "ماذا تتوقع؟"
+    },
+    "learn.observe": {
+      "en": "Record your observation",
+      "ar": "سجّل ملاحظتك"
+    },
+    "learn.explain": {
+      "en": "Explain what happened",
+      "ar": "فسّر ما حدث"
+    },
+    "learn.compare": {
+      "en": "Compare attempts",
+      "ar": "مقارنة المحاولات"
+    },
+    "learn.hint": {
+      "en": "Show a hint",
+      "ar": "عرض تلميح"
+    },
+    "notebook.note": {
+      "en": "Add a note",
+      "ar": "إضافة ملاحظة"
+    },
+    "review.recorded": {
+      "en": "Recorded observations",
+      "ar": "الملاحظات المسجلة"
+    },
+    "review.recompute": {
+      "en": "Recompute explicitly",
+      "ar": "إعادة الحساب"
+    },
+    "review.fork": {
+      "en": "Start a checkpoint branch",
+      "ar": "بدء فرع من نقطة حفظ"
+    },
+    "save.saving": {
+      "en": "Saving…",
+      "ar": "جارٍ الحفظ…"
+    },
+    "save.saved": {
+      "en": "Saved",
+      "ar": "تم الحفظ"
+    },
+    "save.failed": {
+      "en": "Save failed",
+      "ar": "تعذر الحفظ"
+    },
+    "status.research": {
+      "en": "Research model",
+      "ar": "نموذج بحثي"
+    },
+    "status.offline": {
+      "en": "Offline",
+      "ar": "دون اتصال"
+    },
+    "status.updating": {
+      "en": "Last observation — updating",
+      "ar": "آخر ملاحظة — جارٍ التحديث"
+    },
+    "status.unsupported": {
+      "en": "This quantity is unavailable for this model",
+      "ar": "هذه الكمية غير متاحة في هذا النموذج"
+    },
+    "status.reference": {
+      "en": "Reference only",
+      "ar": "مرجع فقط"
+    },
+    "status.dataPending": {
+      "en": "Required data pending",
+      "ar": "البيانات اللازمة غير متاحة بعد"
+    },
+    "hold.tracking": {
+      "en": "Tracking lost — material preserved",
+      "ar": "فُقد التتبع — الكميات محفوظة"
+    },
+    "hold.focus": {
+      "en": "Input focus lost — material preserved",
+      "ar": "فُقد تركيز الإدخال — الكميات محفوظة"
+    },
+    "hold.compute": {
+      "en": "Calculation paused transport",
+      "ar": "الحساب أوقف النقل مؤقتًا"
+    },
+    "hold.continue": {
+      "en": "Continue after neutral alignment",
+      "ar": "متابعة بعد المحاذاة وإعادة التحكم للوضع المحايد"
+    },
+    "settings.title": {
+      "en": "Settings",
+      "ar": "الإعدادات"
+    },
+    "settings.language": {
+      "en": "Language",
+      "ar": "اللغة"
+    },
+    "settings.captions": {
+      "en": "Captions",
+      "ar": "نصوص الإرشاد الصوتي"
+    },
+    "teacher.title": {
+      "en": "Build a lesson",
+      "ar": "إنشاء تجربة تعليمية"
+    },
+    "teacher.preview": {
+      "en": "Preview as a student",
+      "ar": "معاينة كطالب"
+    },
+    "research.title": {
+      "en": "Research project",
+      "ar": "مشروع بحثي"
+    },
+    "research.export": {
+      "en": "Export data and provenance",
+      "ar": "تصدير البيانات ومصادرها"
+    }
+  }
+}

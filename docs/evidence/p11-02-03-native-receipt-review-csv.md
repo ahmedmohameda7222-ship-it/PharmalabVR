@@ -1,0 +1,16 @@
+# P11.02/P11.03 — Native receipt Review and truthful CSV (2026-10-16)
+
+Status: **code-first partial; tasks Open/NotReviewed. Unity EditMode, PlayMode, Player and XR NOT_RUN**. PR #1 remains unmerged; English-only product.
+
+## Native-backed recorded Review
+- TDD RED `2aa54eca245c0bdbf37abeb532e345216acb11a6`: real `RecordedSessionReview` lacked ordered command receipts; headless push [38836936723](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38836936723) failed.
+- Functional `52f6b285f0ea4c263c78e7a113a0d5137e9bbfbe` adds `RecordedCommandReceipt` directly from Native `commandReceipts`, ordered by canonical commandSequence, checking branch/sequence/type/outcome identity and duplicate identities. Desktop Review lists latest actual command receipts, including rejected outcomes; XR shows latest real command receipt beside recorded observations. Neither invents event time or chemical outcomes.
+- Test fixture corrected structurally in `5b3f615fcbe4de2f9ddb8ae413d05cb6a363fb15`; [push 38837189584](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38837189584) and [PR 38837193147](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38837193147) completed SUCCESS for native Ubuntu, Windows and headless tests. Unity EditMode regression `P11_02_RecordedReviewHasOnlyValidatedNativeCommandReceipts` authored, NOT_RUN.
+
+## Truthful CSV observations and command receipts
+- RED `90eb99b316600dc38fc3d2818a50d483c7a037ed`: missing source `SessionExportService` in production-linked headless contract ([38837417162](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38837417162)).
+- GREEN `8b2b3066aad4f17ea63a6ebdfa9e70369bb35245`: one versioned CSV with recordKind=observation/command, Native branch and model/package identity, actual support/freshness/computation/maturity, recorded command sequence/type/accepted/code, and round-trip-precision numeric pH **only** when Native valueAvailable+Supported+Ready+Current+finite. Otherwise a blank numeric field. Atomic write-through replacement and failure cleanup. [Push 38837554257](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38837554257) and [PR 38837559911](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/38837559911) SUCCESS 3/3.
+- Shared UI RED `049cae7bbc01c09a7d1c9552c7cc3b69afcb2180` missing `ExportCsv`; functional `c65f21d253149a95fde67c8f8e86f1dee41bb0a0` enables explicit Desktop/XR Review `Export results CSV` via the shared action coordinator, no ordinary Save/chemistry mutation. Real Unity XR export test source `2a621058d5d7eca93317965341682ff8520d267a` NOT_RUN.
+- Finite signed CSV numeric RED `2ad97766f6f39311c9afb56a67088aa4e3990848` detected a leading-text escape; GREEN `861c5f17ffaaefb817afa496e66542b4359a88f7` preserves scientific signed numeric precision while protecting metadata from spreadsheet formula interpretation. Headless CI passing; Native matrix check separately.
+
+**Unimplemented / acceptance open:** complete event-time/material-transaction journal and replay, fork/branch UI, full portable import, comparison of two known runs, graph provenance, actual Unity rendered interaction, disk fault and device acceptance. Native command receipt sequence is not a simulation/material event timestamp.

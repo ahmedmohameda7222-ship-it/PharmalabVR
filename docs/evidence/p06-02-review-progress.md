@@ -1,0 +1,15 @@
+# P06.02 continuation — live recorded Review without implicit save
+
+Functional code: `8bba4902b97d2a031315634c7e772eca6af8d1bf`. Local Windows Unity 6000.3.25f1. **P06.02 remains Open; G-R1 remains Open.**
+
+## Red, change, green
+
+- A new Lab-scene PlayMode test requested Review through `LabPanelController` and failed: the action returned false unless a mismatched saved session had already supplied `RecordedReview`. The live path now snapshots the native session export into `RecordedSessionReview` without running chemistry again. The test sees a model identity, unchanged native event sequence, and a working return to Lab.
+- The initial implementation used `SaveService.Save` while opening Review. Tests then showed it wrote a durable file and changed an Unsaved session to Saved without an explicit Save action. `RecordedSessionReview.FromJson` now applies the same bounded validation directly to `CoreSession.ExportSession()`. Review retains a recorded snapshot in memory; explicit Save remains a separate action. The live Lab test and VR presenter test assert there is no implicit durable path.
+- A held-session test showed Review could report a successful return to the operating Lab even while `ScreenRouter` refused the transition. `LabPanelController` now rejects that action before closing the recorded snapshot. The green test keeps Review visible under the hold.
+- Adding Review to the spatial panel initially made it touch Measure with a 0-pixel gap. A PlayMode layout assertion failed, then the panel height and button centers were adjusted. The current Editor XR camera render shows separated, readable buttons. The VR presenter test invokes the Review button callback through the real controller and observes the recorded state; it does **not** inject an XR controller ray/trigger into a Player.
+- A Review screenshot initially showed only an observation count. A red PlayMode assertion required a recorded vessel identity. The current Review render shows each represented vessel's recorded pH display and freshness; the captured state honestly reads `-- / Absent`, without computing or inventing a value.
+
+## Verification and limits
+
+Unity PlayMode **33/33** and EditMode **22/22** passed. Native CTest **1/1** passed in isolation; the prior round's failure when concurrent with a Unity build remains an open reliability concern. Fresh WindowsDesktop, WindowsVR and AndroidVR builds reported Success; exact binary hashes are in `artifact-manifest-p06-02-review.json`. The Lab and Review images are Unity Editor XR camera RenderTextures, not standalone Player or physical headset screenshots. An actual WindowsDesktop Player launched to Home at this functional SHA, but its 640×400 client window clipped the right side of the menu; synthetic mouse attempts did not demonstrate a transition. Its Home image/log are preserved, and no Player Review journey is claimed. This scope does not complete Review history/navigation, persistent index, Setup preferences, tracked-ray clicking, Arabic/English, or a student/instructor/expert journey. The historical 95-item catalog remains unchanged.

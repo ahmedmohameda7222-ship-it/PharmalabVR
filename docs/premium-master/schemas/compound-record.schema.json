@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PharmaLabVR compound reference metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "names",
+    "formIdentity",
+    "sources",
+    "simulationStatus"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "names": {
+      "type": "object",
+      "required": [
+        "en",
+        "ar"
+      ],
+      "properties": {
+        "en": {
+          "type": "string"
+        },
+        "ar": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "formula": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cid": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1
+    },
+    "inchiKey": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "formIdentity": {
+      "type": "string"
+    },
+    "familyTags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "properties": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "value",
+          "unit",
+          "conditions",
+          "sourceId",
+          "kind"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "number",
+              "string",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "conditions": {
+            "type": "object"
+          },
+          "sourceId": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "Measured",
+              "Predicted",
+              "Reported",
+              "Unknown"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "url",
+          "retrievedAt",
+          "license"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          },
+          "retrievedAt": {
+            "type": "string"
+          },
+          "license": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "simulationStatus": {
+      "enum": [
+        "ReferenceOnly",
+        "SupportedResearch",
+        "PublishedWithinCoverage",
+        "DataPending"
+      ]
+    }
+  }
+}

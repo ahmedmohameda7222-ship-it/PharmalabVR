@@ -1,0 +1,374 @@
+{
+  "schemaVersion": 1,
+  "scope": "Independent ideal reference, not empirical validation",
+  "constants": {
+    "temperatureK": 298.15,
+    "Ka": 1.8e-05,
+    "Kw": 1e-14,
+    "activityConvention": "Ideal",
+    "volumeConvention": "Additive",
+    "atmosphere": "No exchange"
+  },
+  "cases": [
+    {
+      "id": "strong-0",
+      "volumeM3": 2.4999999999999998e-05,
+      "sodiumMol": 0.0,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 0.9999999999995657,
+      "expectedChargeResidualMolPerL": 3.3389432109872823e-18
+    },
+    {
+      "id": "strong-5",
+      "volumeM3": 2.9999999999999997e-05,
+      "sodiumMol": 0.0005,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 1.176091259054704,
+      "expectedChargeResidualMolPerL": 1.8886202811842327e-17
+    },
+    {
+      "id": "strong-12.5",
+      "volumeM3": 3.75e-05,
+      "sodiumMol": 0.00125,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 1.4771212547157537,
+      "expectedChargeResidualMolPerL": -3.860955774872679e-18
+    },
+    {
+      "id": "strong-20",
+      "volumeM3": 4.4999999999999996e-05,
+      "sodiumMol": 0.002,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 1.9542425094041471,
+      "expectedChargeResidualMolPerL": -4.643908620924507e-18
+    },
+    {
+      "id": "strong-24.9",
+      "volumeM3": 4.989999999999999e-05,
+      "sodiumMol": 0.00249,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 3.69810043748367,
+      "expectedChargeResidualMolPerL": -6.545686465297363e-19
+    },
+    {
+      "id": "strong-24.99",
+      "volumeM3": 4.9989999999999994e-05,
+      "sodiumMol": 0.002499,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 4.698872284139764,
+      "expectedChargeResidualMolPerL": -1.733878304185931e-18
+    },
+    {
+      "id": "strong-24.999",
+      "volumeM3": 4.9998999999999993e-05,
+      "sodiumMol": 0.0024999,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 5.697879674300189,
+      "expectedChargeResidualMolPerL": -3.4526469137126622e-18
+    },
+    {
+      "id": "strong-25",
+      "volumeM3": 4.9999999999999996e-05,
+      "sodiumMol": 0.0025,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 7.000000000002579,
+      "expectedChargeResidualMolPerL": -4.6572253720205585e-18
+    },
+    {
+      "id": "strong-25.001",
+      "volumeM3": 5.0001000000000005e-05,
+      "sodiumMol": 0.0025001000000000003,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 8.302103040136224,
+      "expectedChargeResidualMolPerL": 2.117582368135751e-21
+    },
+    {
+      "id": "strong-25.01",
+      "volumeM3": 5.0010000000000004e-05,
+      "sodiumMol": 0.002501,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 9.300954006750299,
+      "expectedChargeResidualMolPerL": 1.3552527156068805e-20
+    },
+    {
+      "id": "strong-25.1",
+      "volumeM3": 5.01e-05,
+      "sodiumMol": 0.00251,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 10.300162383141071,
+      "expectedChargeResidualMolPerL": 5.421010862427522e-19
+    },
+    {
+      "id": "strong-37.5",
+      "volumeM3": 6.25e-05,
+      "sodiumMol": 0.00375,
+      "chlorideMol": 0.0025,
+      "acetateMol": 0,
+      "expectedPH": 12.301029995674838,
+      "expectedChargeResidualMolPerL": 6.938893903907228e-18
+    },
+    {
+      "id": "weak-0",
+      "volumeM3": 2.4999999999999998e-05,
+      "sodiumMol": 0.0,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 2.8752770603192666,
+      "expectedChargeResidualMolPerL": -1.4984356116882783e-19
+    },
+    {
+      "id": "weak-5",
+      "volumeM3": 2.9999999999999997e-05,
+      "sodiumMol": 0.0005,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 4.144996399805036,
+      "expectedChargeResidualMolPerL": -4.00430922555955e-18
+    },
+    {
+      "id": "weak-12.5",
+      "volumeM3": 3.75e-05,
+      "sodiumMol": 0.00125,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 4.745196012764021,
+      "expectedChargeResidualMolPerL": 3.3314941637890244e-17
+    },
+    {
+      "id": "weak-20",
+      "volumeM3": 4.4999999999999996e-05,
+      "sodiumMol": 0.002,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 5.34700716132965,
+      "expectedChargeResidualMolPerL": 1.0033558555202867e-17
+    },
+    {
+      "id": "weak-24.9",
+      "volumeM3": 4.989999999999999e-05,
+      "sodiumMol": 0.00249,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 7.140783315880762,
+      "expectedChargeResidualMolPerL": -1.2726828851173473e-17
+    },
+    {
+      "id": "weak-24.99",
+      "volumeM3": 4.9989999999999994e-05,
+      "sodiumMol": 0.002499,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 8.115216726973966,
+      "expectedChargeResidualMolPerL": 4.587318684092477e-18
+    },
+    {
+      "id": "weak-24.999",
+      "volumeM3": 4.9998999999999993e-05,
+      "sodiumMol": 0.0024999,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 8.639997218193088,
+      "expectedChargeResidualMolPerL": 9.740878893424454e-20
+    },
+    {
+      "id": "weak-25",
+      "volumeM3": 4.9999999999999996e-05,
+      "sodiumMol": 0.0025,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 8.721904031582177,
+      "expectedChargeResidualMolPerL": -9.489310108089927e-18
+    },
+    {
+      "id": "weak-25.001",
+      "volumeM3": 5.0001000000000005e-05,
+      "sodiumMol": 0.0025001000000000003,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 8.803806791568629,
+      "expectedChargeResidualMolPerL": -1.2705494208814505e-20
+    },
+    {
+      "id": "weak-25.01",
+      "volumeM3": 5.0010000000000004e-05,
+      "sodiumMol": 0.002501,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 9.328385300560178,
+      "expectedChargeResidualMolPerL": 9.04292374488691e-18
+    },
+    {
+      "id": "weak-25.1",
+      "volumeM3": 5.01e-05,
+      "sodiumMol": 0.00251,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 10.30046426372142,
+      "expectedChargeResidualMolPerL": 4.336808689942018e-19
+    },
+    {
+      "id": "weak-37.5",
+      "volumeM3": 6.25e-05,
+      "sodiumMol": 0.00375,
+      "chlorideMol": 0,
+      "acetateMol": 0.0025,
+      "expectedPH": 12.301030019802308,
+      "expectedChargeResidualMolPerL": -5.204170427930421e-17
+    },
+    {
+      "id": "buffer-0.1",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0.0001,
+      "chlorideMol": 0,
+      "acetateMol": 0.0011,
+      "expectedPH": 3.8135186490045783,
+      "expectedChargeResidualMolPerL": 9.629664330819729e-19
+    },
+    {
+      "id": "buffer-1",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0.001,
+      "chlorideMol": 0,
+      "acetateMol": 0.002,
+      "expectedPH": 4.746285310184657,
+      "expectedChargeResidualMolPerL": 1.0115923410336609e-17
+    },
+    {
+      "id": "buffer-10",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0.01,
+      "chlorideMol": 0,
+      "acetateMol": 0.011,
+      "expectedPH": 5.744813209700059,
+      "expectedChargeResidualMolPerL": -1.0632488603889237e-18
+    },
+    {
+      "id": "mixed-0",
+      "volumeM3": 9.999999999999999e-06,
+      "sodiumMol": 0.0,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 0.9999218621495842,
+      "expectedChargeResidualMolPerL": 1.1869565666484926e-17
+    },
+    {
+      "id": "mixed-5",
+      "volumeM3": 1.4999999999999999e-05,
+      "sodiumMol": 0.0005,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 1.4766532267536565,
+      "expectedChargeResidualMolPerL": 5.932734270435383e-18
+    },
+    {
+      "id": "mixed-9.9",
+      "volumeM3": 1.99e-05,
+      "sodiumMol": 0.00099,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 2.910700256294806,
+      "expectedChargeResidualMolPerL": -5.01609032985523e-18
+    },
+    {
+      "id": "mixed-10",
+      "volumeM3": 1.9999999999999998e-05,
+      "sodiumMol": 0.001,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 3.0269987602135338,
+      "expectedChargeResidualMolPerL": -4.181261156225314e-20
+    },
+    {
+      "id": "mixed-10.1",
+      "volumeM3": 2.01e-05,
+      "sodiumMol": 0.00101,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 3.1435951345690807,
+      "expectedChargeResidualMolPerL": 6.5009805294331775e-18
+    },
+    {
+      "id": "mixed-15",
+      "volumeM3": 2.4999999999999998e-05,
+      "sodiumMol": 0.0015,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 4.745507797719119,
+      "expectedChargeResidualMolPerL": 1.2122794167529461e-17
+    },
+    {
+      "id": "mixed-19.99",
+      "volumeM3": 2.9989999999999996e-05,
+      "sodiumMol": 0.001999,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 7.737462586801062,
+      "expectedChargeResidualMolPerL": -6.1354831534365245e-18
+    },
+    {
+      "id": "mixed-20",
+      "volumeM3": 2.9999999999999997e-05,
+      "sodiumMol": 0.002,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 8.633892337055585,
+      "expectedChargeResidualMolPerL": 1.6093625997831706e-20
+    },
+    {
+      "id": "mixed-20.01",
+      "volumeM3": 3.001e-05,
+      "sodiumMol": 0.002001,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 9.529803623303348,
+      "expectedChargeResidualMolPerL": -1.0842021724855044e-19
+    },
+    {
+      "id": "mixed-25",
+      "volumeM3": 3.5e-05,
+      "sodiumMol": 0.0025,
+      "chlorideMol": 0.001,
+      "acetateMol": 0.001,
+      "expectedPH": 12.15490199378548,
+      "expectedChargeResidualMolPerL": -4.163336342344337e-17
+    },
+    {
+      "id": "pure-water",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0,
+      "chlorideMol": 0,
+      "acetateMol": 0,
+      "expectedPH": 7.0,
+      "expectedChargeResidualMolPerL": -1.3234889800848443e-23
+    },
+    {
+      "id": "neutral-salt",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0.01,
+      "chlorideMol": 0.01,
+      "acetateMol": 0,
+      "expectedPH": 7.000000000012488,
+      "expectedChargeResidualMolPerL": 1.4558378780933287e-22
+    },
+    {
+      "id": "dilute-acid",
+      "volumeM3": 9.999999999999999e-05,
+      "sodiumMol": 0,
+      "chlorideMol": 1e-10,
+      "acetateMol": 0,
+      "expectedPH": 6.997828536638183,
+      "expectedChargeResidualMolPerL": 3.3087224502121107e-22
+    }
+  ]
+}
