@@ -23,7 +23,12 @@ returns boolean language sql stable security definer set search_path = '' as $$
 $$;
 create function plv_private.can_manage_section(p_tenant uuid, p_section uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
- select (select plv_private.active_member(p_tenant)) and
+ -- A tenant admin is never authorized over a foreign or nonexistent section.
+ select exists (
+   select 1 from public.course_sections scope_section
+   where scope_section.institution_id = p_tenant
+     and scope_section.id = p_section
+ ) and (select plv_private.active_member(p_tenant)) and
  ((select plv_private.is_admin(p_tenant)) or exists (
   select 1 from public.section_staff s
   join public.institution_memberships m
@@ -47,7 +52,12 @@ returns boolean language sql stable security definer set search_path = '' as $$
 $$;
 create function plv_private.can_view_course(p_tenant uuid,p_course uuid)
 returns boolean language sql stable security definer set search_path = '' as $$
- select (select plv_private.active_member(p_tenant)) and
+ -- Tenant roles cannot be asserted for a course ID belonging elsewhere.
+ select exists (
+   select 1 from public.courses scope_course
+   where scope_course.institution_id = p_tenant
+     and scope_course.id = p_course
+ ) and (select plv_private.active_member(p_tenant)) and
  ((select plv_private.is_admin(p_tenant)) or exists (
   select 1 from public.course_sections s
   where s.institution_id = p_tenant and s.course_id = p_course
