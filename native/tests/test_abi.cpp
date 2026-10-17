@@ -2491,6 +2491,11 @@ TEST_CASE("P11_01 post-tick checkpoint failure reports committed simulation and 
     CHECK(snapshot["hold"]["reason"] == "Storage");
     CHECK(snapshot["hold"]["recoveryReady"] == false);
     CHECK(store.read().value() == *confirmed);
+    // Continue cannot bypass an unresolved durable-storage Hold.
+    submit(handle, command("2", "Continue"));
+    const auto blocked = poll(handle);
+    CHECK(blocked["accepted"] == false);
+    CHECK(blocked["code"] == "RecoveryNotReady");
     // A failed earlier write may never unblock progression until it succeeds.
     CHECK(plv_step(handle, 0.020, 1'501'000'000ULL) == PLV_INTERNAL_ERROR);
     CHECK(json::parse(read_text(handle, false))["simulationTimeS"] ==
@@ -2500,7 +2505,13 @@ TEST_CASE("P11_01 post-tick checkpoint failure reports committed simulation and 
     const auto persisted = json::parse(*store.read());
     CHECK(persisted["simulationTimeS"] == snapshot["simulationTimeS"]);
     CHECK(json::parse(read_text(handle, false))["hold"]["active"] == true);
-    // Storage Hold cannot silently resume transport after disk repair.
+    CHECK(json::parse(read_text(handle, false))["hold"]["recoveryReady"] == true);
+    submit(handle, command("3", "Continue"));
+    CHECK(poll(handle)["accepted"] == true);
+    CHECK(json::parse(read_text(handle, false))["hold"]["active"] == false);
+    REQUIRE(plv_step(handle, 0.020, 1'503'000'000ULL) == PLV_OK);
+    CHECK(json::parse(read_text(handle, false))["simulationTimeS"].get<double>() >
+          snapshot["simulationTimeS"].get<double>());
     REQUIRE(plv_destroy(handle) == PLV_OK);
     fs::remove_all(directory);
 }
