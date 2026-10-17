@@ -20,6 +20,8 @@ jobs:
         run: dotnet run --project tools/notebook-contract/NotebookContract.csproj --configuration Release
       - name: Verify paused-Review regression RED then GREEN (headless)
         run: python tools/panel-contract/check_regression.py
+      - name: Exercise source-linked U02 membership selector security contract (headless; not Supabase)
+        run: dotnet run --project tools/university-contract/UniversityContract.csproj --configuration Release
   native:
     strategy:
       fail-fast: false
