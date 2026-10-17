@@ -57,6 +57,19 @@ class UniversitySqlGuardrails(unittest.TestCase):
         ):
             self.assertIn(marker, CORE)
 
+    def test_u01_private_role_helpers_require_tenant_matching_ids(self):
+        # Static early-warning guard only. Executable Postgres fixture below
+        # must exercise both positive and forbidden helper calls with real RLS.
+        section = RLS.split("create function plv_private.can_manage_section(", 1)[1].split("$;", 1)[0]
+        course = RLS.split("create function plv_private.can_view_course(", 1)[1].split("$;", 1)[0]
+        self.assertIn("from public.course_sections scope_section", section)
+        self.assertIn("scope_section.institution_id = p_tenant", section)
+        self.assertIn("scope_section.id = p_section", section)
+        self.assertIn("from public.courses scope_course", course)
+        self.assertIn("scope_course.institution_id = p_tenant", course)
+        self.assertIn("scope_course.id = p_course", course)
+        self.assertIn("forged other-tenant admin helper returned true", FIXTURE)
+
     def test_u01_private_storage_no_client_upload(self):
         self.assertIn("'plv-university-evidence',false,52428800", RLS)
         self.assertIn("create policy plv_evidence_read", RLS)
