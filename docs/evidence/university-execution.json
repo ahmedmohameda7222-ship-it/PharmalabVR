@@ -24,7 +24,14 @@
         "SQL fixture not run against Supabase or PostgreSQL",
         "RLS policy review and additional server roles required",
         "No project provisioned"
-      ]
+      ],
+      "securityRegression": {
+        "redTestSourceSha": "de8118b40482677c1af636362076232a97098cea",
+        "fixSha": "704afb501c67bbd86948f506bd4f3560b7a8e5fe",
+        "scope": "Reject tenant A admin checking foreign or missing tenant B course/section IDs",
+        "staticSourcePredicateCheck": "Six required section/course matching markers seen; full CI results and PostgreSQL execution remain separate",
+        "realPostgresRlsExecuted": false
+      }
     },
     {
       "id": "U02",
