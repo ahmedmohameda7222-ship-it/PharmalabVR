@@ -224,6 +224,32 @@ class UniversitySqlGuardrails(unittest.TestCase):
             self.assertIn(marker, grade)
         self.assertNotIn("grant insert on public.grades", grade)
 
+    def test_u03_admin_enrollment_is_private_scoped_audited(self):
+        migration = ROOT / "supabase/migrations/20261018050000_section_enrollment_rpc.sql"
+        sql = migration.read_text(encoding="utf-8").lower() if migration.exists() else ""
+        for required in (
+            "create function plv_private.university_enroll_student(",
+            "create function public.university_enroll_student(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.is_admin(p_institution_id)",
+            "m.role = 'student'",
+            "u.email_confirmed_at is not null",
+            "s.institution_id = p_institution_id",
+            "insert into public.enrollments",
+            "insert into public.audit_events",
+            "'enrollmentcreated'",
+            "grant execute on function public.university_enroll_student",
+            "revoke all on function public.university_enroll_student",
+        ):
+            self.assertIn(required, sql)
+        self.assertNotIn("grant insert on public.enrollments", sql)
+        self.assertIn("anon_enrollment_bypass", SMOKE)
+        self.assertIn("unauthorized_enrollment_bypass", SMOKE)
+        self.assertIn("enrollment_admin_pass", FIXTURE)
+        self.assertIn("enrollment_cross_tenant_rejected", FIXTURE)
+        self.assertIn("enrollment_student_rejected", FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
