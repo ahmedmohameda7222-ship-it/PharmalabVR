@@ -935,5 +935,81 @@ begin
    raise exception 'lesson publish audit missing';
  end if;
 end $$;
+-- U03 rubric publication: instructor-only canonical JSON version.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ begin
+  perform public.university_publish_rubric_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000304',1,
+   '{"maxScore":100}'::jsonb,
+   encode(extensions.digest('{"maxScore":100}'::jsonb::text,'sha256'),'hex'),
+   'aaaa0000-0000-4000-8000-000000000130');
+  raise exception 'rubric_student_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_publish_rubric_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000304',1,
+   '{"maxScore":100}'::jsonb,
+   encode(extensions.digest('{"maxScore":100}'::jsonb::text,'sha256'),'hex'),
+   'aaaa0000-0000-4000-8000-000000000131');
+  raise exception 'rubric_foreign_tenant_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+declare rid uuid; retry uuid;
+        content jsonb := '{"maxScore":100}'::jsonb;
+        digest text := encode(extensions.digest('{"maxScore":100}'::jsonb::text,'sha256'),'hex');
+begin
+ rid := public.university_publish_rubric_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000304',1,content,digest,
+   'aaaa0000-0000-4000-8000-000000000132');
+ if rid is null then raise exception 'rubric_instructor_published'; end if;
+ retry := public.university_publish_rubric_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000304',1,content,digest,
+   'aaaa0000-0000-4000-8000-000000000132');
+ if rid is distinct from retry then raise exception 'rubric_retry_stable'; end if;
+ begin
+  perform public.university_publish_rubric_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000304',1,content,repeat('0',64),
+   'aaaa0000-0000-4000-8000-000000000133');
+  raise exception 'rubric_bad_digest_rejected';
+ exception when invalid_parameter_value then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ begin
+  update public.rubric_versions set rubric_json='{"maxScore":1}'::jsonb
+   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     and rubric_id='aaaa0000-0000-4000-8000-000000000304';
+  raise exception 'rubric_immutable_published';
+ exception when check_violation then null;
+ end;
+ if (select count(*) from public.audit_events
+   where action='RubricPublished' and
+     request_id='aaaa0000-0000-4000-8000-000000000132') <> 1 then
+  raise exception 'rubric audit missing';
+ end if;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

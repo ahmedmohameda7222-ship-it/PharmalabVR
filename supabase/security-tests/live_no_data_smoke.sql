@@ -16,6 +16,17 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_publish_rubric_version(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'aaaa0000-0000-4000-8000-000000000304'::uuid,1,
+      '{"maxScore":100}'::jsonb,
+      '3f912fd5540fc99141005c6ccf3f6c0c6fef126479e54c537fe90273edf13c7d',
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'ANON_RUBRIC_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_publish_lesson_version(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'aaaa0000-0000-4000-8000-000000000001'::uuid,
@@ -149,6 +160,17 @@ begin
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
       repeat('a',64));
     raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_publish_rubric_version(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'aaaa0000-0000-4000-8000-000000000304'::uuid,1,
+      '{"maxScore":100}'::jsonb,
+      '3f912fd5540fc99141005c6ccf3f6c0c6fef126479e54c537fe90273edf13c7d',
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'UNAUTHORIZED_RUBRIC_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin

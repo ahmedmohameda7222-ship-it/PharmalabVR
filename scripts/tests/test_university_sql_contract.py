@@ -386,6 +386,33 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "lesson_bad_digest_rejected", "lesson_immutable_published"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u03_published_rubric_is_canonical_and_staff_authorized(self):
+        path = ROOT / "supabase/migrations/20261018110000_rubric_publication_rpc.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for required in (
+            "create function plv_private.university_publish_rubric_version(",
+            "create function public.university_publish_rubric_version(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role in ('university_admin','instructor')",
+            "st.role = 'instructor'",
+            "extensions.digest(p_rubric_json::text,'sha256')",
+            "insert into public.rubric_versions",
+            "insert into public.audit_events",
+            "'rubricpublished'",
+            "revoke all on function public.university_publish_rubric_version",
+            "grant execute on function public.university_publish_rubric_version",
+        ):
+            self.assertIn(required, sql)
+        self.assertNotIn("grant insert on public.rubric_versions", sql)
+        for name in ("anon_rubric_bypass","unauthorized_rubric_bypass"):
+            self.assertIn(name, SMOKE)
+        for name in ("rubric_student_rejected","rubric_foreign_tenant_rejected",
+                     "rubric_instructor_published","rubric_retry_stable",
+                     "rubric_bad_digest_rejected","rubric_immutable_published"):
+            self.assertIn(name, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
