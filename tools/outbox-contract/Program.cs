@@ -1,5 +1,9 @@
 using System;
 using System.IO;
+using System.Net;
+using System.Net.Http;
+using System.Threading;
+using System.Threading.Tasks;
 using PharmaLabVR.University;
 
 internal static class Program
@@ -129,6 +133,60 @@ internal static class Program
             Check(verifier.Pending().Count == 1,
                 "Rejected evidence changed the durable outbox.");
 
+            // U04 staging HTTP is deliberately not a Native attestation or
+            // a queue acknowledgement. Use a fake HTTP handler, no network.
+            var mock = new RecordingHandler();
+            using (var client = new HttpClient(mock))
+            {
+                var endpoint = new Uri("https://example.supabase.co/functions/v1/student-evidence-upload");
+                var uploadId = "aaaa0000-0000-4000-8000-000000000082";
+                var registeredSessionId = "aaaa0000-0000-4000-8000-000000000051";
+                var outcome = UniversityStagingTransport.UploadAsync(client, endpoint,
+                    tenantA, registeredSessionId, uploadId, "student-token",
+                    System.Text.Encoding.UTF8.GetBytes("{\\"export\\":true}"))
+                    .GetAwaiter().GetResult();
+                Check(outcome == UniversityStagingResult.StagedUnverified,
+                    "A successful staged response must remain UNVERIFIED.");
+                Check(mock.RequestCount == 1 && mock.Method == "POST",
+                    "Staging did not submit one authenticated POST.");
+                Check(mock.Auth == "Bearer student-token" &&
+                    mock.Session == registeredSessionId && mock.Artifact == uploadId,
+                    "Staging request omitted identity or Authorization.");
+                Check(mock.Body == "{\\"export\\":true}" &&
+                    mock.BodyDigest == Hash(System.Text.Encoding.UTF8.GetBytes(mock.Body)),
+                    "Staged evidence bytes or computed header SHA were altered.");
+                Check(verifier.Pending().Count == 1,
+                    "Quarantine-only result removed the Native outbox intent.");
+
+                MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
+                        tenantA, registeredSessionId, uploadId, "bad\r\ntoken",
+                        evidenceBytes).GetAwaiter().GetResult(),
+                    "A header-injection token was accepted.");
+                MustReject(() => UniversityStagingTransport.UploadAsync(client,
+                        new Uri("http://example.supabase.co/functions/v1/student-evidence-upload"),
+                        tenantA, registeredSessionId, uploadId, "student-token",
+                        evidenceBytes).GetAwaiter().GetResult(),
+                    "HTTP plaintext leaked bearer credentials.");
+                MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
+                        tenantA, "local-session-2", uploadId, "student-token",
+                        evidenceBytes).GetAwaiter().GetResult(),
+                    "Unregistered local session label was used instead of a UUID.");
+                MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
+                        tenantA, registeredSessionId, uploadId, "student-token",
+                        new byte[1048577]).GetAwaiter().GetResult(),
+                    "Oversized Unity upload bypassed preflight size cap.");
+                Check(mock.RequestCount == 1,
+                    "Rejected staging attempts reached HTTP.");
+                mock.Status=HttpStatusCode.Forbidden;
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\\"export\\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
+                    "Rejected HTTP response falsely acknowledged staging.");
+                Check(verifier.Pending().Count == 1,
+                    "Failed cloud staging modified the durable Native queue.");
+            }
+
             var damaged = File.ReadAllBytes(path);
             damaged[damaged.Length - 2] ^= 0x01;
             File.WriteAllBytes(path, damaged);
@@ -142,6 +200,33 @@ internal static class Program
         finally
         {
             if (Directory.Exists(directory)) Directory.Delete(directory, true);
+        }
+    }
+
+    private sealed class RecordingHandler : HttpMessageHandler
+    {
+        internal int RequestCount;
+        internal string Method;
+        internal string Auth;
+        internal string Session;
+        internal string Artifact;
+        internal string Body;
+        internal string BodyDigest;
+        internal HttpStatusCode Status = HttpStatusCode.Created;
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            RequestCount++;
+            Method = request.Method.Method;
+            Auth = request.Headers.Authorization?.ToString();
+            Session = string.Join("", request.Headers.GetValues("x-session-id"));
+            Artifact = string.Join("", request.Headers.GetValues("x-artifact-id"));
+            BodyDigest = string.Join("", request.Headers.GetValues("x-evidence-sha256"));
+            Body = await request.Content.ReadAsStringAsync();
+            return new HttpResponseMessage(Status) {
+                Content = new StringContent("{\"state\":\"staged_unverified\"}")
+            };
         }
     }
 }
