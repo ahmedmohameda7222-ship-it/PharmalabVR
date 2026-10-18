@@ -105,7 +105,7 @@
     },
     {
       "id": "U04",
-      "status": "PartialCodeImplemented_PendingServerTransportAndUnity",
+      "status": "PartialDeployed_ReadOnlyEvidenceStatusPlusOfflineOutbox",
       "initialRedSha": "38bf18223220eaa2394e2bb8944fb609a4ffc1fa",
       "initialGreenSha": "aa0216bd3c81e4d825f02acab9c00e8c3a52f0c4",
       "lockRedSha": "5cd2a6a33a4ea92becb92c64b856c404ce17c277",
@@ -120,10 +120,17 @@
         "Signed/authorized server acknowledgement and protocol",
         "Actual Native receipt producer integration and hash verification against exported bytes",
         "Cloud upload/download, retries, conflict/fork semantics",
-        "Unity Editor/Player and device verification"
+        "Unity Editor/Player and device verification",
+        "Live student identity HTTP/JWT read endpoint verification",
+        "Attested private Storage upload and signed server acknowledgment"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
-      "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN."
+      "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
+      "readOnlyEdgeFunction": "student-evidence-status",
+      "readOnlyEdgeVersion": 1,
+      "edgeSourceSha": "d291711842bd20053d6353a1a470bb73b8abe439",
+      "edgeAccessTestSourceSha": "639e4a15d24e619c3b5964b1246e233bd8b416e8",
+      "edgeEvidence": "Supabase ACTIVE version 1 verify_jwt=true; pure Node policy headless green; actual authorized HTTP request still NOT_RUN as Auth users=0"
     },
     {
       "id": "U05",
