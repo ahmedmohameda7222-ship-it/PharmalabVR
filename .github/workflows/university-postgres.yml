@@ -1,0 +1,43 @@
+name: University PostgreSQL tenant isolation
+
+on:
+  push:
+    branches: [feat/foundation-vr-first]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/university-postgres.yml"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/university-postgres.yml"
+
+jobs:
+  disposable-supabase:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Start isolated local Supabase (never link or use remote keys)
+        run: supabase start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Verify ten source migrations and core RLS enablement
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "host=127.0.0.1 port=54322 user=postgres dbname=postgres sslmode=disable" \
+            -X -v ON_ERROR_STOP=1 -c "select count(*) as rls_enabled from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity;"
+      - name: Execute disposable two-university Auth RLS and academic fixture
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "host=127.0.0.1 port=54322 user=postgres dbname=postgres sslmode=disable" \
+            -X -v ON_ERROR_STOP=1 -f supabase/security-tests/tenant_isolation.sql
+      - name: Destroy isolated stack without backups
+        if: always()
+        run: supabase stop --no-backup

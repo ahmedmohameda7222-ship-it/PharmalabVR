@@ -1,0 +1,22 @@
+# Ephemeral GitHub Actions/local instance, never linked to production.
+project_id = "pharmalabvr"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[auth]
+enabled = true
+
+[storage]
+enabled = true
+
+[studio]
+enabled = false
