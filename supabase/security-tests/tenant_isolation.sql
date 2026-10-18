@@ -811,6 +811,10 @@ begin
     raise exception 'feedback_changed_payload_rejected';
   exception when unique_violation then null;
   end;
+  perform public.university_record_feedback(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+    'Private instructor note: not released.',false,
+    'aaaa0000-0000-4000-8000-000000000123');
 end $$;
 reset role;
 do $$
@@ -831,6 +835,31 @@ begin
    raise exception 'feedback_audited_once';
  end if;
 end $$;
+
+-- Student sees released feedback only; private instructor note stays private.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ if (select count(*) from public.feedback where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 1 then
+  raise exception 'student feedback visibility breached';
+ end if;
+end $$;
+select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
+do $$
+begin
+ if (select count(*) from public.feedback where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 0 then
+  raise exception 'foreign student feedback leaked';
+ end if;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+begin
+ if (select count(*) from public.feedback where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') <> 2 then
+  raise exception 'instructor feedback review limited';
+ end if;
+end $$;
+reset role;
 
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
