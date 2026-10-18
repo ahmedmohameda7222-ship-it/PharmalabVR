@@ -20,3 +20,16 @@ TEST_CASE("P11_01 checkpoint paths reject relative working-directory traversal")
                     std::invalid_argument);
 
 }
+
+TEST_CASE("P11_01 disk WAL refuses relative and directory destinations") {
+    CHECK_THROWS_AS(plv::DurableJournal("./receipts.wal", 256),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(plv::DurableJournal("../other/receipts.wal", 256),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(plv::DurableJournal(
+        std::filesystem::temp_directory_path().string(), 256),
+        std::invalid_argument);
+    const auto fullPath = (std::filesystem::temp_directory_path() /
+                           "plv-journal-absolute.wal").string();
+    CHECK_NOTHROW(plv::DurableJournal(fullPath, 256));
+}
