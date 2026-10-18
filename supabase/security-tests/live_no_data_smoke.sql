@@ -20,7 +20,8 @@ begin
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'aaaa0000-0000-4000-8000-000000000001'::uuid,
       'aaaa0000-0000-4000-8000-000000000204'::uuid,1,
-      '{"title":"Molarity"}'::jsonb,repeat('0',64),
+      '{"title":"Molarity"}'::jsonb,
+      '3c6f2beedbae5d44abd3849ee0cea9406bc048806669f45f7e5ec5966ebbcebe',
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
     raise exception 'ANON_LESSON_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
@@ -155,7 +156,8 @@ begin
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'aaaa0000-0000-4000-8000-000000000001'::uuid,
       'aaaa0000-0000-4000-8000-000000000204'::uuid,1,
-      '{"title":"Molarity"}'::jsonb,repeat('0',64),
+      '{"title":"Molarity"}'::jsonb,
+      '3c6f2beedbae5d44abd3849ee0cea9406bc048806669f45f7e5ec5966ebbcebe',
       'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
     raise exception 'UNAUTHORIZED_LESSON_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
