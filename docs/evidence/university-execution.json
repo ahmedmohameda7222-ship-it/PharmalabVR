@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "13 deployed Free-plan migrations; 47-block synthetic Postgres tenant and lesson publication tests PASS. Real verified Auth onboarding, U04 trusted upload, rubric/assignment authoring, Unity and institutional pilot NOT_RUN; G-U1 OPEN."
+    "reason": "Owner-authorized 15 migrations applied and synthetic 56-block two-tenant PostgreSQL CI GREEN; real verified Auth identities, trusted Native cloud evidence upload/attestation, real end-to-end student pilot and final Unity Editor/Player/XR tests NOT_RUN. Gate G-U1 OPEN."
   },
   "tasks": [
     {
@@ -79,7 +79,7 @@
     },
     {
       "id": "U03",
-      "status": "PartialDeployed_AdminCourseSectionStaffEnrollmentSubmissionGradesFeedbackLessons",
+      "status": "PartialDeployed_AcademicPublishing_SubmissionsGradesFeedback",
       "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
       "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
@@ -89,13 +89,10 @@
       "remaining": [
         "Real verified U04 evidence upload+digest attestation",
         "Unity Editor/Player/XR tests deferred",
-        "Authorized enrollment/course publishing endpoints",
-        "Lesson/rubric version publication and assignment scheduling",
         "Validated Student Auth onboarding/first owner administrator",
         "Trusted Native evidence upload and positive graded submission integration",
         "Authorized grade appeal / replacement grade workflow (not implemented)",
-        "Real verified student/instructor end-to-end pilot and Native attested evidence upload",
-        "Rubric version authoring/publishing and assignment scheduling"
+        "Real verified student/instructor end-to-end pilot and Native attested evidence upload"
       ],
       "gradeApprovalMigration": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
       "gradeApprovalRemoteVersion": "20261018044135",
@@ -123,7 +120,19 @@
       "publishedLessonSourceSha": "78936b1f1a838426967c770d11f2be676503118b",
       "publishedLessonRemoteVersion": "20261018193506",
       "publishedLessonSecurity": "Server verifies SHA-256 of canonical jsonb text; only verified active assigned instructor or institution admin; immutable version and audited idempotency. No real users.",
-      "publishedLessonTest": "RED PostgreSQL 39159007745 absent RPC; GREEN 13/13 migrations, 16 RLS tables, 47 DO blocks push 39159245779/PR 39159251579, ROLLBACK; live denied-role smoke PASS after valid test hash correction."
+      "publishedLessonTest": "RED PostgreSQL 39159007745 absent RPC; GREEN 13/13 migrations, 16 RLS tables, 47 DO blocks push 39159245779/PR 39159251579, ROLLBACK; live denied-role smoke PASS after valid test hash correction.",
+      "rubricPublication": {
+        "source": "supabase/migrations/20261018110000_rubric_publication_rpc.sql",
+        "functionalSha": "2f5045510db102bf65fc294a88537b911998d51b",
+        "remoteVersion": "20261018210006",
+        "verified": "15? rubric CI at 14/14 migrations, 51 disposable DO blocks, push 39165679182 + PR 39165683724; live role denial smoke passed."
+      },
+      "assignmentPublication": {
+        "source": "supabase/migrations/20261018120000_assignment_publication_rpc.sql",
+        "functionalSha": "37170465f8216236053cd320636351c45c1590a1",
+        "remoteVersion": "20261018210953",
+        "verified": "15/15 local migrations; 56 DO blocks with real RLS and rollback, push 39166396995 and PR 39166400384; live denied-role smoke passed."
+      }
     },
     {
       "id": "U04",

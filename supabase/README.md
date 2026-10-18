@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Thirteen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Fifteen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -19,6 +19,8 @@
 | `20261018080000_section_staff_rpc.sql` | `section_staff_rpc_20261018` | `20261018060400` |
 | `20261018090000_instructor_feedback_rpc.sql` | `instructor_feedback_rpc_20261018` | `20261018191721` |
 | `20261018100000_lesson_publication_rpc.sql` | `lesson_publication_rpc_20261018` | `20261018193506` |
+| `20261018110000_rubric_publication_rpc.sql` | `rubric_publication_rpc_20261018` | `20261018210006` |
+| `20261018120000_assignment_publication_rpc.sql` | `assignment_publication_rpc_20261018` | `20261018210953` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -61,3 +63,6 @@ Owner-approved Supabase Free migrations now include audited `university_create_c
 
 ## U03 canonical lesson publication (partial)
 `public.university_publish_lesson_version` creates an immutable published lesson version once an active instructor assigned to the course (or a tenant admin) has been verified. The server recomputes SHA-256 from PostgreSQL's canonical `jsonb::text` representation; clients must hash those exact canonical bytes rather than an arbitrary input JSON file. Every accepted publication has an immutable audit request and idempotent exact replay. Synthetic multi-tenant PostgreSQL acceptance is verified; real Auth/HTTP and student assignment/lesson-visibility pilot remain open. Published lessons do not automatically become student assignments. See `docs/evidence/u03-lesson-publish-2026-10-18.md`.
+
+## U03 curriculum publication status
+An active assigned instructor or institution admin can now publish a canonical SHA-256-verified immutable rubric version and then publish a section assignment pinned to an already published lesson and rubric from that same course. The assignment is immutable after publication and its request is audited/idempotent. In isolated PostgreSQL, 56/56 fixture DO blocks passed against 15 migrations and 16 RLS tables (with ROLLBACK). These backend authoring functions do **not** prove actual student onboarding, Native evidence attachment or any Unity integration; see `docs/evidence/u03-rubric-assignment-2026-10-18.md`.

@@ -100,6 +100,20 @@
       "remote_version": "20261018193506",
       "blob_sha": "c083781ff3167c974e948b37eef8fd42ba53ee76",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018110000_rubric_publication_rpc.sql",
+      "name": "rubric_publication_rpc_20261018",
+      "remote_version": "20261018210006",
+      "blob_sha": "6c2ff8fb7e5886476aaf79609873a021a22efc6d",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018120000_assignment_publication_rpc.sql",
+      "name": "assignment_publication_rpc_20261018",
+      "remote_version": "20261018210953",
+      "blob_sha": "738fae7c3f87f8179d2a76c24a049b3a07a6cb52",
+      "applied": true
     }
   ],
   "verified": {
@@ -141,7 +155,10 @@
     "instructor_feedback_role_smoke": "Anonymous and unauthorized authenticated denied; private definer/public invoker; no real data inserted.",
     "native_symlink_regression": "RED Native Ubuntu 39158048023 2 assertions; GREEN source 1f7a063e (push 39158307456 / PR 39158312909 3/3 jobs success).",
     "lesson_published_postgres": "13/13 local migrations, 47 DO blocks, 16 RLS tables, rollback SUCCESS push 39159245779/PR 39159251579",
-    "lesson_published_live_smoke": "PASS with real valid canonical-jsonb SHA; denied anonymous/unassigned; no Auth users, lesson_versions or audit rows."
+    "lesson_published_live_smoke": "PASS with real valid canonical-jsonb SHA; denied anonymous/unassigned; no Auth users, lesson_versions or audit rows.",
+    "rubric_publication_real_postgres": "SUCCESS push 39165679182 / PR 39165683724; 14 source migrations, 51 DO blocks, ROLLBACK, 16 RLS tables",
+    "assignment_publication_real_postgres": "SUCCESS push 39166396995 / PR 39166400384; 15 source migrations, 56 DO blocks, ROLLBACK, 16 RLS tables",
+    "academic_content_live_auth_smoke": "PASS: anon and unassigned authenticated rejected for both new RPCs after migration; no Auth users, rubrics, assignments or audits inserted"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -155,7 +172,7 @@
     "u03_unity": "NOT_RUN",
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
-    "rubric_and_assignment_publication": "NOT_IMPLEMENTED"
+    "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -170,6 +187,7 @@
     "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments.",
     "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty.",
     "12 migrations applied; instructor feedback encrypted transport/real HTTP not checked; no client INSERT/UPDATE grant, immutable feedback trigger and student-visible RLS tested in disposable PostgreSQL.",
-    "Lesson hash is SHA256 of PostgreSQL jsonb::text canonical serialization, not of arbitrary raw lesson file bytes. Native chemistry remains local. Initial unauthorized live smoke with deliberately invalid hash hit input validation before role validation; corrected smoke uses valid canonical digest and PASS."
+    "Lesson hash is SHA256 of PostgreSQL jsonb::text canonical serialization, not of arbitrary raw lesson file bytes. Native chemistry remains local. Initial unauthorized live smoke with deliberately invalid hash hit input validation before role validation; corrected smoke uses valid canonical digest and PASS.",
+    "Rubric and assignment publication migrations applied to Free project. Exact source SQL is not installed using supabase db push because API migration versions differ from filenames. Source-level and synthetic RLS verified; no claim of real student pilot."
   ]
 }
