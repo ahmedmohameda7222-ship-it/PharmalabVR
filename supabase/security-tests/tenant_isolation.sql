@@ -9,7 +9,8 @@ insert into auth.users(id,instance_id,aud,role,email,email_confirmed_at) values
  ('33333333-3333-4333-8333-333333333333','00000000-0000-0000-0000-000000000000','authenticated','authenticated','dual-role@example.invalid',now()),
  ('44444444-4444-4444-8444-444444444444','00000000-0000-0000-0000-000000000000','authenticated','authenticated','a-student@example.invalid',now()),
  ('55555555-5555-4555-8555-555555555555','00000000-0000-0000-0000-000000000000','authenticated','authenticated','b-student@example.invalid',now()),
- ('66666666-6666-4666-8666-666666666666','00000000-0000-0000-0000-000000000000','authenticated','authenticated','revoked@example.invalid',now());
+ ('66666666-6666-4666-8666-666666666666','00000000-0000-0000-0000-000000000000','authenticated','authenticated','revoked@example.invalid',now()),
+ ('77777777-7777-4777-8777-777777777777','00000000-0000-0000-0000-000000000000','authenticated','authenticated','new-student@example.invalid',now());
 
 insert into public.institutions(id,slug,name) values
  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','plv-test-a','Synthetic University A'),
@@ -159,6 +160,130 @@ begin
  end if;
 end $$;
 
+-- U02 SECURITY ACCEPTANCE: invitation, acceptance, revocation are server RPC only.
+-- This is authored against the real database but remains NOT_RUN until local
+-- Supabase/PostgreSQL is provisioned. Never execute synthetic users in production.
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+begin
+ begin
+  perform public.university_invite_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    'instructor','77770000-0000-4000-8000-000000000001');
+  raise exception 'nonadmin invite unexpectedly succeeded';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$
+begin
+ if public.university_invite_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    'student','77770000-0000-4000-8000-000000000002') <> 'Invited' then
+   raise exception 'verified target invitation was not accepted';
+ end if;
+ if public.university_invite_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    'student','77770000-0000-4000-8000-000000000002') <> 'AlreadyInvited' then
+   raise exception 'exact invite retry was not idempotent';
+ end if;
+ begin
+  perform public.university_invite_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    'instructor','77770000-0000-4000-8000-000000000002');
+  raise exception 'same request with different role unexpectedly succeeded';
+ exception when unique_violation then null;
+ end;
+ begin
+  perform public.university_invite_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    'university_admin','77770000-0000-4000-8000-000000000003');
+  raise exception 'invitation cannot grant university admin';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+
+select set_config('request.jwt.claim.sub','77777777-7777-4777-8777-777777777777',true);
+do $$
+begin
+ if public.university_accept_invite(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77770000-0000-4000-8000-000000000004') <> 'Accepted' then
+  raise exception 'invitation acceptance was not attributed to auth.uid';
+ end if;
+ if public.university_accept_invite(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77770000-0000-4000-8000-000000000004') <> 'AlreadyAccepted' then
+  raise exception 'acceptance retry did not return terminal success';
+ end if;
+ if not plv_private.active_member('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') then
+  raise exception 'accepted membership is not active';
+ end if;
+end $$;
+
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_revoke_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    '77770000-0000-4000-8000-000000000005');
+  raise exception 'cross-tenant revocation unexpectedly succeeded';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$
+begin
+ if public.university_revoke_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    '77770000-0000-4000-8000-000000000006') <> 'Revoked' then
+   raise exception 'authorized revocation failed';
+ end if;
+ if public.university_revoke_member(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    '77777777-7777-4777-8777-777777777777',
+    '77770000-0000-4000-8000-000000000006') <> 'AlreadyRevoked' then
+   raise exception 'revocation replay was not idempotent';
+ end if;
+end $$;
+
+select set_config('request.jwt.claim.sub','77777777-7777-4777-8777-777777777777',true);
+do $$
+begin
+ if plv_private.active_member('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa') or
+    (select count(*) from public.institution_memberships
+     where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+       and status='active') > 0 then
+   raise exception 'revocation did not immediately deny tenant access';
+ end if;
+end $$;
+
 reset role;
+do $$
+begin
+ if (select count(*) from public.audit_events where
+       institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+       and action='MembershipInvite' and
+       target_id='77777777-7777-4777-8777-777777777777') <> 1 then
+  raise exception 'accepted invitation was not audited';
+ end if;
+ if (select count(*) from public.audit_events where
+       institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+       and action='MembershipRevoke' and
+       target_id='77777777-7777-4777-8777-777777777777') <> 1 then
+  raise exception 'revocation was not audited';
+ end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

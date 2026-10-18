@@ -11,6 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 CORE = (ROOT / "supabase/migrations/20261017000000_university_core.sql").read_text(encoding="utf-8").lower()
 RLS = (ROOT / "supabase/migrations/20261017000100_university_rls.sql").read_text(encoding="utf-8").lower()
 FIXTURE = (ROOT / "supabase/security-tests/tenant_isolation.sql").read_text(encoding="utf-8").lower()
+RPC_PATH = ROOT / "supabase/migrations/20261018000000_university_membership_rpc.sql"
+RPC = RPC_PATH.read_text(encoding="utf-8").lower() if RPC_PATH.exists() else ""
 
 TABLES = (
     "institutions", "profiles", "institution_memberships", "courses",
@@ -84,6 +86,39 @@ class UniversitySqlGuardrails(unittest.TestCase):
         closing = len(re.findall(r"(?m)^end \$\$;$", FIXTURE))
         self.assertGreater(opening, 0)
         self.assertEqual(opening, closing)
+
+    def test_u02_membership_rpc_is_server_checked_and_audited(self):
+        self.assertIn("create function public.university_invite_member(", RPC)
+        self.assertIn("create function public.university_accept_invite(", RPC)
+        self.assertIn("create function public.university_revoke_member(", RPC)
+        self.assertIn("security definer", RPC)
+        self.assertIn("set search_path = ''", RPC)
+        self.assertIn("plv_private.is_admin(p_institution_id)", RPC)
+        self.assertIn("auth.uid()", RPC)
+        self.assertIn("email_confirmed_at is not null", RPC)
+        self.assertIn("for update", RPC)
+        self.assertIn("insert into public.audit_events", RPC)
+        self.assertIn("create unique index", RPC)
+        self.assertIn("revoke all on function public.university_invite_member", RPC)
+        self.assertIn("revoke all on function public.university_accept_invite", RPC)
+        self.assertIn("revoke all on function public.university_revoke_member", RPC)
+        self.assertNotIn("service_role", RPC)
+        self.assertIn("grant execute on function public.university_invite_member", RPC)
+        self.assertIn("grant execute on function public.university_accept_invite", RPC)
+        self.assertIn("grant execute on function public.university_revoke_member", RPC)
+
+    def test_u02_synthetic_postgres_cases_include_denied_cross_tenant_and_replay(self):
+        for marker in (
+            "nonadmin invite unexpectedly succeeded",
+            "cross-tenant revocation unexpectedly succeeded",
+            "invitation cannot grant university admin",
+            "same request with different role unexpectedly succeeded",
+            "invitation acceptance was not attributed to auth.uid",
+            "revocation did not immediately deny tenant access",
+            "accepted invitation was not audited",
+            "revocation was not audited",
+        ):
+            self.assertIn(marker, FIXTURE)
 
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
