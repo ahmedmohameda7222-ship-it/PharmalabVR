@@ -16,6 +16,16 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_submit_attempt(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000041'::uuid,
+      'aaaa0000-0000-4000-8000-000000000051'::uuid,
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
+      repeat('a',64));
+    raise exception 'ANON_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_invite_member(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
@@ -67,6 +77,16 @@ begin
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
     raise exception 'UNAUTHORIZED_ACCEPT_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_submit_attempt(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000041'::uuid,
+      'aaaa0000-0000-4000-8000-000000000051'::uuid,
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
+      repeat('a',64));
+    raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin

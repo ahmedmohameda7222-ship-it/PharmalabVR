@@ -285,5 +285,91 @@ begin
  end if;
 end $$;
 
+-- U03 positive and negative tests require a disposable database. Do NOT seed live.
+-- New local Native session and already-attested private artifact, so earlier
+-- pre-existing fixture records and their counts remain unchanged.
+insert into public.lab_sessions(id,institution_id,user_id,local_session_id,
+  native_branch_id,current_revision,science_package_sha256)
+values ('aaaa0000-0000-4000-8000-000000000091',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  '44444444-4444-4444-8444-444444444444',
+  'local-u03','native-u03',2,repeat('a',64));
+insert into public.session_artifacts(id,institution_id,lab_session_id,user_id,
+  object_key,size_bytes,sha256,content_type)
+values ('aaaa0000-0000-4000-8000-000000000092',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'aaaa0000-0000-4000-8000-000000000091',
+  '44444444-4444-4444-8444-444444444444',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/aaaa0000-0000-4000-8000-000000000092',
+  128,repeat('d',64),'application/json');
+insert into storage.objects(bucket_id,name)
+values ('plv-university-evidence',
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/aaaa0000-0000-4000-8000-000000000092');
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+declare
+  first_id uuid;
+  retry_id uuid;
+begin
+ first_id := public.university_submit_attempt(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000041',
+    'aaaa0000-0000-4000-8000-000000000091',
+    'aaaa0000-0000-4000-8000-000000000093',repeat('d',64));
+ if first_id is null then
+   raise exception 'student_submission_accepted';
+ end if;
+ retry_id := public.university_submit_attempt(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000041',
+    'aaaa0000-0000-4000-8000-000000000091',
+    'aaaa0000-0000-4000-8000-000000000093',repeat('d',64));
+ if retry_id is distinct from first_id then
+   raise exception 'student_submission_retry_reused_id';
+ end if;
+ begin
+   perform public.university_submit_attempt(
+     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+     'aaaa0000-0000-4000-8000-000000000041',
+     'aaaa0000-0000-4000-8000-000000000091',
+     'aaaa0000-0000-4000-8000-000000000093',repeat('e',64));
+   raise exception 'student_submission_changed_hash_rejected';
+ exception when unique_violation then null;
+ end;
+ begin
+   perform public.university_submit_attempt(
+     'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+     'aaaa0000-0000-4000-8000-000000000041',
+     'aaaa0000-0000-4000-8000-000000000091',
+     'aaaa0000-0000-4000-8000-000000000094',repeat('d',64));
+   raise exception 'student_submission_other_tenant_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+begin
+ begin
+  perform public.university_submit_attempt(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000041',
+   'aaaa0000-0000-4000-8000-000000000091',
+   'aaaa0000-0000-4000-8000-000000000095',repeat('d',64));
+  raise exception 'student_submission_nonstudent_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ if (select count(*) from public.audit_events
+    where action='SubmissionCreated'
+      and request_id='aaaa0000-0000-4000-8000-000000000093') <> 1 then
+  raise exception 'student_submission_not_audited';
+ end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

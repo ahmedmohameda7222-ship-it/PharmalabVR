@@ -16,6 +16,8 @@ RPC = RPC_PATH.read_text(encoding="utf-8").lower() if RPC_PATH.exists() else ""
 HARDENING_PATH = ROOT / "supabase/migrations/20261018010000_university_rpc_hardening.sql"
 HARDENING = HARDENING_PATH.read_text(encoding="utf-8").lower() if HARDENING_PATH.exists() else ""
 SMOKE = (ROOT / "supabase/security-tests/live_no_data_smoke.sql").read_text(encoding="utf-8").lower()
+U03_PATH = ROOT / "supabase/migrations/20261018030000_student_submission_rpc.sql"
+U03 = U03_PATH.read_text(encoding="utf-8").lower() if U03_PATH.exists() else ""
 
 TABLES = (
     "institutions", "profiles", "institution_memberships", "courses",
@@ -161,6 +163,47 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertNotIn("create function public.owner_bootstrap", bootstrap)
         self.assertIn("BOOTSTRAP_ANON_BYPASS".lower(), SMOKE)
         self.assertIn("BOOTSTRAP_AUTH_BYPASS".lower(), SMOKE)
+
+    def test_u03_idempotent_submission_is_authorized_and_evidence_bound(self):
+        # Real PostgreSQL execution is in the disposable two-tenant fixture.
+        for marker in (
+            "create function plv_private.university_submit_attempt(",
+            "create function public.university_submit_attempt(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role = 'student'",
+            "e.state = 'active'",
+            "a.published_at is not null",
+            "v_session.current_revision",
+            "public.session_artifacts",
+            "storage.objects",
+            "s.sha256 = p_evidence_sha256",
+            "insert into public.submissions",
+            "on conflict (institution_id,student_id,idempotency_key) do nothing",
+            "insert into public.audit_events",
+            "'submissioncreated'",
+            "grant execute on function public.university_submit_attempt",
+            "revoke all on function public.university_submit_attempt",
+        ):
+            self.assertIn(marker, U03)
+        self.assertNotIn("grant insert on public.submissions", U03)
+        self.assertNotIn("service_role", U03)
+        self.assertIn("for share", U03)
+        self.assertIn("create unique index", U03)
+        for marker in (
+            "student_submission_accepted",
+            "student_submission_retry_reused_id",
+            "student_submission_changed_hash_rejected",
+            "student_submission_other_tenant_rejected",
+            "student_submission_nonstudent_rejected",
+            "student_submission_not_audited",
+        ):
+            self.assertIn(marker, FIXTURE)
+
+    def test_u03_live_no_data_smoke_denies_anon_and_unassigned_auth(self):
+        self.assertIn("anon_submission_bypass", SMOKE)
+        self.assertIn("unauthorized_submission_bypass", SMOKE)
 
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
