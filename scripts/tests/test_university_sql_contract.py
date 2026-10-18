@@ -15,6 +15,7 @@ RPC_PATH = ROOT / "supabase/migrations/20261018000000_university_membership_rpc.
 RPC = RPC_PATH.read_text(encoding="utf-8").lower() if RPC_PATH.exists() else ""
 HARDENING_PATH = ROOT / "supabase/migrations/20261018010000_university_rpc_hardening.sql"
 HARDENING = HARDENING_PATH.read_text(encoding="utf-8").lower() if HARDENING_PATH.exists() else ""
+SMOKE = (ROOT / "supabase/security-tests/live_no_data_smoke.sql").read_text(encoding="utf-8").lower()
 
 TABLES = (
     "institutions", "profiles", "institution_memberships", "courses",
@@ -147,6 +148,19 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertEqual(HARDENING.count("to authenticated;"), 6)
         self.assertIn("revoke all on function public.university_invite_member", HARDENING)
         self.assertIn("revoke all on function public.university_revoke_member", HARDENING)
+
+    def test_u02_owner_bootstrap_cannot_be_executed_by_client_roles(self):
+        bootstrap = (ROOT / "supabase/migrations/20261018020000_owner_bootstrap.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("create function plv_private.owner_bootstrap_institution(", bootstrap)
+        self.assertIn("security invoker set search_path = ''", bootstrap)
+        self.assertIn("if current_user <> 'postgres' then", bootstrap)
+        self.assertIn("email_confirmed_at is not null", bootstrap)
+        self.assertIn("'university_admin','active',null", bootstrap)
+        self.assertIn("insert into public.audit_events(", bootstrap)
+        self.assertIn("from public, anon, authenticated, service_role", bootstrap)
+        self.assertNotIn("create function public.owner_bootstrap", bootstrap)
+        self.assertIn("BOOTSTRAP_ANON_BYPASS".lower(), SMOKE)
+        self.assertIn("BOOTSTRAP_AUTH_BYPASS".lower(), SMOKE)
 
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (

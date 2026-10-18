@@ -9,6 +9,13 @@ set local role anon;
 do $plv$
 begin
   begin
+    perform plv_private.owner_bootstrap_institution('test-school','Fake School',
+      '11111111-1111-4111-8111-111111111111'::uuid,
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'BOOTSTRAP_ANON_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_invite_member(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
@@ -40,6 +47,13 @@ select set_config('request.jwt.claim.sub',
   '11111111-1111-4111-8111-111111111111',true);
 do $plv$
 begin
+  begin
+    perform plv_private.owner_bootstrap_institution('test-school','Fake School',
+      '11111111-1111-4111-8111-111111111111'::uuid,
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'BOOTSTRAP_AUTH_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
   begin
     perform public.university_invite_member(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
