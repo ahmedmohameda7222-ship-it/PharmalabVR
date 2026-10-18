@@ -1082,7 +1082,7 @@ begin
  end if;
 end $$;
 -- U04 quarantined evidence: NO client INSERT/SELECT and not in academic artifact table.
-do $
+do $$
 begin
  if (select public from storage.buckets where id='plv-university-evidence-staging') is distinct from false then
    raise exception 'staging_upload_not_academic_evidence: bucket missing or public';
@@ -1096,6 +1096,6 @@ begin
     and tablename='evidence_upload_staging') then
    raise exception 'staging row access policy must be absent';
  end if;
-end $;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
