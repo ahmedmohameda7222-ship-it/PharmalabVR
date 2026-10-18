@@ -80,6 +80,27 @@ internal static class Program
                 "Stage failure replaced confirmed intents.");
             Directory.Delete(path + ".tmp");
 
+            // A second producer must not write through an exclusive local
+            // lease held by a first producer; this is deterministic, not a
+            // flaky thread interleaving test.
+            var third = new UniversityUploadIntent(tenantB, "local-session-2",
+                "33333333-3333-4333-8333-333333333333", "native-branch-2",
+                "19", new string('a', 64), new string('b', 64),
+                new string('c', 64));
+            var beforeLock = Convert.ToBase64String(File.ReadAllBytes(path));
+            using (var ownedLock = new FileStream(path + ".lock",
+                FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            {
+                MustReject(() => restarted.Enqueue(third),
+                    "Concurrent producer bypassed the exclusive writer lease.");
+                Check(beforeLock == Convert.ToBase64String(File.ReadAllBytes(path)),
+                    "Locked producer rewrote confirmed intent bytes.");
+            }
+            Check(restarted.Enqueue(third),
+                "Pending producer could not retry after released writer lease.");
+            Check(new UniversitySyncOutbox(path, 8192).Pending().Count == 3,
+                "Exclusive writer lease lost an independently queued event.");
+
             var damaged = File.ReadAllBytes(path);
             damaged[damaged.Length - 2] ^= 0x01;
             File.WriteAllBytes(path, damaged);
