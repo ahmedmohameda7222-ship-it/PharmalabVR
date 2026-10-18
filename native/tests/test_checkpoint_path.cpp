@@ -13,4 +13,10 @@ TEST_CASE("P11_01 checkpoint paths reject relative working-directory traversal")
     const auto absolute = (std::filesystem::temp_directory_path() /
                            "plv-checkpoint-absolute.ckpt").string();
     CHECK_NOTHROW(plv::DurableCheckpointStore(absolute, 1024));
+    CHECK_THROWS_AS(plv::DurableCheckpointStore(
+        std::filesystem::temp_directory_path().string(), 1024),
+        std::invalid_argument);
+    CHECK_THROWS_AS(plv::DurableCheckpointStore("/", 1024),
+                    std::invalid_argument);
+
 }
