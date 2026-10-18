@@ -1,33 +1,33 @@
-# PharmaLabVR university backend — source-only (U01)
+# PharmaLabVR university backend — connected project
 
-**Status, 17 October 2026:** Source-authored migrations, **not applied**. The owner has not provisioned a PharmaLabVR Supabase project. Do not use an unrelated connected project or deploy without explicit owner authorization. This backend manages identity, coursework, assessment and verified evidence metadata; it is **not** the Native C++17 chemical solver or checkpoint store.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Four ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
-## Ordered SQL
+## Applied migration order and remote history
 
-1. `migrations/20261017000000_university_core.sql` — normalized tenants, cross-tenant composite FKs, immutable evidence/submissions, RLS enabled and API privileges revoked before any policy.
-2. `migrations/20261017000100_university_rls.sql` — verified-active membership helpers, student/section-scoped SELECT, own profile updates, private evidence Storage read policy. All academic writes are deliberately blocked from public clients; U02/U03 must add authenticated, audited server workflows before these tables become usable for institution administration.
-3. `migrations/20261018000000_university_membership_rpc.sql` — audited invite/self-accept/revoke RPCs for existing email-verified Auth users. No university-admin grants, no cloud provisioning or email delivery, and no client table-mutation grants.
+| Source migration | Supabase migration name | Remote version |
+| --- | --- | --- |
+| `20261017000000_university_core.sql` | `university_core_20261017` | `20261018034553` |
+| `20261017000100_university_rls.sql` | `university_rls_20261017` | `20261018034613` |
+| `20261018000000_university_membership_rpc.sql` | `university_membership_rpc_20261018` | `20261018034623` |
+| `20261018010000_university_rpc_hardening.sql` | `university_rpc_hardening_20261018` | `20261018034945` |
 
-Published curriculum is immutable after publication; version changes require a new version row. Evidence keys are opaque `<institution_uuid>/<artifact_uuid>`. Only a server-approved upload may create private storage objects in a later workstream. No client Storage INSERT/UPDATE/DELETE permissions are added.
+The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
-## Local validation once a disposable Supabase/Postgres stack exists
+## What was and was not tested
 
-Use a **local, disposable Supabase database**, not the owner's production project. Install a compatible Supabase CLI via its current official instructions and run `supabase --help`, `supabase migration --help`, and `supabase db --help` before selecting exact CLI flags. For a local stack, `supabase start` / `supabase db reset` may be appropriate after verifying CLI help. Real RLS tests require Supabase's actual `auth.users`, `auth.uid()`, `storage.buckets`, `storage.objects` and PostgreSQL role definitions; plain-text static checks do **not** establish RLS enforcement.
+`security-tests/live_no_data_smoke.sql` was executed on the owner-authorized project inside a transaction ending with `ROLLBACK`. It verifies the three RPCs reject anonymous callers and an authenticated role with an unauthorised synthetic identity. A post-run count confirmed zero Auth users, institution members, submissions, audit rows and uploaded objects. This is **not** full multitenant integration validation.
 
-The destructive synthetic fixture script `security-tests/tenant_isolation.sql` starts a transaction, inserts fake Auth records in a local database, impersonates `authenticated`, exercises tenant-specific SELECT, denied academic mutations, private storage reads, revoked roles, composite FKs and duplicate idempotency, then rolls everything back. Run only against a disposable local stack that already has both migrations:
+`security-tests/tenant_isolation.sql` is a separate **NOT_RUN** synthetic user fixture designed for a disposable local Supabase PostgreSQL instance. **Never run its synthetic Auth-user inserts on this live project**. When a disposable local stack is available, run migrations first, then run its rollback test using `psql -X -v ON_ERROR_STOP=1`.
 
-```sh
-psql "$LOCAL_SUPABASE_DATABASE_URL" -X -v ON_ERROR_STOP=1 -f supabase/security-tests/tenant_isolation.sql
-```
+## Access and release restrictions
 
-Do not store database URLs, refresh tokens, service-role keys or real student records in Git. No migration, policy or CI check is considered validated until its actual log, SHA and database identity are recorded. Never run this synthetic fixture on a real project.
+- An initial `university_admin` is **not** automatically created. Never elevate an arbitrary email or fabricate a verified Auth user. A trusted, audited owner bootstrap is pending.
+- Invitations apply only to existing, email-verified Auth accounts. The configured email delivery and signup experience have **not** been verified.
+- Published course versions are immutable; student grades, assignments and Storage uploads remain non-writable via ordinary client table APIs.
+- The evidence bucket is private and capped at 50 MiB per object by the schema. No general client upload, update or delete policy exists.
+- The new U04 outbox is still **offline-only**: no cloud acknowledgement or real student sync integration.
+- Security and enrollment gate G-U1 remains **OPEN** until genuine two-university policy tests, teacher/student onboarding, evidence uploads and a controlled pilot pass. Unity Editor, Player and XR tests remain **NOT_RUN**.
+- A new migration is required for any further deployed schema change; do not edit already-applied SQL files or reuse a migration name.
+- Service-role/secret keys are never stored in GitHub or client builds. Free-tier quotas apply; no paid upgrade, branching feature or extra project is assumed.
 
-## Not yet implemented / release-blocking
-
-- U02: invitation acceptance, authenticated memberships, authorized admin provisioning, audited role changes, revocation.
-- U03: server-only lesson publishing, authorized grading, active enrollment and idempotent submission endpoints with a durable audit trail.
-- U04: offline outbox and verified private evidence upload/download, short-lived signed URL broker, hash/size checks and conflict fork policy.
-- U05: English-only university portal, real two-tenant Auth/RLS/Storage integration and G-U1 evidence.
-- Retention/privacy review and real pilot before any student onboarding.
-
-The separate U01–U05 tracker is `docs/evidence/university-execution.json`. Existing P00–P24 (66 tasks), G-R1 and P06.02 formal next task remain unchanged. Unity/Player/XR tests remain deferred.
+Exact schema migration versions, SHA evidence and outstanding gates are recorded in `docs/evidence/supabase-live-deployment-2026-10-18.json`.

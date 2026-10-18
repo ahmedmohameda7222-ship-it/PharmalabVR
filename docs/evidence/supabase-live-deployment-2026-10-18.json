@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-18",
+  "project_ref": "hhbnlhceehgbskzdtorn",
+  "account_link": "PharmalabVr",
+  "organization_plan": "free",
+  "region": "eu-west-1",
+  "postgres": "17.11",
+  "repository": "ahmedmohameda7222-ship-it/PharmalabVR",
+  "branch": "feat/foundation-vr-first",
+  "based_on_head": "be77526a6aa242e5b5bd7d3407e17c03cdd0de3f",
+  "migrations": [
+    {
+      "file": "supabase/migrations/20261017000000_university_core.sql",
+      "name": "university_core_20261017",
+      "remote_version": "20261018034553",
+      "blob_sha": "8b069b2eb8ce6821e8788b24f06d15bb28177691",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261017000100_university_rls.sql",
+      "name": "university_rls_20261017",
+      "remote_version": "20261018034613",
+      "blob_sha": "a880e0ed21e59e135e22bd5fdcc711b739f37edc",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018000000_university_membership_rpc.sql",
+      "name": "university_membership_rpc_20261018",
+      "remote_version": "20261018034623",
+      "blob_sha": "9cc800b18a68cf064566bb8dd473f0c9f53058b7",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018010000_university_rpc_hardening.sql",
+      "name": "university_rpc_hardening_20261018",
+      "remote_version": "20261018034945",
+      "blob_sha": "c3cdd27104f978c51a6b7a97670a4a8a0997e473",
+      "applied": true
+    }
+  ],
+  "verified": {
+    "public_tables": 16,
+    "rls_enabled": 16,
+    "public_policies": 17,
+    "private_storage_buckets": 1,
+    "public_invoker_rpcs": 3,
+    "public_definer_rpcs": 0,
+    "private_definer_membership_rpcs": 3,
+    "anon_execute_rpc": false,
+    "auth_users": 0,
+    "academic_rows": 0,
+    "stored_evidence_objects": 0,
+    "security_advisor_warn_count": 0,
+    "security_advisor_info_count": 1,
+    "live_anonymous_and_unauthorized_auth_smoke": "SQL completed; post-check tables empty"
+  },
+  "pending": {
+    "seeded_two_tenant_postgres_fixture": "NOT_RUN",
+    "unity_editmode": "NOT_RUN",
+    "native_producer_server_sync": "NOT_IMPLEMENTED",
+    "first_university_admin": "NOT_PROVISIONED",
+    "student_pilot": "NOT_RUN"
+  },
+  "notes": [
+    "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
+    "Security advisor INFO is RLS audit_events with deliberately no client policies (deny-by-default).",
+    "Performance advisor INFO: 21 unindexed FK and 6 unused index findings on empty database, not benchmarked.",
+    "No service-role API key shared with Unity or clients.",
+    "Original 66-task Native/VR execution ledger and P11.01 SessionLoad Hold remain unchanged.",
+    "PR #1 remains unmerged."
+  ]
+}
