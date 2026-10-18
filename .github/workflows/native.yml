@@ -28,6 +28,8 @@ jobs:
         run: node --test supabase/functions/student-evidence-status/policy.test.mjs
       - name: U04 upload admission SHA and tenant rules (no cloud)
         run: node --test supabase/functions/student-evidence-upload/intent.test.mjs
+      - name: U04 bounded upload protocol regression (no cloud)
+        run: node --test supabase/functions/student-evidence-upload/protocol.test.mjs
   native:
     strategy:
       fail-fast: false
