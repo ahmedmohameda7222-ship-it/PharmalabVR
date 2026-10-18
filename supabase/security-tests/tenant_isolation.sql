@@ -744,6 +744,12 @@ begin
 end $$;
 
 -- U03 immutable instructor feedback, on the already-submitted A student attempt.
+-- The foreign institution is correctly blocked by submissions RLS; record
+-- the opaque ID under the fixture owner before switching to the foreign role.
+select set_config('plv_test.feedback_submission_id',
+  (select id::text from public.submissions where
+     institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     and idempotency_key='aaaa0000-0000-4000-8000-000000000093'),true);
 set local role authenticated;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
 do $$
@@ -765,9 +771,12 @@ select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222'
 do $$
 declare sid uuid;
 begin
-  select id into strict sid from public.submissions
-   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-     and idempotency_key='aaaa0000-0000-4000-8000-000000000093';
+  if exists(select 1 from public.submissions where
+    institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    and idempotency_key='aaaa0000-0000-4000-8000-000000000093') then
+    raise exception 'foreign institution leaked submission through RLS';
+  end if;
+  sid := current_setting('plv_test.feedback_submission_id')::uuid;
   begin
     perform public.university_record_feedback(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
