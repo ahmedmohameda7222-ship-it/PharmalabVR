@@ -281,6 +281,30 @@ class UniversitySqlGuardrails(unittest.TestCase):
         ):
             self.assertIn(required, FIXTURE)
 
+    def test_u03_section_creation_is_tenant_scoped_and_audited(self):
+        source = ROOT / "supabase/migrations/20261018070000_section_creation_rpc.sql"
+        sql = source.read_text(encoding="utf-8").lower() if source.exists() else ""
+        for marker in (
+            "create function plv_private.university_create_section(",
+            "create function public.university_create_section(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.is_admin(p_institution_id)",
+            "c.institution_id=p_institution_id",
+            "insert into public.course_sections",
+            "insert into public.audit_events",
+            "'sectioncreated'",
+            "revoke all on function public.university_create_section",
+            "grant execute on function public.university_create_section",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.course_sections", sql)
+        for marker in ("anon_section_bypass", "unauthorized_section_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("section_admin_pass", "section_cross_tenant_rejected",
+                       "section_student_rejected", "section retry altered id"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",

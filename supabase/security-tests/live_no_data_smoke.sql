@@ -24,6 +24,14 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_create_section(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'S2','cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
+    raise exception 'ANON_SECTION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_create_course(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'CHEM999', 'Research Chemistry', '2026F',
@@ -120,6 +128,14 @@ begin
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid, 90,
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
     raise exception 'UNASSIGNED_GRADE_PERMISSION_FAILURE' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_create_section(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'S2','cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
+    raise exception 'UNAUTHORIZED_SECTION_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin

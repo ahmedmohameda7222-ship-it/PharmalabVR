@@ -597,5 +597,76 @@ begin
   end if;
 end $$;
 
+
+-- U03 Section creation: one parent course and same-tenant admin.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+  begin
+    perform public.university_create_section(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000001',
+      'S2','aaaa0000-0000-4000-8000-000000000113');
+    raise exception 'section_student_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+  begin
+    perform public.university_create_section(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000001',
+      'S2','aaaa0000-0000-4000-8000-000000000114');
+    raise exception 'section_cross_tenant_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$
+declare
+  v_course uuid;
+  v_section uuid;
+  v_retry uuid;
+begin
+  select id into strict v_course from public.courses
+    where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and code='CHEM999' and term='2026F';
+  v_section := public.university_create_section(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_course,'S2',
+    'aaaa0000-0000-4000-8000-000000000115');
+  if v_section is null then raise exception 'section_admin_pass'; end if;
+  v_retry := public.university_create_section(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_course,'S2',
+    'aaaa0000-0000-4000-8000-000000000115');
+  if v_retry is distinct from v_section then
+    raise exception 'section retry altered id';
+  end if;
+  begin
+    perform public.university_create_section(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_course,'S3',
+      'aaaa0000-0000-4000-8000-000000000115');
+    raise exception 'Conflicting section replay accepted';
+  exception when unique_violation then null;
+  end;
+end $$;
+reset role;
+do $$
+begin
+  if (select count(*) from public.course_sections s
+      join public.courses c on c.id=s.course_id
+      where s.institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        and s.section_code='S2' and c.code='CHEM999') <> 1 then
+    raise exception 'Missing authorized section';
+  end if;
+  if (select count(*) from public.audit_events where
+      action='SectionCreated'
+      and request_id='aaaa0000-0000-4000-8000-000000000115') <> 1 then
+    raise exception 'Section audit missing';
+  end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
