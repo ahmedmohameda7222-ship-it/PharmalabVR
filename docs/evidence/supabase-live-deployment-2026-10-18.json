@@ -58,6 +58,27 @@
       "remote_version": "20261018044135",
       "blob_sha": "f48a4b2dc4cd3a990dd5b582e0b6340d5975ba23",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018050000_section_enrollment_rpc.sql",
+      "name": "section_enrollment_rpc_20261018",
+      "remote_version": "20261018053627",
+      "blob_sha": "fbfcb93d364569d2ff72f73110cd50c0bc6f7e8f",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018060000_course_creation_rpc.sql",
+      "name": "course_creation_rpc_20261018",
+      "remote_version": "20261018054744",
+      "blob_sha": "cb1999ecfb94309a94a52efeeae627bcb39f6918",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018070000_section_creation_rpc.sql",
+      "name": "section_creation_rpc_20261018",
+      "remote_version": "20261018055029",
+      "blob_sha": "7360c634a81b56c125adb5fe33b709a132bbad48",
+      "applied": true
     }
   ],
   "verified": {
@@ -87,7 +108,9 @@
     "u03_unique_native_attempt_index": 1,
     "u03_source_ci": "Implementation commit 196eede5 all 3 jobs SUCCESS both push run 39097080057 and pull_request run 39097083467.",
     "grade_approval_privileges": "3/3 checks: public invoker, private definer, anonymous execute denied",
-    "grade_immutability_trigger": 1
+    "grade_immutability_trigger": 1,
+    "academic_admin_rpcs": "Three public SECURITY INVOKER endpoints, each private SECURITY DEFINER implementation; authenticated grants only; anonymous EXECUTE denied",
+    "academic_admin_live_smoke": "Passed denied-role smoke for enrollment, course and section within BEGIN/ROLLBACK; zero Auth users or academic rows"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
@@ -99,7 +122,8 @@
     "u03_pre_attested_u04_broker": "NOT_IMPLEMENTED: successful ingestion intentionally requires existing attested artifact",
     "u03_grade_approval": "NOT_IMPLEMENTED",
     "u03_unity": "NOT_RUN",
-    "positive_grading": "NOT_RUN: no real Auth students, courses or submissions"
+    "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
+    "disposable_tenant_fixture": "GitHub Actions disposable Supabase job introduced; result not confirmed at evidence HEAD"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -110,6 +134,7 @@
     "PR #1 remains unmerged.",
     "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created.",
     "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked.",
-    "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added."
+    "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added.",
+    "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments."
   ]
 }

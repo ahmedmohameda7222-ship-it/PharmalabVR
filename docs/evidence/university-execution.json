@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "U03 submission RPC applied and denied-role smoke passed, but no positive student submission can occur until U04 attested evidence upload and real Auth/enrollment exists. Two-tenant RLS/Auth/Storage plus Unity and student pilot remain NOT_RUN."
+    "reason": "10 schema/RPC migrations applied, no-data role smoke passed and read-only Edge deployed; real initial university, disposable seeded Auth/RLS/Storage positive test, trusted evidence upload and Unity remain unverified."
   },
   "tasks": [
     {
@@ -79,7 +79,7 @@
     },
     {
       "id": "U03",
-      "status": "PartialDeployed_SubmissionsAndApprovedGrades",
+      "status": "PartialDeployed_AdminCourseSectionEnrollmentSubmissionGrades",
       "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
       "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
@@ -95,13 +95,29 @@
         "Unity Editor/Player/XR tests deferred",
         "Authorized enrollment/course publishing endpoints",
         "Grade appeal and feedback workflow",
-        "Positive two-university grading test on disposable database"
+        "Positive two-university grading test on disposable database",
+        "Instructor section assignment authorization",
+        "Lesson/rubric version publication and assignment scheduling",
+        "Validated Student Auth onboarding/first owner administrator",
+        "Trusted Native evidence upload and positive graded submission integration"
       ],
       "gradeApprovalMigration": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
       "gradeApprovalRemoteVersion": "20261018044135",
       "gradeSourceSha": "92596757cd130ee98a8d13ea5c3709b8799b45de",
       "gradeSourceRedSha": "5058c3f7869db64445f4732bc09e853ee2904d14",
-      "gradeSecurity": "Approved grades immutable, authorized section instructor/institution admin only; unauthorized live role smoke passed; positive seeded tests NOT_RUN."
+      "gradeSecurity": "Approved grades immutable, authorized section instructor/institution admin only; unauthorized live role smoke passed; positive seeded tests NOT_RUN.",
+      "adminRpcs": [
+        "supabase/migrations/20261018050000_section_enrollment_rpc.sql",
+        "supabase/migrations/20261018060000_course_creation_rpc.sql",
+        "supabase/migrations/20261018070000_section_creation_rpc.sql"
+      ],
+      "adminDeploymentVersions": [
+        "20261018053627",
+        "20261018054744",
+        "20261018055029"
+      ],
+      "adminSecuritySmoke": "Anonymous and unassigned authenticated attempts denied in owner Free project; no data created.",
+      "positiveIntegration": "Source fixture with two synthetic institutions authored; disposable GitHub PostgreSQL workflow started but not yet verified."
     },
     {
       "id": "U04",
