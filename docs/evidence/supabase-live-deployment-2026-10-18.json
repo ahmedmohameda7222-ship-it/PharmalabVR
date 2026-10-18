@@ -93,6 +93,13 @@
       "remote_version": "20261018191721",
       "blob_sha": "27977211224ea0197cf7fbaa25c0606382641d7f",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018100000_lesson_publication_rpc.sql",
+      "name": "lesson_publication_rpc_20261018",
+      "remote_version": "20261018193506",
+      "blob_sha": "c083781ff3167c974e948b37eef8fd42ba53ee76",
+      "applied": true
     }
   ],
   "verified": {
@@ -132,7 +139,9 @@
     "local_fixture_context": "Temporary Docker Supabase in GitHub Actions; synthetic Auth accounts inserted then rolled back; never touches linked owner project",
     "disposable_12_migrations_43_blocks": "SUCCESS push 39158497069 + PR 39158501190, 43 PostgreSQL DO blocks, 16 RLS tables, final rollback/no backups.",
     "instructor_feedback_role_smoke": "Anonymous and unauthorized authenticated denied; private definer/public invoker; no real data inserted.",
-    "native_symlink_regression": "RED Native Ubuntu 39158048023 2 assertions; GREEN source 1f7a063e (push 39158307456 / PR 39158312909 3/3 jobs success)."
+    "native_symlink_regression": "RED Native Ubuntu 39158048023 2 assertions; GREEN source 1f7a063e (push 39158307456 / PR 39158312909 3/3 jobs success).",
+    "lesson_published_postgres": "13/13 local migrations, 47 DO blocks, 16 RLS tables, rollback SUCCESS push 39159245779/PR 39159251579",
+    "lesson_published_live_smoke": "PASS with real valid canonical-jsonb SHA; denied anonymous/unassigned; no Auth users, lesson_versions or audit rows."
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -145,7 +154,8 @@
     "u03_grade_approval": "DEPLOYED grade RPC; real-grade pilot NOT_RUN.",
     "u03_unity": "NOT_RUN",
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
-    "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session."
+    "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
+    "rubric_and_assignment_publication": "NOT_IMPLEMENTED"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -159,6 +169,7 @@
     "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added.",
     "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments.",
     "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty.",
-    "12 migrations applied; instructor feedback encrypted transport/real HTTP not checked; no client INSERT/UPDATE grant, immutable feedback trigger and student-visible RLS tested in disposable PostgreSQL."
+    "12 migrations applied; instructor feedback encrypted transport/real HTTP not checked; no client INSERT/UPDATE grant, immutable feedback trigger and student-visible RLS tested in disposable PostgreSQL.",
+    "Lesson hash is SHA256 of PostgreSQL jsonb::text canonical serialization, not of arbitrary raw lesson file bytes. Native chemistry remains local. Initial unauthorized live smoke with deliberately invalid hash hit input validation before role validation; corrected smoke uses valid canonical digest and PASS."
   ]
 }

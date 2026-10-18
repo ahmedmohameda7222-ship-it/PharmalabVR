@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "12 owner-approved Supabase migrations live; 43-block synthetic PostgreSQL tenant/Feedback RLS fixture green. Production Auth/pilot, trusted Storage upload/attestation, lesson/rubric publishing and Unity NOT_RUN; G-U1 OPEN."
+    "reason": "13 deployed Free-plan migrations; 47-block synthetic Postgres tenant and lesson publication tests PASS. Real verified Auth onboarding, U04 trusted upload, rubric/assignment authoring, Unity and institutional pilot NOT_RUN; G-U1 OPEN."
   },
   "tasks": [
     {
@@ -79,7 +79,7 @@
     },
     {
       "id": "U03",
-      "status": "PartialDeployed_CoursesSectionsEnrollmentStaffSubmissionsGradesFeedback",
+      "status": "PartialDeployed_AdminCourseSectionStaffEnrollmentSubmissionGradesFeedbackLessons",
       "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
       "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
@@ -87,7 +87,6 @@
       "liveAuthSmoke": "PASS: anonymous and unassigned authenticated identities denied under BEGIN/ROLLBACK; no data created",
       "sourceStaticGreen": "RED push 39096912542 Ubuntu tooling failed on missing U03 RPC; GREEN implementation SHA 196eede532175803ed2322fdd400ea30a16c0aec passed all 3 jobs on push 39097080057 and PR 39097083467 (Windows, Ubuntu, headless panel).",
       "remaining": [
-        "Author/publish lesson and rubric versions",
         "Real verified U04 evidence upload+digest attestation",
         "Unity Editor/Player/XR tests deferred",
         "Authorized enrollment/course publishing endpoints",
@@ -95,7 +94,8 @@
         "Validated Student Auth onboarding/first owner administrator",
         "Trusted Native evidence upload and positive graded submission integration",
         "Authorized grade appeal / replacement grade workflow (not implemented)",
-        "Real verified student/instructor end-to-end pilot and Native attested evidence upload"
+        "Real verified student/instructor end-to-end pilot and Native attested evidence upload",
+        "Rubric version authoring/publishing and assignment scheduling"
       ],
       "gradeApprovalMigration": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
       "gradeApprovalRemoteVersion": "20261018044135",
@@ -118,7 +118,12 @@
       "instructorFeedbackRemoteVersion": "20261018191721",
       "instructorFeedbackSourceSha": "8f88c1761209d4f96c271c4f9848392fbdad8e3c",
       "instructorFeedbackTdd": "RED source SHA 6572f4e missing function and corrected RED SQL 29de57e; GREEN 4905084 Postgres push 39157853908/PR 39157857668. 43/43 fixture DO blocks with student-visible/private feedback RLS on push 39158497069/PR 39158501190.",
-      "instructorFeedbackLive": "Deployed to owner Free plan; unauthorized and anonymous role smoke in rollback passed; 0 production users, feedback or audit rows; no new Security Advisor WARN."
+      "instructorFeedbackLive": "Deployed to owner Free plan; unauthorized and anonymous role smoke in rollback passed; 0 production users, feedback or audit rows; no new Security Advisor WARN.",
+      "publishedLessonMigration": "supabase/migrations/20261018100000_lesson_publication_rpc.sql",
+      "publishedLessonSourceSha": "78936b1f1a838426967c770d11f2be676503118b",
+      "publishedLessonRemoteVersion": "20261018193506",
+      "publishedLessonSecurity": "Server verifies SHA-256 of canonical jsonb text; only verified active assigned instructor or institution admin; immutable version and audited idempotency. No real users.",
+      "publishedLessonTest": "RED PostgreSQL 39159007745 absent RPC; GREEN 13/13 migrations, 16 RLS tables, 47 DO blocks push 39159245779/PR 39159251579, ROLLBACK; live denied-role smoke PASS after valid test hash correction."
     },
     {
       "id": "U04",
