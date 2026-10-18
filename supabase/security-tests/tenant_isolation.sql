@@ -371,5 +371,83 @@ begin
  end if;
 end $$;
 
+-- U03 grading: grade only a student's real submitted attempt with the
+-- instructor assigned to the same institution AND section.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ begin
+  perform public.university_approve_grade(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000061',88,
+   'aaaa0000-0000-4000-8000-000000000101');
+  raise exception 'student approved grade';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_approve_grade(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000061',88,
+   'aaaa0000-0000-4000-8000-000000000102');
+  raise exception 'foreign university admin approved grade';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+declare v_submission uuid; v_grade uuid; v_retry uuid;
+begin
+ select id into strict v_submission from public.submissions
+  where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    and idempotency_key='aaaa0000-0000-4000-8000-000000000093';
+ v_grade := public.university_approve_grade(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_submission,93.500,
+   'aaaa0000-0000-4000-8000-000000000103');
+ if v_grade is null then raise exception 'instructor grade missing'; end if;
+ v_retry := public.university_approve_grade(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_submission,93.500,
+   'aaaa0000-0000-4000-8000-000000000103');
+ if v_retry is distinct from v_grade then
+   raise exception 'grade retry did not return same id';
+ end if;
+ begin
+  perform public.university_approve_grade(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_submission,80,
+    'aaaa0000-0000-4000-8000-000000000103');
+  raise exception 'changed grade score accepted';
+ exception when unique_violation then null;
+ end;
+ begin
+  perform public.university_approve_grade(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',v_submission,101,
+    'aaaa0000-0000-4000-8000-000000000104');
+  raise exception 'grade outside 100 accepted';
+ exception when invalid_parameter_value then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ begin
+  update public.grades set score=20 where institution_id=
+     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and
+     submission_id=(select id from public.submissions where
+       idempotency_key='aaaa0000-0000-4000-8000-000000000093');
+  raise exception 'approved grade was mutable';
+ exception when check_violation then null;
+ end;
+ if (select count(*) from public.audit_events where
+    institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and
+    action='GradeApproved' and
+    request_id='aaaa0000-0000-4000-8000-000000000103') <> 1 then
+  raise exception 'grade not audited exactly once';
+ end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
