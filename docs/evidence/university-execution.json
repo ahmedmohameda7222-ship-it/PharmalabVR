@@ -79,7 +79,7 @@
     },
     {
       "id": "U03",
-      "status": "PartialDeployed_StudentSubmissionRpcOnly",
+      "status": "PartialDeployed_SubmissionsAndApprovedGrades",
       "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
       "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
@@ -92,8 +92,16 @@
         "Instructor grading and grade approval, audited and role scoped",
         "Real verified U04 evidence upload+digest attestation",
         "Two-university positive/negative Auth/RLS/Storage integration in disposable database",
-        "Unity Editor/Player/XR tests deferred"
-      ]
+        "Unity Editor/Player/XR tests deferred",
+        "Authorized enrollment/course publishing endpoints",
+        "Grade appeal and feedback workflow",
+        "Positive two-university grading test on disposable database"
+      ],
+      "gradeApprovalMigration": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
+      "gradeApprovalRemoteVersion": "20261018044135",
+      "gradeSourceSha": "92596757cd130ee98a8d13ea5c3709b8799b45de",
+      "gradeSourceRedSha": "5058c3f7869db64445f4732bc09e853ee2904d14",
+      "gradeSecurity": "Approved grades immutable, authorized section instructor/institution admin only; unauthorized live role smoke passed; positive seeded tests NOT_RUN."
     },
     {
       "id": "U04",
@@ -113,7 +121,9 @@
         "Actual Native receipt producer integration and hash verification against exported bytes",
         "Cloud upload/download, retries, conflict/fork semantics",
         "Unity Editor/Player and device verification"
-      ]
+      ],
+      "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
+      "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN."
     },
     {
       "id": "U05",
