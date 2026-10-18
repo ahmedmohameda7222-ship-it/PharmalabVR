@@ -141,7 +141,7 @@ end $$;
 -- An A admin must not authorize a B section or course by mismatching
 -- the institution/record pair sent to a private helper (forged reference).
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
-do $
+do $$
 begin
  if plv_private.can_manage_section('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
        'bbbb0000-0000-4000-8000-000000000011') or
@@ -157,7 +157,7 @@ begin
        'aaaa0000-0000-4000-8000-000000000001') then
   raise exception 'real tenant admin section/course helper was denied';
  end if;
-end $;
+end $$;
 
 reset role;
 rollback;
