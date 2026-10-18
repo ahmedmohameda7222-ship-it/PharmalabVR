@@ -16,6 +16,16 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_publish_lesson_version(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'aaaa0000-0000-4000-8000-000000000204'::uuid,1,
+      '{"title":"Molarity"}'::jsonb,repeat('0',64),
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'ANON_LESSON_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_record_feedback(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
@@ -138,6 +148,16 @@ begin
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
       repeat('a',64));
     raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_publish_lesson_version(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000001'::uuid,
+      'aaaa0000-0000-4000-8000-000000000204'::uuid,1,
+      '{"title":"Molarity"}'::jsonb,repeat('0',64),
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'UNAUTHORIZED_LESSON_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin

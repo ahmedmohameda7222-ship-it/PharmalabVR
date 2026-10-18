@@ -358,6 +358,34 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "feedback_audited_once"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u03_published_lesson_binds_canonical_json_digest_and_staff(self):
+        path = ROOT / "supabase/migrations/20261018100000_lesson_publication_rpc.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for marker in (
+            "create function plv_private.university_publish_lesson_version(",
+            "create function public.university_publish_lesson_version(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role in ('university_admin','instructor')",
+            "st.role = 'instructor'",
+            "c.institution_id=p_institution_id",
+            "extensions.digest(p_content_json::text,'sha256')",
+            "insert into public.lesson_versions",
+            "insert into public.audit_events",
+            "'lessonpublished'",
+            "revoke all on function public.university_publish_lesson_version",
+            "grant execute on function public.university_publish_lesson_version",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.lesson_versions", sql)
+        for marker in ("anon_lesson_bypass","unauthorized_lesson_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("lesson_student_rejected", "lesson_foreign_tenant_rejected",
+                       "lesson_instructor_published", "lesson_retry_stable",
+                       "lesson_bad_digest_rejected", "lesson_immutable_published"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",

@@ -861,5 +861,79 @@ begin
 end $$;
 reset role;
 
+-- U03 lesson publication: real PostgreSQL digest of canonical jsonb text.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ begin
+  perform public.university_publish_lesson_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000204',1,
+   '{"title":"Molarity"}'::jsonb,
+   encode(extensions.digest('{"title":"Molarity"}'::jsonb::text,'sha256'),'hex'),
+   'aaaa0000-0000-4000-8000-000000000124');
+  raise exception 'lesson_student_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_publish_lesson_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000204',1,
+   '{"title":"Molarity"}'::jsonb,
+   encode(extensions.digest('{"title":"Molarity"}'::jsonb::text,'sha256'),'hex'),
+   'aaaa0000-0000-4000-8000-000000000125');
+  raise exception 'lesson_foreign_tenant_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+declare lid uuid; repeated uuid; payload jsonb := '{"title":"Molarity"}'::jsonb;
+        canonical text := encode(extensions.digest('{"title":"Molarity"}'::jsonb::text,'sha256'),'hex');
+begin
+ lid := public.university_publish_lesson_version(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'aaaa0000-0000-4000-8000-000000000001',
+  'aaaa0000-0000-4000-8000-000000000204',1,payload,canonical,
+  'aaaa0000-0000-4000-8000-000000000126');
+ if lid is null then raise exception 'lesson_instructor_published'; end if;
+ repeated := public.university_publish_lesson_version(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'aaaa0000-0000-4000-8000-000000000001',
+  'aaaa0000-0000-4000-8000-000000000204',1,payload,canonical,
+  'aaaa0000-0000-4000-8000-000000000126');
+ if repeated is distinct from lid then raise exception 'lesson_retry_stable'; end if;
+ begin
+  perform public.university_publish_lesson_version(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+   'aaaa0000-0000-4000-8000-000000000001',
+   'aaaa0000-0000-4000-8000-000000000204',1,payload,repeat('0',64),
+   'aaaa0000-0000-4000-8000-000000000127');
+  raise exception 'lesson_bad_digest_rejected';
+ exception when invalid_parameter_value then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ begin
+  update public.lesson_versions set content_json='{"title":"Altered"}'::jsonb
+    where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and lesson_id='aaaa0000-0000-4000-8000-000000000204';
+  raise exception 'lesson_immutable_published';
+ exception when check_violation then null;
+ end;
+ if (select count(*) from public.audit_events where action='LessonPublished'
+   and request_id='aaaa0000-0000-4000-8000-000000000126') <> 1 then
+   raise exception 'lesson publish audit missing';
+ end if;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
