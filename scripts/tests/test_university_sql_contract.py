@@ -13,6 +13,8 @@ RLS = (ROOT / "supabase/migrations/20261017000100_university_rls.sql").read_text
 FIXTURE = (ROOT / "supabase/security-tests/tenant_isolation.sql").read_text(encoding="utf-8").lower()
 RPC_PATH = ROOT / "supabase/migrations/20261018000000_university_membership_rpc.sql"
 RPC = RPC_PATH.read_text(encoding="utf-8").lower() if RPC_PATH.exists() else ""
+HARDENING_PATH = ROOT / "supabase/migrations/20261018010000_university_rpc_hardening.sql"
+HARDENING = HARDENING_PATH.read_text(encoding="utf-8").lower() if HARDENING_PATH.exists() else ""
 
 TABLES = (
     "institutions", "profiles", "institution_memberships", "courses",
@@ -119,6 +121,32 @@ class UniversitySqlGuardrails(unittest.TestCase):
             "revocation was not audited",
         ):
             self.assertIn(marker, FIXTURE)
+
+    def test_u02_rpc_hardening_keeps_security_definer_out_of_public_api(self):
+        # RED live-project evidence before the hardening: all three public
+        # functions had prosecdef=true. Public interfaces must be INVOKER.
+        for name, signature, args in (
+            ("university_invite_member", "uuid,uuid,text,uuid", "$1,$2,$3,$4"),
+            ("university_accept_invite", "uuid,uuid", "$1,$2"),
+            ("university_revoke_member", "uuid,uuid,uuid", "$1,$2,$3"),
+        ):
+            self.assertIn(
+                f"alter function public.{name}({signature}) set schema plv_private",
+                HARDENING
+            )
+            self.assertIn(
+                f"create function public.{name}(",
+                HARDENING
+            )
+            self.assertIn(
+                f"plv_private.{name}({args})",
+                HARDENING
+            )
+        self.assertEqual(HARDENING.count("security invoker set search_path = ''"), 3)
+        self.assertEqual(HARDENING.count("security definer"), 1)  # comment only
+        self.assertEqual(HARDENING.count("to authenticated;"), 6)
+        self.assertIn("revoke all on function public.university_invite_member", HARDENING)
+        self.assertIn("revoke all on function public.university_revoke_member", HARDENING)
 
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
