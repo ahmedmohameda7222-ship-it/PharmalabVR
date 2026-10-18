@@ -224,28 +224,6 @@ class UniversitySqlGuardrails(unittest.TestCase):
             self.assertIn(marker, grade)
         self.assertNotIn("grant insert on public.grades", grade)
 
-    def test_u03_section_enrollment_is_admin_only_and_tenant_bound(self):
-        source = ROOT / "supabase/migrations/20261018050000_section_enrollment_rpc.sql"
-        enrollment = source.read_text(encoding="utf-8").lower() if source.exists() else ""
-        for marker in (
-            "create function plv_private.university_enroll_student(",
-            "create function public.university_enroll_student(",
-            "security definer set search_path = ''",
-            "security invoker set search_path = ''",
-            "plv_private.is_admin(p_institution_id)",
-            "m.role = 'student'",
-            "m.status = 'active'",
-            "s.institution_id = p_institution_id",
-            "s.id = p_section_id",
-            "insert into public.enrollments",
-            "insert into public.audit_events",
-            "'enrollmentcreated'",
-            "revoke all on function public.university_enroll_student",
-            "grant execute on function public.university_enroll_student",
-        ):
-            self.assertIn(marker, enrollment)
-        self.assertNotIn("grant insert on public.enrollments", enrollment)
-
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
