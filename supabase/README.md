@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Sixteen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Seventeen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -22,6 +22,7 @@
 | `20261018110000_rubric_publication_rpc.sql` | `rubric_publication_rpc_20261018` | `20261018210006` |
 | `20261018120000_assignment_publication_rpc.sql` | `assignment_publication_rpc_20261018` | `20261018210953` |
 | `20261018130000_evidence_staging.sql` | `evidence_staging_20261018` | `20261018233744` |
+| `20261018140000_staging_session_registration.sql` | `staging_session_registration_20261018` | `20261018235349` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -70,3 +71,6 @@ An active assigned instructor or institution admin can now publish a canonical S
 
 ## U04 staging is **not** Native attestation
 Owner Free project now has a private `plv-university-evidence-staging` bucket and unexposed, immutable `public.evidence_upload_staging` table with RLS enabled and **no** client policies. `student-evidence-upload` Edge Function v1 (JWT verification on) receives up to 1 MiB of JSON, checks actual SHA-256, active student and owned pending session, and stages bytes under a tenant-prefixed UUID object key. It returns `staged_unverified`, never creates `session_artifacts`, and never marks the offline outbox synced. No real Auth users or live authorized HTTP tests exist. The staging object cannot satisfy the academic submission RPC's separate protected evidence-bucket requirement. See `supabase/functions/student-evidence-upload/README.md` and `docs/evidence/u04-quarantine-live-2026-10-18.md`.
+
+## U04 untrusted student Native session registration
+An authenticated, email-verified active student can call `public.university_register_staging_session(institution_id, local_session_id, native_branch_id, science_package_sha256, request_id)` to receive a tenant-bound server session UUID for quarantined uploads. The claimed branch/digest are **not Native-authenticated**: the record starts at `current_revision=0`, `sync_state='pending'`; retry of the exact request UUID is idempotent, while conflicting replays are rejected and logged. The U03 grade/submission flow still requires a genuine nonzero committed revision and a vetted artifact from the **different** academic evidence bucket. Headless PostgreSQL verified the source registration, but no real Auth/HTTP/native application journey exists. See `docs/evidence/u04-staging-session-2026-10-18.md`.

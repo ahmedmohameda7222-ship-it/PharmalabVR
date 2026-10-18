@@ -40,3 +40,6 @@ The isolated PostgreSQL fixture exercises quarantine bucket/table denial.
 No real test students or verified Native export producer exist yet, so an
 authorized production HTTP upload remains **NOT_RUN**, regardless of function
 deployment status. Final Unity Editor/Player/XR tests remain deferred.
+
+## Register a pending source identity
+Before staging, a real authenticated student may invoke the public RPC `university_register_staging_session` with their institution UUID, local session token (1–128 safe ASCII characters), Native branch token, 64-character lowercase science package SHA-256 and stable UUID request ID. Its return value is the *server session UUID* required in the staging HTTP header `x-session-id`. The RPC creates **only** a revision-zero pending self-claimed identity; it is not an authenticated Native receipt, and retries with changed data fail. The real client Auth/HTTP workflow remains untested because production has no Auth student accounts.

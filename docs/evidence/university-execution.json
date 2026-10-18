@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "U04 private quarantine migration 16 installed and Edge v1 ACTIVE; 57-block disposable PostgreSQL fixture successful. No real Auth users or trusted Native server attestation, no promotion to academic evidence, and final Unity/XR tests NOT_RUN. G-U1 OPEN."
+    "reason": "17 owner Free migrations deployed. U04 stage-only Edge v1 and self-claimed zero-revision lab session registration SQL tested in disposable PostgreSQL, not attested. Real Auth and Native export receipt producer, cloud attestation/academic promotion, Unity/XR and user pilot NOT_RUN; G-U1 OPEN."
   },
   "tasks": [
     {
@@ -173,7 +173,12 @@
       "quarantinePolicySha": "8e10bab48665b112ec0ca335f21cd7101da08023",
       "quarantineServerBundleSha256": "5a53331725b173c932f6d9bb95421cc947186dea164d834d5efcda83cd4c316e",
       "quarantineSecurity": "Private 1MiB JSON Storage bucket separate from academic evidence, RLS with zero policies, no anon/authenticated table grants. JWT-verified Edge stage endpoint ACTIVE v1; user must be email verified, active student with an owned pending session; hashes actual bytes. No Native attestation, no academic approval.",
-      "quarantineVerification": "Real local Supabase push CI 39177062225 SUCCESS: 16/16 SQL migrations, 17 public RLS tables, 57 fixture DO blocks and ROLLBACK; API bundle deployed v1 and inspected; real authorized production HTTP upload NOT_RUN (0 Auth users). Headless U04 Node admission+stream tests succeeded at source SHA 76e3bb2, push 39177206523 panel job."
+      "quarantineVerification": "Real local Supabase push CI 39177062225 SUCCESS: 16/16 SQL migrations, 17 public RLS tables, 57 fixture DO blocks and ROLLBACK; API bundle deployed v1 and inspected; real authorized production HTTP upload NOT_RUN (0 Auth users). Headless U04 Node admission+stream tests succeeded at source SHA 76e3bb2, push 39177206523 panel job.",
+      "stagingSessionRegistration": "supabase/migrations/20261018140000_staging_session_registration.sql",
+      "stagingSessionSourceSha": "53d2ed57611e8dd35ef54194380bfd901f35252f",
+      "stagingSessionRemoteVersion": "20261018235349",
+      "stagingSessionSafety": "Authenticated email-verified active student only; inserts own pending zero-revision lab_session as an UNTRUSTED claimed Native branch+science digest with audit/idempotency. No grading or trusted receipt, no direct table INSERT grant.",
+      "stagingSessionTests": "RED PostgreSQL Actions 39177988359 absent public RPC; GREEN 39178191954 + PR 39178194667: 17 migrations, 17 RLS tables, 60 fixture DO blocks, rollback and teardown, no errors; owner live denied-role smoke PASS."
     },
     {
       "id": "U05",
