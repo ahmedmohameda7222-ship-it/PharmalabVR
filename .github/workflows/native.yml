@@ -24,6 +24,8 @@ jobs:
         run: dotnet run --project tools/university-contract/UniversityContract.csproj --configuration Release
       - name: Exercise source-linked U04 durable offline outbox (headless; no cloud)
         run: dotnet run --project tools/outbox-contract/OutboxContract.csproj --configuration Release
+      - name: Exercise pure U04 tenant evidence-status access rules (Node; no cloud)
+        run: node --test supabase/functions/student-evidence-status/policy.test.mjs
   native:
     strategy:
       fail-fast: false
