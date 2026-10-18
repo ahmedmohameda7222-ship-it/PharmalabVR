@@ -250,6 +250,37 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertIn("enrollment_cross_tenant_rejected", FIXTURE)
         self.assertIn("enrollment_student_rejected", FIXTURE)
 
+    def test_u03_admin_course_creation_is_tenant_scoped_and_audited(self):
+        source = ROOT / "supabase/migrations/20261018060000_course_creation_rpc.sql"
+        sql = source.read_text(encoding="utf-8").lower() if source.exists() else ""
+        for required in (
+            "create function plv_private.university_create_course(",
+            "create function public.university_create_course(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.is_admin(p_institution_id)",
+            "m.role = 'university_admin'",
+            "insert into public.courses",
+            "insert into public.audit_events",
+            "'coursecreated'",
+            "revoke all on function public.university_create_course",
+            "grant execute on function public.university_create_course",
+        ):
+            self.assertIn(required, sql)
+        self.assertNotIn("grant insert on public.courses", sql)
+        for required in (
+            "anon_course_bypass",
+            "unauthorized_course_bypass",
+        ):
+            self.assertIn(required, SMOKE)
+        for required in (
+            "course_admin_pass",
+            "course_cross_tenant_rejected",
+            "course_student_rejected",
+            "course exact retry not idempotent",
+        ):
+            self.assertIn(required, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
