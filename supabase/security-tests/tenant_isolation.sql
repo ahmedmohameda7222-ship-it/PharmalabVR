@@ -528,5 +528,74 @@ begin
   end if;
 end $$;
 
+-- U03 course creation: one academic tenant, no direct client INSERT.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+  begin
+    perform public.university_create_course(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'CHEM999','Advanced Chemistry','2026F',
+      'aaaa0000-0000-4000-8000-000000000110');
+    raise exception 'course_student_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+  begin
+    perform public.university_create_course(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'CHEM999','Advanced Chemistry','2026F',
+      'aaaa0000-0000-4000-8000-000000000111');
+    raise exception 'course_cross_tenant_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$
+declare
+  created uuid;
+  retry uuid;
+begin
+  created := public.university_create_course(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'CHEM999','Advanced Chemistry','2026F',
+    'aaaa0000-0000-4000-8000-000000000112');
+  if created is null then raise exception 'course_admin_pass'; end if;
+  retry := public.university_create_course(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'CHEM999','Advanced Chemistry','2026F',
+    'aaaa0000-0000-4000-8000-000000000112');
+  if retry is distinct from created then
+    raise exception 'course exact retry not idempotent';
+  end if;
+  begin
+    perform public.university_create_course(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'CHEM999','Renamed Chemistry','2026F',
+      'aaaa0000-0000-4000-8000-000000000112');
+    raise exception 'Changed-name course replay accepted';
+  exception when unique_violation then null;
+  end;
+end $$;
+reset role;
+do $$
+begin
+  if (select count(*) from public.courses
+    where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and code='CHEM999' and name='Advanced Chemistry'
+      and term='2026F') <> 1 then
+    raise exception 'Course was not created in tenant';
+  end if;
+  if (select count(*) from public.audit_events where
+    request_id='aaaa0000-0000-4000-8000-000000000112'
+    and action='CourseCreated') <> 1 then
+    raise exception 'Course created without exactly one audit event';
+  end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
