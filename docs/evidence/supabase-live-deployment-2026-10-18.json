@@ -77,7 +77,8 @@
     "u03_private_definer_rpcs": 1,
     "u03_anon_execute": false,
     "u03_no_data_smoke": "PASS: 2 new U03 denial cases and 8 earlier authorization-denial cases; script transaction rolled back; no Auth users/institutions/evidence/submissions written",
-    "u03_unique_native_attempt_index": 1
+    "u03_unique_native_attempt_index": 1,
+    "u03_source_ci": "Implementation commit 196eede5 all 3 jobs SUCCESS both push run 39097080057 and pull_request run 39097083467."
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
@@ -98,6 +99,6 @@
     "Original 66-task Native/VR execution ledger and P11.01 SessionLoad Hold remain unchanged.",
     "PR #1 remains unmerged.",
     "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created.",
-    "Sixth migration U03 student submission endpoint installed after source-linked Ubuntu/tooling CI passed; Windows/final HEAD status must be checked independently."
+    "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked."
   ]
 }

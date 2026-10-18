@@ -85,7 +85,7 @@
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
       "remoteMigrationVersion": "20261018042735",
       "liveAuthSmoke": "PASS: anonymous and unassigned authenticated identities denied under BEGIN/ROLLBACK; no data created",
-      "sourceStaticGreen": "Ubuntu Native CI at 196eede5 (push 39097080057 and PR 39097083467), Windows not yet verified",
+      "sourceStaticGreen": "RED push 39096912542 Ubuntu tooling failed on missing U03 RPC; GREEN implementation SHA 196eede532175803ed2322fdd400ea30a16c0aec passed all 3 jobs on push 39097080057 and PR 39097083467 (Windows, Ubuntu, headless panel).",
       "remaining": [
         "Author/publish lesson and rubric versions",
         "Authorized course/section creation and enrollment",
