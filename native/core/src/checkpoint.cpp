@@ -121,6 +121,7 @@ bool flushDirectory(const std::filesystem::path& directory) {
 DurableCheckpointStore::DurableCheckpointStore(std::string path, std::size_t maxPayloadBytes)
     : path_(std::move(path)), maxPayloadBytes_(maxPayloadBytes) {
     if (path_.empty() || path_.find('\0') != std::string::npos ||
+        !std::filesystem::path(path_).is_absolute() ||
         std::filesystem::path(path_).parent_path().empty() ||
         maxPayloadBytes_ == 0 ||
         maxPayloadBytes_ > std::numeric_limits<std::size_t>::max() - headerReserve)
