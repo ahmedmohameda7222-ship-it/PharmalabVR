@@ -143,7 +143,7 @@ class UniversitySqlGuardrails(unittest.TestCase):
                 HARDENING
             )
         self.assertEqual(HARDENING.count("security invoker set search_path = ''"), 3)
-        self.assertEqual(HARDENING.count("security definer"), 1)  # comment only
+        self.assertEqual(HARDENING.count("security definer"), 0)
         self.assertEqual(HARDENING.count("to authenticated;"), 6)
         self.assertIn("revoke all on function public.university_invite_member", HARDENING)
         self.assertIn("revoke all on function public.university_revoke_member", HARDENING)
