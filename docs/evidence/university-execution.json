@@ -9,29 +9,29 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "10 schema/RPC migrations applied, no-data role smoke passed and read-only Edge deployed; real initial university, disposable seeded Auth/RLS/Storage positive test, trusted evidence upload and Unity remain unverified."
+    "reason": "Disposable ten-migration local Supabase two-tenant Postgres fixture passed push/PR, but real email-verified Auth users, real Storage upload/attestation, Unity and pilot still NOT_RUN. G-U1 OPEN."
   },
   "tasks": [
     {
       "id": "U01",
-      "status": "Deployed_PendingSeededTenantIsolationTests",
+      "status": "Deployed_LocalTwoTenantPostgresPassed_RealIdentityPending",
       "files": [
         "supabase/migrations/20261017000000_university_core.sql",
         "supabase/migrations/20261017000100_university_rls.sql",
         "supabase/security-tests/tenant_isolation.sql"
       ],
       "limitations": [
-        "Two-tenant seeded RLS/Auth/Storage fixture NOT_RUN against disposable database",
         "Security INFO audit_events intentionally lacks client read policies",
         "Performance INFO missing FK indexes await real workload",
-        "Unity NOT_RUN"
+        "Unity NOT_RUN",
+        "Real Supabase Auth signup/email, Storage API and Unity client journeys remain NOT_RUN"
       ],
       "securityRegression": {
         "redTestSourceSha": "de8118b40482677c1af636362076232a97098cea",
         "fixSha": "704afb501c67bbd86948f506bd4f3560b7a8e5fe",
         "scope": "Reject tenant A admin checking foreign or missing tenant B course/section IDs",
         "staticSourcePredicateCheck": "Six required section/course matching markers seen; full CI results and PostgreSQL execution remain separate",
-        "realPostgresRlsExecuted": false
+        "realPostgresRlsExecuted": true
       },
       "databaseApplied": true,
       "validation": [
@@ -39,12 +39,13 @@
         "17 academic SELECT/profile policies",
         "private 50 MiB Storage bucket",
         "live no-data SQL smoke succeeded",
-        "seeded two-tenant fixture NOT_RUN"
+        "seeded two-tenant fixture NOT_RUN",
+        "Disposable Supabase PostgreSQL migrated schema and two-institution fixture passed push 39102130003, PR 39102133277; 32 DO assertions blocks completed then ROLLBACK"
       ]
     },
     {
       "id": "U02",
-      "status": "DeployedRpc_PendingEndToEndAuthAndUnity",
+      "status": "Deployed_RpcFixturePassed_RealAuthAndUnityPending",
       "codeCommit": "e871ada682734bfe2e703b74381aa8aed99a97c6",
       "redCommit": "6fde5ba5ac595b9011940bec73d2247cd659e510",
       "headlessTests": "U02 SQL static checks pass on Windows/Ubuntu CI at 73eb30d; synthetic Postgres invitation/Auth/RLS script remains NOT_RUN",
@@ -75,7 +76,8 @@
       ],
       "ownerBootstrapMigration": "supabase/migrations/20261018020000_owner_bootstrap.sql",
       "ownerBootstrapDeploymentVersion": "20261018035637",
-      "ownerBootstrapVerification": "Private SECURITY INVOKER; no anon/authenticated/service_role EXECUTE; rejected role smoke; no Auth user currently exists"
+      "ownerBootstrapVerification": "Private SECURITY INVOKER; no anon/authenticated/service_role EXECUTE; rejected role smoke; no Auth user currently exists",
+      "realPostgresFixture": "Disposable CI synthetic Auth membership invitation/acceptance/revocation SQL passed push 39102130003 and PR 39102133277; real email/Auth service NOT_RUN"
     },
     {
       "id": "U03",
@@ -91,11 +93,9 @@
         "Authorized course/section creation and enrollment",
         "Instructor grading and grade approval, audited and role scoped",
         "Real verified U04 evidence upload+digest attestation",
-        "Two-university positive/negative Auth/RLS/Storage integration in disposable database",
         "Unity Editor/Player/XR tests deferred",
         "Authorized enrollment/course publishing endpoints",
         "Grade appeal and feedback workflow",
-        "Positive two-university grading test on disposable database",
         "Instructor section assignment authorization",
         "Lesson/rubric version publication and assignment scheduling",
         "Validated Student Auth onboarding/first owner administrator",
@@ -117,7 +117,7 @@
         "20261018055029"
       ],
       "adminSecuritySmoke": "Anonymous and unassigned authenticated attempts denied in owner Free project; no data created.",
-      "positiveIntegration": "Source fixture with two synthetic institutions authored; disposable GitHub PostgreSQL workflow started but not yet verified."
+      "positiveIntegration": "Disposable local Supabase/PostgreSQL fixture PASSED for synthetic identities and institution/course/section/enrollment/submission/grade SQL; push 39102130003 and PR 39102133277. Real app Auth and Native evidence integration still pending."
     },
     {
       "id": "U04",

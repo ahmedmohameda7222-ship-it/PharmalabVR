@@ -19,11 +19,15 @@
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
+## Verified disposable PostgreSQL regression
+
+Push [39102130003](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39102130003) and PR [39102133277](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39102133277) successfully started an **unlinked local Supabase stack**, applied all ten repository migrations, exercised the synthetic two-university fixture under real PostgreSQL/RLS with 32 DO blocks, rolled back the fixture, and stopped the stack without backups. This establishes database-side tests for defined synthetic cases, **not** real email delivery, production Auth flows, Storage object bytes, or Unity/VR integration. The workflow never has the owner project URL or credentials.
+
 ## What was and was not tested
 
 `security-tests/live_no_data_smoke.sql` was executed on the owner-authorized project inside a transaction ending with `ROLLBACK`. It verifies the three RPCs reject anonymous callers and an authenticated role with an unauthorised synthetic identity. A post-run count confirmed zero Auth users, institution members, submissions, audit rows and uploaded objects. This is **not** full multitenant integration validation.
 
-`security-tests/tenant_isolation.sql` is a separate **NOT_RUN** synthetic user fixture designed for a disposable local Supabase PostgreSQL instance. **Never run its synthetic Auth-user inserts on this live project**. When a disposable local stack is available, run migrations first, then run its rollback test using `psql -X -v ON_ERROR_STOP=1`.
+`security-tests/tenant_isolation.sql` is a separate synthetic user fixture verified by isolated CI, designed for a disposable local Supabase PostgreSQL instance. **Never run its synthetic Auth-user inserts on this live project**. When a disposable local stack is available, run migrations first, then run its rollback test using `psql -X -v ON_ERROR_STOP=1`.
 
 ## Access and release restrictions
 

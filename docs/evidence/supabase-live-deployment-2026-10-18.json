@@ -110,7 +110,12 @@
     "grade_approval_privileges": "3/3 checks: public invoker, private definer, anonymous execute denied",
     "grade_immutability_trigger": 1,
     "academic_admin_rpcs": "Three public SECURITY INVOKER endpoints, each private SECURITY DEFINER implementation; authenticated grants only; anonymous EXECUTE denied",
-    "academic_admin_live_smoke": "Passed denied-role smoke for enrollment, course and section within BEGIN/ROLLBACK; zero Auth users or academic rows"
+    "academic_admin_live_smoke": "Passed denied-role smoke for enrollment, course and section within BEGIN/ROLLBACK; zero Auth users or academic rows",
+    "local_supabase_postgres_ten_migrations": "SUCCESS push workflow 39102130003, PR workflow 39102133277",
+    "local_rls_tables": 16,
+    "local_fixture_do_blocks": 32,
+    "local_fixture_rollback": true,
+    "local_fixture_context": "Temporary Docker Supabase in GitHub Actions; synthetic Auth accounts inserted then rolled back; never touches linked owner project"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
@@ -123,7 +128,7 @@
     "u03_grade_approval": "NOT_IMPLEMENTED",
     "u03_unity": "NOT_RUN",
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
-    "disposable_tenant_fixture": "GitHub Actions disposable Supabase job introduced; result not confirmed at evidence HEAD"
+    "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session."
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -135,6 +140,7 @@
     "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created.",
     "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked.",
     "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added.",
-    "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments."
+    "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments.",
+    "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty."
   ]
 }
