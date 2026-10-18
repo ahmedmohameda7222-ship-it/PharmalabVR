@@ -668,5 +668,80 @@ begin
   end if;
 end $$;
 
+-- Instructor assignment to section A2: existing verified A instructor 333.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+  begin
+    perform public.university_assign_section_staff(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000012',
+      '33333333-3333-4333-8333-333333333333','instructor',
+      'aaaa0000-0000-4000-8000-000000000116');
+    raise exception 'staff_student_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+  begin
+    perform public.university_assign_section_staff(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000012',
+      '33333333-3333-4333-8333-333333333333','instructor',
+      'aaaa0000-0000-4000-8000-000000000117');
+    raise exception 'staff_cross_tenant_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $$
+declare accepted text; repeated text;
+begin
+  accepted := public.university_assign_section_staff(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000012',
+    '33333333-3333-4333-8333-333333333333','instructor',
+    'aaaa0000-0000-4000-8000-000000000118');
+  if accepted is distinct from 'Assigned' then
+    raise exception 'staff_admin_pass';
+  end if;
+  repeated := public.university_assign_section_staff(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000012',
+    '33333333-3333-4333-8333-333333333333','instructor',
+    'aaaa0000-0000-4000-8000-000000000118');
+  if repeated is distinct from 'AlreadyAssigned' then
+    raise exception 'staff exact retry changed result';
+  end if;
+  begin
+    perform public.university_assign_section_staff(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000012',
+      '33333333-3333-4333-8333-333333333333','teaching_assistant',
+      'aaaa0000-0000-4000-8000-000000000119');
+    raise exception 'role mismatch accepted';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+do $$
+begin
+  if (select count(*) from public.section_staff where
+    institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    and section_id='aaaa0000-0000-4000-8000-000000000012'
+    and user_id='33333333-3333-4333-8333-333333333333'
+    and role='instructor') <> 1 then
+    raise exception 'Staff assignment missing';
+  end if;
+  if (select count(*) from public.audit_events
+    where request_id='aaaa0000-0000-4000-8000-000000000118'
+    and action='SectionStaffAssigned') <> 1 then
+    raise exception 'Staff assignment unaudited';
+  end if;
+end $$;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

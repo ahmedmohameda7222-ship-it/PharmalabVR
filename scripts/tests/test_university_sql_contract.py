@@ -305,6 +305,31 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "section_student_rejected", "section retry altered id"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u03_instructor_assignment_is_admin_and_tenant_checked(self):
+        path = ROOT / "supabase/migrations/20261018080000_section_staff_rpc.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for marker in (
+            "create function plv_private.university_assign_section_staff(",
+            "create function public.university_assign_section_staff(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.is_admin(p_institution_id)",
+            "m.role = p_staff_role",
+            "u.email_confirmed_at is not null",
+            "insert into public.section_staff",
+            "insert into public.audit_events",
+            "'sectionstaffassigned'",
+            "revoke all on function public.university_assign_section_staff",
+            "grant execute on function public.university_assign_section_staff",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.section_staff", sql)
+        for marker in ("anon_staff_bypass", "unauthorized_staff_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("staff_student_rejected", "staff_cross_tenant_rejected",
+                       "staff_admin_pass", "staff exact retry changed result"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
