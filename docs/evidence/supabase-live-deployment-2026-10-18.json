@@ -44,6 +44,13 @@
       "remote_version": "20261018035637",
       "blob_sha": "7189bb0561bed1e223f1fadaf9d340e870ff1b32",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018030000_student_submission_rpc.sql",
+      "name": "student_submission_rpc_20261018",
+      "remote_version": "20261018042735",
+      "blob_sha": "25f35002eda03bfb6900f8bf62d5abc5d12db4ae",
+      "applied": true
     }
   ],
   "verified": {
@@ -65,14 +72,23 @@
     "owner_bootstrap_execute_anon": false,
     "owner_bootstrap_execute_authenticated": false,
     "owner_bootstrap_execute_service_role": false,
-    "live_bootstrap_denial_smoke": "Reexecuted no-data smoke after owner bootstrap deployment: anonymous and unauthorised Auth attempts rejected"
+    "live_bootstrap_denial_smoke": "Reexecuted no-data smoke after owner bootstrap deployment: anonymous and unauthorised Auth attempts rejected",
+    "u03_public_invoker_rpcs": 1,
+    "u03_private_definer_rpcs": 1,
+    "u03_anon_execute": false,
+    "u03_no_data_smoke": "PASS: 2 new U03 denial cases and 8 earlier authorization-denial cases; script transaction rolled back; no Auth users/institutions/evidence/submissions written",
+    "u03_unique_native_attempt_index": 1
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
     "unity_editmode": "NOT_RUN",
     "native_producer_server_sync": "NOT_IMPLEMENTED",
     "first_university_admin": "NOT_PROVISIONED: no verified app Auth user yet",
-    "student_pilot": "NOT_RUN"
+    "student_pilot": "NOT_RUN",
+    "u03_two_tenant_positive_submission": "NOT_RUN (disposable local Supabase database unavailable)",
+    "u03_pre_attested_u04_broker": "NOT_IMPLEMENTED: successful ingestion intentionally requires existing attested artifact",
+    "u03_grade_approval": "NOT_IMPLEMENTED",
+    "u03_unity": "NOT_RUN"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -81,6 +97,7 @@
     "No service-role API key shared with Unity or clients.",
     "Original 66-task Native/VR execution ledger and P11.01 SessionLoad Hold remain unchanged.",
     "PR #1 remains unmerged.",
-    "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created."
+    "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created.",
+    "Sixth migration U03 student submission endpoint installed after source-linked Ubuntu/tooling CI passed; Windows/final HEAD status must be checked independently."
   ]
 }

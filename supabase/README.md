@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Five ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Six ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -11,6 +11,7 @@
 | `20261018000000_university_membership_rpc.sql` | `university_membership_rpc_20261018` | `20261018034623` |
 | `20261018010000_university_rpc_hardening.sql` | `university_rpc_hardening_20261018` | `20261018034945` |
 | `20261018020000_owner_bootstrap.sql` | `owner_bootstrap_20261018` | `20261018035637` |
+| `20261018030000_student_submission_rpc.sql` | `student_submission_rpc_20261018` | `20261018042735` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -32,3 +33,6 @@ The project was empty before deployment, with zero Auth users, application table
 - Service-role/secret keys are never stored in GitHub or client builds. Free-tier quotas apply; no paid upgrade, branching feature or extra project is assumed.
 
 Exact schema migration versions, SHA evidence and outstanding gates are recorded in `docs/evidence/supabase-live-deployment-2026-10-18.json`.
+
+## U03 receipt-bound submissions (partial)
+`public.university_submit_attempt(tenant,assignment,lab_session,idempotency_key,evidence_sha256)` delegates to private authorized SQL. The API rejects unauthenticated, nonstudent, un-enrolled, unpublished, late and non-owned session attempts; a matching server-attested `session_artifacts` record and private Storage object must exist. No client may create these metadata rows directly. A verified U04 upload broker is still missing, so positive submissions are blocked in the currently empty project. The test fixture's synthetic Auth users must **never** be inserted into this live project. See `docs/evidence/u03-submission-progress.md`.

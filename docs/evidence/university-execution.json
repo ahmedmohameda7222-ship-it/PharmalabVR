@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "Live empty-project security smoke passed, but full seeded two-tenant PostgreSQL/RLS/Storage and student pilot remain unverified; Unity remains NOT_RUN."
+    "reason": "U03 submission RPC applied and denied-role smoke passed, but no positive student submission can occur until U04 attested evidence upload and real Auth/enrollment exists. Two-tenant RLS/Auth/Storage plus Unity and student pilot remain NOT_RUN."
   },
   "tasks": [
     {
@@ -79,7 +79,21 @@
     },
     {
       "id": "U03",
-      "status": "Open"
+      "status": "PartialDeployed_StudentSubmissionRpcOnly",
+      "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
+      "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
+      "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
+      "remoteMigrationVersion": "20261018042735",
+      "liveAuthSmoke": "PASS: anonymous and unassigned authenticated identities denied under BEGIN/ROLLBACK; no data created",
+      "sourceStaticGreen": "Ubuntu Native CI at 196eede5 (push 39097080057 and PR 39097083467), Windows not yet verified",
+      "remaining": [
+        "Author/publish lesson and rubric versions",
+        "Authorized course/section creation and enrollment",
+        "Instructor grading and grade approval, audited and role scoped",
+        "Real verified U04 evidence upload+digest attestation",
+        "Two-university positive/negative Auth/RLS/Storage integration in disposable database",
+        "Unity Editor/Player/XR tests deferred"
+      ]
     },
     {
       "id": "U04",
