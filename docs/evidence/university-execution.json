@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "Owner-authorized 15 migrations applied and synthetic 56-block two-tenant PostgreSQL CI GREEN; real verified Auth identities, trusted Native cloud evidence upload/attestation, real end-to-end student pilot and final Unity Editor/Player/XR tests NOT_RUN. Gate G-U1 OPEN."
+    "reason": "U04 private quarantine migration 16 installed and Edge v1 ACTIVE; 57-block disposable PostgreSQL fixture successful. No real Auth users or trusted Native server attestation, no promotion to academic evidence, and final Unity/XR tests NOT_RUN. G-U1 OPEN."
   },
   "tasks": [
     {
@@ -136,7 +136,7 @@
     },
     {
       "id": "U04",
-      "status": "PartialDeployed_ReadOnlyEvidenceStatusPlusOfflineOutbox",
+      "status": "PartialDeployed_ReadOnlyAndQuarantinedUpload",
       "initialRedSha": "38bf18223220eaa2394e2bb8944fb609a4ffc1fa",
       "initialGreenSha": "aa0216bd3c81e4d825f02acab9c00e8c3a52f0c4",
       "lockRedSha": "5cd2a6a33a4ea92becb92c64b856c404ce17c277",
@@ -153,7 +153,9 @@
         "Cloud upload/download, retries, conflict/fork semantics",
         "Unity Editor/Player and device verification",
         "Live student identity HTTP/JWT read endpoint verification",
-        "Attested private Storage upload and signed server acknowledgment"
+        "Attested private Storage upload and signed server acknowledgment",
+        "Trusted Native receipt attestation and promotion from quarantined staging to academic evidence",
+        "Real email-verified student HTTP POST through Edge and private Storage (NOT_RUN)"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -161,7 +163,17 @@
       "readOnlyEdgeVersion": 1,
       "edgeSourceSha": "d291711842bd20053d6353a1a470bb73b8abe439",
       "edgeAccessTestSourceSha": "639e4a15d24e619c3b5964b1246e233bd8b416e8",
-      "edgeEvidence": "Supabase ACTIVE version 1 verify_jwt=true; pure Node policy headless green; actual authorized HTTP request still NOT_RUN as Auth users=0"
+      "edgeEvidence": "Supabase ACTIVE version 1 verify_jwt=true; pure Node policy headless green; actual authorized HTTP request still NOT_RUN as Auth users=0",
+      "quarantineMigration": "supabase/migrations/20261018130000_evidence_staging.sql",
+      "quarantineRemoteVersion": "20261018233744",
+      "quarantineDatabaseSourceSha": "bda009610b711922c8086528683e4387587e1410",
+      "quarantineEdgeFunction": "student-evidence-upload",
+      "quarantineEdgeVersion": 1,
+      "quarantineEdgeSourceSha": "76e3bb28ef3fcbefc0b26e688e7b235be4ef5bb6",
+      "quarantinePolicySha": "8e10bab48665b112ec0ca335f21cd7101da08023",
+      "quarantineServerBundleSha256": "5a53331725b173c932f6d9bb95421cc947186dea164d834d5efcda83cd4c316e",
+      "quarantineSecurity": "Private 1MiB JSON Storage bucket separate from academic evidence, RLS with zero policies, no anon/authenticated table grants. JWT-verified Edge stage endpoint ACTIVE v1; user must be email verified, active student with an owned pending session; hashes actual bytes. No Native attestation, no academic approval.",
+      "quarantineVerification": "Real local Supabase push CI 39177062225 SUCCESS: 16/16 SQL migrations, 17 public RLS tables, 57 fixture DO blocks and ROLLBACK; API bundle deployed v1 and inspected; real authorized production HTTP upload NOT_RUN (0 Auth users). Headless U04 Node admission+stream tests succeeded at source SHA 76e3bb2, push 39177206523 panel job."
     },
     {
       "id": "U05",

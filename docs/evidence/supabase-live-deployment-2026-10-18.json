@@ -114,6 +114,13 @@
       "remote_version": "20261018210953",
       "blob_sha": "738fae7c3f87f8179d2a76c24a049b3a07a6cb52",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018130000_evidence_staging.sql",
+      "name": "evidence_staging_20261018",
+      "remote_version": "20261018233744",
+      "blob_sha": "ac1d6e6b3c4e780fc9359ed332fa7312542c2fbe",
+      "applied": true
     }
   ],
   "verified": {
@@ -158,12 +165,15 @@
     "lesson_published_live_smoke": "PASS with real valid canonical-jsonb SHA; denied anonymous/unassigned; no Auth users, lesson_versions or audit rows.",
     "rubric_publication_real_postgres": "SUCCESS push 39165679182 / PR 39165683724; 14 source migrations, 51 DO blocks, ROLLBACK, 16 RLS tables",
     "assignment_publication_real_postgres": "SUCCESS push 39166396995 / PR 39166400384; 15 source migrations, 56 DO blocks, ROLLBACK, 16 RLS tables",
-    "academic_content_live_auth_smoke": "PASS: anon and unassigned authenticated rejected for both new RPCs after migration; no Auth users, rubrics, assignments or audits inserted"
+    "academic_content_live_auth_smoke": "PASS: anon and unassigned authenticated rejected for both new RPCs after migration; no Auth users, rubrics, assignments or audits inserted",
+    "u04_quarantine_postgres": "SUCCESS GitHub Actions 39177062225; 16 migrations, 17 RLS public tables, 57 fixture DO blocks plus ROLLBACK and teardown",
+    "u04_quarantine_live": "Bucket private; staging rows=0; academic artifact rows=0; zero Auth users; 0 table RLS policies; authenticated INSERT/SELECT both denied",
+    "u04_quarantine_edge": "ACTIVE v1, verify_jwt=true, bundle hash 5a53331725b173c932f6d9bb95421cc947186dea164d834d5efcda83cd4c316e; trusted upload attestation absent"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
     "unity_editmode": "NOT_RUN",
-    "native_producer_server_sync": "NOT_IMPLEMENTED",
+    "native_producer_server_sync": "NOT_IMPLEMENTED: producer trust, signed receipt and server attestation absent",
     "first_university_admin": "NOT_PROVISIONED: no verified app Auth user yet",
     "student_pilot": "NOT_RUN",
     "u03_two_tenant_positive_submission": "Disposable seeded Postgres fixture SUCCESS, production U04 evidence upload and real users NOT_RUN.",
@@ -172,7 +182,9 @@
     "u03_unity": "NOT_RUN",
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
-    "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN"
+    "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN",
+    "u04_authorized_http_upload": "NOT_RUN: no real Auth student / registered Native session; deployed Edge may stage JSON bytes but does not attest them",
+    "u04_academic_promotion": "NOT_IMPLEMENTED: quarantine objects cannot qualify as academic session_artifacts"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -188,6 +200,7 @@
     "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty.",
     "12 migrations applied; instructor feedback encrypted transport/real HTTP not checked; no client INSERT/UPDATE grant, immutable feedback trigger and student-visible RLS tested in disposable PostgreSQL.",
     "Lesson hash is SHA256 of PostgreSQL jsonb::text canonical serialization, not of arbitrary raw lesson file bytes. Native chemistry remains local. Initial unauthorized live smoke with deliberately invalid hash hit input validation before role validation; corrected smoke uses valid canonical digest and PASS.",
-    "Rubric and assignment publication migrations applied to Free project. Exact source SQL is not installed using supabase db push because API migration versions differ from filenames. Source-level and synthetic RLS verified; no claim of real student pilot."
+    "Rubric and assignment publication migrations applied to Free project. Exact source SQL is not installed using supabase db push because API migration versions differ from filenames. Source-level and synthetic RLS verified; no claim of real student pilot.",
+    "Free-plan U04 quarantine bucket and metadata deployed with deny-all direct client grants; Edge upload ACTIVE v1. Security Advisor has INFO on private audit and staging tables with zero RLS policies by design; no WARN."
   ]
 }
