@@ -35,21 +35,24 @@
     },
     {
       "id": "U02",
-      "status": "PartialCodeImplemented_PendingSupabaseAuthAndUnity",
+      "status": "PartialCodeImplemented_PendingRealAuthPostgresAndUnity",
       "codeCommit": "e871ada682734bfe2e703b74381aa8aed99a97c6",
       "redCommit": "6fde5ba5ac595b9011940bec73d2247cd659e510",
-      "headlessTests": "34 source-linked assertions passed on Linux in Native CI at e871ada6; no PostgreSQL/Unity tested",
+      "headlessTests": "U02 SQL static checks pass on Windows/Ubuntu CI at 73eb30d; synthetic Postgres invitation/Auth/RLS script remains NOT_RUN",
       "files": [
         "unity/Assets/PharmaLabVR/Runtime/University/UniversityMembershipSession.cs",
         "tools/university-contract/Program.cs",
         "unity/Assets/PharmaLabVR/Tests/EditMode/UniversityMembershipSessionTests.cs"
       ],
       "remaining": [
-        "Backend-authenticated gateway",
-        "Real invitations and membership revocation server RPCs",
-        "Real PostgreSQL RLS validation",
-        "Unity EditMode/Player integration"
-      ]
+        "Real Supabase Auth and PostgreSQL integration, not only static checks",
+        "Invitation email delivery/provider",
+        "Rate limit, SSO, owner administrative bootstrap and live audit proof",
+        "Unity Editor/Player integration"
+      ],
+      "membershipRpcSourceSha": "73eb30ddf8ea17b9e3be3d0800695fe9a7a2c03c",
+      "testFirstRedSha": "39b03436675d5cdf11f5223e3333b01fc0473ff2",
+      "appliedToDatabase": false
     },
     {
       "id": "U03",
@@ -57,7 +60,23 @@
     },
     {
       "id": "U04",
-      "status": "Open"
+      "status": "PartialCodeImplemented_PendingServerTransportAndUnity",
+      "initialRedSha": "38bf18223220eaa2394e2bb8944fb609a4ffc1fa",
+      "initialGreenSha": "aa0216bd3c81e4d825f02acab9c00e8c3a52f0c4",
+      "lockRedSha": "5cd2a6a33a4ea92becb92c64b856c404ce17c277",
+      "codeCommit": "f2fb11585262ac9c360ca7c1ed4ab9d3c1c248bb",
+      "headlessTests": "Source-linked .NET 8 outbox: 23 assertions passed in push panel job 117549544815 at f2fb1158",
+      "files": [
+        "unity/Assets/PharmaLabVR/Runtime/University/UniversitySyncOutbox.cs",
+        "tools/outbox-contract/Program.cs",
+        "unity/Assets/PharmaLabVR/Tests/EditMode/UniversitySyncOutboxTests.cs"
+      ],
+      "remaining": [
+        "Signed/authorized server acknowledgement and protocol",
+        "Actual Native receipt producer integration and hash verification against exported bytes",
+        "Cloud upload/download, retries, conflict/fork semantics",
+        "Unity Editor/Player and device verification"
+      ]
     },
     {
       "id": "U05",

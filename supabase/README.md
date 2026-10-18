@@ -6,6 +6,7 @@
 
 1. `migrations/20261017000000_university_core.sql` — normalized tenants, cross-tenant composite FKs, immutable evidence/submissions, RLS enabled and API privileges revoked before any policy.
 2. `migrations/20261017000100_university_rls.sql` — verified-active membership helpers, student/section-scoped SELECT, own profile updates, private evidence Storage read policy. All academic writes are deliberately blocked from public clients; U02/U03 must add authenticated, audited server workflows before these tables become usable for institution administration.
+3. `migrations/20261018000000_university_membership_rpc.sql` — audited invite/self-accept/revoke RPCs for existing email-verified Auth users. No university-admin grants, no cloud provisioning or email delivery, and no client table-mutation grants.
 
 Published curriculum is immutable after publication; version changes require a new version row. Evidence keys are opaque `<institution_uuid>/<artifact_uuid>`. Only a server-approved upload may create private storage objects in a later workstream. No client Storage INSERT/UPDATE/DELETE permissions are added.
 
