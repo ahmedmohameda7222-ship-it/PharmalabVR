@@ -131,9 +131,9 @@ class UniversitySqlGuardrails(unittest.TestCase):
             ("university_accept_invite", "uuid,uuid", "$1,$2"),
             ("university_revoke_member", "uuid,uuid,uuid", "$1,$2,$3"),
         ):
-            self.assertIn(
-                f"alter function public.{name}({signature}) set schema plv_private",
-                HARDENING
+            self.assertRegex(
+                HARDENING,
+                rf"alter function public\\.{name}\\({signature}\\)\\s+set schema plv_private"
             )
             self.assertIn(
                 f"create function public.{name}(",
