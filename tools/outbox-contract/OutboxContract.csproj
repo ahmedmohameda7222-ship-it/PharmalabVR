@@ -10,5 +10,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityEvidenceIntegrity.cs" Link="UniversityEvidenceIntegrity.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversitySyncOutbox.cs" Link="UniversitySyncOutbox.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagingTransport.cs" Link="UniversityStagingTransport.cs" />
   </ItemGroup>
 </Project>
