@@ -143,7 +143,7 @@ internal static class Program
                 var registeredSessionId = "aaaa0000-0000-4000-8000-000000000051";
                 var outcome = UniversityStagingTransport.UploadAsync(client, endpoint,
                     tenantA, registeredSessionId, uploadId, "student-token",
-                    System.Text.Encoding.UTF8.GetBytes("{\\"export\\":true}"))
+                    System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                     .GetAwaiter().GetResult();
                 Check(outcome == UniversityStagingResult.StagedUnverified,
                     "A successful staged response must remain UNVERIFIED.");
@@ -152,7 +152,7 @@ internal static class Program
                 Check(mock.Auth == "Bearer student-token" &&
                     mock.Session == registeredSessionId && mock.Artifact == uploadId,
                     "Staging request omitted identity or Authorization.");
-                Check(mock.Body == "{\\"export\\":true}" &&
+                Check(mock.Body == "{\"export\":true}" &&
                     mock.BodyDigest == Hash(System.Text.Encoding.UTF8.GetBytes(mock.Body)),
                     "Staged evidence bytes or computed header SHA were altered.");
                 Check(verifier.Pending().Count == 1,
@@ -180,7 +180,7 @@ internal static class Program
                 mock.Status=HttpStatusCode.Forbidden;
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
                       tenantA, registeredSessionId, uploadId, "student-token",
-                      System.Text.Encoding.UTF8.GetBytes("{\\"export\\":true}"))
+                      System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Rejected HTTP response falsely acknowledged staging.");
                 Check(verifier.Pending().Count == 1,
