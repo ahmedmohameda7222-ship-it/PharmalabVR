@@ -98,7 +98,11 @@ DurableJournal::DurableJournal(
     std::string path, std::size_t maxRecordBytes, std::size_t maxTotalBytes)
     : path_(std::move(path)), maxRecordBytes_(maxRecordBytes),
       maxTotalBytes_(maxTotalBytes) {
-    if (path_.empty() || maxRecordBytes_ == 0 || maxTotalBytes_ < 9 ||
+    if (path_.empty() || path_.find('\0') != std::string::npos ||
+        !std::filesystem::path(path_).is_absolute() ||
+        std::filesystem::path(path_).filename().empty() ||
+        std::filesystem::is_directory(std::filesystem::path(path_)) ||
+        maxRecordBytes_ == 0 || maxTotalBytes_ < 9 ||
         maxRecordBytes_ > maxTotalBytes_ - 8) {
         throw std::invalid_argument("invalid disk journal path or size bounds");
     }
