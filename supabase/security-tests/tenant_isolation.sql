@@ -449,5 +449,84 @@ begin
  end if;
 end $$;
 
+-- U03 enrollment authority: local synthetic users only, fully rolled back.
+-- A2 is initially empty; all real production client mutations stay forbidden.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $
+begin
+  begin
+    perform public.university_enroll_student(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000012',
+      '44444444-4444-4444-8444-444444444444',
+      'aaaa0000-0000-4000-8000-000000000107');
+    raise exception 'enrollment_student_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $
+begin
+  begin
+    perform public.university_enroll_student(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000012',
+      '44444444-4444-4444-8444-444444444444',
+      'aaaa0000-0000-4000-8000-000000000108');
+    raise exception 'enrollment_cross_tenant_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $;
+select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
+do $
+declare
+  first_result text;
+  retry_result text;
+begin
+  first_result := public.university_enroll_student(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000012',
+    '44444444-4444-4444-8444-444444444444',
+    'aaaa0000-0000-4000-8000-000000000109');
+  if first_result is distinct from 'Enrolled' then
+    raise exception 'enrollment_admin_pass';
+  end if;
+  retry_result := public.university_enroll_student(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'aaaa0000-0000-4000-8000-000000000012',
+    '44444444-4444-4444-8444-444444444444',
+    'aaaa0000-0000-4000-8000-000000000109');
+  if retry_result is distinct from 'AlreadyEnrolled' then
+    raise exception 'enrollment exact retry not idempotent';
+  end if;
+  begin
+    perform public.university_enroll_student(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      'aaaa0000-0000-4000-8000-000000000011',
+      '44444444-4444-4444-8444-444444444444',
+      'aaaa0000-0000-4000-8000-000000000109');
+    raise exception 'enrollment conflict replay accepted';
+  exception when unique_violation then null;
+  end;
+end $;
+reset role;
+do $
+begin
+  if (select count(*) from public.enrollments
+    where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      and section_id='aaaa0000-0000-4000-8000-000000000012'
+      and student_user_id='44444444-4444-4444-8444-444444444444'
+      and state='active') <> 1 then
+    raise exception 'student not enrolled in target section';
+  end if;
+  if (select count(*) from public.audit_events
+      where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+        and action='EnrollmentCreated'
+        and request_id='aaaa0000-0000-4000-8000-000000000109') <> 1 then
+    raise exception 'enrollment audit not exactly once';
+  end if;
+end $;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
