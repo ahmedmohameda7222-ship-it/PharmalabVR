@@ -16,6 +16,17 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_publish_assignment(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000012'::uuid,
+      'aaaa0000-0000-4000-8000-000000000204'::uuid,
+      'aaaa0000-0000-4000-8000-000000000304'::uuid,
+      'Titration Exercise',null,
+      'aaaa0000-0000-4000-8000-000000000137'::uuid);
+    raise exception 'ANON_ASSIGNMENT_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_publish_rubric_version(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'aaaa0000-0000-4000-8000-000000000001'::uuid,
@@ -160,6 +171,17 @@ begin
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
       repeat('a',64));
     raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_publish_assignment(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000012'::uuid,
+      'aaaa0000-0000-4000-8000-000000000204'::uuid,
+      'aaaa0000-0000-4000-8000-000000000304'::uuid,
+      'Titration Exercise',null,
+      'aaaa0000-0000-4000-8000-000000000137'::uuid);
+    raise exception 'UNAUTHORIZED_ASSIGNMENT_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin

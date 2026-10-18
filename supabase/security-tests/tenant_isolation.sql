@@ -1011,5 +1011,75 @@ begin
   raise exception 'rubric audit missing';
  end if;
 end $$;
+-- Assignment release: one matched published lesson/rubric per section.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ begin
+  perform public.university_publish_assignment(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000012',
+   'aaaa0000-0000-4000-8000-000000000204','aaaa0000-0000-4000-8000-000000000304','Titration Exercise',null,'aaaa0000-0000-4000-8000-000000000134');
+  raise exception 'assignment_student_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_publish_assignment(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000012',
+   'aaaa0000-0000-4000-8000-000000000204','aaaa0000-0000-4000-8000-000000000304','Titration Exercise',null,'aaaa0000-0000-4000-8000-000000000135');
+  raise exception 'assignment_foreign_tenant_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+declare lv uuid; rv uuid; rid uuid; retry uuid;
+begin
+ select id into strict lv from public.lesson_versions where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+   and lesson_id='aaaa0000-0000-4000-8000-000000000204' and version=1;
+ select id into strict rv from public.rubric_versions where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+   and rubric_id='aaaa0000-0000-4000-8000-000000000304' and version=1;
+ rid := public.university_publish_assignment(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000012',
+   lv,rv,'Titration Exercise',null,'aaaa0000-0000-4000-8000-000000000136');
+ if rid is null then raise exception 'assignment_instructor_published'; end if;
+ retry := public.university_publish_assignment(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000012',
+   lv,rv,'Titration Exercise',null,'aaaa0000-0000-4000-8000-000000000136');
+ if retry is distinct from rid then raise exception 'assignment_retry_stable'; end if;
+ begin
+  perform public.university_publish_assignment(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000012',
+   lv,rv,'Different Title',null,'aaaa0000-0000-4000-8000-000000000136');
+  raise exception 'assignment_changed_retry_rejected';
+ exception when unique_violation then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+begin
+ if (select count(*) from public.assignments where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    and title='Titration Exercise') <> 1 then
+   raise exception 'assignment_student_visible';
+ end if;
+end $$;
+reset role;
+do $$
+begin
+ begin
+  update public.assignments set title='Tampered' where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+   and title='Titration Exercise';
+  raise exception 'assignment_immutable_published';
+ exception when check_violation then null;
+ end;
+ if (select count(*) from public.audit_events where request_id='aaaa0000-0000-4000-8000-000000000136'
+   and action='AssignmentPublished') <> 1 then
+  raise exception 'Assignment audit missing';
+ end if;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

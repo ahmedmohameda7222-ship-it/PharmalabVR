@@ -413,6 +413,35 @@ class UniversitySqlGuardrails(unittest.TestCase):
                      "rubric_bad_digest_rejected","rubric_immutable_published"):
             self.assertIn(name, FIXTURE)
 
+    def test_u03_published_assignment_pins_same_tenant_curriculum(self):
+        path = ROOT / "supabase/migrations/20261018120000_assignment_publication_rpc.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for marker in (
+            "create function plv_private.university_publish_assignment(",
+            "create function public.university_publish_assignment(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "st.role = 'instructor'",
+            "l.published_at is not null",
+            "r.published_at is not null",
+            "insert into public.assignments",
+            "insert into public.audit_events",
+            "'assignmentpublished'",
+            "create trigger immutable_published_assignment",
+            "revoke all on function public.university_publish_assignment",
+            "grant execute on function public.university_publish_assignment",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.assignments", sql)
+        for marker in ("anon_assignment_bypass", "unauthorized_assignment_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("assignment_student_rejected", "assignment_foreign_tenant_rejected",
+                       "assignment_instructor_published", "assignment_retry_stable",
+                       "assignment_changed_retry_rejected", "assignment_immutable_published",
+                       "assignment_student_visible"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
