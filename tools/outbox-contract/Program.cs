@@ -101,6 +101,34 @@ internal static class Program
             Check(new UniversitySyncOutbox(path, 8192).Pending().Count == 3,
                 "Exclusive writer lease lost an independently queued event.");
 
+            // U04: evidence digests must derive from real byte arrays before
+            // a new upload intent is staged; a caller's SHA text is not proof.
+            var receiptBytes = System.Text.Encoding.UTF8.GetBytes("native-receipt-v1");
+            var packageBytes = System.Text.Encoding.UTF8.GetBytes("pinned-science-package");
+            var evidenceBytes = System.Text.Encoding.UTF8.GetBytes("full-native-export-json");
+            string Hash(byte[] bytes)
+            {
+                using (var sha = System.Security.Cryptography.SHA256.Create())
+                    return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "")
+                        .ToLowerInvariant();
+            }
+            var verifiedIntent = new UniversityUploadIntent(tenantA,"local-session-2",
+                "44444444-4444-4444-8444-444444444444","native-branch-2","21",
+                Hash(receiptBytes),Hash(packageBytes),Hash(evidenceBytes));
+            var verifier = new UniversitySyncOutbox(Path.Combine(directory,"verified.plvoutbox"));
+            Check(verifier.EnqueueVerifiedEvidence(verifiedIntent,receiptBytes,
+                packageBytes,evidenceBytes),
+                "Actual Native bytes could not be checked before staging.");
+            Check(verifier.Pending().Count == 1, "Verified receipt was not persisted.");
+            MustReject(() => verifier.EnqueueVerifiedEvidence(verifiedIntent,receiptBytes,
+                packageBytes,System.Text.Encoding.UTF8.GetBytes("altered-export")),
+                "Tampered Native export was accepted.");
+            MustReject(() => verifier.EnqueueVerifiedEvidence(verifiedIntent,null,
+                packageBytes,evidenceBytes),
+                "Missing Native receipt bytes were accepted.");
+            Check(verifier.Pending().Count == 1,
+                "Rejected evidence changed the durable outbox.");
+
             var damaged = File.ReadAllBytes(path);
             damaged[damaged.Length - 2] ^= 0x01;
             File.WriteAllBytes(path, damaged);
