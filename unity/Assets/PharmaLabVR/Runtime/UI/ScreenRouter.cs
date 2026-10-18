@@ -183,6 +183,7 @@ namespace PharmaLabVR.UI
         private string workspace = "Student";
         private string pendingMode = "Desktop";
         private string savedRevision;
+        private string savedBranchId;
         private string saveState = "Unsaved";
         private bool attached;
 
@@ -254,6 +255,7 @@ namespace PharmaLabVR.UI
         public void MarkSaved()
         {
             savedRevision = driver?.CurrentLabView?.EventSequence;
+            savedBranchId = driver?.CurrentNativeBranchId;
             saveState = "Saved";
             Refresh();
         }
@@ -318,7 +320,9 @@ namespace PharmaLabVR.UI
             var observation = view?.Observations.FirstOrDefault(item =>
                 item.VesselId == selectedEntityId && item.ObservableId == "pH");
             var nativeRevision = view?.EventSequence ?? string.Empty;
-            var dirty = savedRevision == null || savedRevision != nativeRevision;
+            var nativeBranch = driver?.CurrentNativeBranchId;
+            var dirty = savedRevision == null || savedRevision != nativeRevision ||
+                        savedBranchId != nativeBranch;
             var actions = screen switch
             {
                 ScreenId.Home => new[] { "EnterDesktop", "EnterVR" },

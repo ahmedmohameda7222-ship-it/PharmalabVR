@@ -24,6 +24,7 @@ namespace PharmaLabVR.Core
         public event Action NativeSessionRestored;
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
+        public string CurrentNativeBranchId => Session?.BranchId ?? string.Empty;
         public string StartupError { get; private set; }
         public string ScientificDatabasePath { get; private set; }
         public MeasurementView Measurement { get; private set; }
