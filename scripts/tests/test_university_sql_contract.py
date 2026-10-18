@@ -76,6 +76,15 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertNotRegex(RLS, r"create policy\s+\w+\s+on storage.objects\s+for (insert|update|delete)")
         self.assertIn("a.object_key = storage.objects.name", RLS)
 
+    def test_u01_fixture_has_only_valid_postgres_do_dollar_quotes(self):
+        # This guards real SQL syntax, not whether its RLS assertions pass.
+        # A malformed DO $ ... END $; was previously shipped unexecuted.
+        self.assertNotRegex(FIXTURE, r"(?m)^\s*(?:do|end)\s+\$(?!\$)")
+        opening = len(re.findall(r"(?m)^do \$\$", FIXTURE))
+        closing = len(re.findall(r"(?m)^end \$\$;$", FIXTURE))
+        self.assertGreater(opening, 0)
+        self.assertEqual(opening, closing)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
