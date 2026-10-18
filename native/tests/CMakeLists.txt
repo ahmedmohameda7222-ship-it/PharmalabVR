@@ -9,6 +9,7 @@ add_executable(plv_tests
     test_solver_worker.cpp
     test_solver_lifecycle.cpp
     test_persistence.cpp
+    test_checkpoint_path.cpp
     test_tools.cpp
     test_transport.cpp
 )
