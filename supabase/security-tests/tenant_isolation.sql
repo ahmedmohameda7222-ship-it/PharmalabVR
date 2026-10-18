@@ -453,7 +453,7 @@ end $$;
 -- A2 is initially empty; all real production client mutations stay forbidden.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
-do $
+do $$
 begin
   begin
     perform public.university_enroll_student(
@@ -464,9 +464,9 @@ begin
     raise exception 'enrollment_student_rejected';
   exception when insufficient_privilege then null;
   end;
-end $;
+end $$;
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
-do $
+do $$
 begin
   begin
     perform public.university_enroll_student(
@@ -477,9 +477,9 @@ begin
     raise exception 'enrollment_cross_tenant_rejected';
   exception when insufficient_privilege then null;
   end;
-end $;
+end $$;
 select set_config('request.jwt.claim.sub','11111111-1111-4111-8111-111111111111',true);
-do $
+do $$
 declare
   first_result text;
   retry_result text;
@@ -509,9 +509,9 @@ begin
     raise exception 'enrollment conflict replay accepted';
   exception when unique_violation then null;
   end;
-end $;
+end $$;
 reset role;
-do $
+do $$
 begin
   if (select count(*) from public.enrollments
     where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
@@ -526,7 +526,7 @@ begin
         and request_id='aaaa0000-0000-4000-8000-000000000109') <> 1 then
     raise exception 'enrollment audit not exactly once';
   end if;
-end $;
+end $$;
 
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
