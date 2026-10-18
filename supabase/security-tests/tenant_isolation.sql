@@ -746,7 +746,7 @@ end $$;
 -- U03 immutable instructor feedback, on the already-submitted A student attempt.
 set local role authenticated;
 select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
-do $
+do $$
 declare sid uuid;
 begin
   select id into strict sid from public.submissions
@@ -760,9 +760,9 @@ begin
     raise exception 'feedback_student_rejected';
   exception when insufficient_privilege then null;
   end;
-end $;
+end $$;
 select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
-do $
+do $$
 declare sid uuid;
 begin
   select id into strict sid from public.submissions
@@ -776,9 +776,9 @@ begin
     raise exception 'feedback_foreign_tenant_rejected';
   exception when insufficient_privilege then null;
   end;
-end $;
+end $$;
 select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
-do $
+do $$
 declare sid uuid; first_id uuid; retry_id uuid;
 begin
   select id into strict sid from public.submissions
@@ -802,9 +802,9 @@ begin
     raise exception 'feedback_changed_payload_rejected';
   exception when unique_violation then null;
   end;
-end $;
+end $$;
 reset role;
-do $
+do $$
 declare fb uuid;
 begin
  select f.id into strict fb from public.feedback f
@@ -821,7 +821,7 @@ begin
    and action='FeedbackRecorded') <> 1 then
    raise exception 'feedback_audited_once';
  end if;
-end $;
+end $$;
 
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
