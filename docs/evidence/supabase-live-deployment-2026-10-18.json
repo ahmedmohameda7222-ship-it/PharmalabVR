@@ -79,6 +79,20 @@
       "remote_version": "20261018055029",
       "blob_sha": "7360c634a81b56c125adb5fe33b709a132bbad48",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018080000_section_staff_rpc.sql",
+      "name": "section_staff_rpc_20261018",
+      "remote_version": "20261018060400",
+      "blob_sha": "e24c93b9560a0b7861e1329597e907a1bdaac8a5",
+      "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018090000_instructor_feedback_rpc.sql",
+      "name": "instructor_feedback_rpc_20261018",
+      "remote_version": "20261018191721",
+      "blob_sha": "27977211224ea0197cf7fbaa25c0606382641d7f",
+      "applied": true
     }
   ],
   "verified": {
@@ -115,17 +129,20 @@
     "local_rls_tables": 16,
     "local_fixture_do_blocks": 32,
     "local_fixture_rollback": true,
-    "local_fixture_context": "Temporary Docker Supabase in GitHub Actions; synthetic Auth accounts inserted then rolled back; never touches linked owner project"
+    "local_fixture_context": "Temporary Docker Supabase in GitHub Actions; synthetic Auth accounts inserted then rolled back; never touches linked owner project",
+    "disposable_12_migrations_43_blocks": "SUCCESS push 39158497069 + PR 39158501190, 43 PostgreSQL DO blocks, 16 RLS tables, final rollback/no backups.",
+    "instructor_feedback_role_smoke": "Anonymous and unauthorized authenticated denied; private definer/public invoker; no real data inserted.",
+    "native_symlink_regression": "RED Native Ubuntu 39158048023 2 assertions; GREEN source 1f7a063e (push 39158307456 / PR 39158312909 3/3 jobs success)."
   },
   "pending": {
-    "seeded_two_tenant_postgres_fixture": "NOT_RUN",
+    "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
     "unity_editmode": "NOT_RUN",
     "native_producer_server_sync": "NOT_IMPLEMENTED",
     "first_university_admin": "NOT_PROVISIONED: no verified app Auth user yet",
     "student_pilot": "NOT_RUN",
-    "u03_two_tenant_positive_submission": "NOT_RUN (disposable local Supabase database unavailable)",
+    "u03_two_tenant_positive_submission": "Disposable seeded Postgres fixture SUCCESS, production U04 evidence upload and real users NOT_RUN.",
     "u03_pre_attested_u04_broker": "NOT_IMPLEMENTED: successful ingestion intentionally requires existing attested artifact",
-    "u03_grade_approval": "NOT_IMPLEMENTED",
+    "u03_grade_approval": "DEPLOYED grade RPC; real-grade pilot NOT_RUN.",
     "u03_unity": "NOT_RUN",
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session."
@@ -141,6 +158,7 @@
     "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked.",
     "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added.",
     "10 migrations applied to owner Free project. Do not run supabase db push against production: Supabase migration history versions from API differ from repository SQL filenames. Use reviewed apply_migration for subsequent deployments.",
-    "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty."
+    "Local two-university Postgres actual fixture passed after 10 migrations; run IDs 39102130003/39102133277, 32 DO blocks and ROLLBACK; owner project remains empty.",
+    "12 migrations applied; instructor feedback encrypted transport/real HTTP not checked; no client INSERT/UPDATE grant, immutable feedback trigger and student-visible RLS tested in disposable PostgreSQL."
   ]
 }

@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "Disposable ten-migration local Supabase two-tenant Postgres fixture passed push/PR, but real email-verified Auth users, real Storage upload/attestation, Unity and pilot still NOT_RUN. G-U1 OPEN."
+    "reason": "12 owner-approved Supabase migrations live; 43-block synthetic PostgreSQL tenant/Feedback RLS fixture green. Production Auth/pilot, trusted Storage upload/attestation, lesson/rubric publishing and Unity NOT_RUN; G-U1 OPEN."
   },
   "tasks": [
     {
@@ -39,7 +39,6 @@
         "17 academic SELECT/profile policies",
         "private 50 MiB Storage bucket",
         "live no-data SQL smoke succeeded",
-        "seeded two-tenant fixture NOT_RUN",
         "Disposable Supabase PostgreSQL migrated schema and two-institution fixture passed push 39102130003, PR 39102133277; 32 DO assertions blocks completed then ROLLBACK"
       ]
     },
@@ -48,7 +47,7 @@
       "status": "Deployed_RpcFixturePassed_RealAuthAndUnityPending",
       "codeCommit": "e871ada682734bfe2e703b74381aa8aed99a97c6",
       "redCommit": "6fde5ba5ac595b9011940bec73d2247cd659e510",
-      "headlessTests": "U02 SQL static checks pass on Windows/Ubuntu CI at 73eb30d; synthetic Postgres invitation/Auth/RLS script remains NOT_RUN",
+      "headlessTests": "Real disposable local PostgreSQL two-university membership/RLS fixture passed; real production Auth email/onboarding and Unity NOT_RUN.",
       "files": [
         "unity/Assets/PharmaLabVR/Runtime/University/UniversityMembershipSession.cs",
         "tools/university-contract/Program.cs",
@@ -57,7 +56,6 @@
       "remaining": [
         "Real signup and email verification onboarding",
         "Trusted owner-approved university-admin bootstrap",
-        "Two-tenant Auth/RLS/Storage seeded test on isolated database",
         "Real invitation/acceptance/revocation end-to-end tests",
         "Unity test campaign",
         "First admin provisioning requires a genuine verified Auth user and owner-chosen institution slug/name"
@@ -81,7 +79,7 @@
     },
     {
       "id": "U03",
-      "status": "PartialDeployed_AdminCourseSectionEnrollmentSubmissionGrades",
+      "status": "PartialDeployed_CoursesSectionsEnrollmentStaffSubmissionsGradesFeedback",
       "implementationSha": "196eede532175803ed2322fdd400ea30a16c0aec",
       "testRedSha": "a943d9111f7063bdc4901d76c21e7a1e7f522adf",
       "migration": "supabase/migrations/20261018030000_student_submission_rpc.sql",
@@ -90,16 +88,14 @@
       "sourceStaticGreen": "RED push 39096912542 Ubuntu tooling failed on missing U03 RPC; GREEN implementation SHA 196eede532175803ed2322fdd400ea30a16c0aec passed all 3 jobs on push 39097080057 and PR 39097083467 (Windows, Ubuntu, headless panel).",
       "remaining": [
         "Author/publish lesson and rubric versions",
-        "Authorized course/section creation and enrollment",
-        "Instructor grading and grade approval, audited and role scoped",
         "Real verified U04 evidence upload+digest attestation",
         "Unity Editor/Player/XR tests deferred",
         "Authorized enrollment/course publishing endpoints",
-        "Grade appeal and feedback workflow",
-        "Instructor section assignment authorization",
         "Lesson/rubric version publication and assignment scheduling",
         "Validated Student Auth onboarding/first owner administrator",
-        "Trusted Native evidence upload and positive graded submission integration"
+        "Trusted Native evidence upload and positive graded submission integration",
+        "Authorized grade appeal / replacement grade workflow (not implemented)",
+        "Real verified student/instructor end-to-end pilot and Native attested evidence upload"
       ],
       "gradeApprovalMigration": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
       "gradeApprovalRemoteVersion": "20261018044135",
@@ -117,7 +113,12 @@
         "20261018055029"
       ],
       "adminSecuritySmoke": "Anonymous and unassigned authenticated attempts denied in owner Free project; no data created.",
-      "positiveIntegration": "Disposable local Supabase/PostgreSQL fixture PASSED for synthetic identities and institution/course/section/enrollment/submission/grade SQL; push 39102130003 and PR 39102133277. Real app Auth and Native evidence integration still pending."
+      "positiveIntegration": "Disposable local Supabase/PostgreSQL fixture PASSED for synthetic identities and institution/course/section/enrollment/submission/grade SQL; push 39102130003 and PR 39102133277. Real app Auth and Native evidence integration still pending.",
+      "instructorFeedbackMigration": "supabase/migrations/20261018090000_instructor_feedback_rpc.sql",
+      "instructorFeedbackRemoteVersion": "20261018191721",
+      "instructorFeedbackSourceSha": "8f88c1761209d4f96c271c4f9848392fbdad8e3c",
+      "instructorFeedbackTdd": "RED source SHA 6572f4e missing function and corrected RED SQL 29de57e; GREEN 4905084 Postgres push 39157853908/PR 39157857668. 43/43 fixture DO blocks with student-visible/private feedback RLS on push 39158497069/PR 39158501190.",
+      "instructorFeedbackLive": "Deployed to owner Free plan; unauthorized and anonymous role smoke in rollback passed; 0 production users, feedback or audit rows; no new Security Advisor WARN."
     },
     {
       "id": "U04",

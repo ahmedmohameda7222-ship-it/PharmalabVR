@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Ten ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Twelve ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -16,6 +16,8 @@
 | `20261018050000_section_enrollment_rpc.sql` | `section_enrollment_rpc_20261018` | `20261018053627` |
 | `20261018060000_course_creation_rpc.sql` | `course_creation_rpc_20261018` | `20261018054744` |
 | `20261018070000_section_creation_rpc.sql` | `section_creation_rpc_20261018` | `20261018055029` |
+| `20261018080000_section_staff_rpc.sql` | `section_staff_rpc_20261018` | `20261018060400` |
+| `20261018090000_instructor_feedback_rpc.sql` | `instructor_feedback_rpc_20261018` | `20261018191721` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -49,6 +51,9 @@ Exact schema migration versions, SHA evidence and outstanding gates are recorded
 The approved-score RPC records one instructor/administrator-approved 0–100 percentage grade, immutable after approval and audited. The private function checks tenant membership, assigned instructor section, published assignment and rubric; the public wrapper is invoker-only. Local U04 `UniversityEvidenceIntegrity` can hash receipt/package/export bytes before staging an outbox intent. Neither feature establishes a completed student pilot or a trusted cloud upload. See `docs/evidence/u03-grade-u04-evidence-2026-10-18.md`.
 
 ## U03 academic administration — partial
-Owner-approved Supabase Free migrations now include audited `university_create_course`, `university_create_section` and `university_enroll_student` RPCs. Each requires an email-verified active `university_admin` for the requested tenant, and validates the institution/section/student identities against normalized database rows. Actual instructor assignments and lesson/rubric publishing are not yet implemented.
+Owner-approved Supabase Free migrations now include audited `university_create_course`, `university_create_section` and `university_enroll_student` RPCs. Each requires an email-verified active `university_admin` for the requested tenant, and validates the institution/section/student identities against normalized database rows. Audited instructor assignments are deployed. Lesson/rubric publishing remains not implemented.
 
 **Important:** The remote migration versions were assigned by the Supabase API and differ from repository filenames. Do not run `supabase db push` against the owner project; it could replay installed SQL. The `university-postgres.yml` workflow tests the original files only in an isolated, unlinked local Supabase stack.
+
+## Staff feedback and student visibility (partial U03)
+`public.university_record_feedback` allows an active instructor assigned to the submission's section, or an active institution admin, to append a tenant-scoped immutable feedback row with an audited idempotency key. A `student_visible=false` note is visible to authorized section staff only; the current RLS policy grants a student only `student_visible=true` feedback for their own submission. Verified using 43 real PostgreSQL disposable fixture DO blocks (12/12 source migrations) on both push and PR CI; not yet tested through a real Auth/HTTP student client. No grade appeal, trusted U04 evidence ingestion, owner bootstrap, or live student pilot is claimed.

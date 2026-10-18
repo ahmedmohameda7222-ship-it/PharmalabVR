@@ -12,3 +12,7 @@ Test SHA `feaca6233422d7ad3f855b14c9a7f77c3454ab99` reproduced accepting a files
 
 ## Exact-SHA GREEN CI confirmation
 At fixed source SHA `fccdf2d6965bbdf614a7c3b48132bd218ac0cd56`, push run `39099755840` and PR run `39099757808` all three jobs succeeded (Windows Native, Ubuntu Native, panel/headless). Ubuntu CTest reported `100% tests passed, 0 tests failed out of 1`. This verifies software path admission only; not real power cut, disk-full or Unity/Player/XR recovery. P11.01 and G-R1 remain Open.
+
+## Symlink alias RED→GREEN (bounded Native WAL safety)
+- Test `f7c528e82c40e6670aca0cc331e08cf0ef353572` proved `DurableJournal` constructor and recovery accepted existing symlink-to-regular-file aliases: push Ubuntu `39158048023`, 2 failing assertions, 126/127 cases.
+- Fix `1f7a063e1785775f57290db8580906d669f2a823` rejects existing leaf symlinks during WAL construction, recovery and immediately before append. Verified all three Native/headless CI jobs SUCCESS on push `39158307456` and PR `39158312909`. Single-writer contract remains; no claim of protection from an attacker concurrently switching a link after the final check or actual device/power-loss evidence. P11.01 Open.
