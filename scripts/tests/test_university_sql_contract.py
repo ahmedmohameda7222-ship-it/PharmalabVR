@@ -461,6 +461,33 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertIn("staging_upload_not_academic_evidence", FIXTURE)
         self.assertIn("staging_student_no_table_grants", FIXTURE)
 
+    def test_u04_student_registers_only_pending_unattested_native_source(self):
+        source = ROOT / "supabase/migrations/20261018140000_staging_session_registration.sql"
+        sql = source.read_text(encoding="utf-8").lower() if source.exists() else ""
+        for marker in (
+            "create function plv_private.university_register_staging_session(",
+            "create function public.university_register_staging_session(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role = 'student'",
+            "insert into public.lab_sessions",
+            "current_revision,sync_state",
+            "0,'pending'",
+            "insert into public.audit_events",
+            "'staginglabsessioncreated'",
+            "revoke all on function public.university_register_staging_session",
+            "grant execute on function public.university_register_staging_session",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.lab_sessions", sql)
+        for marker in ("anon_staging_session_bypass","unauthorized_staging_session_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("staging_student_registered","staging_session_retry_stable",
+                       "staging_request_conflict_denied","staging_foreign_tenant_rejected",
+                       "staging_revision_zero"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",

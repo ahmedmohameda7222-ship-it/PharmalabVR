@@ -1097,5 +1097,54 @@ begin
    raise exception 'staging row access policy must be absent';
  end if;
 end $$;
+-- U04 trusted identity, but untrusted Native branch claim (revision zero).
+set local role authenticated;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $$
+begin
+ begin
+  perform public.university_register_staging_session(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','local-new','native-new',repeat('a',64),
+   'aaaa0000-0000-4000-8000-000000000211');
+  raise exception 'staging_foreign_tenant_rejected';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+declare first_id uuid; retry_id uuid;
+begin
+ first_id:=public.university_register_staging_session(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','local-new','native-new',repeat('a',64),
+  'aaaa0000-0000-4000-8000-000000000212');
+ if first_id is null then raise exception 'staging_student_registered'; end if;
+ retry_id:=public.university_register_staging_session(
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','local-new','native-new',repeat('a',64),
+  'aaaa0000-0000-4000-8000-000000000212');
+ if first_id is distinct from retry_id then raise exception 'staging_session_retry_stable'; end if;
+ begin
+  perform public.university_register_staging_session(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','local-new','native-forged',repeat('a',64),
+   'aaaa0000-0000-4000-8000-000000000212');
+  raise exception 'staging_request_conflict_denied';
+ exception when unique_violation then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ if (select count(*) from public.lab_sessions where
+  institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' and
+  user_id='44444444-4444-4444-8444-444444444444' and
+  local_session_id='local-new' and native_branch_id='native-new' and
+  current_revision=0 and sync_state='pending') <> 1 then
+    raise exception 'staging_revision_zero';
+ end if;
+ if (select count(*) from public.audit_events where
+   request_id='aaaa0000-0000-4000-8000-000000000212' and
+   action='StagingLabSessionCreated') <> 1 then
+    raise exception 'staging session audit missing';
+ end if;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.
