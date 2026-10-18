@@ -488,6 +488,19 @@ internal static class Program
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
+            // P06.02: a saved revision must also bind to the Native branch.
+            // Importing a distinct branch with the same sequence is unsaved.
+            driver.CurrentNativeBranchId = "branch-a";
+            router.MarkSaved();
+            Check(!router.Current.Dirty,
+                "A confirmed same-branch save remained dirty.");
+            var savedSequence = router.Current.NativeRevision;
+            driver.CurrentNativeBranchId = "branch-b";
+            driver.UpdateView();
+            Check(router.Current.NativeRevision == savedSequence && router.Current.Dirty,
+                "Another Native branch reused the saved sequence and showed Saved.");
+            driver.CurrentNativeBranchId = "branch-a";
+            router.MarkSaved();
             Check(ReferenceEquals(router.Current.Setup, selected), "Scene-level selection did not survive");
             var session = new SessionController();
             var panels = new LabPanelController();

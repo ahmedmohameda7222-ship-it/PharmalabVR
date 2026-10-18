@@ -74,6 +74,7 @@ namespace PharmaLabVR.Core
     public sealed class CoreDriver
     {
         public object Session { get; } = new object();
+        public string CurrentNativeBranchId { get; set; } = "branch-a";
         public PharmaLabVR.Lab.LabViewModel CurrentLabView { get; } = new();
         public bool IsTimeHeld { get; private set; }
         public bool IsNativePaused { get; private set; }
