@@ -1,0 +1,9 @@
+# U04 authenticated evidence-status Edge API (18 October 2026)
+
+**Deploy:** `student-evidence-status` version 1 ACTIVE on owner Supabase Free project `hhbnlhceehgbskzdtorn`; `verify_jwt=true`. Published package SHA-256: `1c392dfafa6264a895a53b3ef8891293bb40f0b366f9c86b0fb66928d74940fe`. Source `supabase/functions/student-evidence-status/index.ts`, pure policy `policy.mjs`, and `deno.json` in PR #1.
+
+**Behavior:** A GET requires a valid bearer Auth JWT, current verified user, active student membership at the requested institution and an active institution. It then reads at most 50 own `lab_sessions` and 50 `session_artifacts` via the user's authenticated RLS-bound Supabase client. No service key, object download, Storage upload, grades, academic mutations or native chemistry operations. The response is metadata-only, no-store.
+
+**TDD evidence:** RED `3550b9b3be309d881f793654c7088b32baebfc77`, panel job in push `39099334893` failed on missing `policy.mjs` before implementation. GREEN `639e4a15d24e619c3b5964b1246e233bd8b416e8`, Node `--test` pure access policy passed in push `39099375612` panel job. Additional index.ts source `d291711842bd20053d6353a1a470bb73b8abe439`; deployment version 1 verified by Supabase `list_edge_functions` and `get_edge_function`. Refreshed Security Advisor contains no WARN findings.
+
+**NOT verified:** No real Auth user, enrolled student or institutional pilot currently exists in the project. Authenticated HTTP invocation, live RLS read behavior, rate-limits, signed upload/digest attestation and upload receipt reconciliation are **NOT_RUN/NOT_IMPLEMENTED**. Web retrieval of the function URL did not reach the service; do not claim HTTP smoke success. Unity Editor/Player/XR tests deferred. U04 and G-U1 remain Open/Partial. Native Core continues to be the scientific authority.
