@@ -743,5 +743,85 @@ begin
   end if;
 end $$;
 
+-- U03 immutable instructor feedback, on the already-submitted A student attempt.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $
+declare sid uuid;
+begin
+  select id into strict sid from public.submissions
+   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     and idempotency_key='aaaa0000-0000-4000-8000-000000000093';
+  begin
+    perform public.university_record_feedback(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+      'The titration endpoint is correct.',true,
+      'aaaa0000-0000-4000-8000-000000000120');
+    raise exception 'feedback_student_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $;
+select set_config('request.jwt.claim.sub','22222222-2222-4222-8222-222222222222',true);
+do $
+declare sid uuid;
+begin
+  select id into strict sid from public.submissions
+   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     and idempotency_key='aaaa0000-0000-4000-8000-000000000093';
+  begin
+    perform public.university_record_feedback(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+      'Foreign review is forbidden.',true,
+      'aaaa0000-0000-4000-8000-000000000121');
+    raise exception 'feedback_foreign_tenant_rejected';
+  exception when insufficient_privilege then null;
+  end;
+end $;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $
+declare sid uuid; first_id uuid; retry_id uuid;
+begin
+  select id into strict sid from public.submissions
+   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+     and idempotency_key='aaaa0000-0000-4000-8000-000000000093';
+  first_id := public.university_record_feedback(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+    'The titration endpoint is correct.',true,
+    'aaaa0000-0000-4000-8000-000000000122');
+  if first_id is null then raise exception 'feedback_instructor_accepted'; end if;
+  retry_id := public.university_record_feedback(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+    'The titration endpoint is correct.',true,
+    'aaaa0000-0000-4000-8000-000000000122');
+  if first_id is distinct from retry_id then raise exception 'feedback_retry_same_id'; end if;
+  begin
+    perform public.university_record_feedback(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',sid,
+      'A different comment.',true,
+      'aaaa0000-0000-4000-8000-000000000122');
+    raise exception 'feedback_changed_payload_rejected';
+  exception when unique_violation then null;
+  end;
+end $;
+reset role;
+do $
+declare fb uuid;
+begin
+ select f.id into strict fb from public.feedback f
+ join public.audit_events a on a.target_id=f.id
+ where a.request_id='aaaa0000-0000-4000-8000-000000000122';
+ begin
+  update public.feedback set body='tampered' where id=fb;
+  raise exception 'feedback_immutable';
+ exception when check_violation then null;
+ end;
+ if (select count(*) from public.audit_events
+   where institution_id='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+   and request_id='aaaa0000-0000-4000-8000-000000000122'
+   and action='FeedbackRecorded') <> 1 then
+   raise exception 'feedback_audited_once';
+ end if;
+end $;
+
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

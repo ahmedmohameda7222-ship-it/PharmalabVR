@@ -330,6 +330,34 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "staff_admin_pass", "staff exact retry changed result"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u03_instructor_feedback_is_immutable_and_idempotent(self):
+        path = ROOT / "supabase/migrations/20261018090000_instructor_feedback_rpc.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for marker in (
+            "create function plv_private.university_record_feedback(",
+            "create function public.university_record_feedback(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role in ('university_admin','instructor')",
+            "s.role = 'instructor'",
+            "insert into public.feedback",
+            "insert into public.audit_events",
+            "'feedbackrecorded'",
+            "create trigger immutable_instructor_feedback",
+            "revoke all on function public.university_record_feedback",
+            "grant execute on function public.university_record_feedback",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant insert on public.feedback", sql)
+        for marker in ("anon_feedback_bypass", "unauthorized_feedback_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("feedback_student_rejected", "feedback_foreign_tenant_rejected",
+                       "feedback_instructor_accepted", "feedback_retry_same_id",
+                       "feedback_changed_payload_rejected", "feedback_immutable",
+                       "feedback_audited_once"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",

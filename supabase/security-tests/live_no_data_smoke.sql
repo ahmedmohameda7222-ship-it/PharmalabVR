@@ -16,6 +16,15 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_record_feedback(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'Unauthorized',true,
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'ANON_FEEDBACK_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_approve_grade(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid, 90,
@@ -129,6 +138,15 @@ begin
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
       repeat('a',64));
     raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_record_feedback(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid,
+      'Unauthorized',true,
+      'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid);
+    raise exception 'UNAUTHORIZED_FEEDBACK_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin
