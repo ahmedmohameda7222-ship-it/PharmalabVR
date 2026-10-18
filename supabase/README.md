@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Four ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Five ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -10,6 +10,7 @@
 | `20261017000100_university_rls.sql` | `university_rls_20261017` | `20261018034613` |
 | `20261018000000_university_membership_rpc.sql` | `university_membership_rpc_20261018` | `20261018034623` |
 | `20261018010000_university_rpc_hardening.sql` | `university_rpc_hardening_20261018` | `20261018034945` |
+| `20261018020000_owner_bootstrap.sql` | `owner_bootstrap_20261018` | `20261018035637` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -21,7 +22,7 @@ The project was empty before deployment, with zero Auth users, application table
 
 ## Access and release restrictions
 
-- An initial `university_admin` is **not** automatically created. Never elevate an arbitrary email or fabricate a verified Auth user. A trusted, audited owner bootstrap is pending.
+- An initial `university_admin` is **not** automatically created. The private owner-only SQL function `plv_private.owner_bootstrap_institution` is installed, but it requires an existing email-verified application Auth user and chosen institution metadata. It has no `anon`, `authenticated`, or `service_role` EXECUTE permission. Never elevate an arbitrary email or fabricate a verified Auth user. A trusted, audited owner bootstrap is pending.
 - Invitations apply only to existing, email-verified Auth accounts. The configured email delivery and signup experience have **not** been verified.
 - Published course versions are immutable; student grades, assignments and Storage uploads remain non-writable via ordinary client table APIs.
 - The evidence bucket is private and capped at 50 MiB per object by the schema. No general client upload, update or delete policy exists.

@@ -37,6 +37,13 @@
       "remote_version": "20261018034945",
       "blob_sha": "c3cdd27104f978c51a6b7a97670a4a8a0997e473",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018020000_owner_bootstrap.sql",
+      "name": "owner_bootstrap_20261018",
+      "remote_version": "20261018035637",
+      "blob_sha": "7189bb0561bed1e223f1fadaf9d340e870ff1b32",
+      "applied": true
     }
   ],
   "verified": {
@@ -53,13 +60,18 @@
     "stored_evidence_objects": 0,
     "security_advisor_warn_count": 0,
     "security_advisor_info_count": 1,
-    "live_anonymous_and_unauthorized_auth_smoke": "SQL completed; post-check tables empty"
+    "live_anonymous_and_unauthorized_auth_smoke": "SQL completed; post-check tables empty",
+    "owner_bootstrap_private_invoker": true,
+    "owner_bootstrap_execute_anon": false,
+    "owner_bootstrap_execute_authenticated": false,
+    "owner_bootstrap_execute_service_role": false,
+    "live_bootstrap_denial_smoke": "Reexecuted no-data smoke after owner bootstrap deployment: anonymous and unauthorised Auth attempts rejected"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
     "unity_editmode": "NOT_RUN",
     "native_producer_server_sync": "NOT_IMPLEMENTED",
-    "first_university_admin": "NOT_PROVISIONED",
+    "first_university_admin": "NOT_PROVISIONED: no verified app Auth user yet",
     "student_pilot": "NOT_RUN"
   },
   "notes": [
@@ -68,6 +80,7 @@
     "Performance advisor INFO: 21 unindexed FK and 6 unused index findings on empty database, not benchmarked.",
     "No service-role API key shared with Unity or clients.",
     "Original 66-task Native/VR execution ledger and P11.01 SessionLoad Hold remain unchanged.",
-    "PR #1 remains unmerged."
+    "PR #1 remains unmerged.",
+    "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created."
   ]
 }

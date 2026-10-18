@@ -58,7 +58,8 @@
         "Trusted owner-approved university-admin bootstrap",
         "Two-tenant Auth/RLS/Storage seeded test on isolated database",
         "Real invitation/acceptance/revocation end-to-end tests",
-        "Unity test campaign"
+        "Unity test campaign",
+        "First admin provisioning requires a genuine verified Auth user and owner-chosen institution slug/name"
       ],
       "membershipRpcSourceSha": "73eb30ddf8ea17b9e3be3d0800695fe9a7a2c03c",
       "testFirstRedSha": "39b03436675d5cdf11f5223e3333b01fc0473ff2",
@@ -71,7 +72,10 @@
         "anonymous has no RPC EXECUTE",
         "live no-data denied-auth smoke passed",
         "security advisor no WARN after hardening"
-      ]
+      ],
+      "ownerBootstrapMigration": "supabase/migrations/20261018020000_owner_bootstrap.sql",
+      "ownerBootstrapDeploymentVersion": "20261018035637",
+      "ownerBootstrapVerification": "Private SECURITY INVOKER; no anon/authenticated/service_role EXECUTE; rejected role smoke; no Auth user currently exists"
     },
     {
       "id": "U03",
