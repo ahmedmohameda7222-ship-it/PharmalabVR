@@ -205,6 +205,25 @@ class UniversitySqlGuardrails(unittest.TestCase):
         self.assertIn("anon_submission_bypass", SMOKE)
         self.assertIn("unauthorized_submission_bypass", SMOKE)
 
+    def test_u03_grade_approval_stays_in_private_authorized_rpc(self):
+        grade_path = ROOT / "supabase/migrations/20261018040000_grade_approval_rpc.sql"
+        grade = grade_path.read_text(encoding="utf-8").lower() if grade_path.exists() else ""
+        for marker in (
+            "create function plv_private.university_approve_grade(",
+            "create function public.university_approve_grade(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role in ('university_admin','instructor')",
+            "s.role = 'instructor'",
+            "insert into public.grades",
+            "insert into public.audit_events",
+            "create trigger immutable_approved_grade",
+            "grant execute on function public.university_approve_grade",
+        ):
+            self.assertIn(marker, grade)
+        self.assertNotIn("grant insert on public.grades", grade)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
