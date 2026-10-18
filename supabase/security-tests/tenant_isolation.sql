@@ -1081,5 +1081,21 @@ begin
   raise exception 'Assignment audit missing';
  end if;
 end $$;
+-- U04 quarantined evidence: NO client INSERT/SELECT and not in academic artifact table.
+do $
+begin
+ if (select public from storage.buckets where id='plv-university-evidence-staging') is distinct from false then
+   raise exception 'staging_upload_not_academic_evidence: bucket missing or public';
+ end if;
+ if has_table_privilege('authenticated','public.evidence_upload_staging','INSERT')
+    or has_table_privilege('authenticated','public.evidence_upload_staging','SELECT')
+    or has_table_privilege('anon','public.evidence_upload_staging','INSERT') then
+   raise exception 'staging_student_no_table_grants';
+ end if;
+ if exists(select 1 from pg_policies where schemaname='public'
+    and tablename='evidence_upload_staging') then
+   raise exception 'staging row access policy must be absent';
+ end if;
+end $;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

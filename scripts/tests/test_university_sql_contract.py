@@ -442,6 +442,25 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "assignment_student_visible"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u04_unattested_uploads_are_quarantined_not_grade_evidence(self):
+        path = ROOT / "supabase/migrations/20261018130000_evidence_staging.sql"
+        sql = path.read_text(encoding="utf-8").lower() if path.exists() else ""
+        for marker in (
+            "create table public.evidence_upload_staging",
+            "enable row level security",
+            "revoke all on public.evidence_upload_staging",
+            "'plv-university-evidence-staging'",
+            "storage.buckets",
+            "foreign key (institution_id,lab_session_id,student_id)",
+            "object_key = institution_id::text || '/' || id::text",
+            "check (size_bytes between 1 and 1048576)",
+            "check (content_type = 'application/json')",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("create policy stage_upload", sql)
+        self.assertIn("staging_upload_not_academic_evidence", FIXTURE)
+        self.assertIn("staging_student_no_table_grants", FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",
