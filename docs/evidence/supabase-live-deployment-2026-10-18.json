@@ -51,6 +51,13 @@
       "remote_version": "20261018042735",
       "blob_sha": "25f35002eda03bfb6900f8bf62d5abc5d12db4ae",
       "applied": true
+    },
+    {
+      "file": "supabase/migrations/20261018040000_grade_approval_rpc.sql",
+      "name": "grade_approval_rpc_20261018",
+      "remote_version": "20261018044135",
+      "blob_sha": "f48a4b2dc4cd3a990dd5b582e0b6340d5975ba23",
+      "applied": true
     }
   ],
   "verified": {
@@ -78,7 +85,9 @@
     "u03_anon_execute": false,
     "u03_no_data_smoke": "PASS: 2 new U03 denial cases and 8 earlier authorization-denial cases; script transaction rolled back; no Auth users/institutions/evidence/submissions written",
     "u03_unique_native_attempt_index": 1,
-    "u03_source_ci": "Implementation commit 196eede5 all 3 jobs SUCCESS both push run 39097080057 and pull_request run 39097083467."
+    "u03_source_ci": "Implementation commit 196eede5 all 3 jobs SUCCESS both push run 39097080057 and pull_request run 39097083467.",
+    "grade_approval_privileges": "3/3 checks: public invoker, private definer, anonymous execute denied",
+    "grade_immutability_trigger": 1
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "NOT_RUN",
@@ -89,7 +98,8 @@
     "u03_two_tenant_positive_submission": "NOT_RUN (disposable local Supabase database unavailable)",
     "u03_pre_attested_u04_broker": "NOT_IMPLEMENTED: successful ingestion intentionally requires existing attested artifact",
     "u03_grade_approval": "NOT_IMPLEMENTED",
-    "u03_unity": "NOT_RUN"
+    "u03_unity": "NOT_RUN",
+    "positive_grading": "NOT_RUN: no real Auth students, courses or submissions"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -99,6 +109,7 @@
     "Original 66-task Native/VR execution ledger and P11.01 SessionLoad Hold remain unchanged.",
     "PR #1 remains unmerged.",
     "Fifth owner-bootstrap migration was installed after initial checkpoint; no university or admin was created.",
-    "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked."
+    "At implementation SHA 196eede5 all three CI jobs (Windows Native, Ubuntu Native, C# headless) succeeded for both push and PR; evidence-only later SHA should be independently checked.",
+    "U03 GradeApproved is installed but requires real authorized instructor and student submission; live anonymous/unauthorized smoke passed and no data was added."
   ]
 }
