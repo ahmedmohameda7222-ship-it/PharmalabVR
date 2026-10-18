@@ -102,6 +102,7 @@ DurableJournal::DurableJournal(
         !std::filesystem::path(path_).is_absolute() ||
         std::filesystem::path(path_).filename().empty() ||
         std::filesystem::is_directory(std::filesystem::path(path_)) ||
+        std::filesystem::is_symlink(std::filesystem::path(path_)) ||
         maxRecordBytes_ == 0 || maxTotalBytes_ < 9 ||
         maxRecordBytes_ > maxTotalBytes_ - 8) {
         throw std::invalid_argument("invalid disk journal path or size bounds");
@@ -110,6 +111,9 @@ DurableJournal::DurableJournal(
 
 JournalRecovery DurableJournal::recover() const {
     namespace fs = std::filesystem;
+    // Reject an alias even when created after the constructor ran.
+    if (fs::is_symlink(path_))
+        throw std::runtime_error("disk journal symbolic-link destination is forbidden");
     std::error_code error;
     const bool exists = fs::exists(path_, error);
     if (error) throw std::runtime_error("disk journal presence check failed");
@@ -152,6 +156,10 @@ CommandOutcome DurableJournal::append(const std::string& payload) {
             std::filesystem::resize_file(path_, recovered.validBytes, error);
             if (error) return {false, "JournalWriteFailed", "cannot discard torn tail"};
         }
+        // Recheck at the write boundary; the current Native contract
+        // assumes a single owner with no hostile concurrent path replacement.
+        if (std::filesystem::is_symlink(path_))
+            return {false, "JournalWriteFailed", "symbolic-link WAL destination"};
         std::FILE* file = std::fopen(path_.c_str(), "ab");
         if (file == nullptr) {
             return {false, "JournalWriteFailed", "cannot open disk journal for append"};
