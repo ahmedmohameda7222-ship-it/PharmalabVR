@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Six ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Seven ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -12,6 +12,7 @@
 | `20261018010000_university_rpc_hardening.sql` | `university_rpc_hardening_20261018` | `20261018034945` |
 | `20261018020000_owner_bootstrap.sql` | `owner_bootstrap_20261018` | `20261018035637` |
 | `20261018030000_student_submission_rpc.sql` | `student_submission_rpc_20261018` | `20261018042735` |
+| `20261018040000_grade_approval_rpc.sql` | `grade_approval_rpc_20261018` | `20261018044135` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -36,3 +37,6 @@ Exact schema migration versions, SHA evidence and outstanding gates are recorded
 
 ## U03 receipt-bound submissions (partial)
 `public.university_submit_attempt(tenant,assignment,lab_session,idempotency_key,evidence_sha256)` delegates to private authorized SQL. The API rejects unauthenticated, nonstudent, un-enrolled, unpublished, late and non-owned session attempts; a matching server-attested `session_artifacts` record and private Storage object must exist. No client may create these metadata rows directly. A verified U04 upload broker is still missing, so positive submissions are blocked in the currently empty project. The test fixture's synthetic Auth users must **never** be inserted into this live project. See `docs/evidence/u03-submission-progress.md`.
+
+## Grade approval and evidence integrity status
+The approved-score RPC records one instructor/administrator-approved 0–100 percentage grade, immutable after approval and audited. The private function checks tenant membership, assigned instructor section, published assignment and rubric; the public wrapper is invoker-only. Local U04 `UniversityEvidenceIntegrity` can hash receipt/package/export bytes before staging an outbox intent. Neither feature establishes a completed student pilot or a trusted cloud upload. See `docs/evidence/u03-grade-u04-evidence-2026-10-18.md`.
