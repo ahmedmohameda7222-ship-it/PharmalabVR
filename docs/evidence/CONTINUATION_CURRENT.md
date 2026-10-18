@@ -21,3 +21,6 @@
 2. Continue Native P11.01 authoritative checkpoint/receipt crash recovery and formal P06.02/P07/P08/P03 source queue without altering task acceptance statuses.
 3. Implement trusted U04 storage upload+byte attestation, authenticated course/section/enrollment/publish, instructor feedback and verified two-tenant integration (disposable DB only).
 4. Finish English-only U05 portal and final Unity Codex campaign, then seek G-R1/G-U1 review. No fake PASS evidence.
+
+## CI confirmed after this checkpoint was authored
+- `fccdf2d6965bbdf614a7c3b48132bd218ac0cd56`: push `39099755840` and PR `39099757808` all three jobs SUCCESS; Ubuntu Native CTest 1/1. The additional directory/root checkpoint regressions passed after RED, without changing P11.01 Open or G-R1 Open.

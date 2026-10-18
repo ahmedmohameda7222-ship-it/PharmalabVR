@@ -9,3 +9,6 @@
 
 ## Additional path refusal
 Test SHA `feaca6233422d7ad3f855b14c9a7f77c3454ab99` reproduced accepting a filesystem directory as a checkpoint base (Ubuntu run 39099713098: two assertions failed). Source SHA `fccdf2d6965bbdf614a7c3b48132bd218ac0cd56` now rejects existing directories and path roots. Final CI at this exact SHA is pending review; P11.01 and G-R1 remain OPEN.
+
+## Exact-SHA GREEN CI confirmation
+At fixed source SHA `fccdf2d6965bbdf614a7c3b48132bd218ac0cd56`, push run `39099755840` and PR run `39099757808` all three jobs succeeded (Windows Native, Ubuntu Native, panel/headless). Ubuntu CTest reported `100% tests passed, 0 tests failed out of 1`. This verifies software path admission only; not real power cut, disk-full or Unity/Player/XR recovery. P11.01 and G-R1 remain Open.
