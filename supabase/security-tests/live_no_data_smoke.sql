@@ -24,6 +24,15 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_enroll_student(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000012'::uuid,
+      '44444444-4444-4444-8444-444444444444'::uuid,
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
+    raise exception 'ANON_ENROLLMENT_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_submit_attempt(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'aaaa0000-0000-4000-8000-000000000041'::uuid,
@@ -103,6 +112,15 @@ begin
       'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid, 90,
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
     raise exception 'UNASSIGNED_GRADE_PERMISSION_FAILURE' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_enroll_student(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000012'::uuid,
+      '44444444-4444-4444-8444-444444444444'::uuid,
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid);
+    raise exception 'UNAUTHORIZED_ENROLLMENT_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin
