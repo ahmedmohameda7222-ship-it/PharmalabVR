@@ -61,6 +61,32 @@ namespace PharmaLabVR.University
         public bool Enqueue(UniversityUploadIntent intent)
         {
             Validate(intent);
+            // Every writer must own this cross-instance filesystem lease
+            // BEFORE reading the current event set. Otherwise simultaneous
+            // read-modify-replace operations silently lose one of the events.
+            try
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(directory))
+                    throw new InvalidDataException("Outbox has no parent directory.");
+                Directory.CreateDirectory(directory);
+                using (var lease = new FileStream(path + ".lock",
+                    FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                {
+                    return EnqueueWithExclusiveLease(intent);
+                }
+            }
+            catch (Exception error) when (error is IOException ||
+                                           error is UnauthorizedAccessException)
+            {
+                throw new InvalidDataException(
+                    "Another offline outbox writer holds the lease or storage is unavailable.",
+                    error);
+            }
+        }
+
+        private bool EnqueueWithExclusiveLease(UniversityUploadIntent intent)
+        {
             var records = ReadStrict();
             foreach (var existing in records)
             {
