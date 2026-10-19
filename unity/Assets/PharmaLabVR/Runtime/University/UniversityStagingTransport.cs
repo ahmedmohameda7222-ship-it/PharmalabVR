@@ -78,11 +78,18 @@ namespace PharmaLabVR.University
                         HttpCompletionOption.ResponseHeadersRead,
                         cancellationToken).ConfigureAwait(false))
                     {
-                        if (result.StatusCode != HttpStatusCode.Created)
+                        if (result.StatusCode != HttpStatusCode.Created &&
+                            result.StatusCode != HttpStatusCode.OK)
                             return UniversityStagingResult.Rejected;
                         var text = await result.Content.ReadAsStringAsync()
                             .ConfigureAwait(false);
-                        return text.Contains("\"state\":\"staged_unverified\"")
+                        var staged = text.Contains("\"state\":\"staged_unverified\"");
+                        // 200 is valid ONLY for a server-verified exact retry.
+                        // Neither 200 nor 201 attests Native origin or clears the outbox.
+                        var exactRetry = result.StatusCode == HttpStatusCode.OK &&
+                            text.Contains("\"alreadyStaged\":true");
+                        return staged &&
+                            (result.StatusCode == HttpStatusCode.Created || exactRetry)
                             ? UniversityStagingResult.StagedUnverified
                             : UniversityStagingResult.Rejected;
                     }
