@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "17 owner Free migrations deployed. U04 stage-only Edge v1 and self-claimed zero-revision lab session registration SQL tested in disposable PostgreSQL, not attested. Real Auth and Native export receipt producer, cloud attestation/academic promotion, Unity/XR and user pilot NOT_RUN; G-U1 OPEN."
+    "reason": "17 owner-authorized migrations and staged-only JWT Edge/C# headless transport implemented; production has no Auth users, trusted Native receipt attestation, live HTTP student pilot or Unity/XR validation. G-U1 OPEN."
   },
   "tasks": [
     {
@@ -136,7 +136,7 @@
     },
     {
       "id": "U04",
-      "status": "PartialDeployed_ReadOnlyAndQuarantinedUpload",
+      "status": "PartialDeployed_QuarantinedUploadPlusPendingStudentSessionRPC",
       "initialRedSha": "38bf18223220eaa2394e2bb8944fb609a4ffc1fa",
       "initialGreenSha": "aa0216bd3c81e4d825f02acab9c00e8c3a52f0c4",
       "lockRedSha": "5cd2a6a33a4ea92becb92c64b856c404ce17c277",
@@ -155,7 +155,10 @@
         "Live student identity HTTP/JWT read endpoint verification",
         "Attested private Storage upload and signed server acknowledgment",
         "Trusted Native receipt attestation and promotion from quarantined staging to academic evidence",
-        "Real email-verified student HTTP POST through Edge and private Storage (NOT_RUN)"
+        "Real email-verified student HTTP POST through Edge and private Storage (NOT_RUN)",
+        "Trusted signed Native receipt attestation and academic evidence promotion",
+        "Real Auth student with authorized HTTP staging workflow",
+        "Final Unity Editor/Player/XR validation"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -178,7 +181,11 @@
       "stagingSessionSourceSha": "53d2ed57611e8dd35ef54194380bfd901f35252f",
       "stagingSessionRemoteVersion": "20261018235349",
       "stagingSessionSafety": "Authenticated email-verified active student only; inserts own pending zero-revision lab_session as an UNTRUSTED claimed Native branch+science digest with audit/idempotency. No grading or trusted receipt, no direct table INSERT grant.",
-      "stagingSessionTests": "RED PostgreSQL Actions 39177988359 absent public RPC; GREEN 39178191954 + PR 39178194667: 17 migrations, 17 RLS tables, 60 fixture DO blocks, rollback and teardown, no errors; owner live denied-role smoke PASS."
+      "stagingSessionTests": "RED PostgreSQL Actions 39177988359 absent public RPC; GREEN 39178191954 + PR 39178194667: 17 migrations, 17 RLS tables, 60 fixture DO blocks, rollback and teardown, no errors; owner live denied-role smoke PASS.",
+      "stagingSessionMigration": "supabase/migrations/20261018140000_staging_session_registration.sql",
+      "stagingSessionEvidence": "RED 74c6ca8 missing RPC; GREEN isolated Supabase 17/17 migrations, 17 RLS tables, 60 DO blocks, ROLLBACK; Push 39178191954 and PR 39178194667 successful.",
+      "sourceLinkedUnityTransport": "UnityStagingSessionRegistration and UniversityStagingTransport with Unity meta; fake HTTP .NET headless success push 39179130630 and PR 39179134811. No actual Unity Editor/Player run.",
+      "trustBoundary": "Pending revision zero cloud session and staged_unverified JSON bytes are not Native attestation; offline outbox never marked synced."
     },
     {
       "id": "U05",

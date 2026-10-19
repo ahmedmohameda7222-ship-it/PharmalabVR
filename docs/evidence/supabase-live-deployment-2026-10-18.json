@@ -177,7 +177,10 @@
     "u04_quarantine_live": "Bucket private; staging rows=0; academic artifact rows=0; zero Auth users; 0 table RLS policies; authenticated INSERT/SELECT both denied",
     "u04_quarantine_edge": "ACTIVE v1, verify_jwt=true, bundle hash 5a53331725b173c932f6d9bb95421cc947186dea164d834d5efcda83cd4c316e; trusted upload attestation absent",
     "u04_session_claim_postgres": "SUCCESS push 39178191954 PR 39178194667: all 17 local source migrations, 17 public RLS tables, 60 real PostgreSQL DO blocks then ROLLBACK",
-    "u04_session_claim_production": "Live migration remote 20261018235349; public SECURITY INVOKER private SECURITY DEFINER; denied anon/unassigned role, zero Auth users/lab_sessions/audits; student direct INSERT grant false"
+    "u04_session_claim_production": "Live migration remote 20261018235349; public SECURITY INVOKER private SECURITY DEFINER; denied anon/unassigned role, zero Auth users/lab_sessions/audits; student direct INSERT grant false",
+    "u04_staging_session_ci": "SUCCESS Push 39178191954, PR 39178194667, 17 source migrations, 17 RLS tables, 60 actual PostgreSQL DO tests, rollback",
+    "u04_staging_session_live": "Anon/unassigned no-data smoke denied; Auth users, lab sessions, staged objects and audit rows zero; INFO-only intentional private RLS policy findings",
+    "u04_source_linked_client_ci": "Headless fake-HTTP .NET source-linked tests SUCCESS push 39179130630 and PR 39179134811; not actual Unity or authorized HTTP"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -192,9 +195,10 @@
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
     "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN",
-    "u04_authorized_http_upload": "NOT_RUN: no real Auth student or actual Native session, although stage API v1 and database source-registration RPC are deployed",
+    "u04_authorized_http_upload": "NOT_RUN: No real verified student Auth users or registered Native sessions in production",
     "u04_academic_promotion": "NOT_IMPLEMENTED: quarantine objects cannot qualify as academic session_artifacts",
-    "u04_attested_session_revision": "NOT_IMPLEMENTED: source identity is self-reported revision-zero only, requires actual trusted Native receipt binding"
+    "u04_attested_session_revision": "NOT_IMPLEMENTED: source identity is self-reported revision-zero only, requires actual trusted Native receipt binding",
+    "u04_trusted_native_attestation": "NOT_IMPLEMENTED; staging or student claim does not verify scientific provenance or qualify academic evidence"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -212,6 +216,7 @@
     "Lesson hash is SHA256 of PostgreSQL jsonb::text canonical serialization, not of arbitrary raw lesson file bytes. Native chemistry remains local. Initial unauthorized live smoke with deliberately invalid hash hit input validation before role validation; corrected smoke uses valid canonical digest and PASS.",
     "Rubric and assignment publication migrations applied to Free project. Exact source SQL is not installed using supabase db push because API migration versions differ from filenames. Source-level and synthetic RLS verified; no claim of real student pilot.",
     "Free-plan U04 quarantine bucket and metadata deployed with deny-all direct client grants; Edge upload ACTIVE v1. Security Advisor has INFO on private audit and staging tables with zero RLS policies by design; no WARN.",
-    "Self-reported student staging session identity is explicitly untrusted and created with current_revision=0, pending; academic submissions require verified evidence and nonzero committed Native event revision. Only a separate trusted attestation may advance authority."
+    "Self-reported student staging session identity is explicitly untrusted and created with current_revision=0, pending; academic submissions require verified evidence and nonzero committed Native event revision. Only a separate trusted attestation may advance authority.",
+    "U04 client transports require JWT+publishable key over HTTPS, keep pending outbox unchanged even after staged_unverified. Never use service credentials in Unity."
   ]
 }
