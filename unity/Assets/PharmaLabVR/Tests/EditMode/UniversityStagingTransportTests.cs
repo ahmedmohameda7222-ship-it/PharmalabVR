@@ -75,6 +75,36 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void U04_RegistrationRejectsTrailingLinefeedBeforeHttp()
+        {
+            var handler = new FakeHandler
+            {
+                Status = HttpStatusCode.OK,
+                ResponseBody = "\"" + Session + "\""
+            };
+            using (var client = new HttpClient(handler))
+            {
+                var rpc = new Uri("https://example.supabase.co/rest/v1/rpc/university_register_staging_session");
+                Assert.Throws<ArgumentException>(() =>
+                    UniversityStagingSessionRegistration.RegisterPendingAsync(
+                        client, rpc, "sb_publishable_test", "student-token",
+                        Tenant + "\n", "local-session", "native-branch", new string('a',64),
+                        "aaaa0000-0000-4000-8000-000000000211").GetAwaiter().GetResult());
+                Assert.Throws<ArgumentException>(() =>
+                    UniversityStagingSessionRegistration.RegisterPendingAsync(
+                        client, rpc, "sb_publishable_test", "student-token",
+                        Tenant, "local-session\n", "native-branch", new string('a',64),
+                        "aaaa0000-0000-4000-8000-000000000211").GetAwaiter().GetResult());
+                Assert.Throws<InvalidDataException>(() =>
+                    UniversityStagingSessionRegistration.RegisterPendingAsync(
+                        client, rpc, "sb_publishable_test", "student-token",
+                        Tenant, "local-session", "native-branch", new string('a',64) + "\n",
+                        "aaaa0000-0000-4000-8000-000000000211").GetAwaiter().GetResult());
+                Assert.That(handler.ApiKey, Is.Null,
+                    "Rejected identifiers must not reach Supabase over HTTP.");
+            }
+        }
+        [Test]
         public void U04_OversizedSessionRegistrationReplyNeverMintsCloudIdentity()
         {
             var handler = new FakeHandler
