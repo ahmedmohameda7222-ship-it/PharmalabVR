@@ -307,6 +307,15 @@ internal static class Program
                     tenantA,"local-session-2","native-branch-2",new string('b',64),
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
                     "Registration transport accepted a server secret as a publishable key.");
+                registrationHandler.ThrowTimeout = true;
+                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
+                    tenantA,"local-session-2","native-branch-2",new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult()
+                    == null, "Pending session network timeout fabricated a cloud session.");
+                registrationHandler.ThrowTimeout = false;
+                Check(verifier.Pending().Count == 1,
+                    "Timed-out pending registration cleared the Native outbox.");
                 registrationHandler.Status = HttpStatusCode.Forbidden;
                 Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_publishable_test","student-token",
