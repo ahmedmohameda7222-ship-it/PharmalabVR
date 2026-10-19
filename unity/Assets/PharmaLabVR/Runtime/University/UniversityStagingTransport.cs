@@ -40,7 +40,7 @@ namespace PharmaLabVR.University
             @"\A[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
             RegexOptions.CultureInvariant);
         private static readonly Regex PublicGatewayKey = new Regex(
-            @"\A[A-Za-z0-9_-]{1,512}\z", RegexOptions.CultureInvariant);
+            @"\Asb_publishable_[A-Za-z0-9_-]{1,497}\z", RegexOptions.CultureInvariant);
         private static readonly Regex Bearer = new Regex(
             @"\A[A-Za-z0-9._-]{1,4096}\z", RegexOptions.CultureInvariant);
 

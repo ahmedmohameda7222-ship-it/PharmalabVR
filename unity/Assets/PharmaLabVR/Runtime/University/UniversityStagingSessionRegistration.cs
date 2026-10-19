@@ -24,7 +24,7 @@ namespace PharmaLabVR.University
         private static readonly Regex BearerToken = new Regex(
             @"^[A-Za-z0-9._~-]{1,8192}$", RegexOptions.CultureInvariant);
         private static readonly Regex PublicKey = new Regex(
-            @"^[A-Za-z0-9_-]{1,512}$", RegexOptions.CultureInvariant);
+            @"\Asb_publishable_[A-Za-z0-9_-]{1,497}\z", RegexOptions.CultureInvariant);
         private const string RpcPath =
             "/rest/v1/rpc/university_register_staging_session";
 
