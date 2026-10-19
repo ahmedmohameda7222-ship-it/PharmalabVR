@@ -53,3 +53,9 @@ As of Edge version 3 the server requires more than a user-controlled `pending` l
 
 ## Exact retry evidence (v4)
 Headless Node and source-linked .NET outbox contract tests passed on GitHub Actions push `39181138169`; see `docs/evidence/u04-exact-retry-2026-10-19.md`. Additional Unity EditMode test source exists but Unity execution is deferred. Owner Supabase Free currently has zero real students/sessions/uploads, so authenticated HTTP replay under production networking is **NOT_RUN**. After any 200 retry, local durable Native outbox remains Pending.
+
+## Isolated real HTTP integration (v5)
+
+`supabase/security-tests/staging_http_smoke.mjs` runs in the disposable GitHub PostgreSQL workflow with **localhost-only** Supabase CLI keys and temporary synthetic GoTrue students. It exercises verified password login, session registration RPC, Edge request, private Storage and RLS: 201 initial upload, 200 exact retry with private byte verification, 409 changed body, 403 another student, 422 incorrect digest, client staging table SELECT denied and academic `session_artifacts` empty. Both push `39189809292` and PR `39189813884` succeeded. No owner production Auth user was created or contacted by the test. The exact duplicate recovery path additionally recognizes Storage's legacy 400 Asset Already Exists error, but returns 200 only after checking immutable staging metadata and downloaded private object bytes.
+
+Owner Free `student-evidence-upload` is ACTIVE v5 with `verify_jwt=true` and bundle SHA-256 `1e5dd0ff9c06992d0365a0135122a96940974df592ef4d765a852878ef7b2e12`. **Production authorized student HTTP and Native-origin attestation are still NOT_RUN.** Neither a first staging reply nor an exact retry clears the durable Native outbox or produces academic-grade evidence. Unity Editor/Player/XR execution remains deferred.
