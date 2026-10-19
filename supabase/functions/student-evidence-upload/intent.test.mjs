@@ -13,6 +13,9 @@ const input={
  membership:{institution_id:A,user_id:student,role:"student",status:"active"},
  institution:{id:A,status:"active"},
  session:{id:sessionId,institution_id:A,user_id:student,sync_state:"pending"},
+ registrationAudit:{institution_id:A,actor_id:student,target_id:sessionId,
+   action:"StagingLabSessionCreated",target_type:"lab_sessions",
+   details:{attested:false,nativeRevision:0}},
  sha256:digest,contentType:"application/json",sizeBytes:12
 };
 test("U04 accepts a verified active student and owned same-tenant Native session",()=>{
@@ -57,4 +60,19 @@ test("U04 digest must be computed from actual bytes and equals declared length",
 test("U04 forbids missing or forged artifact scope",()=>{
  assert.throws(()=>checkUploadAdmission({...input,sessionId:B}));
  assert.throws(()=>checkUploadAdmission({...input,membership:{...input.membership,institution_id:B}}));
+});
+
+test("U04 rejects sessions without a matching audited staging registration",()=>{
+ for(const registrationAudit of [
+   null,
+   {...input.registrationAudit,institution_id:B},
+   {...input.registrationAudit,actor_id:"11111111-1111-4111-8111-111111111111"},
+   {...input.registrationAudit,target_id:artifact},
+   {...input.registrationAudit,action:"NativeReceiptVerified"},
+   {...input.registrationAudit,target_type:"session_artifacts"},
+   {...input.registrationAudit,details:{attested:true,nativeRevision:0}},
+   {...input.registrationAudit,details:{attested:false,nativeRevision:7}}
+ ]) {
+   assert.throws(()=>checkUploadAdmission({...input,registrationAudit}));
+ }
 });
