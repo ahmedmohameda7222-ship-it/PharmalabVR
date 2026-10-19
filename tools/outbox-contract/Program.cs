@@ -302,121 +302,22 @@ internal static class Program
                     tenantA,"../local","native-branch-2",new string('b',64),
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
                     "Traversal-like local session ID accepted by staging RPC transport.");
-
-                // RED: Regex '^...
-                MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
-                    authClient,rpcEndpoint,"sb_secret_service_credentials","student-token",
-                    tenantA,"local-session-2","native-branch-2",new string('b',64),
-                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
-                    "Registration transport accepted a server secret as a publishable key.");
-                registrationHandler.ThrowTimeout = true;
-                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
-                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
-                    tenantA,"local-session-2","native-branch-2",new string('b',64),
-                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult()
-                    == null, "Pending session network timeout fabricated a cloud session.");
-                registrationHandler.ThrowTimeout = false;
-                Check(verifier.Pending().Count == 1,
-                    "Timed-out pending registration cleared the Native outbox.");
-                registrationHandler.Status = HttpStatusCode.Forbidden;
-                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
-                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
-                    tenantA,"local-session-2","native-branch-2",new string('b',64),
-                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult()==null,
-                    "Denied registration unexpectedly provided a cloud session ID.");
-                Check(verifier.Pending().Count==1,
-                    "Denied session registration removed pending Native evidence.");
-
-                // RED U04: a gateway/server may reply with an oversized
-                // 200 body. Reject BEFORE buffering the body as a session ID,
-                // and retain the local Native outbox unchanged.
-                registrationHandler.Status = HttpStatusCode.OK;
-                registrationHandler.ResponseBody = new string('x', 8192);
-                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
-                    authClient, rpcEndpoint, "sb_publishable_test", "student-token",
-                    tenantA, "local-session-2", "native-branch-2", new string('b',64),
-                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult() == null,
-                    "Oversized registration HTTP 200 response exposed a session identity or exception.");
-                Check(verifier.Pending().Count == 1,
-                    "Oversized pending-session HTTP response acknowledged Native outbox.");
-                registrationHandler.ResponseBody = "\"" + newSessionUuid + "\"";
-
-            }
-
-            var damaged = File.ReadAllBytes(path);
-            damaged[damaged.Length - 2] ^= 0x01;
-            File.WriteAllBytes(path, damaged);
-            MustReject(() => new UniversitySyncOutbox(path, 8192).Pending(),
-                "Tampered stored intent silently passed integrity verification.");
-            MustReject(() => new UniversitySyncOutbox(path, 8192).Enqueue(Sample(tenantA)),
-                "Corrupt outbox was silently overwritten.");
-            Console.WriteLine("U04 offline outbox: " + assertions +
-                " headless assertions passed; no Supabase connection or Unity/Native integration.");
-        }
-        finally
-        {
-            if (Directory.Exists(directory)) Directory.Delete(directory, true);
-        }
-    }
-
-    private sealed class RecordingHandler : HttpMessageHandler
-    {
-        internal int RequestCount;
-        internal string Method;
-        internal string Auth;
-        internal string Session;
-        internal string Artifact;
-        internal string Body;
-        internal string ApiKey;
-        internal string ResponseBody;
-        internal string BodyDigest;
-        internal HttpStatusCode Status = HttpStatusCode.Created;
-        internal bool ThrowTimeout;
-
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            if (ThrowTimeout) throw new TaskCanceledException("Simulated staging network timeout");
-            RequestCount++;
-            Method = request.Method.Method;
-            Auth = request.Headers.Authorization?.ToString();
-            Session = string.Join("", (request.Headers.Contains("x-session-id") ? request.Headers.GetValues("x-session-id") : Array.Empty<string>()));
-            Artifact = string.Join("", (request.Headers.Contains("x-artifact-id") ? request.Headers.GetValues("x-artifact-id") : Array.Empty<string>()));
-            BodyDigest = string.Join("", (request.Headers.Contains("x-evidence-sha256") ? request.Headers.GetValues("x-evidence-sha256") : Array.Empty<string>()));
-            Body = await request.Content.ReadAsStringAsync();
-            ApiKey = request.Headers.Contains("apikey")
-                ? string.Join("",request.Headers.GetValues("apikey")) : null;
-            var tenant = request.Headers.Contains("x-institution-id")
-                ? string.Join("", request.Headers.GetValues("x-institution-id")) : "";
-            var reply = ResponseBody ?? ("{\"state\":\"staged_unverified\","
-                + "\"institutionId\":\"" + tenant + "\","
-                + "\"artifactId\":\"" + Artifact + "\","
-                + "\"sha256\":\"" + BodyDigest + "\"}");
-            return new HttpResponseMessage(Status) {
-                Content = new StringContent(reply)
-            };
-        }
-    }
-}
- in .NET matches before a final LF.
-                // Newline-suffixed identifiers MUST fail strict preflight,
-                // before constructing JSON or hitting the API gateway.
+                // Strict identity regexes must reject newline suffixes before HTTP.
                 MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_publishable_test","student-token",
                     tenantA + "\n","local-session-2","native-branch-2",new string('b',64),
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
-                    "Institution UUID with trailing LF escaped strict validation.");
+                    "Trailing LF in institution UUID reached the registration client.");
                 MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_publishable_test","student-token",
                     tenantA,"local-session-2\n","native-branch-2",new string('b',64),
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
-                    "Local session identifier with trailing LF was accepted.");
+                    "Trailing LF in local session ID reached the registration client.");
                 MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_publishable_test","student-token",
                     tenantA,"local-session-2","native-branch-2",new string('b',64) + "\n",
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
-                    "Science digest with trailing LF was accepted.");
-
+                    "Trailing LF in science digest reached the registration client.");
                 MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_secret_service_credentials","student-token",
                     tenantA,"local-session-2","native-branch-2",new string('b',64),
