@@ -248,7 +248,7 @@ internal static class Program
         internal string Artifact;
         internal string Body;
         internal string ApiKey;
-        internal string ResponseBody = "{\\"state\\":\\"staged_unverified\\"}";
+        internal string ResponseBody = "{\"state\":\"staged_unverified\"}";
         internal string BodyDigest;
         internal HttpStatusCode Status = HttpStatusCode.Created;
 
@@ -258,9 +258,9 @@ internal static class Program
             RequestCount++;
             Method = request.Method.Method;
             Auth = request.Headers.Authorization?.ToString();
-            Session = string.Join("", request.Headers.GetValues("x-session-id"));
-            Artifact = string.Join("", request.Headers.GetValues("x-artifact-id"));
-            BodyDigest = string.Join("", request.Headers.GetValues("x-evidence-sha256"));
+            Session = string.Join("", (request.Headers.Contains("x-session-id") ? request.Headers.GetValues("x-session-id") : Array.Empty<string>()));
+            Artifact = string.Join("", (request.Headers.Contains("x-artifact-id") ? request.Headers.GetValues("x-artifact-id") : Array.Empty<string>()));
+            BodyDigest = string.Join("", (request.Headers.Contains("x-evidence-sha256") ? request.Headers.GetValues("x-evidence-sha256") : Array.Empty<string>()));
             Body = await request.Content.ReadAsStringAsync();
             ApiKey = request.Headers.Contains("apikey")
                 ? string.Join("",request.Headers.GetValues("apikey")) : null;
