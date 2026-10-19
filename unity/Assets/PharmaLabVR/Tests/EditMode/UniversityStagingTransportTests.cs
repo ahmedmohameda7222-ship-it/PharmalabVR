@@ -58,6 +58,23 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void U04_PendingRegistrationTimeoutNeverReportsCloudIdentity()
+        {
+            var handler = new FakeHandler { ThrowTimeout = true };
+            using (var client = new HttpClient(handler))
+            {
+                var result = UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    client,
+                    new Uri("https://example.supabase.co/rest/v1/rpc/university_register_staging_session"),
+                    "sb_publishable_test", "student-token", Tenant,
+                    "local-session", "native-branch", new string('a', 64),
+                    "aaaa0000-0000-4000-8000-000000000211")
+                    .GetAwaiter().GetResult();
+                Assert.That(result, Is.Null);
+            }
+        }
+
+        [Test]
         public void U04_StagingNetworkTimeoutRejectsWithoutProducingEvidence()
         {
             var handler = new FakeHandler { ThrowTimeout = true };

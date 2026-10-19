@@ -205,6 +205,14 @@
         "redSecretKey": "1d6646179f70e69745ef143fdaa61921ebc82b21, push 39193355042 panel 117870721391 rejected insufficient secret-key admission",
         "greenPublishableOnly": "b85a781a02e0e40694e4cffea8eacfd5a4508521; push 39193500090 panel job 117871156437 SUCCESS, 57 U04 outbox assertions plus Node tests",
         "caveat": "Only sb_publishable_* can be used by Unity staging/registration; legacy anon JWT not an accepted publishable key format. Real Unity Editor/Player/XR and production Auth HTTP client still NOT_RUN; stage remains unverified."
+      },
+      "clientTimeoutTdd": {
+        "uploadRed": "170da96385304b9c7c58c5303817d5b469e46fc9, push 39193786074 failure: uncaught TaskCanceledException",
+        "uploadGreen": "cb604b67451bc7b15ca78da55eb4020ad04a7160, panel 39193961521 SUCCESS: unverified Rejected and retained outbox",
+        "sessionRed": "8365bae6ba8dac5826f44cab5c9d4c1ffd52de50, push 39194108062 failure: uncaught TaskCanceledException",
+        "sessionGreen": "2cb33b3dd4f99625c091614381282eca46ea5302, panel 39194247743 SUCCESS: null response, no confirmed session, outbox intact",
+        "unityVerification": "EditMode source authored; Unity Editor/Player/XR NOT_RUN",
+        "remaining": "No actual production student HTTP pilot; Native attestation/academic promotion and authoritative sync receipt remain NOT_IMPLEMENTED"
       }
     },
     {
