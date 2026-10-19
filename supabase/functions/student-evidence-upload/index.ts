@@ -3,6 +3,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { checkUploadAdmission,verifyEvidenceBytes } from "./intent.mjs";
 import { parseUploadHeaders,readBoundedEvidence } from "./protocol.mjs";
+import { verifyExistingStaging,isDuplicateStagingUpload } from "./reconcile.mjs";
 
 const cors={
   "Access-Control-Allow-Origin":"*",
@@ -104,10 +105,40 @@ Deno.serve(async(request:Request)=>{
       contentType:"application/json",cacheControl:"0",upsert:false,
     });
     if(uploaded.error){
-      const code=String((uploaded.error as {statusCode?:string|number}).statusCode??"");
-      return response(code==="409"?409:503,{
-        error:code==="409"?"Evidence artifact already staged":"Private quarantine upload failed",
-      });
+      if(!isDuplicateStagingUpload(uploaded.error))
+        return response(503,{error:"Private quarantine upload failed"});
+      // A retried request may arrive after the object was saved but the
+      // network reply was lost. It is accepted only if the original staging
+      // row AND the actual privately stored bytes match this same student.
+      const prior=await admin.from("evidence_upload_staging")
+        .select("id,institution_id,lab_session_id,student_id,object_key,size_bytes,sha256,content_type")
+        .eq("id",metadata.artifactId)
+        .eq("institution_id",metadata.tenantId)
+        .maybeSingle();
+      if(prior.error)
+        return response(503,{error:"Quarantine retry lookup unavailable"});
+      if(!prior.data)
+        return response(409,{error:"Staging artifact exists without committed metadata"});
+      const existing=await admin.storage.from(bucket).download(admission.objectKey);
+      if(existing.error || !existing.data)
+        return response(409,{error:"Quarantine stored bytes unavailable for verification"});
+      try{
+        if(existing.data.size>1048576)
+          return response(409,{error:"Stored evidence exceeds quarantine limit"});
+        const storedBytes=new Uint8Array(await existing.data.arrayBuffer());
+        const matched=await verifyExistingStaging({
+          row:prior.data,tenantId:metadata.tenantId,
+          artifactId:metadata.artifactId,sessionId:metadata.sessionId,
+          studentId:actor.id,sha256:metadata.sha256,bytes:storedBytes,
+        });
+        return response(200,{
+          state:"staged_unverified",institutionId:metadata.tenantId,
+          ...matched,
+          note:"Matching quarantined retry; not Native-attested, synced or graded",
+        });
+      }catch{
+        return response(409,{error:"Staging artifact conflicts with existing bytes or scope"});
+      }
     }
     const saved=await admin.from("evidence_upload_staging").insert({
       id:metadata.artifactId,institution_id:metadata.tenantId,
