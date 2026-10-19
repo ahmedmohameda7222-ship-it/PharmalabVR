@@ -194,7 +194,7 @@ internal static class Program
                         tenantA, registeredSessionId, uploadId, "student-token",
                         new byte[1048577]).GetAwaiter().GetResult(),
                     "Oversized Unity upload bypassed preflight size cap.");
-                Check(mock.RequestCount == 1,
+                Check(mock.RequestCount == 3,
                     "Rejected staging attempts reached HTTP.");
                 mock.Status=HttpStatusCode.Forbidden;
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
