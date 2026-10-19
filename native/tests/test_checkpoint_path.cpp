@@ -173,4 +173,26 @@ TEST_CASE("P11_01 durable WAL must reject a hard-linked valid journal") {
     fs::remove_all(dir);
 }
 
+TEST_CASE("P11_01 checkpoint load rejects a checksum-valid hard-link alias") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-ckpt-read-hardlink-" + std::to_string(
+          std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir / "foreign"));
+    REQUIRE(fs::create_directories(dir / "local"));
+    const auto protectedPath = (dir / "foreign" / "session.ckpt").string();
+    const auto suspectPath = (dir / "local" / "session.ckpt").string();
+    plv::DurableCheckpointStore protectedStore(protectedPath, 1024);
+    REQUIRE(protectedStore.write("foreign-scientific-state").accepted);
+    REQUIRE_NOTHROW(fs::create_hard_link(
+        protectedPath + ".slot0", suspectPath + ".slot0"));
+    REQUIRE(fs::hard_link_count(protectedPath + ".slot0") == 2);
+    plv::DurableCheckpointStore suspectStore(suspectPath, 1024);
+    CHECK_THROWS_AS(suspectStore.read(), std::runtime_error);
+    const auto attemptedWrite = suspectStore.write("local-scientific-state");
+    CHECK_FALSE(attemptedWrite.accepted);
+    CHECK(protectedStore.read().value() == "foreign-scientific-state");
+    fs::remove_all(dir);
+}
+
 #endif
