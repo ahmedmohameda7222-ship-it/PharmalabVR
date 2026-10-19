@@ -140,4 +140,37 @@ TEST_CASE("P11_01 checkpoint stage hardlink must never truncate unrelated file")
     fs::remove_all(base);
 }
 
+TEST_CASE("P11_01 durable WAL must reject a hard-linked valid journal") {
+    namespace fs = std::filesystem;
+    const auto dir = fs::temp_directory_path() /
+        ("plv-wal-hardlink-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(dir));
+    const auto protectedWal = dir / "protected-science.wal";
+    const auto suspectWal = dir / "student-receipts.wal";
+    {
+        plv::DurableJournal protectedWriter(protectedWal.string(), 256, 2048);
+        REQUIRE(protectedWriter.append("original-record").accepted);
+    }
+    // Capture durable bytes to prove that a second path never changes them.
+    auto readProtected = [&]() {
+        std::ifstream input(protectedWal, std::ios::binary);
+        REQUIRE(input.is_open());
+        return std::string((std::istreambuf_iterator<char>(input)),
+                           std::istreambuf_iterator<char>());
+    };
+    const auto original = readProtected();
+    plv::DurableJournal admittedBeforeLink(suspectWal.string(), 256, 2048);
+    REQUIRE_NOTHROW(fs::create_hard_link(protectedWal, suspectWal));
+    REQUIRE(fs::hard_link_count(protectedWal) == 2);
+
+    CHECK_THROWS_AS(plv::DurableJournal(suspectWal.string(), 256, 2048),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(admittedBeforeLink.recover(), std::runtime_error);
+    const auto outcome = admittedBeforeLink.append("forged-second-record");
+    CHECK_FALSE(outcome.accepted);
+    CHECK(readProtected() == original);
+    fs::remove_all(dir);
+}
+
 #endif
