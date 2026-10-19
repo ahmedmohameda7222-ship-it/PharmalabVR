@@ -158,7 +158,9 @@
         "Real email-verified student HTTP POST through Edge and private Storage (NOT_RUN)",
         "Trusted signed Native receipt attestation and academic evidence promotion",
         "Real Auth student with authorized HTTP staging workflow",
-        "Final Unity Editor/Player/XR validation"
+        "Final Unity Editor/Player/XR validation",
+        "Real authorized student HTTP POST, Storage write and retry/reconciliation tests",
+        "Trusted Native receipt verification, academic evidence promotion and signed server ack"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -185,7 +187,12 @@
       "stagingSessionMigration": "supabase/migrations/20261018140000_staging_session_registration.sql",
       "stagingSessionEvidence": "RED 74c6ca8 missing RPC; GREEN isolated Supabase 17/17 migrations, 17 RLS tables, 60 DO blocks, ROLLBACK; Push 39178191954 and PR 39178194667 successful.",
       "sourceLinkedUnityTransport": "UnityStagingSessionRegistration and UniversityStagingTransport with Unity meta; fake HTTP .NET headless success push 39179130630 and PR 39179134811. No actual Unity Editor/Player run.",
-      "trustBoundary": "Pending revision zero cloud session and staged_unverified JSON bytes are not Native attestation; offline outbox never marked synced."
+      "trustBoundary": "Pending revision zero cloud session and staged_unverified JSON bytes are not Native attestation; offline outbox never marked synced.",
+      "edgeUploadVersion": 3,
+      "edgeUploadSourceSha": "2080dad6fde7cfc8356d46d395323439b6bdef3f",
+      "edgeUploadBundleSha256": "689003d4a157aeda0b18790157f935c348b989cd1d29d7a1845363a64b0202a6",
+      "edgeUploadSecurity": "Active JWT-checked staging v3: verified active student and same-tenant pending revision-zero session plus immutable official StagingLabSessionCreated audit matching actor/tenant/target. No academic evidence/Native receipt promotion.",
+      "edgeUploadTdd": "RED audit policy 771cdb1 at Push 39179764233, GREEN 0dbbf6d verified headless. RED revision-zero 9246efa at Push 39180137962, GREEN 2080dad verified headless. Live v3 deployment inspected after publish."
     },
     {
       "id": "U05",

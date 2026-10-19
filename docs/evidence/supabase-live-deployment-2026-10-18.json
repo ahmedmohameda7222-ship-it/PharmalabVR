@@ -180,7 +180,10 @@
     "u04_session_claim_production": "Live migration remote 20261018235349; public SECURITY INVOKER private SECURITY DEFINER; denied anon/unassigned role, zero Auth users/lab_sessions/audits; student direct INSERT grant false",
     "u04_staging_session_ci": "SUCCESS Push 39178191954, PR 39178194667, 17 source migrations, 17 RLS tables, 60 actual PostgreSQL DO tests, rollback",
     "u04_staging_session_live": "Anon/unassigned no-data smoke denied; Auth users, lab sessions, staged objects and audit rows zero; INFO-only intentional private RLS policy findings",
-    "u04_source_linked_client_ci": "Headless fake-HTTP .NET source-linked tests SUCCESS push 39179130630 and PR 39179134811; not actual Unity or authorized HTTP"
+    "u04_source_linked_client_ci": "Headless fake-HTTP .NET source-linked tests SUCCESS push 39179130630 and PR 39179134811; not actual Unity or authorized HTTP",
+    "u04_upload_edge_v3": "LIVE ACTIVE v3 verify_jwt=true, bundle 689003d4a157aeda0b18790157f935c348b989cd1d29d7a1845363a64b0202a6, audit+revision-zero gates inspected",
+    "u04_upload_edge_policy_red_green": "RED 771cdb1 missing matching registration audit and RED 9246efa missing revision-zero check; GREEN 0dbbf6d and 2080dad6, headless Node tests passed",
+    "u04_v3_live_counts": "Auth users=0, sessions=0, staging records=0, staged Storage objects=0, academic artifacts=0, audit rows=0. Security Advisor INFO only."
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -195,10 +198,10 @@
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
     "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN",
-    "u04_authorized_http_upload": "NOT_RUN: No real verified student Auth users or registered Native sessions in production",
+    "u04_authorized_http_upload": "NOT_RUN: no verified live student Auth account and no legitimate registered session",
     "u04_academic_promotion": "NOT_IMPLEMENTED: quarantine objects cannot qualify as academic session_artifacts",
     "u04_attested_session_revision": "NOT_IMPLEMENTED: source identity is self-reported revision-zero only, requires actual trusted Native receipt binding",
-    "u04_trusted_native_attestation": "NOT_IMPLEMENTED; staging or student claim does not verify scientific provenance or qualify academic evidence"
+    "u04_trusted_native_attestation": "NOT_IMPLEMENTED: Native signed receipt and server verifier; staged bytes cannot become academic proof."
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -217,6 +220,7 @@
     "Rubric and assignment publication migrations applied to Free project. Exact source SQL is not installed using supabase db push because API migration versions differ from filenames. Source-level and synthetic RLS verified; no claim of real student pilot.",
     "Free-plan U04 quarantine bucket and metadata deployed with deny-all direct client grants; Edge upload ACTIVE v1. Security Advisor has INFO on private audit and staging tables with zero RLS policies by design; no WARN.",
     "Self-reported student staging session identity is explicitly untrusted and created with current_revision=0, pending; academic submissions require verified evidence and nonzero committed Native event revision. Only a separate trusted attestation may advance authority.",
-    "U04 client transports require JWT+publishable key over HTTPS, keep pending outbox unchanged even after staged_unverified. Never use service credentials in Unity."
+    "U04 client transports require JWT+publishable key over HTTPS, keep pending outbox unchanged even after staged_unverified. Never use service credentials in Unity.",
+    "U04 Edge v3 deployment reused same slug student-evidence-upload with explicit deno.json import map; no project secrets placed into Unity or repository."
   ]
 }

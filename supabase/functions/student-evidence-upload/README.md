@@ -47,3 +47,7 @@ Before staging, a real authenticated student may invoke the public RPC `universi
 ## Student session registration before staging
 
 Use a student's live bearer token and public `sb_publishable_` key to invoke `public.university_register_staging_session` through PostgREST, receiving its **cloud lab session UUID**. Do not substitute the local Native session label for this UUID. `UniversityStagingSessionRegistration` and `UniversityStagingTransport` are source-linked Unity runtime classes with .NET fake-HTTP tests. The only permitted server reply after upload is a quarantined `StagedUnverified` status; the Native outbox must remain Pending. No authorized live student HTTP upload or Unity Player verification has occurred.
+
+## Staging registration audit and revision-zero gate
+
+As of Edge version 3 the server requires more than a user-controlled `pending` lab session row. A server-only query to the immutable private `audit_events` table must confirm `StagingLabSessionCreated` for the same institution, student, and session with `attested=false` and `nativeRevision=0`. The current lab session must also have `current_revision=0`. Missing, mismatched, superseded or unaudited sessions are denied **before storage upload**. This is **admission provenance**, not authoritative scientific evidence or a Native receipt signature. No authorized HTTP integration against a real Auth student has yet been performed.

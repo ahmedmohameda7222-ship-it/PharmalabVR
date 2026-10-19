@@ -1,0 +1,8 @@
+# U04 Edge audit and revision-zero safety increment — 19 October 2026
+
+**Source branch:** `feat/foundation-vr-first` / PR #1 unmerged. **Owner Supabase Free:** `hhbnlhceehgbskzdtorn`.
+
+- RED `771cdb186fb55de25221c6be0e82cf2c37c7b974`: real Node headless test 9 failed for absence/forgery of official server-owned StagingLabSessionCreated audit record. GREEN `0dbbf6da911e36a6afa0d7f94f0a1fb74ebe1f8e`: private service-role audit read AFTER live JWT user verification and before any staging Storage operation, plus pure policy assertion for exact tenant/student/session/action details. Edge deployed version 2 and verified ACTIVE.
+- RED `9246efa37ae93150b099b615f4a94a06570e6179`: Node test 10 failed because a mutated revision could pass pending session check. GREEN `2080dad6fde7cfc8356d46d395323439b6bdef3f`: RLS-read current_revision and require numeric zero. Node source-linked headless green on GitHub; Edge deployed **version 3** `verify_jwt=true`, content bundle hash `689003d4a157aeda0b18790157f935c348b989cd1d29d7a1845363a64b0202a6`.
+- LIVE read-only SQL postdeploy: 0 Auth users, 0 lab sessions, 0 staging metadata, 0 staging bucket objects, 0 academic session_artifacts and 0 audit events. Security Advisor INFO-only on intentional private audit/staging RLS tables; no WARN.
+- Not established: actual authorized student request, cloud Storage round trip, verified Native command/export origin, server attestation, trusted promotion, signed synchronization acknowledgment or Unity Editor/Player/XR tests. `staged_unverified` never qualifies as scientific proof or resolves the pending outbox. G-U1/G-R1/P11.01 remain OPEN.
