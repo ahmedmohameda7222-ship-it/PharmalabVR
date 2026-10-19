@@ -48,6 +48,11 @@ CheckpointSlot loadSlot(const std::string& base, unsigned index, std::size_t max
     result.present = fs::exists(path, error);
     if (error) throw std::runtime_error("checkpoint slot could not be inspected");
     if (!result.present) return result;
+    // Checksum validity does not establish ownership: a hard link can expose
+    // a foreign session's perfectly valid checkpoint at this path.
+    const auto linkCount = fs::hard_link_count(path, error);
+    if (error || linkCount != 1)
+        throw std::runtime_error("checkpoint slot hard-linked alias is forbidden");
     const auto size = fs::file_size(path, error);
     if (error) throw std::runtime_error("checkpoint slot could not be measured");
     if (size > maximum + headerReserve) return result;
