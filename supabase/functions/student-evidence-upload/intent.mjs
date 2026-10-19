@@ -24,6 +24,7 @@ export function checkUploadAdmission(args){
     args.session?.institution_id !== args.tenantId ||
     args.session?.user_id !== args.user.id ||
     args.session?.sync_state !== "pending" ||
+    args.session?.current_revision !== 0 ||
     args.registrationAudit?.institution_id !== args.tenantId ||
     args.registrationAudit?.actor_id !== args.user.id ||
     args.registrationAudit?.target_id !== args.sessionId ||

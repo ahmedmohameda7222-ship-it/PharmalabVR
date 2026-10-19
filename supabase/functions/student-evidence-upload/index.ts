@@ -58,7 +58,7 @@ Deno.serve(async(request:Request)=>{
       studentClient.from("institutions")
         .select("id,status").eq("id",metadata.tenantId).maybeSingle(),
       studentClient.from("lab_sessions")
-        .select("id,institution_id,user_id,sync_state")
+        .select("id,institution_id,user_id,sync_state,current_revision")
         .eq("id",metadata.sessionId).eq("institution_id",metadata.tenantId)
         .eq("user_id",actor.id).maybeSingle(),
     ]);
