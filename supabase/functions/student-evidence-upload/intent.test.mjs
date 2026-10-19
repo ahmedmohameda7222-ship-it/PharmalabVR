@@ -12,7 +12,7 @@ const input={
  tenantId:A,artifactId:artifact,sessionId,user:{id:student,email_confirmed_at:"2026-10-18T00:00:00Z"},
  membership:{institution_id:A,user_id:student,role:"student",status:"active"},
  institution:{id:A,status:"active"},
- session:{id:sessionId,institution_id:A,user_id:student,sync_state:"pending"},
+ session:{id:sessionId,institution_id:A,user_id:student,sync_state:"pending",current_revision:0},
  registrationAudit:{institution_id:A,actor_id:student,target_id:sessionId,
    action:"StagingLabSessionCreated",target_type:"lab_sessions",
    details:{attested:false,nativeRevision:0}},
@@ -74,5 +74,13 @@ test("U04 rejects sessions without a matching audited staging registration",()=>
    {...input.registrationAudit,details:{attested:false,nativeRevision:7}}
  ]) {
    assert.throws(()=>checkUploadAdmission({...input,registrationAudit}));
+ }
+});
+
+test("U04 requires the registered session to remain revision zero",()=>{
+ for(const current_revision of [1,-1,"0",null,undefined]) {
+   assert.throws(()=>checkUploadAdmission({
+     ...input,session:{...input.session,current_revision}
+   }));
  }
 });
