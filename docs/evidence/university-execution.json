@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "17 owner Free migrations, staged-only JWT Edge upload v4 and source-linked retries implemented; no real Auth users, HTTP student uploads, Native attestation, Unity Editor/Player/XR, or institutional pilot. G-U1 OPEN."
+    "reason": "Local disposable GoTrue/Edge/Storage staged upload verified, Free Edge v5 active; no real production enrolled users, trusted Native attestation, academic evidence promotion or Unity final campaign. G-U1 OPEN."
   },
   "tasks": [
     {
@@ -136,7 +136,7 @@
     },
     {
       "id": "U04",
-      "status": "PartialDeployed_QuarantinedUploadPlusPendingStudentSessionRPC",
+      "status": "PartialDeployed_Quarantine_AuthenticatedLocalHttpVerified",
       "initialRedSha": "38bf18223220eaa2394e2bb8944fb609a4ffc1fa",
       "initialGreenSha": "aa0216bd3c81e4d825f02acab9c00e8c3a52f0c4",
       "lockRedSha": "5cd2a6a33a4ea92becb92c64b856c404ce17c277",
@@ -161,7 +161,7 @@
         "Final Unity Editor/Player/XR validation",
         "Real authorized student HTTP POST, Storage write and retry/reconciliation tests",
         "Trusted Native receipt verification, academic evidence promotion and signed server ack",
-        "Live authorized HTTP exact retry, object download and concurrent request integration NOT_RUN"
+        "Concurrent request/fault-injection not run; only sequential local HTTP retry verified"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -189,13 +189,16 @@
       "stagingSessionEvidence": "RED 74c6ca8 missing RPC; GREEN isolated Supabase 17/17 migrations, 17 RLS tables, 60 DO blocks, ROLLBACK; Push 39178191954 and PR 39178194667 successful.",
       "sourceLinkedUnityTransport": "UnityStagingSessionRegistration and UniversityStagingTransport with Unity meta; fake HTTP .NET headless success push 39179130630 and PR 39179134811. No actual Unity Editor/Player run.",
       "trustBoundary": "Pending revision zero cloud session and staged_unverified JSON bytes are not Native attestation; offline outbox never marked synced.",
-      "edgeUploadVersion": 4,
-      "edgeUploadSourceSha": "d1e098fa4f3e85393dfc64ebe64dc421836fc583",
-      "edgeUploadBundleSha256": "8fd3a6335dc721a78ac8be6210457cbc2800609e5be94662ba67f950faf90c5b",
+      "edgeUploadVersion": 5,
+      "edgeUploadSourceSha": "c9636358ef68f92b35a4255b5587cf1785a69cf3",
+      "edgeUploadBundleSha256": "1e5dd0ff9c06992d0365a0135122a96940974df592ef4d765a852878ef7b2e12",
       "edgeUploadSecurity": "ACTIVE v4 verify_jwt=true, canonical student/tenant/owned pending zero-revision audited session and SHA JSON upload. Idempotent 200 requires actual stored bytes and matching immutable metadata; otherwise 409/503. No academic evidence/Native receipt promotion.",
       "edgeUploadTdd": "RED audit policy 771cdb1 at Push 39179764233, GREEN 0dbbf6d verified headless. RED revision-zero 9246efa at Push 39180137962, GREEN 2080dad verified headless. Live v3 deployment inspected after publish.",
       "quarantineReplay": "Exact same-student/session/tenant/artifact request can be retried after lost HTTP response. Server accepts 200 only after matching immutable staging metadata and downloading/verifying actual private Storage JSON bytes. Incompatible/partial prior uploads fail closed (409); never attest Native receipt or acknowledge offline sync.",
-      "quarantineReplayTdd": "Node RED ef4ec955 failed missing reconcile.mjs (push 39180682381 panel); GREEN d1e098fa push 39181138169 panel SUCCEEDED (all Node U04 and C# outbox tests). C# RED de53d62 on push 39180925392 expected failure; GREEN d1e098fa panel passed. Unity EditMode tests authored at 77c48709 but NOT_RUN."
+      "quarantineReplayTdd": "Node RED ef4ec955 failed missing reconcile.mjs (push 39180682381 panel); GREEN d1e098fa push 39181138169 panel SUCCEEDED (all Node U04 and C# outbox tests). C# RED de53d62 on push 39180925392 expected failure; GREEN d1e098fa panel passed. Unity EditMode tests authored at 77c48709 but NOT_RUN.",
+      "localAuthHttpEvidence": "Isolated GoTrue->RPC->Edge->Storage real HTTP succeeded: push 39189809292 and PR 39189813884; 201 first, 200 exact retry, 409 changed byte replay, 403 foreign student, 422 wrong SHA, RLS direct-read denied, academic session_artifacts empty. 17 migrations, 17 RLS, 60 DO blocks, rollback, no remote credentials.",
+      "clientReplyBinding": "RED 76ffa25 accepted reply from another institution; GREEN c2527c and EditMode source 1297f1f validate structured top-level tenant, artifact, byte SHA and 201/200 semantics; Unity Editor NOT_RUN.",
+      "uploadRetryTdd": "RED d231367 SDK machine-code precedence, RED 77596ec for Storage 400 Asset Already Exists; GREEN c963635 with independent staged metadata/private-byte verification, local E2E SUCCESS."
     },
     {
       "id": "U05",
