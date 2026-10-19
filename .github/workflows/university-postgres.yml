@@ -43,6 +43,20 @@ jobs:
         run: |
           psql "host=127.0.0.1 port=54322 user=postgres dbname=postgres sslmode=disable" \
             -X -v ON_ERROR_STOP=1 -f supabase/security-tests/tenant_isolation.sql
+      - name: Real localhost Auth / Edge / private Storage regression
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-status.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-status.env"
+          set +a
+          supabase functions serve student-evidence-upload > "$RUNNER_TEMP/u04-edge.log" 2>&1 &
+          EDGE_PID=$!
+          trap 'kill "$EDGE_PID" 2>/dev/null || true' EXIT
+          if ! node supabase/security-tests/staging_http_smoke.mjs; then
+            echo "Local Edge integration failed; showing bounded local service diagnostics:"
+            tail -n 60 "$RUNNER_TEMP/u04-edge.log"
+            exit 1
+          fi
       - name: Destroy isolated stack without backups
         if: always()
         run: supabase stop --no-backup
