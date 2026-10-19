@@ -5,10 +5,16 @@ import { evidenceObjectKey, verifyEvidenceBytes } from "./intent.mjs";
 export function isDuplicateStagingUpload(error) {
   if(!error || !["400","409"].includes(String(error.statusCode??error.status)))
     return false;
-  // Supabase Storage may include both a human-readable error string and a
-  // stable machine code. Match the code first; messages are not API enums.
-  const name=String(error.code??error.error??"");
-  return ["Duplicate","ResourceAlreadyExists","KeyAlreadyExists"].includes(name);
+  // Standard Storage uploads with upsert=false report HTTP 400
+  // "Asset Already Exists"; SDK versions vary between code and error text.
+  // A candidate retry is NEVER trusted on status alone: verifyExistingStaging
+  // subsequently checks scoped immutable metadata and rehashes private bytes.
+  const names=[error.code,error.error,error.message]
+    .filter(x=>typeof x==="string");
+  const enums=["Duplicate","ResourceAlreadyExists","KeyAlreadyExists",
+               "AssetAlreadyExists"];
+  return names.some(name=>enums.includes(name) ||
+    /^(Asset Already Exists|The resource already exists)$/i.test(name));
 }
 
 export async function verifyExistingStaging(args) {
