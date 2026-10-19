@@ -46,6 +46,19 @@ std::uint32_t readU32(const std::vector<std::uint8_t>& input, std::size_t offset
     }
     return value;
 }
+// Reject an existing WAL path with multiple filesystem names. Otherwise an
+// append or torn-tail repair could mutate unrelated science bytes via a hard link.
+// This is a single-writer guard, not a defence against concurrent path swaps.
+bool existingMultipleHardLinks(const std::filesystem::path& path) {
+    namespace fs = std::filesystem;
+    std::error_code error;
+    const bool exists = fs::exists(path, error);
+    if (error) throw std::runtime_error("cannot inspect WAL path");
+    if (!exists) return false;
+    const auto links = fs::hard_link_count(path, error);
+    if (error) throw std::runtime_error("cannot inspect WAL link count");
+    return links != 1;
+}
 }  // namespace
 
 Journal::Journal(std::size_t maxRecordBytes) : maxRecordBytes_(maxRecordBytes) {}
@@ -103,6 +116,7 @@ DurableJournal::DurableJournal(
         std::filesystem::path(path_).filename().empty() ||
         std::filesystem::is_directory(std::filesystem::path(path_)) ||
         std::filesystem::is_symlink(std::filesystem::path(path_)) ||
+        existingMultipleHardLinks(path_) ||
         maxRecordBytes_ == 0 || maxTotalBytes_ < 9 ||
         maxRecordBytes_ > maxTotalBytes_ - 8) {
         throw std::invalid_argument("invalid disk journal path or size bounds");
@@ -114,6 +128,8 @@ JournalRecovery DurableJournal::recover() const {
     // Reject an alias even when created after the constructor ran.
     if (fs::is_symlink(path_))
         throw std::runtime_error("disk journal symbolic-link destination is forbidden");
+    if (existingMultipleHardLinks(path_))
+        throw std::runtime_error("disk journal hard-linked destination is forbidden");
     std::error_code error;
     const bool exists = fs::exists(path_, error);
     if (error) throw std::runtime_error("disk journal presence check failed");
@@ -152,6 +168,8 @@ CommandOutcome DurableJournal::append(const std::string& payload) {
         // Recovery never interprets a trailing fragment as an accepted command.
         // Drop only the unconfirmed tail; retain the complete CRC-checked prefix.
         if (recovered.truncatedTail) {
+            if (existingMultipleHardLinks(path_))
+                return {false, "JournalWriteFailed", "hard-linked WAL cannot be truncated"};
             std::error_code error;
             std::filesystem::resize_file(path_, recovered.validBytes, error);
             if (error) return {false, "JournalWriteFailed", "cannot discard torn tail"};
@@ -160,6 +178,8 @@ CommandOutcome DurableJournal::append(const std::string& payload) {
         // assumes a single owner with no hostile concurrent path replacement.
         if (std::filesystem::is_symlink(path_))
             return {false, "JournalWriteFailed", "symbolic-link WAL destination"};
+        if (existingMultipleHardLinks(path_))
+            return {false, "JournalWriteFailed", "hard-linked WAL destination"};
         std::FILE* file = std::fopen(path_.c_str(), "ab");
         if (file == nullptr) {
             return {false, "JournalWriteFailed", "cannot open disk journal for append"};
