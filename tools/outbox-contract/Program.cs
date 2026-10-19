@@ -293,6 +293,11 @@ internal static class Program
                     tenantA,"../local","native-branch-2",new string('b',64),
                     "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
                     "Traversal-like local session ID accepted by staging RPC transport.");
+                MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient,rpcEndpoint,"sb_secret_service_credentials","student-token",
+                    tenantA,"local-session-2","native-branch-2",new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
+                    "Registration transport accepted a server secret as a publishable key.");
                 registrationHandler.Status = HttpStatusCode.Forbidden;
                 Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
                     authClient,rpcEndpoint,"sb_publishable_test","student-token",
