@@ -4,75 +4,97 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace PharmaLabVR.University
 {
-    // Transport ONLY for quarantining untrusted bytes. 201 means STAGED,
-    // never Native receipt validation or a durable cloud-sync acknowledgement.
-    // Deliberately cannot mutate UniversitySyncOutbox or Native CoreSession.
-    public enum UniversityStagingResult { Rejected, StagedUnverified }
+    // Pure HTTP staging adapter; NEVER a Native attestation or sync receipt.
+    // The caller must retain the offline outbox until a separate trusted,
+    // signed server acknowledgement is verified by a future implementation.
+    public enum UniversityStagingResult
+    {
+        Rejected = 0,
+        StagedUnverified = 1
+    }
 
     public static class UniversityStagingTransport
     {
-        private const int MaxBytes = 1048576;
-        private static readonly Regex CanonicalUuid = new Regex(
-            @"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        private const int MaxJsonBytes = 1048576;
+        private static readonly Regex Uuid = new Regex(
+            @"\A[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
             RegexOptions.CultureInvariant);
-        private static readonly Regex BearerToken = new Regex(
-            @"^[A-Za-z0-9._~-]{1,8192}$", RegexOptions.CultureInvariant);
-        private const string UploadPath = "/functions/v1/student-evidence-upload";
+        private static readonly Regex Bearer = new Regex(
+            @"\A[A-Za-z0-9._-]{1,4096}\z", RegexOptions.CultureInvariant);
 
         public static async Task<UniversityStagingResult> UploadAsync(
-            HttpClient http, Uri endpoint, string institutionId,
-            string registeredSessionId, string artifactId, string studentAccessToken,
-            byte[] rawJsonExport, CancellationToken cancellationToken = default(CancellationToken))
+            HttpClient client, Uri endpoint, string institutionId,
+            string registeredSessionId, string artifactId, string accessToken,
+            byte[] jsonBytes, CancellationToken cancellationToken = default)
         {
-            if (http == null || endpoint == null || !endpoint.IsAbsoluteUri ||
-                endpoint.Scheme != Uri.UriSchemeHttps || !endpoint.IsDefaultPort ||
+            if (client == null) throw new ArgumentNullException(nameof(client));
+            if (endpoint == null || !endpoint.IsAbsoluteUri ||
+                endpoint.Scheme != Uri.UriSchemeHttps ||
                 !endpoint.Host.EndsWith(".supabase.co", StringComparison.OrdinalIgnoreCase) ||
-                !string.Equals(endpoint.AbsolutePath, UploadPath, StringComparison.Ordinal) ||
-                !string.IsNullOrEmpty(endpoint.Query) || !string.IsNullOrEmpty(endpoint.Fragment) ||
-                !string.IsNullOrEmpty(endpoint.UserInfo))
-                throw new ArgumentException("A recognized HTTPS Supabase staging endpoint is required.");
-            if (!ValidId(institutionId) || !ValidId(registeredSessionId) || !ValidId(artifactId))
-                throw new ArgumentException("Canonical tenant, registered session and artifact UUIDs required.");
-            if (studentAccessToken == null || !BearerToken.IsMatch(studentAccessToken))
-                throw new ArgumentException("Valid student access token required.");
-            if (rawJsonExport == null || rawJsonExport.Length < 1 ||
-                rawJsonExport.Length > MaxBytes)
-                throw new InvalidDataException("U04 quarantine export must be 1 byte to 1 MiB.");
+                !string.Equals(endpoint.AbsolutePath,
+                    "/functions/v1/student-evidence-upload", StringComparison.Ordinal) ||
+                endpoint.UserInfo.Length != 0 ||
+                endpoint.Query.Length != 0 || endpoint.Fragment.Length != 0)
+                throw new ArgumentException("HTTPS Supabase staging endpoint required.", nameof(endpoint));
 
-            string sha;
-            using (var hasher = SHA256.Create())
-            {
-                sha = BitConverter.ToString(hasher.ComputeHash(rawJsonExport))
+            if (!CanonicalId(institutionId) || !CanonicalId(registeredSessionId) ||
+                !CanonicalId(artifactId) || string.IsNullOrEmpty(accessToken) ||
+                !Bearer.IsMatch(accessToken))
+                throw new ArgumentException("Invalid staging identity or bearer token.");
+            if (jsonBytes == null || jsonBytes.Length == 0 ||
+                jsonBytes.Length > MaxJsonBytes)
+                throw new InvalidDataException("Invalid bounded staging JSON payload.");
+
+            // No hashes from untrusted caller metadata: hash the actual bytes.
+            string sha256;
+            using (var sha = SHA256.Create())
+                sha256 = BitConverter.ToString(sha.ComputeHash(jsonBytes))
                     .Replace("-", "").ToLowerInvariant();
-            }
+
             using (var request = new HttpRequestMessage(HttpMethod.Post, endpoint))
             {
                 request.Headers.Authorization =
-                    new AuthenticationHeaderValue("Bearer", studentAccessToken);
+                    new AuthenticationHeaderValue("Bearer", accessToken);
                 request.Headers.Add("x-institution-id", institutionId);
                 request.Headers.Add("x-session-id", registeredSessionId);
                 request.Headers.Add("x-artifact-id", artifactId);
-                request.Headers.Add("x-evidence-sha256", sha);
-                request.Content = new ByteArrayContent(rawJsonExport);
-                request.Content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                using (var response = await http.SendAsync(
-                    request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                    .ConfigureAwait(false))
+                request.Headers.Add("x-evidence-sha256", sha256);
+                request.Content = new ByteArrayContent(jsonBytes);
+                request.Content.Headers.ContentType =
+                    new MediaTypeHeaderValue("application/json");
+
+                // A 201 is a *quarantine acknowledgement only*. Never infer
+                // academic evidence or clear any durable Native outbox record.
+                try
                 {
-                    return response.StatusCode == HttpStatusCode.Created
-                        ? UniversityStagingResult.StagedUnverified
-                        : UniversityStagingResult.Rejected;
+                    using (var result = await client.SendAsync(request,
+                        HttpCompletionOption.ResponseHeadersRead,
+                        cancellationToken).ConfigureAwait(false))
+                    {
+                        if (result.StatusCode != HttpStatusCode.Created)
+                            return UniversityStagingResult.Rejected;
+                        var text = await result.Content.ReadAsStringAsync()
+                            .ConfigureAwait(false);
+                        return text.Contains("\"state\":\"staged_unverified\"")
+                            ? UniversityStagingResult.StagedUnverified
+                            : UniversityStagingResult.Rejected;
+                    }
+                }
+                catch (HttpRequestException)
+                {
+                    return UniversityStagingResult.Rejected;
                 }
             }
         }
 
-        private static bool ValidId(string id) =>
-            id != null && CanonicalUuid.IsMatch(id);
+        private static bool CanonicalId(string value) =>
+            !string.IsNullOrEmpty(value) && Uuid.IsMatch(value);
     }
 }
