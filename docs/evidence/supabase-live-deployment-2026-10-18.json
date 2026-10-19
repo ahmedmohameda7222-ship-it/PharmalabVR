@@ -186,7 +186,11 @@
     "u04_v3_live_counts": "Auth users=0, sessions=0, staging records=0, staged Storage objects=0, academic artifacts=0, audit rows=0. Security Advisor INFO only.",
     "u04_edge_v4_retry": "ACTIVE v4 verify_jwt true with explicit import_map_path deno.json; bundle SHA256 8fd3a6335dc721a78ac8be6210457cbc2800609e5be94662ba67f950faf90c5b",
     "u04_retry_headless": "TDD RED Node ef4ec955 / C# de53d62 (expected staged 200 rejection); GREEN panel job 117833934706 in Actions push 39181138169 success, Node reconcile plus source-linked .NET staging tests",
-    "u04_live_after_v4": "SQL auth users=0, lab_sessions=0, quarantine rows/objects=0, academic artifacts=0, audit=0; staging bucket private; direct authenticated INSERT denied; Security Advisor WARN 0"
+    "u04_live_after_v4": "SQL auth users=0, lab_sessions=0, quarantine rows/objects=0, academic artifacts=0, audit=0; staging bucket private; direct authenticated INSERT denied; Security Advisor WARN 0",
+    "u04_local_auth_edge_storage_http": "SUCCESS push 39189809292 and PR 39189813884; 201 initial/200 exact retry/409 conflict/403 other user/422 wrong SHA; real LOCAL Auth JWT, RPC and private Storage",
+    "u04_local_17_migrations_60_postgres_blocks": "SUCCESS 17/17 SQL migrations, 17 RLS-enabled tables, 60 DO statements, rollback, no backups",
+    "u04_upload_edge_v5": "ACTIVE verify_jwt=true ezbr_sha256 1e5dd0ff9c06992d0365a0135122a96940974df592ef4d765a852878ef7b2e12",
+    "u04_unity_transport_structured_response": "RED 76ffa25 (wrong tenant status accepted), GREEN c2527c8 source-linked headless .NET; Unity EditMode authored and deferred"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -201,12 +205,13 @@
     "positive_grading": "NOT_RUN: no real Auth students, courses or submissions",
     "disposable_tenant_fixture": "DONE: isolated synthetic Auth/RLS/Storage/database fixture passed. NOT equivalent to real production Auth, networking or app session.",
     "rubric_and_assignment_publication": "SQL BACKEND DEPLOYED (15 migrations); real Auth/HTTP/Unity journeys NOT_RUN",
-    "u04_authorized_http_upload": "NOT_RUN: no verified live student Auth account and no legitimate registered session",
+    "u04_authorized_http_upload": "LOCAL disposable verified with genuine GoTrue/Auth/Edge/Storage; PRODUCTION with real students NOT_RUN",
     "u04_academic_promotion": "NOT_IMPLEMENTED: quarantine objects cannot qualify as academic session_artifacts",
     "u04_attested_session_revision": "NOT_IMPLEMENTED: source identity is self-reported revision-zero only, requires actual trusted Native receipt binding",
     "u04_trusted_native_attestation": "NOT_IMPLEMENTED: Native signed receipt and server verifier; staged bytes cannot become academic proof.",
-    "u04_live_authenticated_retry": "NOT_RUN: no verified real student, session or quarantined object exists to exercise Edge v4 HTTP 200 replay",
-    "unity_staging_retry_editmode": "SOURCE_AUTHORED at 77c48709; Unity Editor/Player NOT_RUN until final local campaign"
+    "u04_live_authenticated_retry": "LOCAL staged exact byte retry verified; PRODUCTION authenticated retry NOT_RUN",
+    "unity_staging_retry_editmode": "SOURCE_AUTHORED at 77c48709; Unity Editor/Player NOT_RUN until final local campaign",
+    "u04_concurrent_replay": "NOT_RUN: only sequential local retransmission has been verified"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -227,6 +232,7 @@
     "Self-reported student staging session identity is explicitly untrusted and created with current_revision=0, pending; academic submissions require verified evidence and nonzero committed Native event revision. Only a separate trusted attestation may advance authority.",
     "U04 client transports require JWT+publishable key over HTTPS, keep pending outbox unchanged even after staged_unverified. Never use service credentials in Unity.",
     "U04 Edge v3 deployment reused same slug student-evidence-upload with explicit deno.json import map; no project secrets placed into Unity or repository.",
-    "2026-10-19 U04 upload Edge v4 exact replay compares same actor/tenant/session/artifact metadata and rehashes downloaded Storage JSON bytes; 200 remains staged_unverified only. First deployment request hit stale v3 import map path; explicit import_map_path deno.json succeeded in-place. No direct Storage client credentials exposed."
+    "2026-10-19 U04 upload Edge v4 exact replay compares same actor/tenant/session/artifact metadata and rehashes downloaded Storage JSON bytes; 200 remains staged_unverified only. First deployment request hit stale v3 import map path; explicit import_map_path deno.json succeeded in-place. No direct Storage client credentials exposed.",
+    "U04 Edge v5 protects genuine local staging retries across differing Supabase Storage 400/409 error shapes, without ever promoting quarantined bytes into academic evidence. Production remains empty."
   ]
 }
