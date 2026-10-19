@@ -65,9 +65,24 @@ namespace PharmaLabVR.University
                     new AuthenticationHeaderValue("Bearer", accessToken);
                 request.Headers.Add("apikey", publishableKey);
                 request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
-                using (var response = await client.SendAsync(
-                    request, HttpCompletionOption.ResponseContentRead, cancellationToken)
-                    .ConfigureAwait(false))
+                HttpResponseMessage received;
+                try
+                {
+                    received = await client.SendAsync(
+                        request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                catch (HttpRequestException)
+                {
+                    return null;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    // A timeout does not establish a registered session. The
+                    // caller must retain the Native offline intent for retry.
+                    return null;
+                }
+                using (var response = received)
                 {
                     if (response.StatusCode != HttpStatusCode.OK)
                         return null;
