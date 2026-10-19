@@ -357,6 +357,70 @@ internal static class Program
 
             }
 
+            // U04 lost Edge reply recovery: this can confirm quarantine
+            // metadata only; it must NEVER acknowledge Native offline sync.
+            var statusHandler = new RecordingHandler { Status = HttpStatusCode.OK };
+            using (var statusClient = new HttpClient(statusHandler))
+            {
+                const string stagedArtifact = "aaaa0000-0000-4000-8000-000000000083";
+                var endpoint = new Uri(
+                    "https://example.supabase.co/rest/v1/rpc/university_staged_evidence_status");
+                var expectedDigest = Hash(evidenceBytes);
+                statusHandler.ResponseBody = "{\"state\":\"staged_unverified\",\"artifactId\":\""
+                    + stagedArtifact + "\",\"sha256\":\"" + expectedDigest
+                    + "\",\"sizeBytes\":" + evidenceBytes.Length + "}";
+                var recovered = UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_publishable_test", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult();
+                Check(recovered == UniversityStagingResult.StagedUnverified,
+                    "Valid owner staging metadata could not be reconciled.");
+                Check(statusHandler.ApiKey == "sb_publishable_test" &&
+                    statusHandler.Auth == "Bearer student-token" &&
+                    statusHandler.Method == "POST" &&
+                    statusHandler.Body.Contains("\"p_artifact_id\""),
+                    "Reconciliation did not use authorized public-key RPC with artifact identity.");
+                Check(verifier.Pending().Count == 1,
+                    "Staged status falsely cleared a Native pending outbox entry.");
+
+                statusHandler.ResponseBody = "{\"state\":\"staged_unverified\",\"artifactId\":\""
+                    + stagedArtifact + "\",\"sha256\":\"" + new string('0',64)
+                    + "\",\"sizeBytes\":" + evidenceBytes.Length + "}";
+                Check(UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_publishable_test", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult()
+                    == UniversityStagingResult.Rejected,
+                    "Status for different evidence bytes was accepted.");
+
+                statusHandler.ResponseBody = "{\"state\":\"synced\",\"artifactId\":\""
+                    + stagedArtifact + "\",\"sha256\":\"" + expectedDigest
+                    + "\",\"sizeBytes\":" + evidenceBytes.Length + "}";
+                Check(UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_publishable_test", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult()
+                    == UniversityStagingResult.Rejected,
+                    "Forged sync acknowledgment was treated as staged-only status.");
+
+                statusHandler.Status = HttpStatusCode.Forbidden;
+                Check(UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_publishable_test", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult()
+                    == UniversityStagingResult.Rejected,
+                    "Unauthorized status request was accepted.");
+                statusHandler.ThrowTimeout = true;
+                Check(UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_publishable_test", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult()
+                    == UniversityStagingResult.Rejected,
+                    "Timed-out status lookup was accepted.");
+                statusHandler.ThrowTimeout = false;
+                MustReject(() => UniversityStagedEvidenceStatus.ReconcileAsync(
+                    statusClient, endpoint, "sb_secret_bypass", "student-token",
+                    tenantA, stagedArtifact, evidenceBytes).GetAwaiter().GetResult(),
+                    "Client reconciliation accepted a server secret.");
+                Check(verifier.Pending().Count == 1,
+                    "Failed status checks changed durable Native outbox.");
+            }
+
             var damaged = File.ReadAllBytes(path);
             damaged[damaged.Length - 2] ^= 0x01;
             File.WriteAllBytes(path, damaged);
