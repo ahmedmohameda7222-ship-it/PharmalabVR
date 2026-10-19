@@ -167,6 +167,15 @@ internal static class Program
                         tenantA, registeredSessionId, uploadId, "sb_secret_service_credentials",
                         "student-token", evidenceBytes).GetAwaiter().GetResult(),
                     "Server secret was accepted as a Unity publishable apikey.");
+                mock.ThrowTimeout = true;
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                    tenantA, registeredSessionId, uploadId, "sb_publishable_test",
+                    "student-token", evidenceBytes).GetAwaiter().GetResult()
+                    == UniversityStagingResult.Rejected,
+                    "Transport timeout must reject only the staging attempt.");
+                mock.ThrowTimeout = false;
+                Check(verifier.Pending().Count == 1,
+                    "Timed-out quarantine attempt acknowledged the durable Native outbox.");
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
                         tenantA, registeredSessionId, uploadId, "bad\\r\\nkey",
                         "student-token", evidenceBytes).GetAwaiter().GetResult(),
@@ -336,10 +345,12 @@ internal static class Program
         internal string ResponseBody;
         internal string BodyDigest;
         internal HttpStatusCode Status = HttpStatusCode.Created;
+        internal bool ThrowTimeout;
 
         protected override async Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            if (ThrowTimeout) throw new TaskCanceledException("Simulated staging network timeout");
             RequestCount++;
             Method = request.Method.Method;
             Auth = request.Headers.Authorization?.ToString();
