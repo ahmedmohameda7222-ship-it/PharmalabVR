@@ -43,3 +43,7 @@ deployment status. Final Unity Editor/Player/XR tests remain deferred.
 
 ## Register a pending source identity
 Before staging, a real authenticated student may invoke the public RPC `university_register_staging_session` with their institution UUID, local session token (1–128 safe ASCII characters), Native branch token, 64-character lowercase science package SHA-256 and stable UUID request ID. Its return value is the *server session UUID* required in the staging HTTP header `x-session-id`. The RPC creates **only** a revision-zero pending self-claimed identity; it is not an authenticated Native receipt, and retries with changed data fail. The real client Auth/HTTP workflow remains untested because production has no Auth student accounts.
+
+## Student session registration before staging
+
+Use a student's live bearer token and public `sb_publishable_` key to invoke `public.university_register_staging_session` through PostgREST, receiving its **cloud lab session UUID**. Do not substitute the local Native session label for this UUID. `UniversityStagingSessionRegistration` and `UniversityStagingTransport` are source-linked Unity runtime classes with .NET fake-HTTP tests. The only permitted server reply after upload is a quarantined `StagedUnverified` status; the Native outbox must remain Pending. No authorized live student HTTP upload or Unity Player verification has occurred.
