@@ -198,7 +198,14 @@
       "quarantineReplayTdd": "Node RED ef4ec955 failed missing reconcile.mjs (push 39180682381 panel); GREEN d1e098fa push 39181138169 panel SUCCEEDED (all Node U04 and C# outbox tests). C# RED de53d62 on push 39180925392 expected failure; GREEN d1e098fa panel passed. Unity EditMode tests authored at 77c48709 but NOT_RUN.",
       "localAuthHttpEvidence": "Isolated GoTrue->RPC->Edge->Storage real HTTP succeeded: push 39189809292 and PR 39189813884; 201 first, 200 exact retry, 409 changed byte replay, 403 foreign student, 422 wrong SHA, RLS direct-read denied, academic session_artifacts empty. 17 migrations, 17 RLS, 60 DO blocks, rollback, no remote credentials.",
       "clientReplyBinding": "RED 76ffa25 accepted reply from another institution; GREEN c2527c and EditMode source 1297f1f validate structured top-level tenant, artifact, byte SHA and 201/200 semantics; Unity Editor NOT_RUN.",
-      "uploadRetryTdd": "RED d231367 SDK machine-code precedence, RED 77596ec for Storage 400 Asset Already Exists; GREEN c963635 with independent staged metadata/private-byte verification, local E2E SUCCESS."
+      "uploadRetryTdd": "RED d231367 SDK machine-code precedence, RED 77596ec for Storage 400 Asset Already Exists; GREEN c963635 with independent staged metadata/private-byte verification, local E2E SUCCESS.",
+      "unityGatewayKeyTdd": {
+        "redMissingHeader": "cd9757f20c9f6d9a6aad8f542d455a570a0aa8d4, push 39192975812, panel job 117869580471 failed missing apikey",
+        "greenHeader": "1608462056939efaf1a50e065445b6b136438002 adds public apikey and updates headless plus deferred Unity EditMode source",
+        "redSecretKey": "1d6646179f70e69745ef143fdaa61921ebc82b21, push 39193355042 panel 117870721391 rejected insufficient secret-key admission",
+        "greenPublishableOnly": "b85a781a02e0e40694e4cffea8eacfd5a4508521; push 39193500090 panel job 117871156437 SUCCESS, 57 U04 outbox assertions plus Node tests",
+        "caveat": "Only sb_publishable_* can be used by Unity staging/registration; legacy anon JWT not an accepted publishable key format. Real Unity Editor/Player/XR and production Auth HTTP client still NOT_RUN; stage remains unverified."
+      }
     },
     {
       "id": "U05",
