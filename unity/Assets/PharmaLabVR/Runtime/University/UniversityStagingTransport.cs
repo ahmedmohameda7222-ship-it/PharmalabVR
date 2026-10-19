@@ -39,12 +39,15 @@ namespace PharmaLabVR.University
         private static readonly Regex Uuid = new Regex(
             @"\A[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
             RegexOptions.CultureInvariant);
+        private static readonly Regex PublicGatewayKey = new Regex(
+            @"\A[A-Za-z0-9_-]{1,512}\z", RegexOptions.CultureInvariant);
         private static readonly Regex Bearer = new Regex(
             @"\A[A-Za-z0-9._-]{1,4096}\z", RegexOptions.CultureInvariant);
 
         public static async Task<UniversityStagingResult> UploadAsync(
             HttpClient client, Uri endpoint, string institutionId,
-            string registeredSessionId, string artifactId, string accessToken,
+            string registeredSessionId, string artifactId, string publishableKey,
+            string accessToken,
             byte[] jsonBytes, CancellationToken cancellationToken = default)
         {
             if (client == null) throw new ArgumentNullException(nameof(client));
@@ -58,7 +61,9 @@ namespace PharmaLabVR.University
                 throw new ArgumentException("HTTPS Supabase staging endpoint required.", nameof(endpoint));
 
             if (!CanonicalId(institutionId) || !CanonicalId(registeredSessionId) ||
-                !CanonicalId(artifactId) || string.IsNullOrEmpty(accessToken) ||
+                !CanonicalId(artifactId) || string.IsNullOrEmpty(publishableKey) ||
+                !PublicGatewayKey.IsMatch(publishableKey) ||
+                string.IsNullOrEmpty(accessToken) ||
                 !Bearer.IsMatch(accessToken))
                 throw new ArgumentException("Invalid staging identity or bearer token.");
             if (jsonBytes == null || jsonBytes.Length == 0 ||
@@ -75,6 +80,9 @@ namespace PharmaLabVR.University
             {
                 request.Headers.Authorization =
                     new AuthenticationHeaderValue("Bearer", accessToken);
+                // Supabase Edge gateway requires a public API key in addition
+                // to the user bearer; NEVER send a secret/service-role key.
+                request.Headers.Add("apikey", publishableKey);
                 request.Headers.Add("x-institution-id", institutionId);
                 request.Headers.Add("x-session-id", registeredSessionId);
                 request.Headers.Add("x-artifact-id", artifactId);

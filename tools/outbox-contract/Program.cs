@@ -142,7 +142,7 @@ internal static class Program
                 var uploadId = "aaaa0000-0000-4000-8000-000000000082";
                 var registeredSessionId = "aaaa0000-0000-4000-8000-000000000051";
                 var outcome = UniversityStagingTransport.UploadAsync(client, endpoint,
-                    tenantA, registeredSessionId, uploadId, "student-token",
+                    tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                     System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                     .GetAwaiter().GetResult();
                 Check(outcome == UniversityStagingResult.StagedUnverified,
@@ -163,12 +163,16 @@ internal static class Program
                 // digest; a vague staged status is not sufficient evidence
                 // that *this* artifact reached quarantine.
                 var firstStagingSha=Hash(System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"));
+                MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
+                        tenantA, registeredSessionId, uploadId, "bad\\r\\nkey",
+                        "student-token", evidenceBytes).GetAwaiter().GetResult(),
+                    "A public apikey header-injection payload was accepted.");
                 mock.ResponseBody = "{\"state\":\"staged_unverified\","
                     + "\"institutionId\":\"" + tenantB + "\","
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Staging response from a foreign institution was accepted.");
@@ -177,7 +181,7 @@ internal static class Program
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + new string('0',64) + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Staging response for different uploaded bytes was accepted.");
@@ -187,7 +191,7 @@ internal static class Program
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Nested staged status was mistaken for top-level approval.");
@@ -196,7 +200,7 @@ internal static class Program
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.StagedUnverified,
                     "Matching server staging receipt was unexpectedly rejected.");
@@ -210,7 +214,7 @@ internal static class Program
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.StagedUnverified,
                     "Verified exact replay was rejected as if first upload failed.");
@@ -221,7 +225,7 @@ internal static class Program
                     + "\"artifactId\":\"" + uploadId + "\","
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Bare 200 response lacking confirmed matching retry was accepted.");
@@ -231,27 +235,27 @@ internal static class Program
                     + "\"sha256\":\"" + firstStagingSha + "\"}";
 
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
-                        tenantA, registeredSessionId, uploadId, "bad\r\ntoken",
+                        tenantA, registeredSessionId, uploadId, "sb_publishable_test", "bad\r\ntoken",
                         evidenceBytes).GetAwaiter().GetResult(),
                     "A header-injection token was accepted.");
                 MustReject(() => UniversityStagingTransport.UploadAsync(client,
                         new Uri("http://example.supabase.co/functions/v1/student-evidence-upload"),
-                        tenantA, registeredSessionId, uploadId, "student-token",
+                        tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                         evidenceBytes).GetAwaiter().GetResult(),
                     "HTTP plaintext leaked bearer credentials.");
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
-                        tenantA, "local-session-2", uploadId, "student-token",
+                        tenantA, "local-session-2", uploadId, "sb_publishable_test", "student-token",
                         evidenceBytes).GetAwaiter().GetResult(),
                     "Unregistered local session label was used instead of a UUID.");
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
-                        tenantA, registeredSessionId, uploadId, "student-token",
+                        tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                         new byte[1048577]).GetAwaiter().GetResult(),
                     "Oversized Unity upload bypassed preflight size cap.");
                 Check(mock.RequestCount == 7,
                     "Rejected local arguments reached HTTP, or expected response regressions were skipped.");
                 mock.Status=HttpStatusCode.Forbidden;
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
-                      tenantA, registeredSessionId, uploadId, "student-token",
+                      tenantA, registeredSessionId, uploadId, "sb_publishable_test", "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Rejected HTTP response falsely acknowledged staging.");

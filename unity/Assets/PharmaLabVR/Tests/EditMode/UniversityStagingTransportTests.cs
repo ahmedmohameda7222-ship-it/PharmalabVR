@@ -40,10 +40,13 @@ namespace PharmaLabVR.Tests.EditMode
         {
             public HttpStatusCode Status;
             public string ResponseBody;
+            public string ApiKey;
 
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                ApiKey = request.Headers.Contains("apikey")
+                    ? string.Join("", request.Headers.GetValues("apikey")) : null;
                 return Task.FromResult(new HttpResponseMessage(Status)
                 {
                     Content = new StringContent(ResponseBody, Encoding.UTF8, "application/json")
@@ -72,7 +75,7 @@ namespace PharmaLabVR.Tests.EditMode
                 using (var client = new HttpClient(handler))
                 {
                     var result = UniversityStagingTransport.UploadAsync(client, Endpoint,
-                        Tenant, Session, Artifact, "student-token",
+                        Tenant, Session, Artifact, "sb_publishable_test", "student-token",
                         Encoding.UTF8.GetBytes("{\"native\":true}"))
                         .GetAwaiter().GetResult();
                     Assert.That(result, Is.EqualTo(UniversityStagingResult.StagedUnverified));
@@ -95,28 +98,28 @@ namespace PharmaLabVR.Tests.EditMode
                 var changedTenant = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
                 handler.ResponseBody = Reply(changedTenant, Artifact, ExportHash());
                 Assert.That(UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token", Export)
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
                     .GetAwaiter().GetResult(), Is.EqualTo(UniversityStagingResult.Rejected));
 
                 handler.ResponseBody = Reply(Tenant, Session, ExportHash());
                 Assert.That(UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token", Export)
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
                     .GetAwaiter().GetResult(), Is.EqualTo(UniversityStagingResult.Rejected));
 
                 handler.ResponseBody = Reply(Tenant, Artifact, new string('0', 64));
                 Assert.That(UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token", Export)
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
                     .GetAwaiter().GetResult(), Is.EqualTo(UniversityStagingResult.Rejected));
 
                 handler.ResponseBody = "{\"state\":\"denied\",\"detail\":"
                     + Reply(Tenant, Artifact, ExportHash()) + "}";
                 Assert.That(UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token", Export)
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
                     .GetAwaiter().GetResult(), Is.EqualTo(UniversityStagingResult.Rejected));
 
                 handler.ResponseBody = Reply(Tenant, Artifact, ExportHash());
                 Assert.That(UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token", Export)
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
                     .GetAwaiter().GetResult(), Is.EqualTo(UniversityStagingResult.StagedUnverified));
             }
         }
@@ -132,14 +135,15 @@ namespace PharmaLabVR.Tests.EditMode
             using (var client = new HttpClient(handler))
             {
                 var rejected = UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token",
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token",
                     Encoding.UTF8.GetBytes("{\"native\":true}"))
                     .GetAwaiter().GetResult();
+                Assert.That(handler.ApiKey, Is.EqualTo("sb_publishable_test"));
                 Assert.That(rejected, Is.EqualTo(UniversityStagingResult.Rejected));
                 handler.Status = HttpStatusCode.Conflict;
                 handler.ResponseBody = Reply(Tenant, Artifact, ExportHash(), retry: true);
                 var collision = UniversityStagingTransport.UploadAsync(client, Endpoint,
-                    Tenant, Session, Artifact, "student-token",
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token",
                     Encoding.UTF8.GetBytes("{\"native\":true}"))
                     .GetAwaiter().GetResult();
                 Assert.That(collision, Is.EqualTo(UniversityStagingResult.Rejected));
