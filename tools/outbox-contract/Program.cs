@@ -164,6 +164,10 @@ internal static class Program
                 // that *this* artifact reached quarantine.
                 var firstStagingSha=Hash(System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"));
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
+                        tenantA, registeredSessionId, uploadId, "sb_secret_service_credentials",
+                        "student-token", evidenceBytes).GetAwaiter().GetResult(),
+                    "Server secret was accepted as a Unity publishable apikey.");
+                MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
                         tenantA, registeredSessionId, uploadId, "bad\\r\\nkey",
                         "student-token", evidenceBytes).GetAwaiter().GetResult(),
                     "A public apikey header-injection payload was accepted.");
