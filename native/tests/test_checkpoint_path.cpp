@@ -191,6 +191,9 @@ TEST_CASE("P11_01 checkpoint load rejects a checksum-valid hard-link alias") {
     CHECK_THROWS_AS(suspectStore.read(), std::runtime_error);
     const auto attemptedWrite = suspectStore.write("local-scientific-state");
     CHECK_FALSE(attemptedWrite.accepted);
+    // Remove the foreign alias before reading the protected owner. A strict
+    // hard-link check must reject BOTH names while the alias exists.
+    REQUIRE(fs::remove(suspectPath + ".slot0"));
     CHECK(protectedStore.read().value() == "foreign-scientific-state");
     fs::remove_all(dir);
 }
