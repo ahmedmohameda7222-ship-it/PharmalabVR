@@ -5,7 +5,9 @@ import { evidenceObjectKey, verifyEvidenceBytes } from "./intent.mjs";
 export function isDuplicateStagingUpload(error) {
   if(!error || !["400","409"].includes(String(error.statusCode??error.status)))
     return false;
-  const name=String(error.error??error.code??"");
+  // Supabase Storage may include both a human-readable error string and a
+  // stable machine code. Match the code first; messages are not API enums.
+  const name=String(error.code??error.error??"");
   return ["Duplicate","ResourceAlreadyExists","KeyAlreadyExists"].includes(name);
 }
 
