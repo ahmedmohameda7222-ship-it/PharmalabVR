@@ -149,6 +149,8 @@ internal static class Program
                     "A successful staged response must remain UNVERIFIED.");
                 Check(mock.RequestCount == 1 && mock.Method == "POST",
                     "Staging did not submit one authenticated POST.");
+                Check(mock.ApiKey == "sb_publishable_test",
+                    "Student staging HTTP request omitted the public Supabase gateway apikey.");
                 Check(mock.Auth == "Bearer student-token" &&
                     mock.Session == registeredSessionId && mock.Artifact == uploadId,
                     "Staging request omitted identity or Authorization.");
