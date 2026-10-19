@@ -157,6 +157,48 @@ internal static class Program
                     "Staged evidence bytes or computed header SHA were altered.");
                 Check(verifier.Pending().Count == 1,
                     "Quarantine-only result removed the Native outbox intent.");
+                // U04 response must bind tenant, artifact and exact uploaded
+                // digest; a vague staged status is not sufficient evidence
+                // that *this* artifact reached quarantine.
+                var firstStagingSha=Hash(System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"));
+                mock.ResponseBody = "{\"state\":\"staged_unverified\","
+                    + "\"institutionId\":\"" + tenantB + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
+                    "Staging response from a foreign institution was accepted.");
+                mock.ResponseBody = "{\"state\":\"staged_unverified\","
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + new string('0',64) + "\"}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
+                    "Staging response for different uploaded bytes was accepted.");
+                mock.ResponseBody = "{\"state\":\"error\",\"detail\":{"
+                    + "\"state\":\"staged_unverified\",\"alreadyStaged\":true},"
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
+                    "Nested staged status was mistaken for top-level approval.");
+                mock.ResponseBody = "{\"state\":\"staged_unverified\","
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.StagedUnverified,
+                    "Matching server staging receipt was unexpectedly rejected.");
+
 
                 // U04 exact duplicate is a staged-only retry, NEVER an
                 // authenticated Native synchronization acknowledgement.
