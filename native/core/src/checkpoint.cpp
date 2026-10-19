@@ -14,6 +14,7 @@
 #include <io.h>
 #else
 #include <fcntl.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #endif
 
@@ -165,15 +166,28 @@ CommandOutcome DurableCheckpointStore::write(const std::string& nativeExport) {
         // between this preflight check and opening the stage file.
         if (fs::is_symlink(temporary))
             return {false, "CheckpointWriteFailed", "checkpoint stage symlink is forbidden"};
+        // A hard-linked stale stage must never be truncated: it may alias
+        // another science file even though O_NOFOLLOW rejects only symlinks.
+        if (fs::exists(temporary) && fs::hard_link_count(temporary) != 1)
+            return {false, "CheckpointWriteFailed", "checkpoint stage hardlink is forbidden"};
         std::FILE* file = nullptr;
 #ifdef _WIN32
         file = std::fopen(temporary.string().c_str(), "wb");
 #else
         const int descriptor = ::open(
-            temporary.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+            temporary.c_str(), O_WRONLY | O_CREAT | O_NOFOLLOW, 0600);
         if (descriptor >= 0) {
-            file = ::fdopen(descriptor, "wb");
-            if (!file) ::close(descriptor);
+            // Inspect the descriptor BEFORE truncating. A hard link may have
+            // been substituted after the path-level check.
+            struct stat stageInfo {};
+            if (::fstat(descriptor, &stageInfo) == 0 &&
+                S_ISREG(stageInfo.st_mode) && stageInfo.st_nlink == 1 &&
+                ::ftruncate(descriptor, 0) == 0) {
+                file = ::fdopen(descriptor, "wb");
+                if (!file) ::close(descriptor);
+            } else {
+                ::close(descriptor);
+            }
         }
 #endif
         if (!file) return {false, "CheckpointWriteFailed", "checkpoint stage cannot be opened"};
