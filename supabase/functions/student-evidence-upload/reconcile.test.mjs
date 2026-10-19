@@ -50,6 +50,9 @@ test("U04 recognizes only documented duplicate upload error codes",()=>{
   {statusCode:409,error:"KeyAlreadyExists"},
   {statusCode:"400",error:"Duplicate"},
   {statusCode:"400",error:"KeyAlreadyExists"},
+  // Storage standard uploads return HTTP 400 "Asset Already Exists".
+  {statusCode:"400",code:"AssetAlreadyExists",error:"Asset Already Exists"},
+  {statusCode:400,error:"Asset Already Exists"},
   {statusCode:"409",error:"The resource already exists",code:"ResourceAlreadyExists"},
   {statusCode:409,error:"Storage API says duplicate",code:"KeyAlreadyExists"}
  ])assert.equal(isDuplicateStagingUpload(error),true);
