@@ -1,6 +1,6 @@
 # PharmaLabVR university backend — connected project
 
-**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Seventeen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
+**Status: 18 October 2026.** Authorized owner deployment on [Supabase project hhbnlhceehgbskzdtorn](https://supabase.com/dashboard/project/hhbnlhceehgbskzdtorn) (Free plan, region eu-west-1, PostgreSQL 17). Eighteen ordered SQL migrations are installed, including security hardening of the privileged membership RPCs. This backend stores university identity and coursework metadata **not** the Native C++17 chemical solver or authoritative offline checkpoints.
 
 ## Applied migration order and remote history
 
@@ -23,6 +23,7 @@
 | `20261018120000_assignment_publication_rpc.sql` | `assignment_publication_rpc_20261018` | `20261018210953` |
 | `20261018130000_evidence_staging.sql` | `evidence_staging_20261018` | `20261018233744` |
 | `20261018140000_staging_session_registration.sql` | `staging_session_registration_20261018` | `20261018235349` |
+| `20261018150000_staged_evidence_status_rpc.sql` | `staged_evidence_status_rpc_20261019` | `20261019051013` |
 
 The project was empty before deployment, with zero Auth users, application tables and migrations. Current verification confirms 16 public RLS-enabled tables, 17 academic policies, a private evidence bucket, and three `public` `SECURITY INVOKER` membership RPCs delegating to private privileged implementations. Anonymous clients cannot EXECUTE those RPCs. The Supabase Security Advisor has **no WARN** findings. Its single INFO is intentional: `audit_events` has RLS but no client policies.
 
@@ -81,3 +82,6 @@ An active, verified student can self-register a **pending revision-zero** databa
 
 ## U04 retry recovery without academic promotion (19 October 2026)
 `student-evidence-upload` Edge v4 supports idempotent staging retry responses: the server checks a prior same-student immutable staging row AND reads/verifies the actual private Storage bytes before returning HTTP 200 `alreadyStaged: true`. Any conflict returns 409. The source-linked Unity staging adapter accepts that verified retry as `StagedUnverified` only; it does not clear the durable offline Native outbox. The hosted project still has **zero** real Auth students and uploaded objects, so no live authenticated end-to-end result is claimed. See `docs/evidence/u04-exact-retry-2026-10-19.md`.
+
+## U04 recover a lost staging response without trusting it
+`public.university_staged_evidence_status(p_institution_id, p_artifact_id)` is an authenticated-only RPC for the current active verified student. It returns `state=staged_unverified`, the artifact ID, SHA-256 and byte count only after matching an owned **pending** session and a quarantined metadata row. It discloses neither the private bucket object key nor a signed URL; it does **not** attest a Native receipt, unlock academic grading, or clear the Native offline outbox. Isolated two-tenant PostgreSQL tests passed (64 DO blocks); real production user/Unity HTTP status reconciliation NOT_RUN.

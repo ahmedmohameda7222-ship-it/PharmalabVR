@@ -9,7 +9,7 @@
   "universityReleaseGate": {
     "id": "G-U1",
     "status": "Open",
-    "reason": "Local disposable GoTrue/Edge/Storage staged upload verified, Free Edge v5 active; no real production enrolled users, trusted Native attestation, academic evidence promotion or Unity final campaign. G-U1 OPEN."
+    "reason": "18 Supabase Free migrations deployed, isolated PostgreSQL 64-block fixture passed; U04 only quarantines and reports staged_unverified, with no signed Native attestation, academic promotion, real production student/Unity E2E. G-U1 OPEN."
   },
   "tasks": [
     {
@@ -161,7 +161,8 @@
         "Final Unity Editor/Player/XR validation",
         "Real authorized student HTTP POST, Storage write and retry/reconciliation tests",
         "Trusted Native receipt verification, academic evidence promotion and signed server ack",
-        "Concurrent request/fault-injection not run; only sequential local HTTP retry verified"
+        "Concurrent request/fault-injection not run; only sequential local HTTP retry verified",
+        "Real authenticated Unity/student RPC status reconciliation (source client not integrated)"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -221,7 +222,13 @@
         "strictInputGreen": "3bfab5960591b115ae9670861b81db0617098a44; PR panel 39197202120 SUCCESS; \\A and \\z on session UUID/local ID/SHA/JWT token",
         "unitySources": "fcf0a865a3f366a0f4eeb3017d63e18ad6226b61 and cdd713d48f4f33275499e1cc058bd1d519faa182; NUnit EditMode test source authored, Unity execution NOT_RUN",
         "scope": "HTTP registration safety only. Does not prove Native origin or signed server sync acknowledgment."
-      }
+      },
+      "stagedStatusRpc": "public.university_staged_evidence_status",
+      "stagedStatusMigration": "supabase/migrations/20261018150000_staged_evidence_status_rpc.sql",
+      "stagedStatusSourceSha": "6d46e39acce2fe708b9053751a2ab3ef9c8f1147",
+      "stagedStatusRemoteVersion": "20261019051013",
+      "stagedStatusEvidence": "RED isolated Postgres 39202668912 missing function; GREEN 39202905693, 18/18 migrations, 17 public RLS tables, 64 DO blocks and rollback; production denied-role smoke PASS, zero production Auth/staging/artifacts/audit rows; no actual production HTTP status call",
+      "stagedStatusTrust": "Read-only response with staged_unverified, artifactId, sha256, sizeBytes only; authenticated verified active owning student and pending session; no object key/signed URL, Native attestation or outbox acknowledgement"
     },
     {
       "id": "U05",
