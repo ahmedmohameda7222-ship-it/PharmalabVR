@@ -4,6 +4,8 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -22,6 +24,17 @@ namespace PharmaLabVR.University
 
     public static class UniversityStagingTransport
     {
+        // Explicit flat reply shape. Never search raw JSON for status text:
+        // nested error details must not be interpreted as a confirmed upload.
+        [DataContract]
+        private sealed class StagingReply
+        {
+            [DataMember(Name = "state")] public string State { get; set; }
+            [DataMember(Name = "institutionId")] public string InstitutionId { get; set; }
+            [DataMember(Name = "artifactId")] public string ArtifactId { get; set; }
+            [DataMember(Name = "sha256")] public string Sha256 { get; set; }
+            [DataMember(Name = "alreadyStaged")] public bool AlreadyStaged { get; set; }
+        }
         private const int MaxJsonBytes = 1048576;
         private static readonly Regex Uuid = new Regex(
             @"\A[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
@@ -81,15 +94,38 @@ namespace PharmaLabVR.University
                         if (result.StatusCode != HttpStatusCode.Created &&
                             result.StatusCode != HttpStatusCode.OK)
                             return UniversityStagingResult.Rejected;
+                        // Limit response buffering independently of the upload size.
+                        if (result.Content == null ||
+                            result.Content.Headers.ContentLength > 4096)
+                            return UniversityStagingResult.Rejected;
+                        await result.Content.LoadIntoBufferAsync(4096).ConfigureAwait(false);
                         var text = await result.Content.ReadAsStringAsync()
                             .ConfigureAwait(false);
-                        var staged = text.Contains("\"state\":\"staged_unverified\"");
-                        // 200 is valid ONLY for a server-verified exact retry.
-                        // Neither 200 nor 201 attests Native origin or clears the outbox.
-                        var exactRetry = result.StatusCode == HttpStatusCode.OK &&
-                            text.Contains("\"alreadyStaged\":true");
-                        return staged &&
-                            (result.StatusCode == HttpStatusCode.Created || exactRetry)
+                        if (text.Length > 4096)
+                            return UniversityStagingResult.Rejected;
+                        StagingReply parsed;
+                        try
+                        {
+                            using (var buffer = new MemoryStream(Encoding.UTF8.GetBytes(text)))
+                            {
+                                var serializer = new DataContractJsonSerializer(typeof(StagingReply));
+                                parsed = serializer.ReadObject(buffer) as StagingReply;
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            return UniversityStagingResult.Rejected;
+                        }
+                        if (parsed == null ||
+                            !string.Equals(parsed.State, "staged_unverified", StringComparison.Ordinal) ||
+                            !string.Equals(parsed.InstitutionId, institutionId, StringComparison.Ordinal) ||
+                            !string.Equals(parsed.ArtifactId, artifactId, StringComparison.Ordinal) ||
+                            !string.Equals(parsed.Sha256, sha256, StringComparison.Ordinal))
+                            return UniversityStagingResult.Rejected;
+                        // 201 is first quarantine staging. 200 is only an exact
+                        // retransmission. Neither acknowledges the Native outbox.
+                        bool isExactReplay = result.StatusCode == HttpStatusCode.OK;
+                        return parsed.AlreadyStaged == isExactReplay
                             ? UniversityStagingResult.StagedUnverified
                             : UniversityStagingResult.Rejected;
                     }

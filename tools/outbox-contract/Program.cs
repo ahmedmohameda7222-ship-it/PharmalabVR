@@ -203,7 +203,10 @@ internal static class Program
                 // U04 exact duplicate is a staged-only retry, NEVER an
                 // authenticated Native synchronization acknowledgement.
                 mock.Status = HttpStatusCode.OK;
-                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":true}";
+                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":true,"
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
                       tenantA, registeredSessionId, uploadId, "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
@@ -211,13 +214,19 @@ internal static class Program
                     "Verified exact replay was rejected as if first upload failed.");
                 Check(verifier.Pending().Count == 1,
                     "Staging retry falsely acknowledged the durable Native outbox.");
-                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":false}";
+                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":false,"
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
                       tenantA, registeredSessionId, uploadId, "student-token",
                       System.Text.Encoding.UTF8.GetBytes("{\"export\":true}"))
                       .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
                     "Bare 200 response lacking confirmed matching retry was accepted.");
-                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":true}";
+                mock.ResponseBody = "{\"state\":\"staged_unverified\",\"alreadyStaged\":true,"
+                    + "\"institutionId\":\"" + tenantA + "\","
+                    + "\"artifactId\":\"" + uploadId + "\","
+                    + "\"sha256\":\"" + firstStagingSha + "\"}";
 
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
                         tenantA, registeredSessionId, uploadId, "bad\r\ntoken",
@@ -236,8 +245,8 @@ internal static class Program
                         tenantA, registeredSessionId, uploadId, "student-token",
                         new byte[1048577]).GetAwaiter().GetResult(),
                     "Oversized Unity upload bypassed preflight size cap.");
-                Check(mock.RequestCount == 3,
-                    "Rejected staging attempts reached HTTP.");
+                Check(mock.RequestCount == 7,
+                    "Rejected local arguments reached HTTP, or expected response regressions were skipped.");
                 mock.Status=HttpStatusCode.Forbidden;
                 Check(UniversityStagingTransport.UploadAsync(client, endpoint,
                       tenantA, registeredSessionId, uploadId, "student-token",
@@ -309,7 +318,7 @@ internal static class Program
         internal string Artifact;
         internal string Body;
         internal string ApiKey;
-        internal string ResponseBody = "{\"state\":\"staged_unverified\"}";
+        internal string ResponseBody;
         internal string BodyDigest;
         internal HttpStatusCode Status = HttpStatusCode.Created;
 
@@ -325,8 +334,14 @@ internal static class Program
             Body = await request.Content.ReadAsStringAsync();
             ApiKey = request.Headers.Contains("apikey")
                 ? string.Join("",request.Headers.GetValues("apikey")) : null;
+            var tenant = request.Headers.Contains("x-institution-id")
+                ? string.Join("", request.Headers.GetValues("x-institution-id")) : "";
+            var reply = ResponseBody ?? ("{\"state\":\"staged_unverified\","
+                + "\"institutionId\":\"" + tenant + "\","
+                + "\"artifactId\":\"" + Artifact + "\","
+                + "\"sha256\":\"" + BodyDigest + "\"}");
             return new HttpResponseMessage(Status) {
-                Content = new StringContent(ResponseBody)
+                Content = new StringContent(reply)
             };
         }
     }
