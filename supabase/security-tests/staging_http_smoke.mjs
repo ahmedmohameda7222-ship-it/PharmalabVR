@@ -111,13 +111,45 @@ async function main(){
   assert.equal(cross.status,403,"Different student must not stage on A session");
   const badHash=await stage(token,sessionId,randomUUID(),bytes,"0".repeat(64));
   assert.equal(badHash.status,422,"Declared digest must match the real bytes");
+  // Two concurrent claims for one artifact: storage must never overwrite,
+  // staging metadata must bind to the sole winner and the loser must conflict.
+  const racingArtifact=randomUUID();
+  const firstBytes=Buffer.from('{"race":"candidate-a"}');
+  const secondBytes=Buffer.from('{"race":"candidate-b"}');
+  const firstHash=createHash("sha256").update(firstBytes).digest("hex");
+  const secondHash=createHash("sha256").update(secondBytes).digest("hex");
+  const [raceA,raceB]=await Promise.all([
+    stage(token,sessionId,racingArtifact,firstBytes,firstHash),
+    stage(token,sessionId,racingArtifact,secondBytes,secondHash)
+  ]);
+  assert.deepEqual([raceA.status,raceB.status].sort((x,y)=>x-y),[201,409],
+    "Concurrent conflicting writes must have one winner and one conflict: "
+    +JSON.stringify([raceA.data,raceB.data]));
+  const winningBytes=raceA.status===201?firstBytes:secondBytes;
+  const winningHash=raceA.status===201?firstHash:secondHash;
+  const losingBytes=raceA.status===201?secondBytes:firstBytes;
+  const losingHash=raceA.status===201?secondHash:firstHash;
+  const raceRetry=await stage(token,sessionId,racingArtifact,winningBytes,winningHash);
+  assert.equal(raceRetry.status,200,"Committed concurrent winner must reconcile");
+  const loserRetry=await stage(token,sessionId,racingArtifact,losingBytes,losingHash);
+  assert.equal(loserRetry.status,409,"Conflicting loser must remain rejected");
+  const object=await fetch(api+"/storage/v1/object/authenticated/"
+    +"plv-university-evidence-staging/"+tenant+"/"+racingArtifact,{
+    headers:{"apikey":service,"Authorization":"Bearer "+service}
+  });
+  assert.equal(object.status,200,"Private object unavailable to server verification");
+  assert.deepEqual(Buffer.from(await object.arrayBuffer()),winningBytes,
+    "Racing loser replaced original private Storage object");
   const adminRows=await jsonRequest(
     "/rest/v1/evidence_upload_staging?select=id,institution_id,lab_session_id,student_id,sha256",
     {headers:secretHeaders});
-  assert.equal(adminRows.data.length,1);
+  assert.equal(adminRows.data.length,2);
   assert.equal(adminRows.data[0].student_id,a);
   assert.equal(adminRows.data[0].lab_session_id,sessionId);
   assert.equal(adminRows.data[0].sha256,sha);
+  const raceRecord=adminRows.data.find(r=>r.id===racingArtifact);
+  assert(raceRecord && raceRecord.sha256===winningHash,
+    "Concurrent staging metadata did not bind to the single stored winner");
   const academic=await jsonRequest("/rest/v1/session_artifacts?select=id",
     {headers:secretHeaders});
   assert.equal(academic.data.length,0,"Quarantine must not mint academic evidence");
@@ -125,6 +157,6 @@ async function main(){
     headers:studentHeaders(token)
   });
   assert(!studentTable.ok,"Authenticated client unexpectedly reads quarantined metadata");
-  console.log("U04 local HTTP: verified Auth, RPC, Edge 201/200/409/403/422, Storage metadata, RLS; no academic evidence.");
+  console.log("U04 local HTTP: Auth/RPC/Edge/Storage 201/200/409/403/422, conflicting concurrent write isolation, private-byte reconciliation, RLS; no academic evidence.");
 }
 await main();
