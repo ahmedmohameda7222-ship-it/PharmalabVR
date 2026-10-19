@@ -19,9 +19,12 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v5
+      # Pin an actual released CLI so Actions never queries 'latest' unauthenticated.
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.121.0
+      - name: Record exact installed Supabase CLI
+        run: supabase --version
       - name: Start isolated local Supabase (never link or use remote keys)
         run: supabase start
       - name: Install PostgreSQL client
