@@ -187,6 +187,42 @@ internal static class Program
                     "Failed cloud staging modified the durable Native queue.");
             }
 
+            // Server registration returns only an untrusted pending DB session
+            // UUID. It must never be interpreted as a Native receipt or ack.
+            var registrationHandler = new RecordingHandler();
+            var newSessionUuid = "aaaa0000-0000-4000-8000-000000000051";
+            registrationHandler.Status = HttpStatusCode.OK;
+            registrationHandler.ResponseBody = "\"" + newSessionUuid + "\"";
+            using (var authClient = new HttpClient(registrationHandler))
+            {
+                var rpcEndpoint = new Uri("https://example.supabase.co/rest/v1/rpc/university_register_staging_session");
+                var registered = UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
+                    tenantA,"local-session-2","native-branch-2",new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult();
+                Check(registered == newSessionUuid,"Pending staging RPC returned invalid session UUID.");
+                Check(registrationHandler.ApiKey == "sb_publishable_test" &&
+                    registrationHandler.Auth == "Bearer student-token" &&
+                    registrationHandler.Body.Contains("\"p_local_session_id\":\"local-session-2\"") &&
+                    registrationHandler.Method == "POST",
+                    "Pending staging RPC omitted Auth/publishable key or local session identity.");
+                Check(verifier.Pending().Count==1,
+                    "Registering a cloud staging session cleared the Native outbox.");
+                MustReject(() => UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
+                    tenantA,"../local","native-branch-2",new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult(),
+                    "Traversal-like local session ID accepted by staging RPC transport.");
+                registrationHandler.Status = HttpStatusCode.Forbidden;
+                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient,rpcEndpoint,"sb_publishable_test","student-token",
+                    tenantA,"local-session-2","native-branch-2",new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult()==null,
+                    "Denied registration unexpectedly provided a cloud session ID.");
+                Check(verifier.Pending().Count==1,
+                    "Denied session registration removed pending Native evidence.");
+            }
+
             var damaged = File.ReadAllBytes(path);
             damaged[damaged.Length - 2] ^= 0x01;
             File.WriteAllBytes(path, damaged);
@@ -211,6 +247,8 @@ internal static class Program
         internal string Session;
         internal string Artifact;
         internal string Body;
+        internal string ApiKey;
+        internal string ResponseBody = "{\\"state\\":\\"staged_unverified\\"}";
         internal string BodyDigest;
         internal HttpStatusCode Status = HttpStatusCode.Created;
 
@@ -224,8 +262,10 @@ internal static class Program
             Artifact = string.Join("", request.Headers.GetValues("x-artifact-id"));
             BodyDigest = string.Join("", request.Headers.GetValues("x-evidence-sha256"));
             Body = await request.Content.ReadAsStringAsync();
+            ApiKey = request.Headers.Contains("apikey")
+                ? string.Join("",request.Headers.GetValues("apikey")) : null;
             return new HttpResponseMessage(Status) {
-                Content = new StringContent("{\"state\":\"staged_unverified\"}")
+                Content = new StringContent(ResponseBody)
             };
         }
     }
