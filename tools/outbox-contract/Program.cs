@@ -158,6 +158,25 @@ internal static class Program
                 Check(verifier.Pending().Count == 1,
                     "Quarantine-only result removed the Native outbox intent.");
 
+                // U04 exact duplicate is a staged-only retry, NEVER an
+                // authenticated Native synchronization acknowledgement.
+                mock.Status = HttpStatusCode.OK;
+                mock.ResponseBody = "{\\\"state\\\":\\\"staged_unverified\\\",\\\"alreadyStaged\\\":true}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\\\"export\\\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.StagedUnverified,
+                    "Verified exact replay was rejected as if first upload failed.");
+                Check(verifier.Pending().Count == 1,
+                    "Staging retry falsely acknowledged the durable Native outbox.");
+                mock.ResponseBody = "{\\\"state\\\":\\\"staged_unverified\\\",\\\"alreadyStaged\\\":false}";
+                Check(UniversityStagingTransport.UploadAsync(client, endpoint,
+                      tenantA, registeredSessionId, uploadId, "student-token",
+                      System.Text.Encoding.UTF8.GetBytes("{\\\"export\\\":true}"))
+                      .GetAwaiter().GetResult() == UniversityStagingResult.Rejected,
+                    "Bare 200 response lacking confirmed matching retry was accepted.");
+                mock.ResponseBody = "{\\\"state\\\":\\\"staged_unverified\\\",\\\"alreadyStaged\\\":true}";
+
                 MustReject(() => UniversityStagingTransport.UploadAsync(client, endpoint,
                         tenantA, registeredSessionId, uploadId, "bad\r\ntoken",
                         evidenceBytes).GetAwaiter().GetResult(),
