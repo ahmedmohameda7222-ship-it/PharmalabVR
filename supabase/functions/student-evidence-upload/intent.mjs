@@ -24,6 +24,13 @@ export function checkUploadAdmission(args){
     args.session?.institution_id !== args.tenantId ||
     args.session?.user_id !== args.user.id ||
     args.session?.sync_state !== "pending" ||
+    args.registrationAudit?.institution_id !== args.tenantId ||
+    args.registrationAudit?.actor_id !== args.user.id ||
+    args.registrationAudit?.target_id !== args.sessionId ||
+    args.registrationAudit?.action !== "StagingLabSessionCreated" ||
+    args.registrationAudit?.target_type !== "lab_sessions" ||
+    args.registrationAudit?.details?.attested !== false ||
+    args.registrationAudit?.details?.nativeRevision !== 0 ||
     !digest.test(args.sha256) ||
     args.contentType !== "application/json" ||
     !Number.isInteger(args.sizeBytes) ||

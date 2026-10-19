@@ -64,6 +64,25 @@ Deno.serve(async(request:Request)=>{
     ]);
     if(member.error || school.error || nativeSession.error)
       return response(503,{error:"Session authorization lookup unavailable"});
+    // Server-authored immutable audit ties this student, tenant and session
+    // to the official revision-zero registration; a stray pending row alone
+    // must not authorize quarantined uploads.
+    const admin=createClient(url,secretKey,{
+      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
+    });
+    const registered=await admin.from("audit_events")
+      .select("institution_id,actor_id,target_id,action,target_type,details")
+      .eq("institution_id",metadata.tenantId)
+      .eq("actor_id",actor.id)
+      .eq("target_id",metadata.sessionId)
+      .eq("action","StagingLabSessionCreated")
+      .eq("target_type","lab_sessions")
+      .maybeSingle();
+    if(registered.error)
+      return response(503,{error:"Staging registration audit unavailable"});
+    if(!registered.data)
+      return response(403,{error:"No audited pending session registration"});
+
     let bytes:Uint8Array;
     try{bytes=await readBoundedEvidence(request);}
     catch{return response(413,{error:"Invalid or oversized evidence payload"});}
@@ -72,6 +91,7 @@ Deno.serve(async(request:Request)=>{
       admission=checkUploadAdmission({
         ...metadata,user:actor,
         membership:member.data,institution:school.data,session:nativeSession.data,
+        registrationAudit:registered.data,
         sizeBytes:bytes.byteLength,contentType:"application/json",
       });
     }catch{return response(403,{error:"Active student and owned pending Native session required"});}
@@ -79,9 +99,6 @@ Deno.serve(async(request:Request)=>{
     catch{return response(422,{error:"Evidence bytes or SHA-256 did not validate"});}
     // Service credential never leaves this function. No upsert, no academic
     // evidence bucket access or authoritative Native acknowledgment.
-    const admin=createClient(url,secretKey,{
-      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
-    });
     const bucket="plv-university-evidence-staging";
     const uploaded=await admin.storage.from(bucket).upload(admission.objectKey,bytes,{
       contentType:"application/json",cacheControl:"0",upsert:false,
