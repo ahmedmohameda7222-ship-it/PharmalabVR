@@ -69,7 +69,7 @@ namespace PharmaLabVR.University
                 try
                 {
                     received = await client.SendAsync(
-                        request, HttpCompletionOption.ResponseContentRead, cancellationToken)
+                        request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                         .ConfigureAwait(false);
                 }
                 catch (HttpRequestException)
@@ -86,6 +86,26 @@ namespace PharmaLabVR.University
                 {
                     if (response.StatusCode != HttpStatusCode.OK)
                         return null;
+                    // An RPC UUID reply is 38 JSON bytes. Reject oversized
+                    // responses before buffering; a gateway error or hostile
+                    // body must never create a session identity or exhaust RAM.
+                    const int MaxRpcReplyBytes = 128;
+                    if (response.Content == null ||
+                        response.Content.Headers.ContentLength > MaxRpcReplyBytes)
+                        return null;
+                    try
+                    {
+                        await response.Content.LoadIntoBufferAsync(MaxRpcReplyBytes)
+                            .ConfigureAwait(false);
+                    }
+                    catch (HttpRequestException)
+                    {
+                        return null;
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        return null;
+                    }
                     var json = (await response.Content.ReadAsStringAsync()
                         .ConfigureAwait(false)).Trim();
                     if (json.Length != 38 || json[0] != '"' || json[37] != '"')
