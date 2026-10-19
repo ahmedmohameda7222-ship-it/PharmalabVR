@@ -100,7 +100,7 @@ async function main(){
   assert.equal(first.data.artifactId,artifact);
   assert.equal(first.data.sha256,sha);
   const repeated=await stage(token,sessionId,artifact,bytes,sha);
-  assert.equal(repeated.status,200,"Exact retransmission must reconcile private bytes");
+  assert.equal(repeated.status,200,"Exact retransmission must reconcile private bytes; response="+JSON.stringify(repeated.data));
   assert.equal(repeated.data.alreadyStaged,true);
   assert.equal(repeated.data.state,"staged_unverified");
   const changed=Buffer.from('{"native":"altered","points":3}');

@@ -49,7 +49,9 @@ test("U04 recognizes only documented duplicate upload error codes",()=>{
   {statusCode:"409",error:"ResourceAlreadyExists"},
   {statusCode:409,error:"KeyAlreadyExists"},
   {statusCode:"400",error:"Duplicate"},
-  {statusCode:"400",error:"KeyAlreadyExists"}
+  {statusCode:"400",error:"KeyAlreadyExists"},
+  {statusCode:"409",error:"The resource already exists",code:"ResourceAlreadyExists"},
+  {statusCode:409,error:"Storage API says duplicate",code:"KeyAlreadyExists"}
  ])assert.equal(isDuplicateStagingUpload(error),true);
  for(const error of [null,{}, {statusCode:400,error:"InvalidMimeType"},
    {statusCode:401,error:"Unauthorized"},{statusCode:503,error:"InternalError"}])
