@@ -20,9 +20,7 @@ The route is `POST /functions/v1/student-evidence-upload`. Send the raw
 
 There is a hard 1 MiB streaming size cap, including when no
 `Content-Length` is provided. The function accepts only valid UTF-8 JSON
-objects. On success, status 201 and `state: "staged_unverified"` mean the
-bytes are **quarantined**, not a scientific or academic attestation.
-Retrying the same artifact ID never overwrites an existing object.
+objects. On the first upload, HTTP 201 with `state: "staged_unverified"` means the bytes are **quarantined**, not scientific or academic attestation. If the same upload is retried after a lost response, HTTP 200 with `alreadyStaged: true` is returned **only** when the server matches the immutable same-student/session/tenant/artifact metadata and re-downloads the private stored object to verify actual SHA-256 and JSON bytes. Changed scope or bytes returns 409; storage/read faults fail closed. Neither 200 nor 201 acknowledges Native outbox sync, and existing objects are never overwritten.
 
 The staging table and bucket have no direct authenticated or anonymous client
 policies. The `service_role`/server secret is used only inside the Edge
@@ -34,6 +32,7 @@ Headless admission and request streaming regressions:
 ```sh
 node --test supabase/functions/student-evidence-upload/intent.test.mjs
 node --test supabase/functions/student-evidence-upload/protocol.test.mjs
+node --test supabase/functions/student-evidence-upload/reconcile.test.mjs
 ```
 
 The isolated PostgreSQL fixture exercises quarantine bucket/table denial.
@@ -51,3 +50,6 @@ Use a student's live bearer token and public `sb_publishable_` key to invoke `pu
 ## Staging registration audit and revision-zero gate
 
 As of Edge version 3 the server requires more than a user-controlled `pending` lab session row. A server-only query to the immutable private `audit_events` table must confirm `StagingLabSessionCreated` for the same institution, student, and session with `attested=false` and `nativeRevision=0`. The current lab session must also have `current_revision=0`. Missing, mismatched, superseded or unaudited sessions are denied **before storage upload**. This is **admission provenance**, not authoritative scientific evidence or a Native receipt signature. No authorized HTTP integration against a real Auth student has yet been performed.
+
+## Exact retry evidence (v4)
+Headless Node and source-linked .NET outbox contract tests passed on GitHub Actions push `39181138169`; see `docs/evidence/u04-exact-retry-2026-10-19.md`. Additional Unity EditMode test source exists but Unity execution is deferred. Owner Supabase Free currently has zero real students/sessions/uploads, so authenticated HTTP replay under production networking is **NOT_RUN**. After any 200 retry, local durable Native outbox remains Pending.

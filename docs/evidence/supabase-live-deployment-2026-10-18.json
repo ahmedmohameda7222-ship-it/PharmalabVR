@@ -183,7 +183,10 @@
     "u04_source_linked_client_ci": "Headless fake-HTTP .NET source-linked tests SUCCESS push 39179130630 and PR 39179134811; not actual Unity or authorized HTTP",
     "u04_upload_edge_v3": "LIVE ACTIVE v3 verify_jwt=true, bundle 689003d4a157aeda0b18790157f935c348b989cd1d29d7a1845363a64b0202a6, audit+revision-zero gates inspected",
     "u04_upload_edge_policy_red_green": "RED 771cdb1 missing matching registration audit and RED 9246efa missing revision-zero check; GREEN 0dbbf6d and 2080dad6, headless Node tests passed",
-    "u04_v3_live_counts": "Auth users=0, sessions=0, staging records=0, staged Storage objects=0, academic artifacts=0, audit rows=0. Security Advisor INFO only."
+    "u04_v3_live_counts": "Auth users=0, sessions=0, staging records=0, staged Storage objects=0, academic artifacts=0, audit rows=0. Security Advisor INFO only.",
+    "u04_edge_v4_retry": "ACTIVE v4 verify_jwt true with explicit import_map_path deno.json; bundle SHA256 8fd3a6335dc721a78ac8be6210457cbc2800609e5be94662ba67f950faf90c5b",
+    "u04_retry_headless": "TDD RED Node ef4ec955 / C# de53d62 (expected staged 200 rejection); GREEN panel job 117833934706 in Actions push 39181138169 success, Node reconcile plus source-linked .NET staging tests",
+    "u04_live_after_v4": "SQL auth users=0, lab_sessions=0, quarantine rows/objects=0, academic artifacts=0, audit=0; staging bucket private; direct authenticated INSERT denied; Security Advisor WARN 0"
   },
   "pending": {
     "seeded_two_tenant_postgres_fixture": "DONE on unlinked CI (43-block SQL fixture); live Auth email and Storage API integration still NOT_RUN.",
@@ -201,7 +204,9 @@
     "u04_authorized_http_upload": "NOT_RUN: no verified live student Auth account and no legitimate registered session",
     "u04_academic_promotion": "NOT_IMPLEMENTED: quarantine objects cannot qualify as academic session_artifacts",
     "u04_attested_session_revision": "NOT_IMPLEMENTED: source identity is self-reported revision-zero only, requires actual trusted Native receipt binding",
-    "u04_trusted_native_attestation": "NOT_IMPLEMENTED: Native signed receipt and server verifier; staged bytes cannot become academic proof."
+    "u04_trusted_native_attestation": "NOT_IMPLEMENTED: Native signed receipt and server verifier; staged bytes cannot become academic proof.",
+    "u04_live_authenticated_retry": "NOT_RUN: no verified real student, session or quarantined object exists to exercise Edge v4 HTTP 200 replay",
+    "unity_staging_retry_editmode": "SOURCE_AUTHORED at 77c48709; Unity Editor/Player NOT_RUN until final local campaign"
   },
   "notes": [
     "The Supabase migration tool generated remote version identifiers; they are not the original source file timestamps.",
@@ -221,6 +226,7 @@
     "Free-plan U04 quarantine bucket and metadata deployed with deny-all direct client grants; Edge upload ACTIVE v1. Security Advisor has INFO on private audit and staging tables with zero RLS policies by design; no WARN.",
     "Self-reported student staging session identity is explicitly untrusted and created with current_revision=0, pending; academic submissions require verified evidence and nonzero committed Native event revision. Only a separate trusted attestation may advance authority.",
     "U04 client transports require JWT+publishable key over HTTPS, keep pending outbox unchanged even after staged_unverified. Never use service credentials in Unity.",
-    "U04 Edge v3 deployment reused same slug student-evidence-upload with explicit deno.json import map; no project secrets placed into Unity or repository."
+    "U04 Edge v3 deployment reused same slug student-evidence-upload with explicit deno.json import map; no project secrets placed into Unity or repository.",
+    "2026-10-19 U04 upload Edge v4 exact replay compares same actor/tenant/session/artifact metadata and rehashes downloaded Storage JSON bytes; 200 remains staged_unverified only. First deployment request hit stale v3 import map path; explicit import_map_path deno.json succeeded in-place. No direct Storage client credentials exposed."
   ]
 }
