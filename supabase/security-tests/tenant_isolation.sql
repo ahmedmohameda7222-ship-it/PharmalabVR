@@ -1146,5 +1146,59 @@ begin
     raise exception 'staging session audit missing';
  end if;
 end $$;
+-- U04 synthetic staging metadata reconciliation: not a Native attestation.
+insert into public.evidence_upload_staging(id,institution_id,lab_session_id,student_id,
+ object_key,size_bytes,sha256,content_type) values(
+ 'aaaa0000-0000-4000-8000-000000000083',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+ 'aaaa0000-0000-4000-8000-000000000051',
+ '44444444-4444-4444-8444-444444444444',
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa/aaaa0000-0000-4000-8000-000000000083',
+ 12,repeat('f',64),'application/json');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','44444444-4444-4444-8444-444444444444',true);
+do $$
+declare result jsonb;
+begin
+ result:=public.university_staged_evidence_status(
+ 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000083');
+ if result->>'state' is distinct from 'staged_unverified' or
+    result->>'artifactId' is distinct from 'aaaa0000-0000-4000-8000-000000000083'
+    or result->>'sha256' is distinct from repeat('f',64)
+    or result->>'sizeBytes' is distinct from '12' then
+   raise exception 'staging_owner_can_reconcile';
+ end if;
+ if result ? 'objectKey' or result ? 'object_key' or result ? 'url' or result ? 'signedUrl' then
+   raise exception 'staging_exposes_object_key';
+ end if;
+end $$;
+select set_config('request.jwt.claim.sub','55555555-5555-4555-8555-555555555555',true);
+do $$
+begin
+ begin
+  perform public.university_staged_evidence_status(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000083');
+  raise exception 'staging_foreign_student_denied';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+select set_config('request.jwt.claim.sub','33333333-3333-4333-8333-333333333333',true);
+do $$
+begin
+ begin
+  perform public.university_staged_evidence_status(
+   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa','aaaa0000-0000-4000-8000-000000000083');
+  raise exception 'staging_instructor_denied';
+ exception when insufficient_privilege then null;
+ end;
+end $$;
+reset role;
+do $$
+begin
+ if exists(select 1 from public.session_artifacts where
+    id='aaaa0000-0000-4000-8000-000000000083') then
+    raise exception 'staging_never_academic_attestation';
+ end if;
+end $$;
 rollback;
 -- Every DO block reaching here means the tested SQL checks passed.

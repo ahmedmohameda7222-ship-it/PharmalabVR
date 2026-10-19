@@ -488,6 +488,31 @@ class UniversitySqlGuardrails(unittest.TestCase):
                        "staging_revision_zero"):
             self.assertIn(marker, FIXTURE)
 
+    def test_u04_staging_status_rpc_is_owner_only_and_never_attests(self):
+        source = ROOT / "supabase/migrations/20261018150000_staged_evidence_status_rpc.sql"
+        sql = source.read_text(encoding="utf-8").lower() if source.exists() else ""
+        for marker in (
+            "create function plv_private.university_staged_evidence_status(",
+            "create function public.university_staged_evidence_status(",
+            "security definer set search_path = ''",
+            "security invoker set search_path = ''",
+            "plv_private.active_member(p_institution_id)",
+            "m.role = 'student'",
+            "e.student_id=v_actor",
+            "evidence_upload_staging",
+            "'staged_unverified'",
+            "revoke all on function public.university_staged_evidence_status",
+            "grant execute on function public.university_staged_evidence_status",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn("grant select on public.evidence_upload_staging", sql)
+        for marker in ("anon_staged_status_bypass","unauthorized_staged_status_bypass"):
+            self.assertIn(marker, SMOKE)
+        for marker in ("staging_owner_can_reconcile","staging_exposes_object_key",
+                       "staging_foreign_student_denied","staging_instructor_denied",
+                       "staging_never_academic_attestation"):
+            self.assertIn(marker, FIXTURE)
+
     def test_u01_sql_fixture_has_tenants_auth_impersonation_and_rollback(self):
         for marker in (
             "insert into auth.users", "set local role authenticated;",

@@ -16,6 +16,13 @@ begin
   exception when insufficient_privilege then null;
   end;
   begin
+    perform public.university_staged_evidence_status(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000083'::uuid);
+    raise exception 'ANON_STAGED_STATUS_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
     perform public.university_register_staging_session(
       'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
       'local-new','native-new',repeat('a',64),
@@ -179,6 +186,13 @@ begin
       'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid,
       repeat('a',64));
     raise exception 'UNAUTHORIZED_SUBMISSION_BYPASS' using errcode='P0001';
+  exception when insufficient_privilege then null;
+  end;
+  begin
+    perform public.university_staged_evidence_status(
+      'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid,
+      'aaaa0000-0000-4000-8000-000000000083'::uuid);
+    raise exception 'UNAUTHORIZED_STAGED_STATUS_BYPASS' using errcode='P0001';
   exception when insufficient_privilege then null;
   end;
   begin
