@@ -40,6 +40,9 @@ CheckpointSlot loadSlot(const std::string& base, unsigned index, std::size_t max
     namespace fs = std::filesystem;
     const fs::path path(base + ".slot" + std::to_string(index));
     CheckpointSlot result;
+    // A foreign but checksum-valid slot must not be imported through an alias.
+    if (fs::is_symlink(path))
+        throw std::runtime_error("checkpoint slot symlink is forbidden");
     std::error_code error;
     result.present = fs::exists(path, error);
     if (error) throw std::runtime_error("checkpoint slot could not be inspected");
@@ -157,7 +160,22 @@ CommandOutcome DurableCheckpointStore::write(const std::string& nativeExport) {
         const auto prefix = std::string(magic) + "\n" + std::to_string(generation) +
                             "\n" + std::to_string(nativeExport.size()) + "\n";
         const auto framed = prefix + sha256Hex(prefix + nativeExport) + "\n" + nativeExport;
-        std::FILE* file = std::fopen(temporary.string().c_str(), "wb");
+        // A stale or redirected staging slot is never an acceptable target.
+        // Linux O_NOFOLLOW also closes the final-component symlink race
+        // between this preflight check and opening the stage file.
+        if (fs::is_symlink(temporary))
+            return {false, "CheckpointWriteFailed", "checkpoint stage symlink is forbidden"};
+        std::FILE* file = nullptr;
+#ifdef _WIN32
+        file = std::fopen(temporary.string().c_str(), "wb");
+#else
+        const int descriptor = ::open(
+            temporary.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_NOFOLLOW, 0600);
+        if (descriptor >= 0) {
+            file = ::fdopen(descriptor, "wb");
+            if (!file) ::close(descriptor);
+        }
+#endif
         if (!file) return {false, "CheckpointWriteFailed", "checkpoint stage cannot be opened"};
         bool completed = std::fwrite(framed.data(), 1, framed.size(), file) == framed.size();
         if (completed) completed = flushFile(file);
