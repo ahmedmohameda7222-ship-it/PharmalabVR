@@ -113,4 +113,31 @@ TEST_CASE("P11_01 checkpoint load rejects a valid slot aliased by symlink") {
     fs::remove_all(base);
 }
 
+
+TEST_CASE("P11_01 checkpoint stage hardlink must never truncate unrelated file") {
+    namespace fs = std::filesystem;
+    const auto base = fs::temp_directory_path() /
+        ("plv-ckpt-stage-hardlink-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(base));
+    const auto protectedFile = base / "protected-science-file";
+    {
+        std::ofstream output(protectedFile, std::ios::binary);
+        REQUIRE(output.is_open());
+        output << "this-data-must-not-change";
+    }
+    const auto path = (base / "session.ckpt").string();
+    REQUIRE_NOTHROW(fs::create_hard_link(protectedFile, path + ".slot0.tmp"));
+    REQUIRE(fs::hard_link_count(protectedFile) == 2);
+    plv::DurableCheckpointStore checkpoint(path, 1024);
+    const auto result = checkpoint.write("different-payload");
+    CHECK_FALSE(result.accepted);
+    std::ifstream input(protectedFile, std::ios::binary);
+    REQUIRE(input.is_open());
+    const std::string actual((std::istreambuf_iterator<char>(input)),
+                             std::istreambuf_iterator<char>());
+    CHECK(actual == "this-data-must-not-change");
+    fs::remove_all(base);
+}
+
 #endif
