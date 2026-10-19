@@ -68,4 +68,49 @@ TEST_CASE("P11_01 disk WAL must not follow a symlink to another persisted file")
     CHECK(contents == "do-not-corrupt");
     fs::remove_all(directory);
 }
+
+TEST_CASE("P11_01 checkpoint stage symlink must never truncate unrelated file") {
+    namespace fs = std::filesystem;
+    const auto base = fs::temp_directory_path() /
+        ("plv-ckpt-stage-symlink-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(base));
+    const auto protectedFile = base / "unrelated-binary";
+    {
+        std::ofstream output(protectedFile, std::ios::binary);
+        REQUIRE(output.is_open());
+        output << "must-remain-byte-identical";
+    }
+    const auto path = (base / "session.ckpt").string();
+    REQUIRE_NOTHROW(fs::create_symlink(protectedFile, path + ".slot0.tmp"));
+    plv::DurableCheckpointStore store(path, 1024);
+    const auto outcome = store.write("authenticated-checkpoint-bytes");
+    CHECK_FALSE(outcome.accepted);
+    std::ifstream stream(protectedFile, std::ios::binary);
+    REQUIRE(stream.is_open());
+    const std::string recovered((std::istreambuf_iterator<char>(stream)),
+                                std::istreambuf_iterator<char>());
+    CHECK(recovered == "must-remain-byte-identical");
+    fs::remove_all(base);
+}
+
+TEST_CASE("P11_01 checkpoint load rejects a valid slot aliased by symlink") {
+    namespace fs = std::filesystem;
+    const auto base = fs::temp_directory_path() /
+        ("plv-ckpt-read-symlink-" + std::to_string(
+            std::chrono::steady_clock::now().time_since_epoch().count()));
+    REQUIRE(fs::create_directories(base));
+    REQUIRE(fs::create_directories(base / "foreign"));
+    REQUIRE(fs::create_directories(base / "local"));
+    const auto foreignPath = (base / "foreign" / "session.ckpt").string();
+    const auto localPath = (base / "local" / "session.ckpt").string();
+    plv::DurableCheckpointStore foreign(foreignPath, 1024);
+    REQUIRE(foreign.write("foreign-native-snapshot").accepted);
+    REQUIRE_NOTHROW(fs::create_symlink(
+        foreignPath + ".slot0", localPath + ".slot0"));
+    plv::DurableCheckpointStore local(localPath, 1024);
+    CHECK_THROWS_AS(local.read(), std::runtime_error);
+    fs::remove_all(base);
+}
+
 #endif
