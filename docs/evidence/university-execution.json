@@ -213,6 +213,14 @@
         "sessionGreen": "2cb33b3dd4f99625c091614381282eca46ea5302, panel 39194247743 SUCCESS: null response, no confirmed session, outbox intact",
         "unityVerification": "EditMode source authored; Unity Editor/Player/XR NOT_RUN",
         "remaining": "No actual production student HTTP pilot; Native attestation/academic promotion and authoritative sync receipt remain NOT_IMPLEMENTED"
+      },
+      "clientRpcBoundsTdd": {
+        "oversizedReplyRed": "f89394d12a4d00f37a184a21144ff94eeee680d8; PR Native panel 39196566555 failed InvalidDataException: Registration returned no canonical UUID on oversized 200",
+        "oversizedReplyGreen": "206f5f33f5ecf948e2e5d0b73153a89e3555ba9f; PR panel 39196688690 SUCCESS; headers-first and LoadIntoBufferAsync(128) prevent unbounded RPC reply reads",
+        "strictInputRed": "6434ba813294c810d52e0ba3f988268c94756bdf; PR panel 39197022440 failed: Trailing LF in institution UUID reached the registration client",
+        "strictInputGreen": "3bfab5960591b115ae9670861b81db0617098a44; PR panel 39197202120 SUCCESS; \\A and \\z on session UUID/local ID/SHA/JWT token",
+        "unitySources": "fcf0a865a3f366a0f4eeb3017d63e18ad6226b61 and cdd713d48f4f33275499e1cc058bd1d519faa182; NUnit EditMode test source authored, Unity execution NOT_RUN",
+        "scope": "HTTP registration safety only. Does not prove Native origin or signed server sync acknowledgment."
       }
     },
     {
