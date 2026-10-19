@@ -15,14 +15,14 @@ namespace PharmaLabVR.University
     public static class UniversityStagingSessionRegistration
     {
         private static readonly Regex CanonicalUuid = new Regex(
-            @"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            @"\A[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z",
             RegexOptions.CultureInvariant);
         private static readonly Regex LocalToken = new Regex(
-            @"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$", RegexOptions.CultureInvariant);
+            @"\A[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}\z", RegexOptions.CultureInvariant);
         private static readonly Regex CanonicalSha = new Regex(
-            @"^[0-9a-f]{64}$", RegexOptions.CultureInvariant);
+            @"\A[0-9a-f]{64}\z", RegexOptions.CultureInvariant);
         private static readonly Regex BearerToken = new Regex(
-            @"^[A-Za-z0-9._~-]{1,8192}$", RegexOptions.CultureInvariant);
+            @"\A[A-Za-z0-9._~-]{1,8192}\z", RegexOptions.CultureInvariant);
         private static readonly Regex PublicKey = new Regex(
             @"\Asb_publishable_[A-Za-z0-9_-]{1,497}\z", RegexOptions.CultureInvariant);
         private const string RpcPath =
