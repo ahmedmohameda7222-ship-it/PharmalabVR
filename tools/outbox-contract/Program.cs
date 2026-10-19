@@ -324,6 +324,21 @@ internal static class Program
                     "Denied registration unexpectedly provided a cloud session ID.");
                 Check(verifier.Pending().Count==1,
                     "Denied session registration removed pending Native evidence.");
+
+                // RED U04: a gateway/server may reply with an oversized
+                // 200 body. Reject BEFORE buffering the body as a session ID,
+                // and retain the local Native outbox unchanged.
+                registrationHandler.Status = HttpStatusCode.OK;
+                registrationHandler.ResponseBody = new string('x', 8192);
+                Check(UniversityStagingSessionRegistration.RegisterPendingAsync(
+                    authClient, rpcEndpoint, "sb_publishable_test", "student-token",
+                    tenantA, "local-session-2", "native-branch-2", new string('b',64),
+                    "aaaa0000-0000-4000-8000-000000000201").GetAwaiter().GetResult() == null,
+                    "Oversized registration HTTP 200 response exposed a session identity or exception.");
+                Check(verifier.Pending().Count == 1,
+                    "Oversized pending-session HTTP response acknowledged Native outbox.");
+                registrationHandler.ResponseBody = "\"" + newSessionUuid + "\"";
+
             }
 
             var damaged = File.ReadAllBytes(path);
