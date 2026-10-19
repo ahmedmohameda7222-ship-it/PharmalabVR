@@ -142,6 +142,13 @@ namespace PharmaLabVR.University
                 {
                     return UniversityStagingResult.Rejected;
                 }
+                // Network timeout is a failed quarantine attempt, not a
+                // cloud receipt. Preserve the offline Native outbox for retry.
+                // Explicit user cancellation still propagates to the caller.
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    return UniversityStagingResult.Rejected;
+                }
             }
         }
 

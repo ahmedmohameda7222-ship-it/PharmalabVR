@@ -41,16 +41,32 @@ namespace PharmaLabVR.Tests.EditMode
             public HttpStatusCode Status;
             public string ResponseBody;
             public string ApiKey;
+            public bool ThrowTimeout;
 
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                if (ThrowTimeout)
+                    throw new TaskCanceledException("Simulated network timeout");
                 ApiKey = request.Headers.Contains("apikey")
                     ? string.Join("", request.Headers.GetValues("apikey")) : null;
                 return Task.FromResult(new HttpResponseMessage(Status)
                 {
                     Content = new StringContent(ResponseBody, Encoding.UTF8, "application/json")
                 });
+            }
+        }
+
+        [Test]
+        public void U04_StagingNetworkTimeoutRejectsWithoutProducingEvidence()
+        {
+            var handler = new FakeHandler { ThrowTimeout = true };
+            using (var client = new HttpClient(handler))
+            {
+                var result = UniversityStagingTransport.UploadAsync(client, Endpoint,
+                    Tenant, Session, Artifact, "sb_publishable_test", "student-token", Export)
+                    .GetAwaiter().GetResult();
+                Assert.That(result, Is.EqualTo(UniversityStagingResult.Rejected));
             }
         }
 
