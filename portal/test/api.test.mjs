@@ -220,6 +220,13 @@ test('RLS denied lesson details fail closed and never fabricate coursework', asy
     /unavailable/i);
 });
 
+// Fail the RED run promptly even when an old implementation never aborts.
+const deadline = promise => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() =>
+    reject(new Error('Request deadline was not enforced')), 400))
+]);
+
 test('hung Auth request aborts under bounded request time, never mints signed-in state', async () => {
   let aborted = false;
   const api = createUniversityPortalApi({
@@ -232,7 +239,7 @@ test('hung Auth request aborts under bounded request time, never mints signed-in
       }, { once: true });
     })
   });
-  await assert.rejects(() => api.signIn('learner@example.edu', 'private-password'),
+  await assert.rejects(() => deadline(api.signIn('learner@example.edu', 'private-password')),
     /unavailable/i);
   assert.equal(aborted, true);
 });
@@ -240,5 +247,5 @@ test('hung Auth request aborts under bounded request time, never mints signed-in
 test('hung current-session logout is bounded and never claims server revocation', async () => {
   const { api } = harness({ logoutHangs: true, requestTimeoutMs: 25 });
   const session = await api.signIn('learner@example.edu', 'private-password');
-  assert.equal(await api.signOut(session), false);
+  assert.equal(await deadline(api.signOut(session)), false);
 });
