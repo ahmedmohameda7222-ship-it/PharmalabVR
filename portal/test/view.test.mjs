@@ -1,9 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments } from '../src/view.mjs';
+import { renderAssignments, renderLesson } from '../src/view.mjs';
 
 class FakeNode {
-  constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; }
+  constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
+  addEventListener(name, fn) { this.events[name] = fn; }
   replaceChildren(...nodes) { this.children = nodes; this.textContent = ''; }
   append(...nodes) { this.children.push(...nodes); }
   set innerHTML(_) { throw new Error('Unsafe innerHTML injection'); }
@@ -43,4 +44,40 @@ test('network loading state cannot impersonate academic data', () => {
   renderAssignments(root, { status: 'loading', assignments: [assignment] }, document);
   assert.match(visibleText(root), /loading/i);
   assert.doesNotMatch(visibleText(root), /script>/);
+});
+
+test('student can select a published assignment without auto-opening a lesson', () => {
+  const root = new FakeNode('section');
+  const selected = [];
+  renderAssignments(root, { status: 'available', assignments: [assignment] }, document,
+    id => selected.push(id));
+  const card = root.children[0].children[0];
+  const selectButton = card.children.at(-1);
+  assert.equal(selectButton.tag, 'button');
+  assert.equal(selected.length, 0);
+  selectButton.events.click();
+  assert.deepEqual(selected, ['a']);
+});
+
+test('lesson content is inert text and preserves declared server provenance', () => {
+  const root = new FakeNode('section');
+  renderLesson(root, { status: 'available', lesson: {
+    id: 'lesson-one', version: 3, contentSha256: 'a'.repeat(64),
+    content: { title: '<img src=x onerror=alert(1)>', steps: ['Read instructions'] }
+  } }, document);
+  assert.match(visibleText(root), /version 3/i);
+  assert.match(visibleText(root), /<img src=x onerror=alert\(1\)>/);
+  assert.match(visibleText(root), /not a verified scientific record/i);
+});
+
+test('failed lesson read never leaves previous lesson contents visible', () => {
+  const root = new FakeNode('section');
+  renderLesson(root, { status: 'available', lesson: {
+    version: 1, contentSha256: 'b'.repeat(64), content: { title: 'Private lesson' }
+  } }, document);
+  renderLesson(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /Private lesson/);
+  renderLesson(root, { status: 'no-selection' }, document);
+  assert.match(visibleText(root), /select a published assignment/i);
 });
