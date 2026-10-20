@@ -18,9 +18,9 @@ namespace PharmaLabVR.Tests.EditMode
             try
             {
                 var receipt = Encoding.UTF8.GetBytes(
-                    "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
-                    "\\"commandSequence\\":\\"3\\",\\"type\\":\\"CommandOutcome\\"," +
-                    "\\"accepted\\":true,\\"code\\":\\"Accepted\\",\\"message\\":\\"\\"}");
+                    "{\"schemaVersion\":1,\"branchId\":\"native-branch\"," +
+                    "\"commandSequence\":\"3\",\"type\":\"CommandOutcome\"," +
+                    "\"accepted\":true,\"code\":\"Accepted\",\"message\":\"\"}");
                 var package = Encoding.UTF8.GetBytes("science-package");
                 string Hash(byte[] bytes)
                 {
@@ -29,12 +29,12 @@ namespace PharmaLabVR.Tests.EditMode
                             .ToLowerInvariant();
                 }
                 var export = Encoding.UTF8.GetBytes(
-                    "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
-                    "\\"nextCommandSequence\\":\\"4\\",\\"scientificPackage\\":{\\"identity\\":\\"" +
-                    Hash(package) + "\\"},\\"commandReceipts\\":[{\\"commandSequence\\":\\"3\\"," +
-                    "\\"canonicalCommand\\":{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
-                    "\\"commandSequence\\":\\"3\\",\\"type\\":\\"Pause\\"}," +
-                    "\\"terminalOutcome\\":" + Encoding.UTF8.GetString(receipt) + "}]}");
+                    "{\"schemaVersion\":1,\"branchId\":\"native-branch\"," +
+                    "\"nextCommandSequence\":\"4\",\"scientificPackage\":{\"identity\":\"" +
+                    Hash(package) + "\"},\"commandReceipts\":[{\"commandSequence\":\"3\"," +
+                    "\"canonicalCommand\":{\"schemaVersion\":1,\"branchId\":\"native-branch\"," +
+                    "\"commandSequence\":\"3\",\"type\":\"Pause\"}," +
+                    "\"terminalOutcome\":" + Encoding.UTF8.GetString(receipt) + "}]}");
                 var intent = new UniversityUploadIntent(
                     "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "local-session",
                     "11111111-1111-4111-8111-111111111111", "native-branch",

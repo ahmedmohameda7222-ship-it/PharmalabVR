@@ -125,19 +125,19 @@ internal static class Program
             // U04: evidence digests must derive from real byte arrays before
             // a new upload intent is staged; a caller's SHA text is not proof.
             var receiptBytes = System.Text.Encoding.UTF8.GetBytes(
-                "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch-2\\"," +
-                "\\"commandSequence\\":\\"21\\",\\"type\\":\\"CommandOutcome\\"," +
-                "\\"accepted\\":true,\\"code\\":\\"Accepted\\",\\"message\\":\\"\\"}");
+                "{\"schemaVersion\":1,\"branchId\":\"native-branch-2\"," +
+                "\"commandSequence\":\"21\",\"type\":\"CommandOutcome\"," +
+                "\"accepted\":true,\"code\":\"Accepted\",\"message\":\"\"}");
             var packageBytes = System.Text.Encoding.UTF8.GetBytes("pinned-science-package");
             string NativeExport(string branch, string sequence, string scienceDigest)
             {
-                return "{\\"schemaVersion\\":1,\\"branchId\\":\\"" + branch +
-                    "\\",\\"nextCommandSequence\\":\\"23\\",\\"scientificPackage\\":{\\"identity\\":\\"" +
-                    scienceDigest + "\\"},\\"commandReceipts\\":[{" +
-                    "\\"commandSequence\\":\\"" + sequence +
-                    "\\",\\"canonicalCommand\\":{\\"schemaVersion\\":1,\\"branchId\\":\\"" +
-                    branch + "\\",\\"commandSequence\\":\\"" + sequence +
-                    "\\",\\"type\\":\\"Pause\\"},\\"terminalOutcome\\":" +
+                return "{\"schemaVersion\":1,\"branchId\":\"" + branch +
+                    "\",\"nextCommandSequence\":\"23\",\"scientificPackage\":{\"identity\":\"" +
+                    scienceDigest + "\"},\"commandReceipts\":[{" +
+                    "\"commandSequence\":\"" + sequence +
+                    "\",\"canonicalCommand\":{\"schemaVersion\":1,\"branchId\":\"" +
+                    branch + "\",\"commandSequence\":\"" + sequence +
+                    "\",\"type\":\"Pause\"},\"terminalOutcome\":" +
                     System.Text.Encoding.UTF8.GetString(receiptBytes) + "}]}";
             }
             var evidenceBytes = System.Text.Encoding.UTF8.GetBytes(
