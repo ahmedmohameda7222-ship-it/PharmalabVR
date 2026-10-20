@@ -124,9 +124,24 @@ internal static class Program
 
             // U04: evidence digests must derive from real byte arrays before
             // a new upload intent is staged; a caller's SHA text is not proof.
-            var receiptBytes = System.Text.Encoding.UTF8.GetBytes("native-receipt-v1");
+            var receiptBytes = System.Text.Encoding.UTF8.GetBytes(
+                "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch-2\\"," +
+                "\\"commandSequence\\":\\"21\\",\\"type\\":\\"CommandOutcome\\"," +
+                "\\"accepted\\":true,\\"code\\":\\"Accepted\\",\\"message\\":\\"\\"}");
             var packageBytes = System.Text.Encoding.UTF8.GetBytes("pinned-science-package");
-            var evidenceBytes = System.Text.Encoding.UTF8.GetBytes("full-native-export-json");
+            string NativeExport(string branch, string sequence, string scienceDigest)
+            {
+                return "{\\"schemaVersion\\":1,\\"branchId\\":\\"" + branch +
+                    "\\",\\"nextCommandSequence\\":\\"23\\",\\"scientificPackage\\":{\\"identity\\":\\"" +
+                    scienceDigest + "\\"},\\"commandReceipts\\":[{" +
+                    "\\"commandSequence\\":\\"" + sequence +
+                    "\\",\\"canonicalCommand\\":{\\"schemaVersion\\":1,\\"branchId\\":\\"" +
+                    branch + "\\",\\"commandSequence\\":\\"" + sequence +
+                    "\\",\\"type\\":\\"Pause\\"},\\"terminalOutcome\\":" +
+                    System.Text.Encoding.UTF8.GetString(receiptBytes) + "}]}";
+            }
+            var evidenceBytes = System.Text.Encoding.UTF8.GetBytes(
+                NativeExport("native-branch-2", "21", Hash(packageBytes)));
             string Hash(byte[] bytes)
             {
                 using (var sha = System.Security.Cryptography.SHA256.Create())
@@ -147,6 +162,32 @@ internal static class Program
             MustReject(() => verifier.EnqueueVerifiedEvidence(verifiedIntent,null,
                 packageBytes,evidenceBytes),
                 "Missing Native receipt bytes were accepted.");
+            var wrongBranchBytes = System.Text.Encoding.UTF8.GetBytes(
+                NativeExport("another-branch", "21", Hash(packageBytes)));
+            var wrongBranchIntent = new UniversityUploadIntent(tenantA, "local-session-2",
+                "66666666-6666-4666-8666-666666666666", "native-branch-2", "21",
+                Hash(receiptBytes), Hash(packageBytes), Hash(wrongBranchBytes));
+            MustReject(() => verifier.EnqueueVerifiedEvidence(wrongBranchIntent,
+                receiptBytes, packageBytes, wrongBranchBytes),
+                "A foreign Native branch was attached to an unrelated outbox event.");
+
+            var wrongSequenceBytes = System.Text.Encoding.UTF8.GetBytes(
+                NativeExport("native-branch-2", "20", Hash(packageBytes)));
+            var wrongSequenceIntent = new UniversityUploadIntent(tenantA, "local-session-2",
+                "77777777-7777-4777-8777-777777777777", "native-branch-2", "21",
+                Hash(receiptBytes), Hash(packageBytes), Hash(wrongSequenceBytes));
+            MustReject(() => verifier.EnqueueVerifiedEvidence(wrongSequenceIntent,
+                receiptBytes, packageBytes, wrongSequenceBytes),
+                "An export for a different Native command sequence was admitted.");
+
+            var wrongModelBytes = System.Text.Encoding.UTF8.GetBytes(
+                NativeExport("native-branch-2", "21", new string('f', 64)));
+            var wrongModelIntent = new UniversityUploadIntent(tenantA, "local-session-2",
+                "88888888-8888-4888-8888-888888888888", "native-branch-2", "21",
+                Hash(receiptBytes), Hash(packageBytes), Hash(wrongModelBytes));
+            MustReject(() => verifier.EnqueueVerifiedEvidence(wrongModelIntent,
+                receiptBytes, packageBytes, wrongModelBytes),
+                "An export declaring a different scientific package was admitted.");
             Check(verifier.Pending().Count == 1,
                 "Rejected evidence changed the durable outbox.");
 

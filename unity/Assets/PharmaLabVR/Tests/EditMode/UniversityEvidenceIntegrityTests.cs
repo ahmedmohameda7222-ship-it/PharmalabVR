@@ -17,15 +17,24 @@ namespace PharmaLabVR.Tests.EditMode
             Directory.CreateDirectory(root);
             try
             {
-                var receipt = Encoding.UTF8.GetBytes("native-receipt");
+                var receipt = Encoding.UTF8.GetBytes(
+                    "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
+                    "\\"commandSequence\\":\\"3\\",\\"type\\":\\"CommandOutcome\\"," +
+                    "\\"accepted\\":true,\\"code\\":\\"Accepted\\",\\"message\\":\\"\\"}");
                 var package = Encoding.UTF8.GetBytes("science-package");
-                var export = Encoding.UTF8.GetBytes("native-export");
                 string Hash(byte[] bytes)
                 {
                     using (var sha = SHA256.Create())
                         return BitConverter.ToString(sha.ComputeHash(bytes)).Replace("-", "")
                             .ToLowerInvariant();
                 }
+                var export = Encoding.UTF8.GetBytes(
+                    "{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
+                    "\\"nextCommandSequence\\":\\"4\\",\\"scientificPackage\\":{\\"identity\\":\\"" +
+                    Hash(package) + "\\"},\\"commandReceipts\\":[{\\"commandSequence\\":\\"3\\"," +
+                    "\\"canonicalCommand\\":{\\"schemaVersion\\":1,\\"branchId\\":\\"native-branch\\"," +
+                    "\\"commandSequence\\":\\"3\\",\\"type\\":\\"Pause\\"}," +
+                    "\\"terminalOutcome\\":" + Encoding.UTF8.GetString(receipt) + "}]}");
                 var intent = new UniversityUploadIntent(
                     "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "local-session",
                     "11111111-1111-4111-8111-111111111111", "native-branch",
