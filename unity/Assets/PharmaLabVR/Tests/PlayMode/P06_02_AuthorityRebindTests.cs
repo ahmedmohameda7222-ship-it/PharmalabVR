@@ -16,8 +16,10 @@ namespace PharmaLabVR.Tests.PlayMode
             var oldOwner = new GameObject("P06-old-Native-owner");
             var newOwner = new GameObject("P06-new-Native-owner");
             var panelOwner = new GameObject("P06-router");
+            var thirdOwner = new GameObject("P06-after-destroy-owner");
             oldOwner.SetActive(false);
             newOwner.SetActive(false);
+            thirdOwner.SetActive(false);
             panelOwner.SetActive(false);
             try
             {
@@ -40,11 +42,23 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.SupportedActions, Does.Contain("Pause"));
                 Assert.That(router.ReturnFromSettings(), Is.False,
                     "A replaced Native session must not inherit old Back history.");
+                // Unity's destroyed Component compares equal to null, but
+                // a managed reference to the previous owner still exists.
+                // Rebinding must clear stale UI even after that destruction.
+                var afterDestroyDriver = thirdOwner.AddComponent<CoreDriver>();
+                router.Show(ScreenId.Settings);
+                router.MarkSaved();
+                if (newOwner != null) Object.DestroyImmediate(newOwner);
+                router.Configure(afterDestroyDriver);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(router.ReturnFromSettings(), Is.False);
             }
             finally
             {
                 Object.DestroyImmediate(panelOwner);
                 Object.DestroyImmediate(newOwner);
+                Object.DestroyImmediate(thirdOwner);
                 Object.DestroyImmediate(oldOwner);
             }
         }
