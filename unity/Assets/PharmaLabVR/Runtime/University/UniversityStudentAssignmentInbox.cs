@@ -37,6 +37,29 @@ namespace PharmaLabVR.University
         }
     }
 
+    // Status is presentation evidence, not an authorization grant.
+    // Only an authenticated, validated HTTP 200 can establish an available
+    // (including legitimately empty) assignment list.
+    public enum UniversityAssignmentInboxStatus
+    {
+        NoStudentContext = 0,
+        Unavailable = 1,
+        Available = 2
+    }
+
+    public sealed class UniversityAssignmentInboxResult
+    {
+        public UniversityAssignmentInboxStatus Status { get; }
+        public IReadOnlyList<UniversityStudentAssignmentSummary> Assignments { get; }
+
+        internal UniversityAssignmentInboxResult(UniversityAssignmentInboxStatus status,
+            IReadOnlyList<UniversityStudentAssignmentSummary> assignments)
+        {
+            Status = status;
+            Assignments = assignments;
+        }
+    }
+
     // First U05 read-only student assignment inbox data path.
     // A membership snapshot is a UI hint, not proof of student authorization.
     // RLS must still enforce enrolled sections and published assignments.
@@ -49,6 +72,13 @@ namespace PharmaLabVR.University
             @"\A[A-Za-z0-9._~-]{1,8192}\z", RegexOptions.CultureInvariant);
         private static readonly IReadOnlyList<UniversityStudentAssignmentSummary> Empty =
             Array.Empty<UniversityStudentAssignmentSummary>();
+        private static readonly UniversityAssignmentInboxResult NoContext =
+            new UniversityAssignmentInboxResult(
+                UniversityAssignmentInboxStatus.NoStudentContext, Empty);
+        private static readonly UniversityAssignmentInboxResult Unavailable =
+            new UniversityAssignmentInboxResult(
+                UniversityAssignmentInboxStatus.Unavailable, Empty);
+
 
         [DataContract]
         private sealed class AssignmentRow
@@ -61,7 +91,20 @@ namespace PharmaLabVR.University
             [DataMember(Name = "due_at")] public string DueAt { get; set; }
         }
 
+        // Compatibility adapter for existing callers that only accept rows.
+        // New student UI must use FetchWithStatusAsync to avoid treating
+        // network failure or revoked membership as "no assignments".
         public static async Task<IReadOnlyList<UniversityStudentAssignmentSummary>> FetchPublishedAsync(
+            HttpClient client, Uri supabaseProjectUrl, string publishableKey,
+            string accessToken, UniversityMembershipSession membership,
+            DateTimeOffset nowUtc, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return (await FetchWithStatusAsync(client, supabaseProjectUrl, publishableKey,
+                accessToken, membership, nowUtc, cancellationToken).ConfigureAwait(false))
+                .Assignments;
+        }
+
+        public static async Task<UniversityAssignmentInboxResult> FetchWithStatusAsync(
             HttpClient client, Uri supabaseProjectUrl, string publishableKey,
             string accessToken, UniversityMembershipSession membership,
             DateTimeOffset nowUtc, CancellationToken cancellationToken = default(CancellationToken))
@@ -82,13 +125,13 @@ namespace PharmaLabVR.University
                 !AccessToken.IsMatch(accessToken ?? ""))
                 throw new ArgumentException("Student Auth bearer and public gateway key are required.");
 
-            if (membership == null) return Empty;
+            if (membership == null) return NoContext;
             var tenant = membership.ActiveInstitutionId;
             // This only limits stale/unselected student UI requests.
             // The server never trusts the role string supplied by a client.
             if (!membership.CanDisplayInstitution(tenant, nowUtc) ||
                 membership.SelectedRole(nowUtc) != "student")
-                return Empty;
+                return NoContext;
 
             var url = new Uri(supabaseProjectUrl,
                 "rest/v1/assignments?select=id%2Cinstitution_id%2Csection_id%2Ctitle%2Cpublished_at%2Cdue_at" +
@@ -110,7 +153,7 @@ namespace PharmaLabVR.University
                         if (response.StatusCode != HttpStatusCode.OK ||
                             response.Content == null ||
                             response.Content.Headers.ContentLength > MaxResponseBytes)
-                            return Empty;
+                            return Unavailable;
                         try
                         {
                             await response.Content.LoadIntoBufferAsync(MaxResponseBytes)
@@ -118,13 +161,13 @@ namespace PharmaLabVR.University
                             var bytes = await response.Content.ReadAsByteArrayAsync()
                                 .ConfigureAwait(false);
                             if (bytes.Length > MaxResponseBytes)
-                                return Empty;
+                                return Unavailable;
                             AssignmentRow[] rows;
                             using (var buffer = new MemoryStream(bytes, false))
                                 rows = new DataContractJsonSerializer(
                                     typeof(AssignmentRow[])).ReadObject(buffer) as AssignmentRow[];
                             if (rows == null || rows.Length > 100)
-                                return Empty;
+                                return Unavailable;
                             var seen = new HashSet<string>(StringComparer.Ordinal);
                             var result = new List<UniversityStudentAssignmentSummary>(rows.Length);
                             foreach (var row in rows)
@@ -139,35 +182,36 @@ namespace PharmaLabVR.University
                                     !DateTimeOffset.TryParse(row.PublishedAt,
                                         CultureInfo.InvariantCulture,
                                         DateTimeStyles.AssumeUniversal, out var publishedAt))
-                                    return Empty;
+                                    return Unavailable;
                                 DateTimeOffset? dueAt = null;
                                 if (row.DueAt != null)
                                 {
                                     if (!DateTimeOffset.TryParse(row.DueAt,
                                         CultureInfo.InvariantCulture,
                                         DateTimeStyles.AssumeUniversal, out var parsedDueAt))
-                                        return Empty;
+                                        return Unavailable;
                                     dueAt = parsedDueAt.ToUniversalTime();
                                 }
                                 result.Add(new UniversityStudentAssignmentSummary(
                                     row.Id, row.InstitutionId, row.SectionId, row.Title,
                                     publishedAt.ToUniversalTime(), dueAt));
                             }
-                            return result.AsReadOnly();
+                            return new UniversityAssignmentInboxResult(
+                                UniversityAssignmentInboxStatus.Available, result.AsReadOnly());
                         }
                         catch (Exception error) when (error is SerializationException ||
                             error is System.Xml.XmlException ||
                             error is InvalidOperationException || error is HttpRequestException ||
                             error is IOException || error is ArgumentException)
                         {
-                            return Empty;
+                            return Unavailable;
                         }
                     }
                 }
-                catch (HttpRequestException) { return Empty; }
+                catch (HttpRequestException) { return Unavailable; }
                 catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
                 {
-                    return Empty;
+                    return Unavailable;
                 }
             }
         }
