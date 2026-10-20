@@ -21,3 +21,6 @@ button.secondary{background:transparent;border:1px solid #6882a5;color:#e6efff}
 footer{margin-top:36px;font-size:.85rem}
 [hidden]{display:none!important}
 @media(max-width:520px){.panel{padding:16px}}
+
+.lesson-content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:32rem;overflow:auto;padding:16px;background:#0e1c30;border:1px solid #3c516e;border-radius:10px;font-size:.86rem}
+.assignment-list button{margin-top:10px}

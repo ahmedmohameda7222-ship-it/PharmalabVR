@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments } from './src/view.mjs';
+import { renderAssignments, renderLesson } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -12,6 +12,7 @@ const accountArea = document.getElementById('account');
 const institutionSelect = document.getElementById('institution');
 const institutionArea = document.getElementById('institution-area');
 const assignmentsArea = document.getElementById('assignments');
+const lessonArea = document.getElementById('lesson');
 const clearButton = document.getElementById('clear-session');
 let currentSession = null;
 let currentGeneration = 0;
@@ -29,6 +30,7 @@ function clearSession() {
   signInForm.hidden = false;
   password.value = '';
   renderAssignments(assignmentsArea, { status: 'no-student-context' });
+  renderLesson(lessonArea, { status: 'no-selection' });
   setText(authStatus, 'Session cleared from this tab. Sign in to continue.');
 }
 clearButton.addEventListener('click', clearSession);
@@ -73,6 +75,7 @@ signInForm.addEventListener('submit', async event => {
       ? 'Signed in. Select your active student institution.'
       : 'Signed in. No active university memberships were found.');
     renderAssignments(assignmentsArea, { status: 'no-student-context' });
+  renderLesson(lessonArea, { status: 'no-selection' });
   } catch {
     if (generation === currentGeneration) {
       currentSession = null;
@@ -82,20 +85,45 @@ signInForm.addEventListener('submit', async event => {
     signInForm.querySelector('button[type=submit]').disabled = false;
   }
 });
+async function openPublishedLesson(assignmentId) {
+  const generation = ++currentGeneration;
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  const selected = institutionSelect.selectedOptions[0];
+  if (!session || !tenant || selected?.dataset.role !== 'student') {
+    renderLesson(lessonArea, { status: 'no-selection' });
+    return;
+  }
+  renderLesson(lessonArea, { status: 'loading' });
+  try {
+    const lesson = await api.assignmentLesson(session, tenant, assignmentId);
+    if (generation === currentGeneration && currentSession === session &&
+        institutionSelect.value === tenant)
+      renderLesson(lessonArea, { status: 'available', lesson });
+  } catch {
+    if (generation === currentGeneration && currentSession === session)
+      renderLesson(lessonArea, { status: 'unavailable' });
+  }
+}
+
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
   const tenant = institutionSelect.value;
   const selected = institutionSelect.selectedOptions[0];
   if (!currentSession || !tenant || selected?.dataset.role !== 'student') {
     renderAssignments(assignmentsArea, { status: 'no-student-context' });
+  renderLesson(lessonArea, { status: 'no-selection' });
     return;
   }
+  renderLesson(lessonArea, { status: 'no-selection' });
   renderAssignments(assignmentsArea, { status: 'loading' });
+  const session = currentSession;
   try {
-    const assignments = await api.assignments(currentSession, tenant);
-    if (generation === currentGeneration && currentSession &&
+    const assignments = await api.assignments(session, tenant);
+    if (generation === currentGeneration && currentSession === session &&
         institutionSelect.value === tenant)
-      renderAssignments(assignmentsArea, { status: 'available', assignments });
+      renderAssignments(assignmentsArea, { status: 'available', assignments },
+        document, openPublishedLesson);
   } catch {
     if (generation === currentGeneration)
       renderAssignments(assignmentsArea, { status: 'unavailable' });
