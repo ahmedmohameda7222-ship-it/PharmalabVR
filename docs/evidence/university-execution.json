@@ -283,6 +283,20 @@
           "behavior": "Client POST /auth/v1/logout?scope=local with current bearer/public apikey, boolean on successful HTTP; UI immediately clears in-tab tokens irrespective of network. Revokes refresh token only when server accepts; existing JWT valid until expiry.",
           "remaining": "Actual Auth-server logout HTTP and full browser journey NOT_RUN; current app does not implement token refresh; real cross-tab/device behavior and SessionLoad Hold unaffected."
         }
+      },
+      "studentPublishedLesson": {
+        "status": "CodeFirst_ReadOnlyPortalLinked_HeadlessPass_UnityBrowserPilotNotRun",
+        "apiRedSha": "8a34ae693312c1fbd42109fa63bc3f1485136270",
+        "apiRedEvidence": "Native PR 39395524920 panel: four cases failed expected missing assignmentLesson method",
+        "apiGreenSha": "f457b8a19a9006ea4a18f9bb6986a66dcbf68ec6",
+        "apiGreenEvidence": "Native PR 39395714320 and disposable Supabase PR 39395714096 completed SUCCESS at exact source SHA.",
+        "viewRedSha": "99a95de3e4ed13b02b596f39dc1aa888c0551b4a",
+        "viewRedEvidence": "Native PR 39395786906 panel failed missing renderLesson named export",
+        "rendererSha": "66067f01396fae2327a583ff54d4f5a364118726",
+        "wiredPortalSha": "b8b4972973776e691f50472f35edfb0b0e0653b0",
+        "latestHeadlessEvidence": "At b8b4972 Native PR 39396357041 panel-routing SUCCESS: 18/18 portal source-linked Node tests and node --check browser source. Native Ubuntu, Native Windows, and disposable Supabase PR 39396357029 require separate full exact-SHA conclusion inspection.",
+        "behavior": "Student selects an RLS-visible published assignment, client refetches its exact tenant/section/course/pinned lesson-version metadata then GETs the published same-tenant same-course lesson_versions row; content_json shown as inert JSON text with declared content_sha256 string, never executed or interpreted as Native science. Denies foreign, stale/absent, duplicate or unpublished details and clears UI on request failure.",
+        "trustLimit": "PostgreSQL jsonb::text SHA256 claimed by server is NOT independently verified using JS JSON.stringify, and is not scientific attestation. Only fresh authenticated Auth+RLS can authorize server rows; no live service, real student or browser was exercised. Unity and hardware NOT_RUN."
       }
     }
   ],
