@@ -150,6 +150,19 @@ internal static class Program
             Check(verifier.Pending().Count == 1,
                 "Rejected evidence changed the durable outbox.");
 
+            // RED: matching caller-supplied hashes alone must not make random
+            // bytes a source-bound Native receipt/export. This currently
+            // stages without any branch, sequence or scientific identity check.
+            var unrelatedExport = System.Text.Encoding.UTF8.GetBytes(
+                "not-a-native-export");
+            var hashOnlyIntent = new UniversityUploadIntent(tenantA, "local-session-2",
+                "55555555-5555-4555-8555-555555555555", "native-branch-2", "22",
+                Hash(receiptBytes), Hash(packageBytes), Hash(unrelatedExport));
+            MustReject(() => verifier.EnqueueVerifiedEvidence(hashOnlyIntent,
+                receiptBytes, packageBytes, unrelatedExport),
+                "Hash-only outbox admission accepted bytes without a Native export identity.");
+
+
             // U04 staging HTTP is deliberately not a Native attestation or
             // a queue acknowledgement. Use a fake HTTP handler, no network.
             var mock = new RecordingHandler();
