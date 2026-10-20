@@ -8,6 +8,8 @@ const institutionB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const student = '11111111-1111-4111-8111-111111111111';
 const sectionA = '22222222-2222-4222-8222-222222222222';
 const assignmentA = '33333333-3333-4333-8333-333333333333';
+const courseA = '44444444-4444-4444-8444-444444444444';
+const lessonA = '55555555-5555-4555-8555-555555555555';
 const key = 'sb_publishable_test';
 const token = 'student.access.token';
 
@@ -44,9 +46,18 @@ function harness(options = {}) {
         { institution_id: institutionB, role: 'instructor', status: 'active' }
       ], options.membershipsStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/lesson_versions') {
+      return mockResponse(options.lessonRows ?? [{
+        id: lessonA, institution_id: institutionA, course_id: courseA,
+        version: 1, content_sha256: 'a'.repeat(64),
+        content_json: { title: 'Lesson instructions', steps: ['Use the Native lab'] },
+        published_at: '2026-10-20T02:00:00Z'
+      }], options.lessonStatus ?? 200);
+    }
     if (uri.pathname === '/rest/v1/assignments') {
       return mockResponse(options.assignments ?? [{
         id: assignmentA, institution_id: institutionA, section_id: sectionA,
+        course_id: courseA, lesson_version_id: lessonA,
         title: 'Foundation titration', published_at: '2026-10-20T02:00:00Z',
         due_at: null
       }], options.assignmentsStatus ?? 200);
@@ -148,4 +159,57 @@ test('disconnected or expired server logout fails closed without invented confir
   const before = calls.length;
   assert.equal(await api.signOut({ ...session, expiresAtMs: 1 }), false);
   assert.equal(calls.length, before);
+});
+
+test('assigned learner can open only pinned published lesson version under tenant RLS', async () => {
+  const { api, calls } = harness();
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  const lesson = await api.assignmentLesson(session, institutionA, assignmentA);
+  assert.equal(lesson.assignmentId, assignmentA);
+  assert.equal(lesson.id, lessonA);
+  assert.equal(lesson.courseId, courseA);
+  assert.equal(lesson.version, 1);
+  assert.deepEqual(lesson.content, { title: 'Lesson instructions', steps: ['Use the Native lab'] });
+  assert.equal(lesson.contentSha256, 'a'.repeat(64));
+  const read = calls.find(c => c.url.pathname === '/rest/v1/lesson_versions');
+  assert.ok(read);
+  assert.equal(read.url.searchParams.get('id'), 'eq.' + lessonA);
+  assert.equal(read.url.searchParams.get('institution_id'), 'eq.' + institutionA);
+  assert.equal(read.url.searchParams.get('course_id'), 'eq.' + courseA);
+  assert.equal(read.url.searchParams.get('published_at'), 'not.is.null');
+  assert.equal(read.init.headers.Authorization, 'Bearer ' + token);
+  assert.equal(read.init.method, 'GET');
+});
+
+test('unselected, foreign or unpublished assignment cannot trigger any lesson read', async () => {
+  const { api, calls } = harness();
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  await assert.rejects(() => api.assignmentLesson(session, institutionB, assignmentA), /student/i);
+  await assert.rejects(() => api.assignmentLesson(session, institutionA,
+    '99999999-9999-4999-8999-999999999999'), /published assignment/i);
+  assert.equal(calls.filter(c => c.url.pathname === '/rest/v1/lesson_versions').length, 0);
+});
+
+test('foreign lesson row, wrong pinned course, and missing publication are all refused', async () => {
+  const cases = [
+    { id: lessonA, institution_id: institutionB, course_id: courseA, version: 1,
+      content_sha256: 'a'.repeat(64), content_json: {}, published_at: '2026-10-20T02:00:00Z' },
+    { id: lessonA, institution_id: institutionA, course_id: institutionB, version: 1,
+      content_sha256: 'a'.repeat(64), content_json: {}, published_at: '2026-10-20T02:00:00Z' },
+    { id: lessonA, institution_id: institutionA, course_id: courseA, version: 1,
+      content_sha256: 'a'.repeat(64), content_json: {}, published_at: null }
+  ];
+  for (const row of cases) {
+    const { api } = harness({ lessonRows: [row] });
+    const session = await api.signIn('learner@example.edu', 'private-password');
+    await assert.rejects(() => api.assignmentLesson(session, institutionA, assignmentA),
+      /Invalid|unavailable/i);
+  }
+});
+
+test('RLS denied lesson details fail closed and never fabricate coursework', async () => {
+  const { api } = harness({ lessonStatus: 403 });
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  await assert.rejects(() => api.assignmentLesson(session, institutionA, assignmentA),
+    /unavailable/i);
 });
