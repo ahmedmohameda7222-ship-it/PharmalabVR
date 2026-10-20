@@ -143,6 +143,51 @@ internal static class Program
                 inboxHandler.Url.Contains("published_at=not.is.null"),
                 "Student inbox request omitted bearer/public key or tenant/publication filter.");
 
+            // U05: an empty authenticated 200 is not a failed fetch.
+            // The portal must not display "No assignments" for denied,
+            // corrupted, expired-credential or disconnected requests.
+            inboxHandler.Response = "[]";
+            var knownEmpty = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now).GetAwaiter().GetResult();
+            Check(knownEmpty.Status == UniversityAssignmentInboxStatus.Available &&
+                knownEmpty.Assignments.Count == 0,
+                "A successful empty inbox was not distinguishable from offline failure.");
+            inboxHandler.Status = HttpStatusCode.Forbidden;
+            var denied = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now).GetAwaiter().GetResult();
+            Check(denied.Status == UniversityAssignmentInboxStatus.Unavailable &&
+                denied.Assignments.Count == 0,
+                "HTTP forbidden was presented as an authoritative empty assignment list.");
+            inboxHandler.Status = HttpStatusCode.OK;
+            inboxHandler.ThrowTimeout = true;
+            var timedOut = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now).GetAwaiter().GetResult();
+            Check(timedOut.Status == UniversityAssignmentInboxStatus.Unavailable &&
+                timedOut.Assignments.Count == 0,
+                "Timeout was presented as a confirmed empty assignment list.");
+            inboxHandler.ThrowTimeout = false;
+            inboxHandler.Response = "[{}]";
+            var invalidBody = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now).GetAwaiter().GetResult();
+            Check(invalidBody.Status == UniversityAssignmentInboxStatus.Unavailable &&
+                invalidBody.Assignments.Count == 0,
+                "Malformed server response was presented as confirmed empty data.");
+            var beforeExpiredLookup = inboxHandler.Requests;
+            var noContext = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now.AddMinutes(6)).GetAwaiter().GetResult();
+            Check(noContext.Status == UniversityAssignmentInboxStatus.NoStudentContext &&
+                noContext.Assignments.Count == 0 &&
+                inboxHandler.Requests == beforeExpiredLookup,
+                "Expired student snapshot triggered HTTP or was presented as available.");
+            Check(auth.ReplaceSnapshot(User, now, now.AddMinutes(4),
+                ActiveTenants(), now) && auth.TrySelectInstitution(B, now),
+                "U05 status regression could not restore tenant snapshot.");
+            inboxHandler.Response = "[" + studentAssignment + "]";
             inboxHandler.Response = "[" + studentAssignment.Replace(B, A) + "]";
             Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
                 endpoint, "sb_publishable_test", "student-token", auth, now)
