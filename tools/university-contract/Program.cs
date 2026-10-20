@@ -156,8 +156,8 @@ internal static class Program
                 "Duplicate academic assignment IDs were admitted.");
 
             inboxHandler.Response = "[" + studentAssignment.Replace(
-                "\\"published_at\\":\\"2026-10-17T10:00:00Z\\"",
-                "\\"published_at\\":null") + "]";
+                "\"published_at\":\"2026-10-17T10:00:00Z\"",
+                "\"published_at\":null") + "]";
             Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
                 endpoint, "sb_publishable_test", "student-token", auth, now)
                 .GetAwaiter().GetResult().Count == 0,
