@@ -566,16 +566,16 @@ internal static class Program
                 "Native Pause update left an apparently live Lab screen.");
             // If a Hold covered a Lab before Pause was presented, native
             // recovery must restore Pause rather than stale Lab.
-            var interruptedNative = new CoreDriver();
-            var interruptedRouter = new ScreenRouter();
-            interruptedRouter.Configure(interruptedNative);
-            Check(interruptedNative.PauseSession(), "Interrupted Native Pause fixture failed.");
-            interruptedNative.SetHold(true);
-            Check(interruptedRouter.Current.ScreenId == ScreenId.Hold,
+            var heldPauseDriver = new CoreDriver();
+            var heldPauseRouter = new ScreenRouter();
+            heldPauseRouter.Configure(heldPauseDriver);
+            Check(heldPauseDriver.PauseSession(), "Interrupted Native Pause fixture failed.");
+            heldPauseDriver.SetHold(true);
+            Check(heldPauseRouter.Current.ScreenId == ScreenId.Hold,
                 "Native Hold must take precedence over an unrendered Pause.");
-            interruptedNative.SetHold(false);
-            Check(interruptedRouter.Current.ScreenId == ScreenId.Pause &&
-                  interruptedNative.IsNativePaused,
+            heldPauseDriver.SetHold(false);
+            Check(heldPauseRouter.Current.ScreenId == ScreenId.Pause &&
+                  heldPauseDriver.IsNativePaused,
                 "Releasing a Native Hold resurrected live Lab over paused authority.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
