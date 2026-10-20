@@ -191,7 +191,9 @@ namespace PharmaLabVR.UI
         {
             if (!ReferenceEquals(driver, core))
             {
-                var hadAuthority = driver != null;
+                // Unity's destroyed MonoBehaviour compares equal to null
+                // while its managed reference still belongs to an old session.
+                var hadAuthority = !ReferenceEquals(driver, null);
                 Detach();
                 driver = core;
                 if (hadAuthority)
