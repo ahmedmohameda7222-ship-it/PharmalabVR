@@ -569,6 +569,56 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // Authored for final owner's Unity campaign: this exercises real
+        // Lab scene CoreDriver and panel routing, not the .NET test stub.
+        [UnityTest]
+        public IEnumerator P06_02_DirectRouterShowNeverBypassesRealNativePause()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                router.Show(ScreenId.Lab); // Intentionally bypass controller.
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(driver.IsNativePaused, Is.True,
+                    "Presentation cannot invent a Native Continue receipt.");
+
+                router.Show(ScreenId.Settings);
+                router.Show(ScreenId.Lab);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+                Assert.That(panels.Request(PanelAction.Back), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+
+                router.Show(ScreenId.Settings);
+                Assert.That(driver.PauseSession(), Is.True);
+                Assert.That(router.ReturnFromSettings(), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "A Native pause arriving during Settings must not revive Lab.");
+                Assert.That(driver.IsNativePaused, Is.True);
+            }
+            finally
+            {
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P06_02_SettingsBackRestoresNativePausedScreenWithoutContinuing()
         {
