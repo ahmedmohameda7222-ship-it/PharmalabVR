@@ -235,6 +235,18 @@ namespace PharmaLabVR.UI
         {
             if (driver != null && driver.IsTimeHeld && id != ScreenId.Hold &&
                 id != ScreenId.Review && id != ScreenId.Settings) return;
+            // Panel navigation is public. Never expose live Lab actions when
+            // the authoritative Native session is still paused; only the
+            // shared controller's successful Native Continue can clear pause.
+            if (driver != null && driver.IsNativePaused && id == ScreenId.Lab)
+            {
+                if (screen == ScreenId.Lab)
+                {
+                    screen = ScreenId.Pause;
+                    Refresh();
+                }
+                return;
+            }
             if (!string.IsNullOrEmpty(entityId))
             {
                 if (driver?.CurrentLabView == null ||
@@ -262,6 +274,10 @@ namespace PharmaLabVR.UI
                 if (destination == ScreenId.Settings || destination == ScreenId.Hold)
                     destination = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
             }
+            // A late Native Pause while Settings is visible must not
+            // restore a live Lab solely from previously captured UI history.
+            if (destination == ScreenId.Lab && driver != null && driver.IsNativePaused)
+                destination = ScreenId.Pause;
             Show(destination);
             return screen == destination;
         }
