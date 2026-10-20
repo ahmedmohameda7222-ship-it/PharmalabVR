@@ -44,6 +44,31 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void U04_StalePredictableTemporaryFileMustRemainUntouched()
+        {
+            var root = Path.Combine(Path.GetTempPath(), "plv-u04-stale-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                var outboxPath = Path.Combine(root, "pending.plvoutbox");
+                var oldTemporary = outboxPath + ".tmp";
+                File.WriteAllText(oldTemporary, "PRESERVE_EXISTING_FILE");
+                var intent = new UniversityUploadIntent(
+                    "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", "student-session",
+                    "11111111-1111-4111-8111-111111111111", "native-branch",
+                    "1", new string('a', 64), new string('b', 64), new string('c', 64));
+                var outbox = new UniversitySyncOutbox(outboxPath);
+                Assert.That(outbox.Enqueue(intent), Is.True);
+                Assert.That(File.ReadAllText(oldTemporary), Is.EqualTo("PRESERVE_EXISTING_FILE"),
+                    "Outbox stage reused a predictable pre-existing temporary leaf.");
+                Assert.That(outbox.Pending().Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                if (Directory.Exists(root)) Directory.Delete(root, true);
+            }
+        }
+        [Test]
         public void U04_SecondProducerMustNotBypassExclusiveFileLease()
         {
             var root = Path.Combine(Path.GetTempPath(), "plv-u04-lease-" + Guid.NewGuid().ToString("N"));
