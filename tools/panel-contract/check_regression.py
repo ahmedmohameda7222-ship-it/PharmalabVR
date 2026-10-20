@@ -16,7 +16,10 @@ MUTATIONS = [
         "if (driver.IsNativePaused && !driver.ContinueSession()) return false;",
         "if (router.Current.ScreenId == ScreenId.Pause && "
         "driver.IsNativePaused && !driver.ContinueSession()) return false;",
-        "Review return failed to resume the paused authority",
+        # The new ScreenRouter pause admission fails the bypass at the
+        # Request(Lab) result before the legacy post-navigation assertion.
+        # It still proves the mutated controller cannot fake Native Continue.
+        "Recorded Review return refused",
         "paused Review return"
     ),
     (
