@@ -6,10 +6,12 @@ on:
     paths:
       - "supabase/**"
       - ".github/workflows/university-postgres.yml"
+      - "scripts/ci/stop-disposable-supabase.sh"
   pull_request:
     paths:
       - "supabase/**"
       - ".github/workflows/university-postgres.yml"
+      - "scripts/ci/stop-disposable-supabase.sh"
 
 jobs:
   disposable-supabase:
@@ -60,6 +62,6 @@ jobs:
             tail -n 60 "$RUNNER_TEMP/u04-edge.log"
             exit 1
           fi
-      - name: Destroy isolated stack without backups
+      - name: Destroy and verify isolated stack without backups
         if: always()
-        run: supabase stop --no-backup
+        run: bash scripts/ci/stop-disposable-supabase.sh
