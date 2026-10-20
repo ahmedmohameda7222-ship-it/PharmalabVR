@@ -172,6 +172,73 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return Object.freeze(result);
   }
 
+  // Read-only detail of an assigned and published lesson. First confirm
+  // assignment visibility through the student's fresh tenant-scoped RLS list,
+  // then read the persisted assignment's pinned lesson_version_id and
+  // course_id before requesting the immutable published lesson. These
+  // client checks never replace Auth, section-enrollment or lesson RLS.
+  async function assignmentLesson(session, institutionId, assignmentId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(institutionId) || !canonicalUuid(assignmentId))
+      throw new Error('Published assignment identity is invalid');
+
+    const list = await assignments(current, institutionId);
+    const assigned = list.find(row => row.id === assignmentId);
+    if (!assigned) throw new Error('Published assignment is not accessible');
+
+    const detailUrl = new URL('/rest/v1/assignments', project);
+    detailUrl.searchParams.set('select',
+      'id,institution_id,section_id,course_id,lesson_version_id,published_at');
+    detailUrl.searchParams.set('id', 'eq.' + assignmentId);
+    detailUrl.searchParams.set('institution_id', 'eq.' + institutionId);
+    detailUrl.searchParams.set('published_at', 'not.is.null');
+    detailUrl.searchParams.set('limit', '2');
+    const details = await request(detailUrl.pathname + detailUrl.search, {},
+      current.accessToken);
+    if (!Array.isArray(details) || details.length !== 1 ||
+        details[0]?.id !== assignmentId ||
+        details[0]?.institution_id !== institutionId ||
+        details[0]?.section_id !== assigned.sectionId ||
+        !canonicalUuid(details[0]?.course_id) ||
+        !canonicalUuid(details[0]?.lesson_version_id))
+      throw invalid('published assignment detail');
+    timestamp(details[0].published_at);
+
+    const lessonId = details[0].lesson_version_id;
+    const courseId = details[0].course_id;
+    const lessonUrl = new URL('/rest/v1/lesson_versions', project);
+    lessonUrl.searchParams.set('select',
+      'id,institution_id,course_id,version,content_sha256,content_json,published_at');
+    lessonUrl.searchParams.set('id', 'eq.' + lessonId);
+    lessonUrl.searchParams.set('institution_id', 'eq.' + institutionId);
+    lessonUrl.searchParams.set('course_id', 'eq.' + courseId);
+    lessonUrl.searchParams.set('published_at', 'not.is.null');
+    lessonUrl.searchParams.set('limit', '2');
+    const rows = await request(lessonUrl.pathname + lessonUrl.search, {},
+      current.accessToken);
+    if (!Array.isArray(rows) || rows.length !== 1) throw invalid('lesson visibility');
+    const row = rows[0];
+    if (row?.id !== lessonId ||
+        row?.institution_id !== institutionId ||
+        row?.course_id !== courseId ||
+        !Number.isSafeInteger(row.version) || row.version < 1 || row.version > 10000 ||
+        typeof row.content_sha256 !== 'string' ||
+        !/^[0-9a-f]{64}$/.test(row.content_sha256) ||
+        row.content_json === null || Array.isArray(row.content_json) ||
+        typeof row.content_json !== 'object')
+      throw invalid('lesson provenance and content');
+    timestamp(row.published_at);
+
+    // The server's content_sha256 is the PostgreSQL jsonb::text digest.
+    // A JS JSON.stringify digest is NOT the same canonicalization and is
+    // deliberately not claimed as locally verified scientific provenance.
+    return Object.freeze({
+      assignmentId, id: lessonId, institutionId, courseId,
+      version: row.version, contentSha256: row.content_sha256,
+      publishedAt: row.published_at, content: row.content_json
+    });
+  }
+
   // Revoke only the current Auth session's refresh token. An access
   // JWT may still be usable until expiry, even after successful logout.
   async function signOut(session) {
@@ -191,5 +258,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, signOut });
+  return Object.freeze({ signIn, memberships, assignments, assignmentLesson, signOut });
 }
