@@ -162,7 +162,7 @@
         "Real authorized student HTTP POST, Storage write and retry/reconciliation tests",
         "Trusted Native receipt verification, academic evidence promotion and signed server ack",
         "Concurrent request/fault-injection not run; only sequential local HTTP retry verified",
-        "Real authenticated Unity/student RPC status reconciliation (source client not integrated)"
+        "Live verified Auth student status RPC over HTTP and integration into final Unity UI (NOT_RUN)"
       ],
       "bytesIntegritySourceSha": "6e11e383481f6978d0670bc4766270e4c11c66c8",
       "bytesIntegrityClaim": "Added SHA256 verification of supplied receipt/package/export bytes before local staging. Native-origin binding and cloud sync remain NOT_RUN.",
@@ -228,7 +228,12 @@
       "stagedStatusSourceSha": "6d46e39acce2fe708b9053751a2ab3ef9c8f1147",
       "stagedStatusRemoteVersion": "20261019051013",
       "stagedStatusEvidence": "RED isolated Postgres 39202668912 missing function; GREEN 39202905693, 18/18 migrations, 17 public RLS tables, 64 DO blocks and rollback; production denied-role smoke PASS, zero production Auth/staging/artifacts/audit rows; no actual production HTTP status call",
-      "stagedStatusTrust": "Read-only response with staged_unverified, artifactId, sha256, sizeBytes only; authenticated verified active owning student and pending session; no object key/signed URL, Native attestation or outbox acknowledgement"
+      "stagedStatusTrust": "Read-only response with staged_unverified, artifactId, sha256, sizeBytes only; authenticated verified active owning student and pending session; no object key/signed URL, Native attestation or outbox acknowledgement",
+      "stagedStatusClientSource": "unity/Assets/PharmaLabVR/Runtime/University/UniversityStagedEvidenceStatus.cs",
+      "stagedStatusClientSha": "1264c259e66ab11c9d7ada413a96902dd4cccdf6",
+      "stagedStatusClientTestSha": "8d324078c7355f03a13c8eed8f1c774ea61b6841",
+      "stagedStatusClientEvidence": "TDD RED bf485a19: missing UniversityStagedEvidenceStatus.cs caused panel failure on push 39203647403 and PR 39203652302. GREEN 1264c259: push 39351521766 and PR 39351525515 panel-routing SUCCESS, 75 headless outbox assertions; Native Ubuntu/Windows also succeeded on functional SHA. Unity NUnit test source added at 8d324078; actual Unity Editor test execution remains NOT_RUN.",
+      "stagedStatusClientTrust": "Status response accepted as StagedUnverified only for exact artifact ID, SHA256 of original bytes and size, over recognized HTTPS Supabase RPC under current student JWT/public apikey. Never marks Native outbox synced, never creates academic evidence."
     },
     {
       "id": "U05",
