@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using PharmaLabVR.University;
+using PharmaLabVR.Core;
 
 internal static class Program
 {
@@ -203,6 +204,40 @@ internal static class Program
                 receiptBytes, packageBytes, unrelatedExport),
                 "Hash-only outbox admission accepted bytes without a Native export identity.");
 
+
+
+            // Source-bound producer: obtain the snapshot directly from an
+            // existing Native session, derive all three hashes rather than
+            // trusting a UI-authored intent, and leave the offline outbox Pending.
+            var captured = new UniversitySyncOutbox(
+                Path.Combine(directory, "native-producer.plvoutbox"));
+            var nativeSource = new CoreSession("native-branch-2",
+                System.Text.Encoding.UTF8.GetString(evidenceBytes));
+            const string producerEvent = "99999999-9999-4999-8999-999999999999";
+            Check(UniversityNativeReceiptProducer.CaptureCompletedCommand(
+                captured, nativeSource, tenantA, "local-session-2", producerEvent,
+                System.Text.Encoding.UTF8.GetString(receiptBytes), packageBytes),
+                "Real Native-snapshot capture failed to durably queue its receipt.");
+            Check(nativeSource.ExportCount == 1 && captured.Pending().Count == 1,
+                "Native export must be captured once and retained Pending.");
+            Check(captured.Pending()[0].NativeBranchId == nativeSource.BranchId &&
+                  captured.Pending()[0].NativeEventSequence == "21" &&
+                  captured.Pending()[0].ScientificPackageSha256 == Hash(packageBytes) &&
+                  captured.Pending()[0].ArtifactSha256 == Hash(evidenceBytes),
+                "Native producer did not bind branch, sequence, model and export bytes.");
+            Check(!UniversityNativeReceiptProducer.CaptureCompletedCommand(
+                captured, nativeSource, tenantA, "local-session-2", producerEvent,
+                System.Text.Encoding.UTF8.GetString(receiptBytes), packageBytes),
+                "Identical Native capture should be an immutable local retry.");
+            var foreignSource = new CoreSession("another-native-branch",
+                System.Text.Encoding.UTF8.GetString(evidenceBytes));
+            MustReject(() => UniversityNativeReceiptProducer.CaptureCompletedCommand(
+                captured, foreignSource, tenantA, "local-session-2",
+                "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01",
+                System.Text.Encoding.UTF8.GetString(receiptBytes), packageBytes),
+                "Producer staged a receipt from a different Native session branch.");
+            Check(captured.Pending().Count == 1,
+                "Rejected producer identity changed confirmed offline intents.");
 
             // U04 staging HTTP is deliberately not a Native attestation or
             // a queue acknowledgement. Use a fake HTTP handler, no network.
