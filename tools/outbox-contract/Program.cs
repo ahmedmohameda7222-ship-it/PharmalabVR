@@ -42,6 +42,19 @@ internal static class Program
         var path = Path.Combine(directory, "pending.plvoutbox");
         try
         {
+            // U04: a predictable .tmp leaf is attacker-controllable on disk.
+            // It must never truncate an unrelated existing science file.
+            var protectedFile = Path.Combine(directory, "protected-native-science.txt");
+            var aliasedOutbox = Path.Combine(directory, "aliased.plvoutbox");
+            File.WriteAllText(protectedFile, "ORIGINAL_SCIENCE");
+            File.CreateSymbolicLink(aliasedOutbox + ".tmp", protectedFile);
+            try
+            {
+                new UniversitySyncOutbox(aliasedOutbox, 8192).Enqueue(Sample(tenantA));
+            }
+            catch (InvalidDataException) { /* Denying a hostile stage is safe. */ }
+            Check(File.ReadAllText(protectedFile) == "ORIGINAL_SCIENCE",
+                "Predictable outbox .tmp symlink truncated an unrelated science file.");
             var store = new UniversitySyncOutbox(path, 8192);
             Check(store.Pending().Count == 0, "Fresh offline outbox must be empty.");
             var a = Sample(tenantA);
