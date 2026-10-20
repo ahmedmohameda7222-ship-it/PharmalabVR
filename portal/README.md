@@ -6,14 +6,14 @@ dependencies or build service are required.
 
 ## Configuration and local static hosting
 
-Edit \`portal/config.mjs\` with the owner's HTTPS \`https://PROJECT.supabase.co/\`
-URL and **public** \`sb_publishable_...\` key. Never place a service role key,
+Edit `portal/config.mjs` with the owner's HTTPS `https://PROJECT.supabase.co/`
+URL and **public** `sb_publishable_...` key. Never place a service role key,
 Supabase secret, JWT, password, or Auth refresh token in config. Config ships
 **empty** by design; the app refuses requests until the public connection is set.
-Serve the \`portal/\` directory over HTTPS (or localhost for testing). Opening
-\`file://\` is not a supported deployment.
+Serve the `portal/` directory over HTTPS (or localhost for testing). Opening
+`file://` is not a supported deployment.
 
-This app uses Supabase GoTrue password sign-in and GET \`/auth/v1/user\` for
+This app uses Supabase GoTrue password sign-in and GET `/auth/v1/user` for
 verified identity, then reads the existing RLS-protected membership/assignment
 tables. It supports student viewing only, not enrollment, invitations,
 instructor/admin workflows, uploads, grading or publishing. Auth token is
@@ -23,7 +23,7 @@ revocation/refresh. Expired sessions require signing in again.
 
 ## Verification and limits
 
-\`node --test portal/test/*.test.mjs\` checks the source-linked Auth/tenant
+`node --test portal/test/*.test.mjs` checks the source-linked Auth/tenant
 contract and safe view output with synthetic HTTP and DOM fixtures only.
 It is also invoked from the existing GitHub Native headless workflow.
 These are **not** browser, production Auth, Unity, RLS or student-pilot tests.
