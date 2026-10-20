@@ -37,6 +37,11 @@ function harness(options = {}) {
       });
     }
     if (uri.pathname === '/auth/v1/logout') {
+      if (options.logoutHangs)
+        return new Promise((_, reject) => {
+          init.signal?.addEventListener('abort', () =>
+            reject(new Error('Auth logout canceled')), { once: true });
+        });
       if (options.logoutThrows) throw new Error('Simulated offline logout');
       return new Response(null, { status: options.logoutStatus ?? 204 });
     }
@@ -66,7 +71,8 @@ function harness(options = {}) {
   };
   return { calls, api: createUniversityPortalApi({
     projectUrl: base, publishableKey: key, transport,
-    clock: () => Date.parse('2026-10-20T02:30:00Z')
+    clock: () => Date.parse('2026-10-20T02:30:00Z'),
+    requestTimeoutMs: options.requestTimeoutMs ?? 12000
   }) };
 }
 
@@ -212,4 +218,27 @@ test('RLS denied lesson details fail closed and never fabricate coursework', asy
   const session = await api.signIn('learner@example.edu', 'private-password');
   await assert.rejects(() => api.assignmentLesson(session, institutionA, assignmentA),
     /unavailable/i);
+});
+
+test('hung Auth request aborts under bounded request time, never mints signed-in state', async () => {
+  let aborted = false;
+  const api = createUniversityPortalApi({
+    projectUrl: base, publishableKey: key,
+    requestTimeoutMs: 25,
+    transport: (_url, init) => new Promise((_, reject) => {
+      init.signal?.addEventListener('abort', () => {
+        aborted = true;
+        reject(new Error('Auth connection canceled'));
+      }, { once: true });
+    })
+  });
+  await assert.rejects(() => api.signIn('learner@example.edu', 'private-password'),
+    /unavailable/i);
+  assert.equal(aborted, true);
+});
+
+test('hung current-session logout is bounded and never claims server revocation', async () => {
+  const { api } = harness({ logoutHangs: true, requestTimeoutMs: 25 });
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  assert.equal(await api.signOut(session), false);
 });
