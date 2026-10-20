@@ -604,6 +604,15 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.IsNativePaused, Is.False);
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
 
+                // Pause independently of PanelAction.Pause, then allow a
+                // Native-view refresh to reconcile screen before any live UI.
+                Assert.That(driver.PauseSession(), Is.True);
+                router.Configure(driver);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+
                 router.Show(ScreenId.Settings);
                 Assert.That(driver.PauseSession(), Is.True);
                 Assert.That(router.ReturnFromSettings(), Is.True);
