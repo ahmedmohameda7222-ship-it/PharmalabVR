@@ -552,6 +552,31 @@ internal static class Program
                   guardedRouter.Current.ScreenId == ScreenId.Pause &&
                   guardedNative.IsNativePaused,
                 "Settings Back revived live Lab after a Native pause during Settings.");
+            // P06.02: Native may pause from focus/system or a separate
+            // session adapter, without a PanelAction.Pause button. A real
+            // LabViewChanged re-render must not keep live input actions.
+            var asynchronousDriver = new CoreDriver();
+            var asynchronousRouter = new ScreenRouter();
+            asynchronousRouter.Configure(asynchronousDriver);
+            Check(asynchronousDriver.PauseSession(),
+                "Out-of-band Native Pause fixture failed.");
+            asynchronousDriver.UpdateView();
+            Check(asynchronousRouter.Current.ScreenId == ScreenId.Pause &&
+                  asynchronousDriver.IsNativePaused,
+                "Native Pause update left an apparently live Lab screen.");
+            // If a Hold covered a Lab before Pause was presented, native
+            // recovery must restore Pause rather than stale Lab.
+            var interruptedNative = new CoreDriver();
+            var interruptedRouter = new ScreenRouter();
+            interruptedRouter.Configure(interruptedNative);
+            Check(interruptedNative.PauseSession(), "Interrupted Native Pause fixture failed.");
+            interruptedNative.SetHold(true);
+            Check(interruptedRouter.Current.ScreenId == ScreenId.Hold,
+                "Native Hold must take precedence over an unrendered Pause.");
+            interruptedNative.SetHold(false);
+            Check(interruptedRouter.Current.ScreenId == ScreenId.Pause &&
+                  interruptedNative.IsNativePaused,
+                "Releasing a Native Hold resurrected live Lab over paused authority.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
