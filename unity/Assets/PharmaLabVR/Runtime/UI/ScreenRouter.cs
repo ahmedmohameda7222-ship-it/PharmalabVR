@@ -368,6 +368,19 @@ namespace PharmaLabVR.UI
 
         private void Refresh()
         {
+            // A focus/system adapter can pause or hold the Native authority
+            // without a UI PanelAction. LabViewChanged and reactivation must
+            // reconcile this truth before publishing live Lab actions.
+            if (driver != null && screen == ScreenId.Lab)
+            {
+                if (driver.IsTimeHeld)
+                {
+                    beforeHold = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                    screen = ScreenId.Hold;
+                }
+                else if (driver.IsNativePaused)
+                    screen = ScreenId.Pause;
+            }
             var view = driver?.CurrentLabView;
             var observation = view?.Observations.FirstOrDefault(item =>
                 item.VesselId == selectedEntityId && item.ObservableId == "pH");
