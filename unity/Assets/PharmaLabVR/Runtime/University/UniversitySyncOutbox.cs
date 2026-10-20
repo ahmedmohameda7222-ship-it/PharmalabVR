@@ -109,14 +109,17 @@ namespace PharmaLabVR.University
             if (bytes.Length > maxBytes)
                 throw new InvalidDataException("University outbox capacity exceeded.");
 
-            var temporary = path + ".tmp";
+            // A unique, create-only stage cannot follow an existing predictable
+            // .tmp symlink or overwrite a stale crash artifact. The OS must
+            // create a fresh leaf in the same directory before atomic replace.
+            var temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
                 var directory = Path.GetDirectoryName(path);
                 if (string.IsNullOrEmpty(directory))
                     throw new InvalidDataException("University outbox has no parent directory.");
                 Directory.CreateDirectory(directory);
-                using (var file = new FileStream(temporary, FileMode.Create,
+                using (var file = new FileStream(temporary, FileMode.CreateNew,
                     FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
                 {
                     file.Write(bytes, 0, bytes.Length);
