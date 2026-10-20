@@ -35,46 +35,46 @@ namespace PharmaLabVR.University
         [DataContract]
         private sealed class NativeExport
         {
-            [DataMember(Name = "schemaVersion")] public int SchemaVersion;
-            [DataMember(Name = "branchId")] public string BranchId;
-            [DataMember(Name = "nextCommandSequence")] public string NextCommandSequence;
-            [DataMember(Name = "scientificPackage")] public NativePackage Package;
-            [DataMember(Name = "commandReceipts")] public NativeReceipt[] Receipts;
+            [DataMember(Name = "schemaVersion")] public int SchemaVersion { get; set; }
+            [DataMember(Name = "branchId")] public string BranchId { get; set; }
+            [DataMember(Name = "nextCommandSequence")] public string NextCommandSequence { get; set; }
+            [DataMember(Name = "scientificPackage")] public NativePackage Package { get; set; }
+            [DataMember(Name = "commandReceipts")] public NativeReceipt[] Receipts { get; set; }
         }
 
         [DataContract]
         private sealed class NativePackage
         {
-            [DataMember(Name = "identity")] public string Identity;
+            [DataMember(Name = "identity")] public string Identity { get; set; }
         }
 
         [DataContract]
         private sealed class NativeReceipt
         {
-            [DataMember(Name = "commandSequence")] public string CommandSequence;
-            [DataMember(Name = "canonicalCommand")] public NativeCommand Command;
-            [DataMember(Name = "terminalOutcome")] public NativeOutcome Outcome;
+            [DataMember(Name = "commandSequence")] public string CommandSequence { get; set; }
+            [DataMember(Name = "canonicalCommand")] public NativeCommand Command { get; set; }
+            [DataMember(Name = "terminalOutcome")] public NativeOutcome Outcome { get; set; }
         }
 
         [DataContract]
         private sealed class NativeCommand
         {
-            [DataMember(Name = "schemaVersion")] public int SchemaVersion;
-            [DataMember(Name = "branchId")] public string BranchId;
-            [DataMember(Name = "commandSequence")] public string CommandSequence;
-            [DataMember(Name = "type")] public string Type;
+            [DataMember(Name = "schemaVersion")] public int SchemaVersion { get; set; }
+            [DataMember(Name = "branchId")] public string BranchId { get; set; }
+            [DataMember(Name = "commandSequence")] public string CommandSequence { get; set; }
+            [DataMember(Name = "type")] public string Type { get; set; }
         }
 
         [DataContract]
         private sealed class NativeOutcome
         {
-            [DataMember(Name = "schemaVersion")] public int SchemaVersion;
-            [DataMember(Name = "branchId")] public string BranchId;
-            [DataMember(Name = "commandSequence")] public string CommandSequence;
-            [DataMember(Name = "type")] public string Type;
-            [DataMember(Name = "accepted")] public bool Accepted;
-            [DataMember(Name = "code")] public string Code;
-            [DataMember(Name = "message")] public string Message;
+            [DataMember(Name = "schemaVersion")] public int SchemaVersion { get; set; }
+            [DataMember(Name = "branchId")] public string BranchId { get; set; }
+            [DataMember(Name = "commandSequence")] public string CommandSequence { get; set; }
+            [DataMember(Name = "type")] public string Type { get; set; }
+            [DataMember(Name = "accepted")] public bool Accepted { get; set; }
+            [DataMember(Name = "code")] public string Code { get; set; }
+            [DataMember(Name = "message")] public string Message { get; set; }
         }
 
         private static T ReadNativeJson<T>(byte[] bytes)
