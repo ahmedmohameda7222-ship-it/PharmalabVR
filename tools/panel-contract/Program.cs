@@ -522,6 +522,36 @@ internal static class Program
             newDriver.SetHold(false);
             Check(replacementRouter.Current.ScreenId == ScreenId.Pause,
                 "Detached Native drivers changed fresh Pause screen.");
+            // P06.02: ScreenRouter.Show is a public presentation entrypoint.
+            // It must not bypass the Native Pause/Continue authority protocol
+            // when callers (including scene presenters) route directly.
+            var guardedNative = new CoreDriver();
+            var guardedRouter = new ScreenRouter();
+            guardedRouter.Configure(guardedNative);
+            Check(guardedNative.PauseSession(), "Native Pause fixture refused.");
+            guardedRouter.Show(ScreenId.Pause);
+            guardedRouter.Show(ScreenId.Lab);
+            Check(guardedRouter.Current.ScreenId == ScreenId.Pause &&
+                  guardedNative.IsNativePaused && guardedNative.ContinueCalls == 0,
+                "Direct router Show(Lab) displayed live tools without Native Continue.");
+            guardedRouter.Show(ScreenId.Settings);
+            guardedRouter.Show(ScreenId.Lab);
+            Check(guardedRouter.Current.ScreenId == ScreenId.Settings &&
+                  guardedNative.IsNativePaused,
+                "Settings direct Lab shortcut bypassed paused Native authority.");
+            Check(guardedRouter.ReturnFromSettings() &&
+                  guardedRouter.Current.ScreenId == ScreenId.Pause,
+                "Settings Back did not preserve Native Pause.");
+            Check(guardedNative.ContinueSession(), "Native Continue fixture refused.");
+            guardedRouter.Show(ScreenId.Lab);
+            Check(guardedRouter.Current.ScreenId == ScreenId.Lab,
+                "A genuinely resumed Native session remained falsely paused.");
+            guardedRouter.Show(ScreenId.Settings);
+            Check(guardedNative.PauseSession(), "Late Native pause fixture refused.");
+            Check(guardedRouter.ReturnFromSettings() &&
+                  guardedRouter.Current.ScreenId == ScreenId.Pause &&
+                  guardedNative.IsNativePaused,
+                "Settings Back revived live Lab after a Native pause during Settings.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
