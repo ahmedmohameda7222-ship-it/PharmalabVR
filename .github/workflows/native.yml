@@ -22,6 +22,8 @@ jobs:
         run: python tools/panel-contract/check_regression.py
       - name: Exercise source-linked U02 membership selector security contract (headless; not Supabase)
         run: dotnet run --project tools/university-contract/UniversityContract.csproj --configuration Release
+      - name: Exercise U05 English-only portal Auth/RLS client contract (Node; no cloud)
+        run: node --test portal/test/*.test.mjs
       - name: Exercise source-linked U04 durable offline outbox (headless; no cloud)
         run: dotnet run --project tools/outbox-contract/OutboxContract.csproj --configuration Release
       - name: Exercise pure U04 tenant evidence-status access rules (Node; no cloud)
