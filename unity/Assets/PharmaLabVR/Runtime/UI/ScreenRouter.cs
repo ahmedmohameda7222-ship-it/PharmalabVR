@@ -189,8 +189,42 @@ namespace PharmaLabVR.UI
 
         public void Configure(CoreDriver core)
         {
-            if (driver != core) Detach();
-            driver = core;
+            if (!ReferenceEquals(driver, core))
+            {
+                var hadAuthority = driver != null;
+                Detach();
+                driver = core;
+                if (hadAuthority)
+                {
+                    // A replaced CoreDriver is a new authority even if its
+                    // branch ID and event sequence happen to be identical.
+                    // Never inherit the old saved label, vessel selection,
+                    // Settings history, Review or time-hold presentation.
+                    savedRevision = null;
+                    savedBranchId = null;
+                    saveState = "Unsaved";
+                    selectedEntityId = "source";
+                    beforeSettings = ScreenId.Lab;
+                    beforeInterruptedSettings = ScreenId.Lab;
+                    beforeHold = core != null && core.IsNativePaused
+                        ? ScreenId.Pause : ScreenId.Lab;
+                    screen = core != null && core.IsTimeHeld
+                        ? ScreenId.Hold : core != null && core.IsNativePaused
+                            ? ScreenId.Pause : ScreenId.Lab;
+                }
+                else if (core != null && screen == ScreenId.Lab)
+                {
+                    // Initial session binding must also respect Native
+                    // pause/hold state, rather than assuming a running Lab.
+                    if (core.IsTimeHeld)
+                    {
+                        beforeHold = core.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                        screen = ScreenId.Hold;
+                    }
+                    else if (core.IsNativePaused)
+                        screen = ScreenId.Pause;
+                }
+            }
             Attach();
             Refresh();
         }
