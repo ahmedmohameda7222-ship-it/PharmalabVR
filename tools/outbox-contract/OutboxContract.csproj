@@ -9,7 +9,6 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityEvidenceIntegrity.cs" Link="UniversityEvidenceIntegrity.cs" />
-    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagingTransport.cs" Link="UniversityStagingTransport.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagingSessionRegistration.cs" Link="UniversityStagingSessionRegistration.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagedEvidenceStatus.cs" Link="UniversityStagedEvidenceStatus.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversitySyncOutbox.cs" Link="UniversitySyncOutbox.cs" />
