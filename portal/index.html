@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src https://*.supabase.co; base-uri 'none'; form-action 'self'">
+  <title>PharmaLabVR University</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script type="module" src="./app.mjs"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">PharmaLabVR · University</p>
+      <h1>Academic assignments</h1>
+      <p>View published course assignments. Scientific laboratory work remains available offline in PharmaLabVR.</p>
+    </header>
+    <section class="panel" aria-labelledby="account-heading">
+      <h2 id="account-heading">University account</h2>
+      <form id="sign-in" autocomplete="on">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" autocomplete="username" required maxlength="254">
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+        <button type="submit">Sign in</button>
+      </form>
+      <p id="auth-status" role="status" aria-live="polite">Enter your verified university account.</p>
+      <div id="account" hidden>
+        <div id="institution-area" hidden>
+          <label for="institution">Active institution</label>
+          <select id="institution" aria-controls="assignments"></select>
+        </div>
+        <button id="clear-session" type="button" class="secondary">End session in this tab</button>
+      </div>
+    </section>
+    <section class="panel" aria-labelledby="assignment-heading">
+      <h2 id="assignment-heading">Published assignments</h2>
+      <div id="assignments" role="status" aria-live="polite">
+        <p>Select an active student institution to see published assignments.</p>
+      </div>
+    </section>
+    <footer>
+      <p>Read-only university metadata. Staged evidence is not verified or graded, and this portal does not modify Native scientific records.</p>
+    </footer>
+  </main>
+</body>
+</html>
