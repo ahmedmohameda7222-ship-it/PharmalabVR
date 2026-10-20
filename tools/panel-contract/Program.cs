@@ -485,6 +485,43 @@ internal static class Program
             Check(!SessionLoadAdmission.MayReplace("VR", null, true, true),
                 "Missing imported Native mode falsely admitted");
 
+            // P06.02: a newly injected Native driver is a distinct authority
+            // even when its branch and revision text happen to match the old one.
+            // Presentation holds, Settings history, inspection and Save status
+            // must never be inherited from a disposed gameplay session.
+            var disposedDriver = new CoreDriver { CurrentNativeBranchId = "shared-branch" };
+            var replacementRouter = new ScreenRouter();
+            replacementRouter.Configure(disposedDriver);
+            replacementRouter.Show(ScreenId.Inspect, "receiver");
+            replacementRouter.MarkSaved();
+            Check(!replacementRouter.Current.Dirty, "First session save fixture was not established.");
+            Check(disposedDriver.PauseSession(), "First session pause fixture was refused.");
+            replacementRouter.Show(ScreenId.Pause);
+            replacementRouter.Show(ScreenId.Settings);
+            var newDriver = new CoreDriver { CurrentNativeBranchId = "shared-branch" };
+            replacementRouter.Configure(newDriver);
+            Check(replacementRouter.Current.ScreenId == ScreenId.Lab &&
+                  replacementRouter.Current.SelectedEntityId == "source" &&
+                  replacementRouter.Current.Dirty &&
+                  replacementRouter.Current.SupportedActions.Contains("Pause"),
+                "Replacing Native authority carried stale Settings/selection/Save across session.");
+            disposedDriver.SetHold(true);
+            Check(replacementRouter.Current.ScreenId == ScreenId.Lab,
+                "Old CoreDriver callback mutated the replacement session panel.");
+            newDriver.SetHold(true);
+            Check(replacementRouter.Current.ScreenId == ScreenId.Hold,
+                "Replacement Native Hold did not take precedence.");
+            var pausedReplacement = new CoreDriver { CurrentNativeBranchId = "shared-branch" };
+            Check(pausedReplacement.PauseSession(), "Replacement Pause fixture was refused.");
+            replacementRouter.Configure(pausedReplacement);
+            Check(replacementRouter.Current.ScreenId == ScreenId.Pause &&
+                  replacementRouter.Current.Dirty &&
+                  replacementRouter.Current.SelectedEntityId == "source",
+                "A new paused authority inherited obsolete Hold or Saved state.");
+            disposedDriver.SetHold(false);
+            newDriver.SetHold(false);
+            Check(replacementRouter.Current.ScreenId == ScreenId.Pause,
+                "Detached Native drivers changed fresh Pause screen.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
