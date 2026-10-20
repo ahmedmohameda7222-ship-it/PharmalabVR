@@ -52,7 +52,7 @@ function timestamp(value) {
 }
 
 export function createUniversityPortalApi({ projectUrl, publishableKey,
-  transport = globalThis.fetch, clock = Date.now }) {
+  transport = globalThis.fetch, clock = Date.now, requestTimeoutMs = 12000 }) {
   let project;
   try { project = new URL(projectUrl); }
   catch { throw new Error('HTTPS Supabase project URL required'); }
@@ -65,6 +65,19 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     throw new Error('A public sb_publishable_ key is required');
   if (typeof transport !== 'function' || typeof clock !== 'function')
     throw new TypeError('Transport and clock functions are required');
+  if (!Number.isInteger(requestTimeoutMs) ||
+      requestTimeoutMs < 10 || requestTimeoutMs > 60000)
+    throw new RangeError('Bounded request deadline required');
+
+  // Deadline covers both response headers and bounded streaming body.
+  // Real browser fetch observes AbortSignal; synthetic CI handlers exercise
+  // the same cancellation pathway. No offline response becomes an Auth fact.
+  async function withDeadline(operation) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), requestTimeoutMs);
+    try { return await operation(controller.signal); }
+    finally { clearTimeout(timer); }
+  }
 
   async function request(path, options = {}, bearer = '') {
     const headers = { apikey: publishableKey, Accept: 'application/json' };
@@ -72,12 +85,14 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     if (options.body !== undefined) headers['Content-Type'] = 'application/json';
     let response;
     try {
-      response = await transport(new URL(path, project).toString(), {
-        method: options.method ?? 'GET', headers,
-        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-        credentials: 'omit', cache: 'no-store'
+      return await withDeadline(async signal => {
+        response = await transport(new URL(path, project).toString(), {
+          method: options.method ?? 'GET', headers,
+          ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+          credentials: 'omit', cache: 'no-store', signal
+        });
+        return await parseBounded(response);
       });
-      return await parseBounded(response);
     } catch (error) {
       // Never forward server error bodies, passwords or tokens to the UI.
       if (error?.message?.startsWith('Invalid ')) throw error;
@@ -244,17 +259,19 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
   async function signOut(session) {
     try {
       const current = requireSession(session);
-      const response = await transport(
-        new URL('/auth/v1/logout?scope=local', project).toString(),
-        {
-          method: 'POST',
-          headers: {
-            apikey: publishableKey,
-            Authorization: 'Bearer ' + current.accessToken
-          },
-          credentials: 'omit', cache: 'no-store'
-        });
-      return response?.ok === true;
+      return await withDeadline(async signal => {
+        const response = await transport(
+          new URL('/auth/v1/logout?scope=local', project).toString(),
+          {
+            method: 'POST',
+            headers: {
+              apikey: publishableKey,
+              Authorization: 'Bearer ' + current.accessToken
+            },
+            credentials: 'omit', cache: 'no-store', signal
+          });
+        return response?.ok === true;
+      });
     } catch { return false; }
   }
 
