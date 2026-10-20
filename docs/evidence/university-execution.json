@@ -262,6 +262,19 @@
         "headlessEvidence": "Native PR 39363856825 panel-routing SUCCESS; source-linked U02+U05 contract 46 assertions (12 newly added for U05), U04 outbox 86 assertions; native Ubuntu/Windows and disposable Supabase conclusions at later commits require separate checks.",
         "scope": "Read-only authenticated published assignment list for fresh selected active student tenant, from existing public.assignments REST with publishable key and student JWT; limit=100, bounded response, re-check response tenant, canonical IDs, publication marker and duplicate rows. No client authorization or role escalation.",
         "remaining": "Real human Auth and institution enrollment/publishing, actual browser or Unity portal display, server-side production RLS HTTP path, handling of availability/error states in UX, real Unity EditMode/Player/XR, G-U1 remain OPEN."
+      },
+      "studentPortalSource": {
+        "status": "CodeFirst_ReadOnlyBrowserSource_HeadlessPassed_BrowserAndHumanPilotNotRun",
+        "loginAndRlsRedSha": "f0f6cc4edac78c609e267364e8135940513de5a0",
+        "loginAndRlsRedEvidence": "Native PR 39391177830 panel U05 Node failed expected ERR_MODULE_NOT_FOUND portal/src/api.mjs",
+        "apiGreenSha": "998fda50ea53320f8543f39db474b814cbf68c03",
+        "viewRedSha": "cebfe7c7d925e5e2eb712dc6eeb852255a36ff63",
+        "viewRedEvidence": "Native PR 39391668181 panel failed expected missing portal/src/view.mjs",
+        "portalFunctionalSha": "ac12b675381997d5829c5f8513370a9a06a892d6",
+        "syntaxCheckSha": "49637dfccee98d9f4d03892e6e7387afb0bc9cca",
+        "headlessEvidence": "At ac12b67 Native PR panel-routing 39392065456 SUCCESS, 9/9 portal Node source-linked tests, plus Ubuntu and Windows Native jobs SUCCESS and isolated PostgreSQL PR 39392065647 SUCCESS. At 49637d syntax checks plus Node suite panel-routing SUCCESS; exact Windows/Ubuntu/PostgreSQL run conclusions to be inspected separately.",
+        "scope": "Browser-source-only English student sign-in via Auth password endpoint and /auth/v1/user identity validation, current membership via RLS, student-selected publication-filtered assignment GET. Browser tokens kept only in module memory; HTML uses textContent not innerHTML; app config ships blank and no production credentials. This is not a deployed or verified browser portal.",
+        "remaining": "Actual browser launch and end-to-end human Auth account; production institution/admin onboarding; real email verification, university naming/UI polish, server logout/revocation, other instructor/admin/lesson/rubric/submission/grade portal routes, accessibility/browser compatibility, Native signed scientific attestation and trusted academic promotion. No browser E2E, Editor/Player/XR run. G-U1 and G-R1 OPEN."
       }
     }
   ],
