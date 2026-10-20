@@ -172,5 +172,24 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return Object.freeze(result);
   }
 
-  return Object.freeze({ signIn, memberships, assignments });
+  // Revoke only the current Auth session's refresh token. An access
+  // JWT may still be usable until expiry, even after successful logout.
+  async function signOut(session) {
+    try {
+      const current = requireSession(session);
+      const response = await transport(
+        new URL('/auth/v1/logout?scope=local', project).toString(),
+        {
+          method: 'POST',
+          headers: {
+            apikey: publishableKey,
+            Authorization: 'Bearer ' + current.accessToken
+          },
+          credentials: 'omit', cache: 'no-store'
+        });
+      return response?.ok === true;
+    } catch { return false; }
+  }
+
+  return Object.freeze({ signIn, memberships, assignments, signOut });
 }

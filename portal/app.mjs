@@ -19,8 +19,11 @@ let api = null;
 
 function setText(target, value) { target.textContent = value; }
 function clearSession() {
+  const toRevoke = currentSession;
   ++currentGeneration;
   currentSession = null;
+  // Always clear local memory; HTTP refusal is not a confirmed revoke.
+  if (api && toRevoke) void api.signOut(toRevoke);
   institutionSelect.replaceChildren();
   accountArea.hidden = true;
   signInForm.hidden = false;

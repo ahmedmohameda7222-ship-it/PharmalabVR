@@ -17,9 +17,11 @@ This app uses Supabase GoTrue password sign-in and GET `/auth/v1/user` for
 verified identity, then reads the existing RLS-protected membership/assignment
 tables. It supports student viewing only, not enrollment, invitations,
 instructor/admin workflows, uploads, grading or publishing. Auth token is
-in-memory for the current tab; no local or session storage. Session end clears
-local memory; this source slice does **not** yet implement remote token
-revocation/refresh. Expired sessions require signing in again.
+in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
+`scope=local` (not global). Failed HTTP does not mean the refresh token was
+revoked; even successful logout does not revoke existing JWT access tokens
+until their expiry. Refresh remains unimplemented and expired sessions must
+sign in again.
 
 ## Verification and limits
 
