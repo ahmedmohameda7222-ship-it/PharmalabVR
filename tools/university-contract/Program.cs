@@ -118,12 +118,12 @@ internal static class Program
         Check(auth.ReplaceSnapshot(User, now, now.AddMinutes(4),
             ActiveTenants(), now) && auth.TrySelectInstitution(B, now),
             "U05 student could not select their active university.");
-        var studentAssignment = "{\\"id\\":\\"11111111-1111-4111-8111-111111111121\\"," +
-            "\\"institution_id\\":\\"" + B +
-            "\\",\\"section_id\\":\\"11111111-1111-4111-8111-111111111122\\"," +
-            "\\"title\\":\\"Introductory titration\\"," +
-            "\\"published_at\\":\\"2026-10-17T10:00:00Z\\"," +
-            "\\"due_at\\":\\"2026-11-01T10:00:00Z\\"}";
+        var studentAssignment = "{\"id\":\"11111111-1111-4111-8111-111111111121\"," +
+            "\"institution_id\":\"" + B +
+            "\",\"section_id\":\"11111111-1111-4111-8111-111111111122\"," +
+            "\"title\":\"Introductory titration\"," +
+            "\"published_at\":\"2026-10-17T10:00:00Z\"," +
+            "\"due_at\":\"2026-11-01T10:00:00Z\"}";
         using (var inboxHandler = new InboxHandler {
             Response = "[" + studentAssignment + "]" })
         using (var inboxClient = new HttpClient(inboxHandler))
