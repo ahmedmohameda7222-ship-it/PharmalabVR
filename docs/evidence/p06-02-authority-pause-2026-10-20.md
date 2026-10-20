@@ -1,0 +1,15 @@
+# P06.02 shared panel state machine — authority rebind and pause bypass, 20 October 2026
+
+**Status: Code-first PARTIAL; canonical P06.02 Open, 66-task roadmap unchanged. Unity Editor/Player/XR NOT_RUN.**
+
+## Found defect A — old authority presentation leakage
+Public `ScreenRouter.Configure(CoreDriver)` detached old listeners but reused the previous saved branch/revision label, selected Native vessel, Settings history and screen on another driver object. Even identical branch/sequence strings do not make a new session equivalent. Red `98d9ec6ff24a0588d3c57ff06c17ad5a91e3b997`, [Native PR 39399647502](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39399647502): actual linked C# panel test failed `Replacing Native authority carried stale Settings/selection/Save across session`. Green `2e316f2b4b482331028b3ef11701ea28ca1b85c6`: clears old screen/history/saved identity, resets selected vessel, recognizes replacement Native Pause/Hold and detaches stale driver events. Production `d7bc30d3cf2e7f8f0e811a5a1b41ae0b65567a68` treats destroyed Unity `CoreDriver` as a previously bound object using `ReferenceEquals` (Unity fake-null). Source-only Unity MonoBehaviour PlayMode `0cc88c45`, fake-null test `b11d6265`, both NOT_RUN.
+
+## Found defect B — direct screen route bypassing Native Pause
+Public `ScreenRouter.Show(ScreenId.Lab)` allowed a presenter to display live controls while `CoreDriver.IsNativePaused` remained true. RED `8ef2678a44c03a6c9b823ca420f02cd19e123f21`, [Native PR 39400373586](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39400373586) panel failed exact bypass message. GREEN `2f7271e459220b72284291dae0cca53959130302`: direct live Lab route rejected until Native Continue, and Settings Back from active native pause resolves Pause instead of stale Lab. Real-Native PlayMode regression authored `01c55b763942e345416dd8f5a5744a45afff94ef`, NOT_RUN.
+
+## Headless mutation interaction
+The original paused-Review mutation still yields a denial, now earlier at `Recorded Review return refused`; the prior expected later string was obsolete, so interim PR panel at `2f7271e` failed that harness, NOT the routed contract. Adjusted test `24f7e6ae8a343b17d52a9b2a15fddfebe367bbfd` expects the earlier fail-closed diagnostic. [Native PR 39401131571](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39401131571) panel source: **301/301 checks PASS**, six deliberate mutation RED checks and exact source restoration GREEN. Native Windows/Ubuntu and isolated PostgreSQL verdicts remain exact-SHA independent of panel success.
+
+## Preserved constraints and release work
+No new Native chemical values, no authored academic evidence attestation, no live Supabase changes, no merged PR, no Unity Cloud CI. Settings, Pause/Review, English-only UI and SessionLoad Hold retained. Real scene/Editor/Player/XR validation, VR tracked input and native restart/physical Hold interactions remain **NOT_RUN**. P06.02 and G-R1 remain OPEN; next P06.02 in the original roadmap, 15 VerifiedLocal / 51 Open. U05 and G-U1 remain OPEN.
