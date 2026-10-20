@@ -87,6 +87,9 @@ internal static class Program
 
             // Simulate failed backup/replace, not a predictable .tmp collision:
             // each stage now uses a random create-only temporary file.
+            // Previous commits legitimately leave an ordinary .bak file.
+            // Remove only this disposable fixture backup before fault injection.
+            if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
             Directory.CreateDirectory(path + ".bak");
             var previous = Convert.ToBase64String(File.ReadAllBytes(path));
             MustReject(() => restarted.Enqueue(new UniversityUploadIntent(
