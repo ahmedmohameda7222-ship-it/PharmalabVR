@@ -13,3 +13,8 @@ The original paused-Review mutation still yields a denial, now earlier at `Recor
 
 ## Preserved constraints and release work
 No new Native chemical values, no authored academic evidence attestation, no live Supabase changes, no merged PR, no Unity Cloud CI. Settings, Pause/Review, English-only UI and SessionLoad Hold retained. Real scene/Editor/Player/XR validation, VR tracked input and native restart/physical Hold interactions remain **NOT_RUN**. P06.02 and G-R1 remain OPEN; next P06.02 in the original roadmap, 15 VerifiedLocal / 51 Open. U05 and G-U1 remain OPEN.
+
+## Follow-up: refresh-time Native Pause/Hold reconciliation
+- RED `bf2f87de981f2c7f9354f604c019d6e5de58204e` initially had a duplicated C# test local and failed build; corrected as `8fbea9a2055cf04d5386e84fef395009c95b962f`. [Native PR 39402118903](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39402118903) panel then failed the **intended runtime assertion**, `Native Pause update left an apparently live Lab screen`.
+- GREEN `828ef12b6de0b9d160ce9e2c8d678ed8fde326c9` reconciles effective Native Pause and Hold when `ScreenRouter.Refresh` would publish Lab, whether triggered by `LabViewChanged`, reconfiguration or releasing an interrupt. Hold remains highest priority, and Pause is not cleared by a UI display. [Unity PlayMode source `305c52c`](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/commit/305c52c42712b41e10d4f0dd088842a98b254d00) extends actual Lab scene coverage but is **NOT_RUN**.
+- CI at latest functional/source SHA requires exact-SHA check; no cloud production changes, no Unity or hardware acceptance, P06.02 OPEN.

@@ -746,7 +746,7 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": "2f7271e459220b72284291dae0cca53959130302",
+          "codeCommit": "828ef12b6de0b9d160ce9e2c8d678ed8fde326c9",
           "evidence": [
             "docs/evidence/p06-02-progress.md",
             "docs/evidence/artifact-manifest-p06-02.json",
@@ -780,7 +780,8 @@
             "2026-10-16 Desktop saved-session load: headless RED d0c3ebe (run 38829295610, assertion 'Desktop Pause has no explicit saved-session Load action'), GREEN 182b7b6 (push 38829380659 and PR 38829386957, 3/3 jobs each SUCCESS). Native session-load admission now permits Desktop from Pause/Hold without a VR dock, preserves the VR dock prerequisite and no implicit Save/receipt/revision; old unguarded Desktop live Lab GUI ContinueFrom shortcut removed at 186c9ae; actual Unity PlayMode P06_02_DesktopPauseLoadSavedSessionIsExplicitAndNativeBacked source authored, NOT_RUN. P06.02 remains Open/NotReviewed.",
             "2026-10-16 P06.02 + P11.01 Pause/Hold saved-session backup admission: source RED 551a2cb (missing SaveService.HasSaveCandidate in headless actual service) push 38832226727; GREEN c7b0b05 allows a confirmed .bak alone to advertise Load and delegates real validation/import to SaveService.Load. Shared Desktop/VR Pause/Hold safety remains, Desktop unguarded Lab load absent. Unity PlayMode existing Desktop Load test extended to missing primary/valid backup; NOT_RUN. GitHub push 38832333024 and PR 38832338221 all three jobs SUCCESS. P06.02 remains Open.",
             "2026-10-20 P06.02 Native authority replacement: RED 98d9ec6, Native PR 39399647502 headless rejected stale Settings/inspection/Saved state; GREEN 2e316f2 source resets old Native binding, old events detached, same-branch/same-sequence resets, new Native Pause/Hold honored. Unity fake-null destroyed CoreDriver fix d7bc30d, authored PlayMode MonoBehaviour source b11d626, Unity NOT_RUN.",
-            "2026-10-20 P06.02 direct Live Lab bypass admission: RED 8ef2678 Native PR 39400373586 headless failed 'Direct router Show(Lab) displayed live tools without Native Continue'; GREEN 2f7271e disallows direct Lab while Native paused and sends Settings Back to Pause on late pause, real Unity scene PlayMode test authored 01c55b7 NOT_RUN. Updated mutation expected earlier fail-closed Review guard at 24f7e6; PR Native 39401131571 panel-routing SUCCESS (301 source-linked assertions + six mutation RED/restore GREEN), Windows/Ubuntu jobs pending when recorded."
+            "2026-10-20 P06.02 direct Live Lab bypass admission: RED 8ef2678 Native PR 39400373586 headless failed 'Direct router Show(Lab) displayed live tools without Native Continue'; GREEN 2f7271e disallows direct Lab while Native paused and sends Settings Back to Pause on late pause, real Unity scene PlayMode test authored 01c55b7 NOT_RUN. Updated mutation expected earlier fail-closed Review guard at 24f7e6; PR Native 39401131571 panel-routing SUCCESS (301 source-linked assertions + six mutation RED/restore GREEN), Windows/Ubuntu jobs pending when recorded.",
+            "2026-10-20 P06.02 asynchronous Native Pause snapshot routing: test-first initial  bf2f87d compiled failed due preexisting interruptedRouter local; corrected RED 8fbea9a headless PR 39402118903 failed expected 'Native Pause update left an apparently live Lab screen' (exit 134). GREEN 828ef12 source reconciles Lab->Native Hold/Pause before publishing PanelState on LabViewChanged, and after Hold release; real Native PlayMode source extended 305c52c, NOT_RUN. Source-linked exact-SHA Native/isolated CI pending at evidence writing."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial: native-backed routing and recorded Review; new Boot/Settings posture/hand/bench-view/text/caption/motion/contrast/audio preference state and presentation wiring, paused-Review native Continue guard, Back from Settings and dynamic Desktop HUD bounds. 39 headless C# routing assertions and an intentionally mutated Review-return RED/GREEN at 37440f1 verify source logic against test adapters only. New Unity PlayMode tests authored but never executed at this SHA; no Unity compile/render, Desktop Player or injected tracked-ray action proof. Full VR Settings parity, real UI input journeys, scene references, physical geometry/reach, English-only UI completeness and P06.02 acceptance remain open.",
@@ -2274,9 +2275,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "24f7e6ae8a343b17d52a9b2a15fddfebe367bbfd",
-  "functionalCodeSha": "2f7271e459220b72284291dae0cca53959130302",
-  "currentTask": "P06.02 Native authority rebind and direct-Lab pause guard implemented headlessly; Unity Editor/Player/XR NOT_RUN; formal task still Open pending original acceptance.",
+  "actualHead": "305c52c42712b41e10d4f0dd088842a98b254d00",
+  "functionalCodeSha": "828ef12b6de0b9d160ce9e2c8d678ed8fde326c9",
+  "currentTask": "P06.02 source routing: old authority rebinding, direct Native Pause admission and out-of-band Native Pause/Hold snapshot reconciliation; PlayMode/Editor/Player/XR NOT_RUN. Task remains Open.",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
