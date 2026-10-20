@@ -16,3 +16,7 @@
 - The published `content_sha256` is based on PostgreSQL `jsonb::text` canonicalization, NOT recomputed in JS. This is metadata, not scientifically trustworthy Native/IPhreeqc provenance or academic evidence approval.
 - No executed lesson workflow, interactive teacher-authored instructions UI, submission/grade portal, real browser, real student Auth, live storage or Unity/Player/XR testing in this increment.
 - Original 66-task roadmap unchanged (15 VerifiedLocal, 51 Open, P06.02 formal next), English-only forever, offline Native authority and SessionLoad Hold, PR #1 open/unmerged. Production Supabase untouched.
+
+## Subsequent transport reliability increment
+- RED `37c9c53203e99b520c6ea624cb9bde9d9e54bf13` ([Native PR 39397215380](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39397215380)): two hanging Auth and scoped-logout requests failed independent watchdog because deadline absent. First RED `8aa0e2d042e17ed2066984f7674d20a7abba99bd` was replaced by a finite RED watchdog to avoid a permanently running CI test.
+- GREEN `e2fae3f2eb1a48ad0d296d546f83f7a3b7d5667a`: `AbortController` deadline encloses HTTP request and bounded response parsing; same for `scope=local` sign-out, no false server logout. [Native PR 39397395483](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39397395483) panel passed **20/20** source-linked portal Node assertions. Latest exact SHA Native Windows/Ubuntu and disposable PostgreSQL results to be inspected separately. No real browser/local hardware verification.

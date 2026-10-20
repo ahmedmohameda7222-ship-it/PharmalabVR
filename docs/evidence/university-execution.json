@@ -282,6 +282,15 @@
           "verified": "Native PR 39393103716 panel-routing SUCCESS, portal Node 11/11 tests and node --check; native Windows/Ubuntu and disposable Supabase exact-SHA completions must be read separately.",
           "behavior": "Client POST /auth/v1/logout?scope=local with current bearer/public apikey, boolean on successful HTTP; UI immediately clears in-tab tokens irrespective of network. Revokes refresh token only when server accepts; existing JWT valid until expiry.",
           "remaining": "Actual Auth-server logout HTTP and full browser journey NOT_RUN; current app does not implement token refresh; real cross-tab/device behavior and SessionLoad Hold unaffected."
+        },
+        "requestDeadline": {
+          "initialRedSha": "8aa0e2d042e17ed2066984f7674d20a7abba99bd",
+          "boundedRedSha": "37c9c53203e99b520c6ea624cb9bde9d9e54bf13",
+          "boundedRedEvidence": "Native PR 39397215380 panel failed 2 expected portal assertions because simulated hung Auth/login/logout requests never aborted within test watchdog.",
+          "greenSha": "e2fae3f2eb1a48ad0d296d546f83f7a3b7d5667a",
+          "greenEvidence": "Native PR 39397395483 panel SUCCESS: 20/20 portal Node tests; Native Windows/Ubuntu and disposable Supabase PR 39397395547 full exact-SHA conclusions must be checked separately.",
+          "behavior": "All API transport operations (including parsing bounded streaming reply bodies and scope=local logout) use AbortController with 12-second default deadline, configurable 10..60000 ms in non-production fixture. Failures do not fabricate Auth or academic rows.",
+          "limits": "A custom transport ignoring AbortSignal is outside browser fetch guarantee. Actual HTTPS Supabase/Auth/browser, Native Unity Editor/Player/XR and pilot NOT_RUN."
         }
       },
       "studentPublishedLesson": {

@@ -38,3 +38,10 @@ server title fields as HTML.
 Do not deploy to the owner's live Supabase project or perform real user signup,
 email or production DB changes without owner authorization. G-U1 and G-R1
 remain Open; PR #1 stays open/unmerged; Unity Editor/Player/XR NOT_RUN.
+
+## Request time limits
+All browser API reads, sign-in and session-scoped logout use an abort-aware
+12-second default request deadline (including bounded response streaming).
+An unavailable connection never becomes an academic assignment or successful
+server revocation. The injected timeout used in synthetic Node tests is not a
+claim of verified real-browser behavior.
