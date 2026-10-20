@@ -251,7 +251,18 @@
     },
     {
       "id": "U05",
-      "status": "Open"
+      "status": "Open",
+      "codeFirstAssignmentInbox": {
+        "status": "SourceReadClientHeadlessPassed_RealPortalAndAuthPending",
+        "redSha": "81808014ca8cbc719c34f273bb9bc9de89854a2c",
+        "redEvidence": "Native PR 39363530180 panel failed expected missing UniversityStudentAssignmentInbox.cs; this run does not establish client behavior.",
+        "functionalSha": "aa45ecc4eb75de3dc7d9d3f59566fe3e6f4da848",
+        "correctedFixtureSha": "8d0f20d61506eed42169479d9e6ce78ff7e14977",
+        "unityTestSourceSha": "cb3e4225ea3075ac33485cddc3652531cd3c73ef",
+        "headlessEvidence": "Native PR 39363856825 panel-routing SUCCESS; source-linked U02+U05 contract 46 assertions (12 newly added for U05), U04 outbox 86 assertions; native Ubuntu/Windows and disposable Supabase conclusions at later commits require separate checks.",
+        "scope": "Read-only authenticated published assignment list for fresh selected active student tenant, from existing public.assignments REST with publishable key and student JWT; limit=100, bounded response, re-check response tenant, canonical IDs, publication marker and duplicate rows. No client authorization or role escalation.",
+        "remaining": "Real human Auth and institution enrollment/publishing, actual browser or Unity portal display, server-side production RLS HTTP path, handling of availability/error states in UX, real Unity EditMode/Player/XR, G-U1 remain OPEN."
+      }
     }
   ],
   "immutableDecisions": [
