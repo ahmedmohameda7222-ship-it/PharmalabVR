@@ -34,6 +34,10 @@ function harness(options = {}) {
         email_confirmed_at: options.unconfirmed ? null : '2026-10-20T01:00:00Z'
       });
     }
+    if (uri.pathname === '/auth/v1/logout') {
+      if (options.logoutThrows) throw new Error('Simulated offline logout');
+      return new Response(null, { status: options.logoutStatus ?? 204 });
+    }
     if (uri.pathname === '/rest/v1/institution_memberships') {
       return mockResponse(options.memberships ?? [
         { institution_id: institutionA, role: 'student', status: 'active' },
@@ -123,4 +127,25 @@ test('client configuration refuses secret keys and non-Supabase hosts', () => {
   assert.throws(() => createUniversityPortalApi({
     projectUrl: 'https://evil.example/', publishableKey: key, transport: async () => {}
   }), /Supabase|HTTPS/i);
+});
+
+test('browser sign-out requests only current session revocation with authenticated bearer', async () => {
+  const { calls, api } = harness();
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  assert.equal(await api.signOut(session), true);
+  const logout = calls.find(c => c.url.pathname === '/auth/v1/logout');
+  assert.ok(logout);
+  assert.equal(logout.url.searchParams.get('scope'), 'local');
+  assert.equal(logout.init.method, 'POST');
+  assert.equal(logout.init.headers.Authorization, 'Bearer ' + token);
+  assert.equal(logout.init.headers.apikey, key);
+});
+
+test('disconnected or expired server logout fails closed without invented confirmation', async () => {
+  const { calls, api } = harness({ logoutThrows: true });
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  assert.equal(await api.signOut(session), false);
+  const before = calls.length;
+  assert.equal(await api.signOut({ ...session, expiresAtMs: 1 }), false);
+  assert.equal(calls.length, before);
 });
