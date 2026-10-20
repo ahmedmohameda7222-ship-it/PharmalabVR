@@ -85,8 +85,9 @@ internal static class Program
                 "Unverifiable Native receipt hash was accepted.");
             Check(restarted.Pending().Count == 2, "Rejected intents mutated confirmed outbox.");
 
-            // Simulate failed staging: the confirmed file must remain intact.
-            Directory.CreateDirectory(path + ".tmp");
+            // Simulate failed backup/replace, not a predictable .tmp collision:
+            // each stage now uses a random create-only temporary file.
+            Directory.CreateDirectory(path + ".bak");
             var previous = Convert.ToBase64String(File.ReadAllBytes(path));
             MustReject(() => restarted.Enqueue(new UniversityUploadIntent(
                 tenantA, "local-session-1", "22222222-2222-4222-8222-222222222222",
@@ -95,7 +96,7 @@ internal static class Program
                 "Blocked staging unexpectedly acknowledged a new intent.");
             Check(previous == Convert.ToBase64String(File.ReadAllBytes(path)),
                 "Stage failure replaced confirmed intents.");
-            Directory.Delete(path + ".tmp");
+            Directory.Delete(path + ".bak");
 
             // A second producer must not write through an exclusive local
             // lease held by a first producer; this is deterministic, not a
