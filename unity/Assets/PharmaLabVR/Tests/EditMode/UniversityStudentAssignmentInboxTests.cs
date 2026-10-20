@@ -17,11 +17,14 @@ namespace PharmaLabVR.Tests.EditMode
         {
             public string Body;
             public int Requests;
+            public HttpStatusCode Status = HttpStatusCode.OK;
+            public bool ThrowTimeout;
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken)
             {
+                if (ThrowTimeout) throw new TaskCanceledException("Fake network timeout");
                 Requests++;
-                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                return Task.FromResult(new HttpResponseMessage(Status)
                 {
                     Content = new StringContent(Body, Encoding.UTF8, "application/json")
                 });
@@ -62,6 +65,51 @@ namespace PharmaLabVR.Tests.EditMode
                     clock.AddMinutes(6)).GetAwaiter().GetResult(), Is.Empty);
                 Assert.That(handler.Requests, Is.EqualTo(previousRequests),
                     "Expired institutional context must not cause cloud requests.");
+            }
+        }
+
+        [Test]
+        public void U05_InboxStatusDistinguishesNoAssignmentsFromOfflineAndUnauthorized()
+        {
+            const string tenant = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+            const string user = "11111111-1111-4111-8111-111111111111";
+            var now = new DateTimeOffset(2026, 10, 20, 0, 0, 0, TimeSpan.Zero);
+            var membership = new UniversityMembershipSession();
+            Assert.That(membership.ReplaceSnapshot(user, now, now.AddMinutes(4),
+                new[] { new UniversityMembershipRecord(tenant, "student", "active") }, now),
+                Is.True);
+            Assert.That(membership.TrySelectInstitution(tenant, now), Is.True);
+            var handler = new FakeHandler { Body = "[]" };
+            using (var client = new HttpClient(handler))
+            {
+                var projectUrl = new Uri("https://example.supabase.co/");
+                var empty = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                    client, projectUrl, "sb_publishable_test", "student-token",
+                    membership, now).GetAwaiter().GetResult();
+                Assert.That(empty.Status, Is.EqualTo(UniversityAssignmentInboxStatus.Available));
+                Assert.That(empty.Assignments, Is.Empty);
+
+                handler.Status = HttpStatusCode.Forbidden;
+                var denied = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                    client, projectUrl, "sb_publishable_test", "student-token",
+                    membership, now).GetAwaiter().GetResult();
+                Assert.That(denied.Status, Is.EqualTo(UniversityAssignmentInboxStatus.Unavailable));
+                Assert.That(denied.Assignments, Is.Empty);
+
+                handler.Status = HttpStatusCode.OK;
+                handler.ThrowTimeout = true;
+                var offline = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                    client, projectUrl, "sb_publishable_test", "student-token",
+                    membership, now).GetAwaiter().GetResult();
+                Assert.That(offline.Status, Is.EqualTo(UniversityAssignmentInboxStatus.Unavailable));
+                handler.ThrowTimeout = false;
+                var beforeExpired = handler.Requests;
+                var stale = UniversityStudentAssignmentInbox.FetchWithStatusAsync(
+                    client, projectUrl, "sb_publishable_test", "student-token",
+                    membership, now.AddMinutes(6)).GetAwaiter().GetResult();
+                Assert.That(stale.Status, Is.EqualTo(UniversityAssignmentInboxStatus.NoStudentContext));
+                Assert.That(stale.Assignments, Is.Empty);
+                Assert.That(handler.Requests, Is.EqualTo(beforeExpired));
             }
         }
     }
