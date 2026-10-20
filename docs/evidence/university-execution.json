@@ -274,7 +274,15 @@
         "syntaxCheckSha": "49637dfccee98d9f4d03892e6e7387afb0bc9cca",
         "headlessEvidence": "At ac12b67 Native PR panel-routing 39392065456 SUCCESS, 9/9 portal Node source-linked tests, plus Ubuntu and Windows Native jobs SUCCESS and isolated PostgreSQL PR 39392065647 SUCCESS. At 49637d syntax checks plus Node suite panel-routing SUCCESS; exact Windows/Ubuntu/PostgreSQL run conclusions to be inspected separately.",
         "scope": "Browser-source-only English student sign-in via Auth password endpoint and /auth/v1/user identity validation, current membership via RLS, student-selected publication-filtered assignment GET. Browser tokens kept only in module memory; HTML uses textContent not innerHTML; app config ships blank and no production credentials. This is not a deployed or verified browser portal.",
-        "remaining": "Actual browser launch and end-to-end human Auth account; production institution/admin onboarding; real email verification, university naming/UI polish, server logout/revocation, other instructor/admin/lesson/rubric/submission/grade portal routes, accessibility/browser compatibility, Native signed scientific attestation and trusted academic promotion. No browser E2E, Editor/Player/XR run. G-U1 and G-R1 OPEN."
+        "remaining": "Actual browser launch and end-to-end human Auth account; production institution/admin onboarding; real email verification, university naming/UI polish, actual live Auth logout verification, other instructor/admin/lesson/rubric/submission/grade portal routes, accessibility/browser compatibility, Native signed scientific attestation and trusted academic promotion. No browser E2E, Editor/Player/XR run. G-U1 and G-R1 OPEN.",
+        "sessionScopedLogout": {
+          "redSha": "33a570401e61119471221da3c9163520df52d363",
+          "redEvidence": "Native PR 39392828543 panel Node test failed `api.signOut is not a function` (2 cases).",
+          "greenSha": "59fd33fe0b6f792739dfb8f6c3c554ca103a1a77",
+          "verified": "Native PR 39393103716 panel-routing SUCCESS, portal Node 11/11 tests and node --check; native Windows/Ubuntu and disposable Supabase exact-SHA completions must be read separately.",
+          "behavior": "Client POST /auth/v1/logout?scope=local with current bearer/public apikey, boolean on successful HTTP; UI immediately clears in-tab tokens irrespective of network. Revokes refresh token only when server accepts; existing JWT valid until expiry.",
+          "remaining": "Actual Auth-server logout HTTP and full browser journey NOT_RUN; current app does not implement token refresh; real cross-tab/device behavior and SessionLoad Hold unaffected."
+        }
       }
     }
   ],

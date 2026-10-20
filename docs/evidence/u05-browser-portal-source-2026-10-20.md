@@ -17,3 +17,8 @@
 
 ## Required follow-through
 Actual browser authentication and hosted deployment, production verified student email/first owner-selected institution, enrolled sections, lesson/rubric/assignment/instructor/teacher/admin workflows, Auth refresh/logout semantics, accessible UI interaction, scientific attestation and academic evidence promotion remain OPEN. No live Supabase changes here. Original 66 canonical tasks unchanged: 15 VerifiedLocal / 51 Open, next P06.02. U05, G-U1, G-R1 OPEN; Unity Editor/Player/XR NOT_RUN, English-only, PR #1 unmerged.
+
+## Follow-up: session-scoped logout, 20 October
+- Earlier read-only first slice had **local-only** logout; superseded in active source by RED `33a570401e61119471221da3c9163520df52d363` ([Native PR 39392828543](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39392828543) two expected missing-method failures) and GREEN `59fd33fe0b6f792739dfb8f6c3c554ca103a1a77`.
+- New `api.signOut` requests GoTrue `/auth/v1/logout?scope=local`, never the global default, and returns true only on a successful HTTP response. The browser controller clears its in-memory token before attempting best-effort HTTP; an offline failure never claims revocation. Even accepted Auth logout only revokes refresh tokens; issued JWT access tokens remain valid until expiration. Browser session refresh is still absent; expiry requires fresh login.
+- PR Native [39393103716](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39393103716) panel: **11/11** source-linked portal Node tests and browser `node --check` PASS. Remaining exact-SHA Native matrix/disposable Supabase conclusions independently verified later. Live GoTrue/Auth, real student, rendered browser journey and Unity NOT_RUN.
