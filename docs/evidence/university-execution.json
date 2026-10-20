@@ -233,7 +233,21 @@
       "stagedStatusClientSha": "1264c259e66ab11c9d7ada413a96902dd4cccdf6",
       "stagedStatusClientTestSha": "8d324078c7355f03a13c8eed8f1c774ea61b6841",
       "stagedStatusClientEvidence": "TDD RED bf485a19: missing UniversityStagedEvidenceStatus.cs caused panel failure on push 39203647403 and PR 39203652302. GREEN 1264c259: push 39351521766 and PR 39351525515 panel-routing SUCCESS, 75 headless outbox assertions; Native Ubuntu/Windows also succeeded on functional SHA. Unity NUnit test source added at 8d324078; actual Unity Editor test execution remains NOT_RUN.",
-      "stagedStatusClientTrust": "Status response accepted as StagedUnverified only for exact artifact ID, SHA256 of original bytes and size, over recognized HTTPS Supabase RPC under current student JWT/public apikey. Never marks Native outbox synced, never creates academic evidence."
+      "stagedStatusClientTrust": "Status response accepted as StagedUnverified only for exact artifact ID, SHA256 of original bytes and size, over recognized HTTPS Supabase RPC under current student JWT/public apikey. Never marks Native outbox synced, never creates academic evidence.",
+      "nativeReceiptSourceBinding": {
+        "status": "CodeImplemented_HeadlessVerified_UnityAndAttestationNotRun",
+        "hashOnlyRedSha": "1544d729189820004a1e0ffc3b2395ebfac5d4e8",
+        "hashOnlyRedEvidence": "Native PR 39361159592 panel-routing failed with Hash-only outbox admission accepted bytes without a Native export identity.",
+        "identityBindingGreenSha": "6d40253e2904369367ec2c4591614f18b4972fc4",
+        "identityBindingGreenEvidence": "Native push 39361705456, PR 39361711456 and isolated Supabase PR 39361711509 succeeded. Headless U04 80 assertions.",
+        "nativeProducerRedSha": "226b578e794a76c33f618bf232da22cf78dda7e4",
+        "nativeProducerRedEvidence": "Native PR 39362369755 panel-routing failed because real UniversityNativeReceiptProducer.cs was missing.",
+        "nativeProducerGreenSha": "4ec701b95c13b9e70a0d9fba68f2bdd2a9067cdc",
+        "nativeProducerUnitySourceSha": "75336bb8e9f71c94fcc7ee29ed61f0a0ba260e90",
+        "nativeProducerHeadlessEvidence": "Source-linked CoreSession API stub contract at functional SHA 4ec701b: 86 U04 assertions passed (NOT an actual Native/Unity producer run); 39362572487 panel-routing and Ubuntu succeeded, 39362572493 disposable-Supabase succeeded at inspection; Windows and next source SHA workflows must be checked independently.",
+        "scope": "Local verified bytes must structurally bind terminal Native outcome to exported command receipt, branch, command sequence and pinned scientific package digest. Producer reads a single export from live CoreSession and derives pending intent hashes; no cloud promotion or new scientific values.",
+        "remaining": "Actual CoreSession + pinned model Unity test NOT_RUN; no server-trusted Native attestation or academic origin proof, verified delivery acknowledgement, live authenticated student/portal pilot; all pending receipts remain Pending."
+      }
     },
     {
       "id": "U05",
