@@ -1,4 +1,9 @@
 using System;
+using System.Net;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using PharmaLabVR.University;
 
 internal static class Program
@@ -106,7 +111,123 @@ internal static class Program
         context.SignOut();
         Check(!context.CanDisplayInstitution(B, now) && context.SelectedRole(now) == string.Empty,
             "Sign-out left membership or role visible.");
+
+        // U05 student inbox: read-only RLS-scoped assignment data, not a role
+        // authorization decision or offline Native chemistry operation.
+        var auth = new UniversityMembershipSession();
+        Check(auth.ReplaceSnapshot(User, now, now.AddMinutes(4),
+            ActiveTenants(), now) && auth.TrySelectInstitution(B, now),
+            "U05 student could not select their active university.");
+        var studentAssignment = "{\\"id\\":\\"11111111-1111-4111-8111-111111111121\\"," +
+            "\\"institution_id\\":\\"" + B +
+            "\\",\\"section_id\\":\\"11111111-1111-4111-8111-111111111122\\"," +
+            "\\"title\\":\\"Introductory titration\\"," +
+            "\\"published_at\\":\\"2026-10-17T10:00:00Z\\"," +
+            "\\"due_at\\":\\"2026-11-01T10:00:00Z\\"}";
+        using (var inboxHandler = new InboxHandler {
+            Response = "[" + studentAssignment + "]" })
+        using (var inboxClient = new HttpClient(inboxHandler))
+        {
+            var endpoint = new Uri("https://example.supabase.co/");
+            var assignmentList = UniversityStudentAssignmentInbox.FetchPublishedAsync(
+                inboxClient, endpoint, "sb_publishable_test", "student-token",
+                auth, now).GetAwaiter().GetResult();
+            Check(assignmentList.Count == 1 &&
+                assignmentList[0].Title == "Introductory titration" &&
+                assignmentList[0].InstitutionId == B,
+                "Published same-tenant assignment was not displayed.");
+            Check(inboxHandler.ApiKey == "sb_publishable_test" &&
+                inboxHandler.Auth == "Bearer student-token" &&
+                inboxHandler.Method == "GET" &&
+                inboxHandler.Url.Contains("institution_id=eq." + B) &&
+                inboxHandler.Url.Contains("published_at=not.is.null"),
+                "Student inbox request omitted bearer/public key or tenant/publication filter.");
+
+            inboxHandler.Response = "[" + studentAssignment.Replace(B, A) + "]";
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0,
+                "Student inbox displayed an unauthorized foreign-university row.");
+
+            inboxHandler.Response = "[" + studentAssignment + "," + studentAssignment + "]";
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0,
+                "Duplicate academic assignment IDs were admitted.");
+
+            inboxHandler.Response = "[" + studentAssignment.Replace(
+                "\\"published_at\\":\\"2026-10-17T10:00:00Z\\"",
+                "\\"published_at\\":null") + "]";
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0,
+                "An unpublished assignment leaked into the student inbox.");
+
+            inboxHandler.Response = "[" + studentAssignment + "]";
+            inboxHandler.Status = HttpStatusCode.Forbidden;
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0,
+                "Server RLS denial was displayed as a confirmed assignment.");
+            inboxHandler.Status = HttpStatusCode.OK;
+            inboxHandler.ThrowTimeout = true;
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0,
+                "Network timeout became a fictional academic assignment.");
+            inboxHandler.ThrowTimeout = false;
+            var requestCount = inboxHandler.Requests;
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth,
+                now.AddMinutes(6)).GetAwaiter().GetResult().Count == 0 &&
+                inboxHandler.Requests == requestCount,
+                "Expired tenant membership caused an authenticated HTTP request.");
+            Check(auth.ReplaceSnapshot(User, now, now.AddMinutes(4),
+                ActiveTenants(), now) && auth.TrySelectInstitution(A, now),
+                "Instructor membership fixture could not be restored.");
+            Check(UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                endpoint, "sb_publishable_test", "student-token", auth, now)
+                .GetAwaiter().GetResult().Count == 0 &&
+                inboxHandler.Requests == requestCount,
+                "Instructor role in another tenant was used as a student inbox entitlement.");
+            var secretRejected = false;
+            try {
+                UniversityStudentAssignmentInbox.FetchPublishedAsync(inboxClient,
+                    endpoint, "sb_secret_wrong", "student-token", auth, now)
+                    .GetAwaiter().GetResult();
+            } catch (ArgumentException) { secretRejected = true; }
+            Check(secretRejected && inboxHandler.Requests == requestCount,
+                "A server secret reached the Unity student inbox HTTP client.");
+        }
+        Console.WriteLine("U05 student inbox test assertions exercised; no Auth/RLS live access.");
         Console.WriteLine("U02 headless presentation-state assertions: " + checks +
             " passed; NO real Supabase Auth/RLS/Unity or server authorization was exercised.");
+    }
+
+    private sealed class InboxHandler : HttpMessageHandler
+    {
+        public string Response;
+        public string ApiKey;
+        public string Auth;
+        public string Method;
+        public string Url;
+        public int Requests;
+        public bool ThrowTimeout;
+        public HttpStatusCode Status = HttpStatusCode.OK;
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            if (ThrowTimeout) throw new TaskCanceledException("Simulated network timeout");
+            Requests++;
+            ApiKey = request.Headers.Contains("apikey")
+                ? string.Join("", request.Headers.GetValues("apikey")) : null;
+            Auth = request.Headers.Authorization?.ToString();
+            Method = request.Method.Method;
+            Url = request.RequestUri.ToString();
+            return Task.FromResult(new HttpResponseMessage(Status)
+            {
+                Content = new StringContent(Response ?? "[]", Encoding.UTF8, "application/json")
+            });
+        }
     }
 }

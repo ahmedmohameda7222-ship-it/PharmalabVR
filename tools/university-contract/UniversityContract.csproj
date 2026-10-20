@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStudentAssignmentInbox.cs" Link="UniversityStudentAssignmentInbox.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityMembershipSession.cs"
       Link="UniversityMembershipSession.cs" />
   </ItemGroup>
