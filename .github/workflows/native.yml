@@ -32,6 +32,8 @@ jobs:
         run: node --test supabase/functions/student-evidence-upload/protocol.test.mjs
       - name: U04 idempotent verified quarantine replay regression (no cloud)
         run: node --test supabase/functions/student-evidence-upload/reconcile.test.mjs
+      - name: Supabase teardown must detect residual containers (isolated fake Docker)
+        run: node --test scripts/tests/test_supabase_teardown.mjs
   native:
     strategy:
       fail-fast: false
