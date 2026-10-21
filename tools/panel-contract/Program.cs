@@ -647,6 +647,28 @@ internal static class Program
             Check(importedRouter.Current.ScreenId == ScreenId.Lab &&
                   importedRouter.Current.SelectedEntityId == "source",
                 "A detached NativeSessionRestored event modified the new CoreDriver panel.");
+            // NativeSessionRestored fires BEFORE CoreDriver publishes its
+            // replacement snapshot. The outgoing session may have been
+            // recovery-ready; that stale flag must not expose Continue.
+            var oldReadyNative = new CoreDriver { NativeRecoveryReady = true };
+            var snapshotGate = new ScreenRouter();
+            snapshotGate.Configure(oldReadyNative);
+            oldReadyNative.SetHold(true);
+            Check(snapshotGate.Current.ScreenId == ScreenId.Hold &&
+                  snapshotGate.Current.SupportedActions.Contains("Continue"),
+                "Pre-restore recovery-ready fixture could not show Continue.");
+            oldReadyNative.RaiseNativeSessionRestored();
+            Check(snapshotGate.Current.ScreenId == ScreenId.Hold &&
+                  !snapshotGate.Current.SupportedActions.Contains("Continue"),
+                "Unpublished replacement Native snapshot inherited an old Continue action.");
+            oldReadyNative.NativeRecoveryReady = false;
+            oldReadyNative.UpdateView();
+            Check(!snapshotGate.Current.SupportedActions.Contains("Continue"),
+                "Replacement Native snapshot not recovery-ready exposed Continue.");
+            oldReadyNative.NativeRecoveryReady = true;
+            oldReadyNative.UpdateView();
+            Check(snapshotGate.Current.SupportedActions.Contains("Continue"),
+                "Fresh confirmed recovery-ready Native snapshot remained blocked.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
