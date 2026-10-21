@@ -146,6 +146,12 @@
         "tests": "Mocked Node Auth/JWT, admin role, selected tenant/course/section, exact idempotent JSON RPC; not real-browser or positive production GoTrue.",
         "safety": "Only university_admin active role may invoke in client; server RPC checks actual membership, institution, verified existing student, audit and request identity. No user creation or service_role key on client.",
         "blockers": "First real verified institution/admin/student users and full end-to-end pilot; classroom lesson/rubric editing and academic grading UI are still incomplete."
+      },
+      "portalFeedbackRead": {
+        "status": "CodeFirst_ImmutableFeedbackClient_ReadOnlyGrades_SyntheticCIOnly",
+        "backend": "Existing live-deployed university_record_feedback RPC is audited append-only server-authorized; client does not create or approve grades. Grade/feedback student queries are SELECT-only and protected by existing RLS.",
+        "source": "portal/src/api.mjs studentResults/staffSubmissions/staffRecordFeedback, portal/src/view.mjs and portal/app.mjs through de87ada; three-decimal grade fix 9476d86",
+        "limits": "No production feedback insert, real user pilot or evidence-grade scientific attestation. Unauthorized synthetic HTTP tests do not substitute for real PostgreSQL RLS acceptance."
       }
     },
     {
@@ -366,6 +372,35 @@
         "enrollmentBrowserWiring": "f9f2d3e82f4bf614efb01f1b32b1251da3fad6f4",
         "scope": "Read-only admin academic overview plus admin-only create_course/create_section/enroll_student existing idempotent audit RPCs, with in-memory per-draft request keys; validates code/term/section/student UUID and RLS-visible parent course/section. Source only, no owner user or student created.",
         "remaining": "Existing verified students must be onboarded and joined to a university membership separately; full real GoTrue/live tenant pilot and browser acceptance NOT_RUN. Instructor section staff enrollment, lesson/rubric authored version UI, grades/feedback, uploads, admin pagination incomplete. No production data mutated."
+      },
+      "studentOutcomesStaffSubmissionsFeedback": {
+        "status": "CodeFirst_RLSAcademicReadAndAuditedFeedback_HeadlessVerified_BrowserHumanPilotNOT_RUN",
+        "sourceStartSha": "24fae4244600ca6c84a1b90893b94d368f80d0cf",
+        "resultsRedSha": "f31c2a31992b094d542beb726fc6b43648b437f9",
+        "resultsRedEvidence": "Native PR 39577218442 panel failed five expected missing studentResults/staffSubmissions cases",
+        "resultsApiSha": "b2c8707304a279af928c0b838cd30e42892a4440",
+        "resultsApiEvidence": "Native PR 39577626046 full SUCCESS, disposable Supabase PR 39577626048 SUCCESS",
+        "resultsViewRedSha": "d6deba7251d98f3d3383a3dc2453811eb92b02f3",
+        "resultsViewRedEvidence": "Native PR 39577791593 portal failed missing renderStaffSubmissions export",
+        "resultsViewSha": "3795ed642b193ee45309dc58f0a833546ca1d94c",
+        "resultsWiredSha": "87c48d8c4720734fc924efa6d5f795b1a3b52af9",
+        "resultsIntegratedEvidence": "Native PR 39578322598 and disposable Supabase PR 39578322510 full SUCCESS at exact integrated source SHA",
+        "feedbackApiRedSha": "f529bc95c806587254a3c02abd0af9cd407468fe",
+        "feedbackApiRedEvidence": "Native PR 39578787440 failed three expected missing staffRecordFeedback cases",
+        "feedbackIntermediateSha": "544bc382e218694cf5d253a8a5264c279a5d4e25",
+        "feedbackCorrectedSha": "a87b95eeda20534c795205d991759178cb1521c8",
+        "feedbackCorrectionReason": "First feedback GREEN exposed TA role-check ordering bug: unrelated staff read failed before instructor-only check; corrected early active membership role gate. CI on corrected intermediate SHA still failed intentionally absent feedback view export.",
+        "feedbackViewRedSha": "44b7058245a3ee2b945c0dbedb0b2ebd26e0c8eb",
+        "feedbackViewRedEvidence": "Native PR 39579085173 panel expected missing renderFeedbackForm export",
+        "feedbackViewSha": "438cb9b854a337350dd51677152c04ad1b4106bd",
+        "feedbackWiredSha": "de87adadc5df5f258bae51b7718bf5c92a1f9663",
+        "feedbackWiredEvidence": "Native PR 39579608924 headless portal 58/58 Node PASS; isolated Supabase PR 39579609026 and OS Native jobs require exact conclusions, not inferred from panel success",
+        "numericPrecisionRedSha": "c1f15d40b6ecd0c71005746290f7c7b4053319bf",
+        "numericPrecisionRedEvidence": "Native PR 39579917055 portal failed numeric(8,3) valid 1.005 due to binary *1000 integer check",
+        "numericPrecisionGreenSha": "9476d86c41630fa19758a678b54f89b0da0f3e51",
+        "latestEvidence": "Native PR 39580125167 portal Node 59/59 PASS, plus preserved .NET/Native headless suites; disposable Supabase PR 39580125164 and Windows/Ubuntu full run conclusions must be checked on exact SHA",
+        "behavior": "Student-selected published assignment RLS checks user-owned submissions, approved grades and student-visible feedback only, tenant/section/submission joins validated, invalid/foreign draft/private rows fail closed. Instructors and teaching assistants may read RLS-visible staff section submission previews; only instructor/admin may call already-deployed university_record_feedback RPC with explicit private-by-default studentVisible boolean, exact idempotent request UUID and JWT. Rejected/delayed responses never imply successful feedback or trusted Native evidence. JS numeric precision accepts server 3-decimal grade without IEEE rounding false negatives.",
+        "remaining": "Real GoTrue signed-in student/instructor/TA browser pilot and accessibility, production RLS HTTP visibility vs seeded fixtures, pagination beyond first 100 and rich feedback history, Native scientific signed evidence attestation, actual trusted grade approval, Unity Editor/Player/XR, G-U1 NOT_RUN/OPEN."
       }
     }
   ],
