@@ -19,7 +19,12 @@ tables. Students can select a published assignment and retrieve its pinned lesso
 lesson `content_json` is displayed as inert read-only JSON text, not as executable
 instructions or scientifically verified data. Instructors, teaching assistants and university administrators can additionally browse
 JWT/RLS-visible courses, sections and published assignments in an English-only,
-read-only hierarchical overview. The first 100 records per category are shown;
+read-only hierarchical overview. An instructor or university administrator can
+select a section, choose server-published same-course lesson and rubric versions,
+and submit an assignment through the existing authenticated
+`public.university_publish_assignment` RPC with a per-draft idempotency key.
+Publication is an academic server operation, never a chemistry calculation,
+Native receipt attestation or direct assignment-table mutation. The first 100 records per category are shown;
 this is not a complete institutional audit. It supports staff and student reading,
 not enrollment, invitations,
 instructor/admin workflows, uploads, grading or publishing. Auth token is

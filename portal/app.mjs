@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson, renderStaffOverview } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -15,9 +15,13 @@ const assignmentsArea = document.getElementById('assignments');
 const lessonArea = document.getElementById('lesson');
 const staffArea = document.getElementById('staff-area');
 const staffOverviewArea = document.getElementById('staff-overview');
+const publishArea = document.getElementById('publish-area');
+const publishChoices = document.getElementById('publish-choices');
+const publishStatus = document.getElementById('publish-status');
 const clearButton = document.getElementById('clear-session');
 let currentSession = null;
 let currentGeneration = 0;
+let publicationSelection = null;
 let api = null;
 
 function setText(target, value) { target.textContent = value; }
@@ -35,6 +39,10 @@ function clearSession() {
   renderLesson(lessonArea, { status: 'no-selection' });
   staffArea.hidden = true;
   renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
+  publishArea.hidden = true;
+  publicationSelection = null;
+  renderPublicationForm(publishChoices, { status: 'no-selection' });
+  setText(publishStatus, '');
   setText(authStatus, 'Session cleared from this tab. Sign in to continue.');
 }
 clearButton.addEventListener('click', clearSession);
@@ -76,7 +84,7 @@ signInForm.addEventListener('submit', async event => {
     signInForm.hidden = true;
     accountArea.hidden = false;
     setText(authStatus, memberships.length > 0
-      ? 'Signed in. Select your active student institution.'
+      ? 'Signed in. Select your active institution.'
       : 'Signed in. No active university memberships were found.');
     renderAssignments(assignmentsArea, { status: 'no-student-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
@@ -110,8 +118,74 @@ async function openPublishedLesson(assignmentId) {
   }
 }
 
+function publicationContext() {
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  return currentSession && ['university_admin', 'instructor'].includes(role)
+    ? { session: currentSession, tenant: institutionSelect.value } : null;
+}
+
+async function submitPublication(draft) {
+  const ctx = publicationContext();
+  const selection = publicationSelection;
+  if (!ctx || !selection || draft.sectionId !== selection.sectionId ||
+      selection.submitting) return;
+  const fingerprint = JSON.stringify(draft);
+  if (selection.fingerprint !== fingerprint) {
+    // Reuse this idempotency key after timeouts for the exact same draft.
+    selection.fingerprint = fingerprint;
+    selection.requestId = crypto.randomUUID();
+  }
+  selection.submitting = true;
+  const generation = currentGeneration;
+  setText(publishStatus, 'Submitting assignment to the university server…');
+  try {
+    const id = await api.staffPublishAssignment(ctx.session, {
+      ...draft, institutionId: ctx.tenant, requestId: selection.requestId
+    });
+    if (generation === currentGeneration && publicationSelection === selection &&
+        currentSession === ctx.session && institutionSelect.value === ctx.tenant) {
+      setText(publishStatus, 'Published assignment confirmed by server: ' + id);
+      const overview = await api.staffOverview(ctx.session, ctx.tenant);
+      if (generation === currentGeneration && publicationSelection === selection)
+        renderStaffOverview(staffOverviewArea, { status: 'available', overview },
+          document, openStaffSection);
+    }
+  } catch {
+    if (generation === currentGeneration && publicationSelection === selection)
+      setText(publishStatus,
+        'Publication not confirmed. Review the request and retry; unchanged requests reuse the same ID.');
+  } finally {
+    selection.submitting = false;
+  }
+}
+
+async function openStaffSection(sectionId) {
+  const ctx = publicationContext();
+  if (!ctx) return;
+  const generation = ++currentGeneration;
+  const selection = { sectionId, fingerprint: null, requestId: null, submitting: false };
+  publicationSelection = selection;
+  publishArea.hidden = false;
+  setText(publishStatus, '');
+  renderPublicationForm(publishChoices, { status: 'loading' });
+  try {
+    const options = await api.staffPublicationOptions(ctx.session, ctx.tenant, sectionId);
+    if (generation === currentGeneration && publicationSelection === selection &&
+        currentSession === ctx.session && institutionSelect.value === ctx.tenant)
+      renderPublicationForm(publishChoices, { status: 'available', options },
+        document, submitPublication);
+  } catch {
+    if (generation === currentGeneration && publicationSelection === selection)
+      renderPublicationForm(publishChoices, { status: 'unavailable' });
+  }
+}
+
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
+  publicationSelection = null;
+  publishArea.hidden = true;
+  setText(publishStatus, '');
+  renderPublicationForm(publishChoices, { status: 'no-selection' });
   const tenant = institutionSelect.value;
   const selected = institutionSelect.selectedOptions[0];
   const role = selected?.dataset.role;
@@ -127,7 +201,8 @@ institutionSelect.addEventListener('change', async () => {
         const overview = await api.staffOverview(session, tenant);
         if (generation === currentGeneration && currentSession === session &&
             institutionSelect.value === tenant)
-          renderStaffOverview(staffOverviewArea, { status: 'available', overview });
+          renderStaffOverview(staffOverviewArea, { status: 'available', overview },
+            document, openStaffSection);
       } catch {
         if (generation === currentGeneration && currentSession === session)
           renderStaffOverview(staffOverviewArea, { status: 'unavailable' });
