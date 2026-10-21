@@ -1,6 +1,6 @@
 // English-only academic metadata rendering. Never use HTML interpolation.
 export function renderAssignments(target, state, documentSource = globalThis.document,
-  onSelect = null) {
+  onSelect = null, onResults = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -41,6 +41,13 @@ export function renderAssignments(target, state, documentSource = globalThis.doc
       button.textContent = 'View published lesson';
       button.addEventListener('click', () => onSelect(assignment.id));
       item.append(button);
+    }
+    if (typeof onResults === 'function') {
+      const resultsButton = documentSource.createElement('button');
+      resultsButton.type = 'button';
+      resultsButton.textContent = 'View academic results';
+      resultsButton.addEventListener('click', () => onResults(assignment.id));
+      item.append(resultsButton);
     }
     list.append(item);
   }
@@ -94,7 +101,7 @@ export function renderLesson(target, state, documentSource = globalThis.document
 // not proof of membership grants and never an editable gradebook.
 // All university-supplied strings are inert textContent.
 export function renderStaffOverview(target, state, documentSource = globalThis.document,
-  onSectionSelect = null) {
+  onSectionSelect = null, onSubmissionsSelect = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -150,6 +157,13 @@ export function renderStaffOverview(target, state, documentSource = globalThis.d
         const sectionHeading = documentSource.createElement('h4');
         sectionHeading.textContent = 'Section ' + section.sectionCode;
         sectionItem.append(sectionHeading);
+        if (typeof onSubmissionsSelect === 'function') {
+          const submissionsButton = documentSource.createElement('button');
+          submissionsButton.type = 'button';
+          submissionsButton.textContent = 'View submissions';
+          submissionsButton.addEventListener('click', () => onSubmissionsSelect(section.id));
+          sectionItem.append(submissionsButton);
+        }
         if (typeof onSectionSelect === 'function' &&
             ['instructor', 'university_admin'].includes(state.overview.role)) {
           const selectButton = documentSource.createElement('button');
@@ -403,5 +417,122 @@ export function renderAdminSetup(target, state, documentSource = globalThis.docu
     });
     root.append(enrollForm);
   }
+  target.replaceChildren(root);
+}
+
+
+// Read-only, server-authorized academic outcomes. Approved grades come from
+// RLS-protected grades; feedback must be explicitly released by an instructor.
+// Neither this UI nor a client digest authenticates Native scientific origin.
+export function renderStudentResults(target, state, documentSource = globalThis.document) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const p = documentSource.createElement('p');
+    p.textContent = value;
+    target.replaceChildren(p);
+  };
+  if (state?.status === 'no-selection') {
+    message('Select a published assignment to view academic results.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading student academic results…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Academic results could not be loaded. Check the connection and retry.');
+    return;
+  }
+  const results = state?.results;
+  if (state?.status !== 'available' || !results ||
+      !Array.isArray(results.submissions) ||
+      !Array.isArray(results.grades) || !Array.isArray(results.feedback))
+    throw new TypeError('Validated student academic results required');
+  if (results.submissions.length === 0) {
+    message('No submitted attempt is visible for this published assignment.');
+    return;
+  }
+  const root = documentSource.createElement('div');
+  const caution = documentSource.createElement('p');
+  caution.textContent = 'Academic metadata from the university server. Native scientific origin is not attested by this view.';
+  root.append(caution);
+  const list = documentSource.createElement('ul');
+  for (const sub of results.submissions) {
+    const item = documentSource.createElement('li');
+    const heading = documentSource.createElement('h3');
+    heading.textContent = 'Submitted attempt ' + sub.id;
+    item.append(heading);
+    const grade = results.grades.find(g => g.submissionId === sub.id);
+    const summary = documentSource.createElement('p');
+    summary.textContent = grade
+      ? 'Approved academic grade: ' + grade.score + '%'
+      : 'No approved academic grade is available.';
+    item.append(summary);
+    const visible = results.feedback.filter(x => x.submissionId === sub.id);
+    if (!visible.length) {
+      const empty = documentSource.createElement('p');
+      empty.textContent = 'No released instructor feedback is available.';
+      item.append(empty);
+    } else {
+      const notes = documentSource.createElement('ul');
+      for (const entry of visible) {
+        const note = documentSource.createElement('li');
+        note.textContent = entry.body;
+        notes.append(note);
+      }
+      item.append(notes);
+    }
+    list.append(item);
+  }
+  root.append(list);
+  target.replaceChildren(root);
+}
+
+// Staff review is a preview of RLS-visible submitted academic metadata only.
+// It does not display private evidence bytes, approve grades or promote staged
+// unverified artifacts. The UI role never substitutes for PostgreSQL policy.
+export function renderStaffSubmissions(target, state, documentSource = globalThis.document) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const p = documentSource.createElement('p');
+    p.textContent = value;
+    target.replaceChildren(p);
+  };
+  if (state?.status === 'no-selection') {
+    message('Select a staff-visible section to review submissions.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading section submissions…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Section submissions could not be loaded. Check the connection and retry.');
+    return;
+  }
+  if (state?.status !== 'available' || !Array.isArray(state.submissions))
+    throw new TypeError('Validated staff submission rows required');
+  if (!state.submissions.length) {
+    message('No submissions are visible in this section.');
+    return;
+  }
+  const root = documentSource.createElement('div');
+  const caution = documentSource.createElement('p');
+  caution.textContent =
+    'Read-only first 100 RLS-visible submissions. No scientific evidence validation or grade approval.';
+  root.append(caution);
+  const list = documentSource.createElement('ul');
+  for (const sub of state.submissions) {
+    const item = documentSource.createElement('li');
+    item.textContent = 'Submission ' + sub.id +
+      ' — student ' + sub.studentId +
+      ' — assignment ' + sub.assignmentId;
+    list.append(item);
+  }
+  root.append(list);
   target.replaceChildren(root);
 }
