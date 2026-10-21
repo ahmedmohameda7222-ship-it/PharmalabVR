@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -80,4 +80,49 @@ test('failed lesson read never leaves previous lesson contents visible', () => {
   assert.doesNotMatch(visibleText(root), /Private lesson/);
   renderLesson(root, { status: 'no-selection' }, document);
   assert.match(visibleText(root), /select a published assignment/i);
+});
+
+test('staff overview presents tenant-scoped course, section and published assignment tree', () => {
+  const root = new FakeNode('section');
+  renderStaffOverview(root, { status: 'available', overview: {
+    role: 'instructor',
+    courses: [{ id: 'course-1', code: 'CHEM101',
+      name: '<svg onload=alert(1)>', term: 'Fall 2026' }],
+    sections: [{ id: 'section-1', courseId: 'course-1',
+      sectionCode: 'LAB01' }],
+    assignments: [{ id: 'assignment-1', sectionId: 'section-1',
+      courseId: 'course-1', title: '<script>unsafe</script>',
+      publishedAt: '2026-10-20T02:00:00Z', dueAt: null }]
+  } }, document);
+  const value = visibleText(root);
+  assert.match(value, /CHEM101/);
+  assert.match(value, /LAB01/);
+  assert.match(value, /<svg onload=alert\(1\)>/);
+  assert.match(value, /<script>unsafe<\/script>/);
+  assert.match(value, /first 100/i);
+  assert.match(value, /read.only/i);
+});
+
+test('staff failures clear previously rendered academic content', () => {
+  const root = new FakeNode('section');
+  renderStaffOverview(root, { status: 'available', overview: {
+    role: 'university_admin',
+    courses: [{ id: 'course-1', code: 'CHEM', name: 'Private course', term: 'Fall' }],
+    sections: [], assignments: []
+  } }, document);
+  renderStaffOverview(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /Private course/);
+  renderStaffOverview(root, { status: 'no-staff-context' }, document);
+  assert.match(visibleText(root), /select an active instructor/i);
+  assert.doesNotMatch(visibleText(root), /Private course/);
+});
+
+test('empty verified staff results are distinct from unavailable state', () => {
+  const root = new FakeNode('section');
+  renderStaffOverview(root, { status: 'available', overview: {
+    role: 'instructor', courses: [], sections: [], assignments: []
+  } }, document);
+  assert.match(visibleText(root), /no courses visible/i);
+  assert.doesNotMatch(visibleText(root), /could not be loaded/i);
 });
