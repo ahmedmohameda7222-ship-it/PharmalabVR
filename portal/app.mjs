@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -13,6 +13,8 @@ const institutionSelect = document.getElementById('institution');
 const institutionArea = document.getElementById('institution-area');
 const assignmentsArea = document.getElementById('assignments');
 const lessonArea = document.getElementById('lesson');
+const staffArea = document.getElementById('staff-area');
+const staffOverviewArea = document.getElementById('staff-overview');
 const clearButton = document.getElementById('clear-session');
 let currentSession = null;
 let currentGeneration = 0;
@@ -31,6 +33,8 @@ function clearSession() {
   password.value = '';
   renderAssignments(assignmentsArea, { status: 'no-student-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
+  staffArea.hidden = true;
+  renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
   setText(authStatus, 'Session cleared from this tab. Sign in to continue.');
 }
 clearButton.addEventListener('click', clearSession);
@@ -110,11 +114,29 @@ institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
   const tenant = institutionSelect.value;
   const selected = institutionSelect.selectedOptions[0];
-  if (!currentSession || !tenant || selected?.dataset.role !== 'student') {
+  const role = selected?.dataset.role;
+  const staff = ['instructor', 'teaching_assistant', 'university_admin'].includes(role);
+  if (!currentSession || !tenant || role !== 'student') {
     renderAssignments(assignmentsArea, { status: 'no-student-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
+    staffArea.hidden = !staff;
+    renderStaffOverview(staffOverviewArea, { status: staff ? 'loading' : 'no-staff-context' });
+    if (staff) {
+      const session = currentSession;
+      try {
+        const overview = await api.staffOverview(session, tenant);
+        if (generation === currentGeneration && currentSession === session &&
+            institutionSelect.value === tenant)
+          renderStaffOverview(staffOverviewArea, { status: 'available', overview });
+      } catch {
+        if (generation === currentGeneration && currentSession === session)
+          renderStaffOverview(staffOverviewArea, { status: 'unavailable' });
+      }
+    }
     return;
   }
+  staffArea.hidden = true;
+  renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
   renderAssignments(assignmentsArea, { status: 'loading' });
   const session = currentSession;

@@ -17,7 +17,11 @@ This app uses Supabase GoTrue password sign-in and GET `/auth/v1/user` for
 verified identity, then reads the existing RLS-protected membership/assignment
 tables. Students can select a published assignment and retrieve its pinned lesson version;
 lesson `content_json` is displayed as inert read-only JSON text, not as executable
-instructions or scientifically verified data. It supports student viewing only, not enrollment, invitations,
+instructions or scientifically verified data. Instructors, teaching assistants and university administrators can additionally browse
+JWT/RLS-visible courses, sections and published assignments in an English-only,
+read-only hierarchical overview. The first 100 records per category are shown;
+this is not a complete institutional audit. It supports staff and student reading,
+not enrollment, invitations,
 instructor/admin workflows, uploads, grading or publishing. Auth token is
 in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
 `scope=local` (not global). Failed HTTP does not mean the refresh token was
