@@ -51,6 +51,12 @@ function harness(options = {}) {
         { institution_id: institutionB, role: 'instructor', status: 'active' }
       ], options.membershipsStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/rpc/university_create_course')
+      return mockResponse(options.courseResult ??
+        '99999999-9999-4999-8999-999999999999', options.courseRpcStatus ?? 200);
+    if (uri.pathname === '/rest/v1/rpc/university_create_section')
+      return mockResponse(options.sectionResult ??
+        'aaaaaaaa-aaaa-4aaa-8aaa-000000000001', options.sectionRpcStatus ?? 200);
     if (uri.pathname === '/rest/v1/rpc/university_publish_assignment')
       return mockResponse(options.publishedId ??
         '77777777-7777-4777-8777-777777777777', options.publishStatus ?? 200);
@@ -423,4 +429,72 @@ test('invalid instructor requests and refused RPC cannot claim publication', asy
     await assert.rejects(() => r.api.staffPublishAssignment(actor, good),
       /unavailable|Invalid/i);
   }
+});
+
+test('university admin creates course via existing idempotent audited RPC', async () => {
+  const { api, calls } = harness({ memberships: [
+    { institution_id: institutionB, role: 'university_admin', status: 'active' }
+  ] });
+  const session = await api.signIn('admin@example.edu', 'password');
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const id = await api.adminCreateCourse(session, {
+    institutionId: institutionB, code: 'CHEM101',
+    name: '  Lab science  ', term: 'Fall2026', requestId
+  });
+  assert.equal(id, '99999999-9999-4999-8999-999999999999');
+  const rpc = calls.find(x => x.url.pathname === '/rest/v1/rpc/university_create_course');
+  assert.equal(rpc.init.method, 'POST');
+  assert.equal(rpc.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(rpc.init.body), {
+    p_institution_id: institutionB, p_code: 'CHEM101',
+    p_name: 'Lab science', p_term: 'Fall2026', p_request_id: requestId
+  });
+  assert.equal(calls.some(x => x.url.pathname === '/rest/v1/courses' &&
+    x.init.method !== 'GET'), false);
+});
+
+test('university admin creates section only for visible same-tenant course via RPC', async () => {
+  const h = harness({ memberships: [
+    { institution_id: institutionB, role: 'university_admin', status: 'active' }
+  ], assignments: [] });
+  const session = await h.api.signIn('admin@example.edu', 'password');
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const id = await h.api.adminCreateSection(session, {
+    institutionId: institutionB, courseId: courseA,
+    sectionCode: 'LAB01', requestId
+  });
+  assert.equal(id, 'aaaaaaaa-aaaa-4aaa-8aaa-000000000001');
+  const rpc = h.calls.find(x => x.url.pathname === '/rest/v1/rpc/university_create_section');
+  assert.equal(rpc.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(rpc.init.body), {
+    p_institution_id: institutionB, p_course_id: courseA,
+    p_section_code: 'LAB01', p_request_id: requestId
+  });
+});
+
+test('university creation excludes instructor, foreign university and malformed codes', async () => {
+  const h = harness();
+  const session = await h.api.signIn('instructor@example.edu', 'password');
+  await assert.rejects(() => h.api.adminCreateCourse(session, {
+    institutionId: institutionB, code: 'CHEM101', name: 'Science',
+    term: 'Fall2026', requestId: '88888888-8888-4888-8888-888888888888'
+  }), /admin/i);
+  await assert.rejects(() => h.api.adminCreateSection(session, {
+    institutionId: institutionB, courseId: courseA,
+    sectionCode: 'LAB01', requestId: '88888888-8888-4888-8888-888888888888'
+  }), /admin/i);
+  assert.equal(h.calls.filter(c => c.url.pathname.includes('/rpc/')).length, 0);
+  const admin = harness({ memberships: [
+    { institution_id: institutionB, role: 'university_admin', status: 'active' }
+  ] });
+  const adminSession = await admin.api.signIn('admin@example.edu', 'password');
+  await assert.rejects(() => admin.api.adminCreateCourse(adminSession, {
+    institutionId: institutionB, code: 'lowercase', name: 'Science',
+    term: 'Fall2026', requestId: '88888888-8888-4888-8888-888888888888'
+  }));
+  await assert.rejects(() => admin.api.adminCreateSection(adminSession, {
+    institutionId: institutionB, courseId: institutionA,
+    sectionCode: 'LAB01', requestId: '88888888-8888-4888-8888-888888888888'
+  }));
+  assert.equal(admin.calls.filter(c => c.url.pathname.includes('/rpc/')).length, 0);
 });
