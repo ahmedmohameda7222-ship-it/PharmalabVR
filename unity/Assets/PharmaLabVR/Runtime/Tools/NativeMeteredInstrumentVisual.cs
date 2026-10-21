@@ -36,6 +36,27 @@ namespace PharmaLabVR.Tools
             Render(0.0);
         }
 
+        // Editor generation cannot persist event delegates. Bind from the
+        // actual scene when loaded in a Player, including additive scenes.
+        // Never search globally: another lab/Native driver may be active.
+        private void OnEnable()
+        {
+            if (!Application.isPlaying || !gameObject.scene.IsValid()) return;
+            foreach (var root in gameObject.scene.GetRootGameObjects())
+            {
+                var core = root.GetComponentInChildren<CoreDriver>(true);
+                if (core == null) continue;
+                Configure(core);
+                return;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (driver != null) driver.SnapshotChanged -= ApplySnapshot;
+            driver = null;
+        }
+
         public void Configure(CoreDriver core)
         {
             if (driver != null) driver.SnapshotChanged -= ApplySnapshot;

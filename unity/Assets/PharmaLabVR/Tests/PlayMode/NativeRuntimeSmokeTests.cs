@@ -24,6 +24,43 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        [UnityTest]
+        public IEnumerator M1_StockBottleRendersActualNativeSourceWithoutInventingBuretteFill()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var bottle = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(item => item.name == "ResearchStockBottle")
+                    .GetComponent<NativeMeteredInstrumentVisual>();
+                var burette = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(item => item.name == "DesktopResearchTool")
+                    .GetComponent<LiquidPresenter>();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(bottle, Is.Not.Null);
+                Assert.That(burette, Is.Not.Null);
+                Assert.That(bottle.DisplayedVolumeM3, Is.Zero);
+                Assert.That(sessions.SelectStock("nacl", 0.05), Is.True, sessions.LastError);
+                yield return null;
+                Assert.That(bottle.DisplayedVolumeM3, Is.EqualTo(2.5e-5).Within(1e-9),
+                    "The authored bottle fill must reflect committed Native source inventory.");
+                Assert.That(burette.CommittedVolumeM3, Is.Zero,
+                    "Preparing stock is not proof of filling the physical burette.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         [Test]
         public void P05_03_ComputeHoldCannotOfferContinueWithoutNativeRecovery()
         {
