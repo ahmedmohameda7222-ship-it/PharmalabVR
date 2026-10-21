@@ -438,6 +438,129 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return result;
   }
 
+  // Read-only view of an authenticated student's own academic results.
+  // Grade/feedback GETs cannot grant visibility: PostgreSQL policies allow
+  // approved grades and explicitly student-visible feedback only.
+  // Staged Native evidence is NOT a verified submission or a grade.
+  async function studentResults(session, institutionId, assignmentId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(institutionId) || !canonicalUuid(assignmentId))
+      throw new Error('Published assignment identity required');
+    const published = await assignments(current, institutionId);
+    const selected = published.find(x => x.id === assignmentId);
+    if (!selected) throw new Error('Published assignment not accessible');
+
+    async function read(resource, select, filters = {}) {
+      const url = new URL('/rest/v1/' + resource, project);
+      url.searchParams.set('select', select);
+      url.searchParams.set('institution_id', 'eq.' + institutionId);
+      for (const [key, value] of Object.entries(filters))
+        url.searchParams.set(key, value);
+      url.searchParams.set('limit', '100');
+      const rows = await request(url.pathname + url.search, {}, current.accessToken);
+      if (!Array.isArray(rows) || rows.length > 100)
+        throw invalid(resource + ' student results');
+      return rows;
+    }
+
+    const seenSubmissions = new Set();
+    const submissionRows = await read('submissions',
+      'id,institution_id,section_id,assignment_id,student_id,submitted_at', {
+        assignment_id: 'eq.' + assignmentId, student_id: 'eq.' + current.userId
+      });
+    const submissions = submissionRows.map(row => {
+      if (!canonicalUuid(row?.id) || seenSubmissions.has(row.id) ||
+          row.institution_id !== institutionId ||
+          row.section_id !== selected.sectionId ||
+          row.assignment_id !== assignmentId ||
+          row.student_id !== current.userId)
+        throw invalid('student submission identity');
+      seenSubmissions.add(row.id);
+      return Object.freeze({ id: row.id, assignmentId, sectionId: selected.sectionId,
+        submittedAt: timestamp(row.submitted_at) });
+    });
+    if (!submissions.length)
+      return { submissions: [], grades: [], feedback: [] };
+
+    const ids = 'in.(' + submissions.map(row => row.id).join(',') + ')';
+    const gradeRows = await read('grades',
+      'id,institution_id,submission_id,status,score', {
+        submission_id: ids, status: 'eq.approved'
+      });
+    const seenGrades = new Set(), gradedSubmissions = new Set();
+    const grades = gradeRows.map(row => {
+      if (!canonicalUuid(row?.id) || seenGrades.has(row.id) ||
+          row.institution_id !== institutionId ||
+          !seenSubmissions.has(row.submission_id) ||
+          gradedSubmissions.has(row.submission_id) ||
+          row.status !== 'approved' ||
+          typeof row.score !== 'number' || !Number.isFinite(row.score) ||
+          row.score < 0 || row.score > 100 ||
+          !Number.isInteger(row.score * 1000))
+        throw invalid('approved student grade');
+      seenGrades.add(row.id);
+      gradedSubmissions.add(row.submission_id);
+      return Object.freeze({ id: row.id, submissionId: row.submission_id,
+        score: row.score });
+    });
+
+    const feedbackRows = await read('feedback',
+      'id,institution_id,submission_id,body,student_visible,created_at', {
+        submission_id: ids, student_visible: 'eq.true'
+      });
+    const seenFeedback = new Set();
+    const feedback = feedbackRows.map(row => {
+      if (!canonicalUuid(row?.id) || seenFeedback.has(row.id) ||
+          row.institution_id !== institutionId ||
+          !seenSubmissions.has(row.submission_id) ||
+          row.student_visible !== true ||
+          typeof row.body !== 'string' || !row.body.trim() ||
+          row.body.length > 12000)
+        throw invalid('student-visible feedback');
+      seenFeedback.add(row.id);
+      return Object.freeze({ id: row.id, submissionId: row.submission_id,
+        body: row.body, createdAt: timestamp(row.created_at) });
+    });
+    return { submissions: Object.freeze(submissions),
+      grades: Object.freeze(grades), feedback: Object.freeze(feedback) };
+  }
+
+  // RLS-protected staff preview, limited to the first 100 matching rows.
+  // A client-side staff role is only a hint, never a grade/feedback grant.
+  async function staffSubmissions(session, institutionId, sectionId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(institutionId) || !canonicalUuid(sectionId))
+      throw new Error('Active staff section required');
+    const overview = await staffOverview(current, institutionId);
+    const section = overview.sections.find(x => x.id === sectionId);
+    if (!section) throw new Error('Active staff section required');
+    const url = new URL('/rest/v1/submissions', project);
+    url.searchParams.set('select',
+      'id,institution_id,course_id,section_id,assignment_id,student_id,submitted_at');
+    url.searchParams.set('institution_id', 'eq.' + institutionId);
+    url.searchParams.set('section_id', 'eq.' + sectionId);
+    url.searchParams.set('limit', '100');
+    const rows = await request(url.pathname + url.search, {}, current.accessToken);
+    if (!Array.isArray(rows) || rows.length > 100)
+      throw invalid('staff submission preview');
+    const seen = new Set();
+    return Object.freeze(rows.map(row => {
+      if (!canonicalUuid(row?.id) || seen.has(row.id) ||
+          row.institution_id !== institutionId ||
+          row.section_id !== sectionId ||
+          row.course_id !== section.courseId ||
+          !canonicalUuid(row.student_id) ||
+          !overview.assignments.some(a => a.id === row.assignment_id &&
+            a.sectionId === sectionId && a.courseId === section.courseId))
+        throw invalid('staff submission section');
+      seen.add(row.id);
+      return Object.freeze({ id: row.id, institutionId,
+        courseId: row.course_id, sectionId, assignmentId: row.assignment_id,
+        studentId: row.student_id,
+        submittedAt: timestamp(row.submitted_at) });
+    }));
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -526,5 +649,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, adminEnrollStudent, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, adminEnrollStudent, studentResults, staffSubmissions, assignmentLesson, signOut });
 }
