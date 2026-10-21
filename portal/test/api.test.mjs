@@ -81,6 +81,9 @@ function harness(options = {}) {
       return mockResponse(options.submissions ?? [], options.submissionStatus ?? 200);
     if (uri.pathname === '/rest/v1/grades')
       return mockResponse(options.grades ?? [], options.gradeStatus ?? 200);
+    if (uri.pathname === '/rest/v1/rpc/university_record_feedback')
+      return mockResponse(options.feedbackRecordedId ??
+        'aaaaaaaa-aaaa-4aaa-8aaa-000000000002', options.feedbackRpcStatus ?? 200);
     if (uri.pathname === '/rest/v1/feedback')
       return mockResponse(options.feedback ?? [], options.feedbackStatus ?? 200);
     if (uri.pathname === '/rest/v1/courses') {
@@ -643,5 +646,78 @@ test('RLS-denied academic result routes remain unavailable, not empty', async ()
     const session = await h.api.signIn('learner@example.edu', 'password');
     await assert.rejects(() => h.api.studentResults(session, institutionA, assignmentA),
       /unavailable/i);
+  }
+});
+
+test('assigned instructor records immutable visibility-scoped feedback via audited RPC only', async () => {
+  const subId = '77777777-7777-4777-8777-777777777777';
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const h = harness({
+    submissions: [{ id: subId, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, assignment_id: assignmentA,
+      student_id: student, submitted_at: '2026-10-21T01:00:00Z' }],
+    assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+      published_at: '2026-10-20T02:00:00Z', due_at: null }]
+  });
+  const session = await h.api.signIn('instructor@example.edu', 'password');
+  const id = await h.api.staffRecordFeedback(session, {
+    institutionId: institutionB, sectionId: sectionA, submissionId: subId,
+    body: '  Correct the result discussion. ', studentVisible: false, requestId
+  });
+  assert.equal(id, 'aaaaaaaa-aaaa-4aaa-8aaa-000000000002');
+  const rpc = h.calls.find(x => x.url.pathname === '/rest/v1/rpc/university_record_feedback');
+  assert.ok(rpc);
+  assert.equal(rpc.init.method, 'POST');
+  assert.equal(rpc.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(rpc.init.body), {
+    p_institution_id: institutionB, p_submission_id: subId,
+    p_body: '  Correct the result discussion. ',
+    p_student_visible: false, p_request_id: requestId
+  });
+  assert.equal(h.calls.some(x => x.url.pathname === '/rest/v1/feedback' &&
+    x.init.method !== 'GET'), false);
+});
+
+test('feedback denies TA, foreign institution, missing section and malformed visibility', async () => {
+  const subId = '77777777-7777-4777-8777-777777777777';
+  const payload = { institutionId: institutionB, sectionId: sectionA,
+    submissionId: subId, body: 'Teacher feedback', studentVisible: true,
+    requestId: '88888888-8888-4888-8888-888888888888' };
+  const ta = harness({ memberships: [{
+    institution_id: institutionB, role: 'teaching_assistant', status: 'active'
+  }] });
+  const taSession = await ta.api.signIn('ta@example.edu', 'password');
+  await assert.rejects(() => ta.api.staffRecordFeedback(taSession, payload),
+    /instructor|admin/i);
+  assert.equal(ta.calls.filter(x => x.url.pathname.includes('/rpc/')).length, 0);
+  const h = harness();
+  const session = await h.api.signIn('instructor@example.edu', 'password');
+  for(const bad of [
+    { ...payload, institutionId: institutionA },
+    { ...payload, sectionId: institutionA },
+    { ...payload, studentVisible: null },
+    { ...payload, body: ' ' },
+    { ...payload, requestId: 'invalid' }
+  ]) await assert.rejects(() => h.api.staffRecordFeedback(session, bad));
+  assert.equal(h.calls.filter(x => x.url.pathname.includes('/rpc/')).length, 0);
+});
+
+test('feedback RPC 403 or noncanonical result cannot become a confirmed post', async () => {
+  const subId = '77777777-7777-4777-8777-777777777777';
+  const base = { assignments: [{ id: assignmentA, institution_id: institutionB,
+    course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+    published_at: '2026-10-20T02:00:00Z', due_at: null }],
+    submissions: [{ id: subId, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, assignment_id: assignmentA,
+      student_id: student, submitted_at: '2026-10-21T01:00:00Z' }] };
+  for(const fault of [{ feedbackRpcStatus: 403 }, { feedbackRecordedId: 'wrong-id' }]) {
+    const h = harness({ ...base, ...fault });
+    const session = await h.api.signIn('teacher@example.edu', 'password');
+    await assert.rejects(() => h.api.staffRecordFeedback(session, {
+      institutionId: institutionB, sectionId: sectionA, submissionId: subId,
+      body: 'Comments', studentVisible: true,
+      requestId: '88888888-8888-4888-8888-888888888888'
+    }), /unavailable|Invalid/i);
   }
 });
