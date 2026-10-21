@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson, renderStaffOverview } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -125,4 +125,54 @@ test('empty verified staff results are distinct from unavailable state', () => {
   } }, document);
   assert.match(visibleText(root), /no courses visible/i);
   assert.doesNotMatch(visibleText(root), /could not be loaded/i);
+});
+
+test('instructor must explicitly select a section before publishing', () => {
+  const root = new FakeNode('section');
+  const seen = [];
+  renderStaffOverview(root, { status: 'available', overview: {
+    role: 'instructor', courses: [{ id: 'course-1', code: 'CHEM101',
+      name: 'Foundations', term: 'Fall' }],
+    sections: [{ id: 'section-1', courseId: 'course-1', sectionCode: 'LAB01' }],
+    assignments: []
+  } }, document, sectionId => seen.push(sectionId));
+  const findButtons = node => [node, ...node.children.flatMap(findButtons)]
+    .filter(n => n.tag === 'button');
+  const buttons = findButtons(root);
+  assert.equal(buttons.length, 1);
+  assert.equal(seen.length, 0);
+  buttons[0].events.click();
+  assert.deepEqual(seen, ['section-1']);
+});
+
+test('published version form submits explicit validated immutable version choices', () => {
+  const root = new FakeNode('section');
+  const received = [];
+  renderPublicationForm(root, { status: 'available', options: {
+    sectionId: 'section-1', courseId: 'course-1',
+    lessons: [{ id: 'lesson-1', version: 3 }],
+    rubrics: [{ id: 'rubric-2', version: 2 }]
+  } }, document, draft => received.push(draft));
+  const find = node => [node, ...node.children.flatMap(find)];
+  const form = find(root).find(n => n.tag === 'form');
+  assert.ok(form);
+  const inputs = find(form).filter(n => ['input', 'select'].includes(n.tag));
+  const title = inputs.find(x => x.name === 'title');
+  assert.ok(title);
+  title.value = 'CHEM101 lab';
+  const event = { preventDefault() {} };
+  form.events.submit(event);
+  assert.equal(received.length, 1);
+  assert.equal(received[0].sectionId, 'section-1');
+  assert.equal(received[0].lessonVersionId, 'lesson-1');
+  assert.equal(received[0].rubricVersionId, 'rubric-2');
+  assert.equal(received[0].title, 'CHEM101 lab');
+});
+
+test('publication form never claims successful assignment after failed read', () => {
+  const root = new FakeNode('section');
+  renderPublicationForm(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  renderPublicationForm(root, { status: 'no-selection' }, document);
+  assert.match(visibleText(root), /select a section/i);
 });
