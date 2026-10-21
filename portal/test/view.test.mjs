@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm, renderGradeApprovalForm } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -355,4 +355,77 @@ test('only instructor or admin staff preview provides an explicit feedback actio
   assert.equal(buttons.length, 1);
   buttons[0].events.click();
   assert.deepEqual(sent, ['submission-1']);
+});
+
+
+test('irreversible grade form requires explicit acknowledgement before submit', () => {
+  const root = new FakeNode('section');
+  const drafts = [];
+  renderGradeApprovalForm(root, {
+    status: 'available', submissionId: 'submission-1'
+  }, document, x => drafts.push(x));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const form = walk(root).find(n => n.tag === 'form');
+  assert.ok(form);
+  const score = walk(form).find(n => n.tag === 'input' && n.name === 'score');
+  const confirm = walk(form).find(n => n.tag === 'input' && n.name === 'acknowledge');
+  assert.ok(score);
+  assert.ok(confirm);
+  assert.equal(confirm.checked, false);
+  score.value = '87.125';
+  form.events.submit({ preventDefault() {} });
+  assert.equal(drafts.length, 0);
+  confirm.checked = true;
+  form.events.submit({ preventDefault() {} });
+  assert.deepEqual(drafts, [{ submissionId: 'submission-1', score: 87.125 }]);
+  assert.match(visibleText(root), /irreversible/i);
+  assert.match(visibleText(root), /not.*scientific/i);
+});
+
+test('grade form rejects over-precision or out-of-range scores without callback', () => {
+  const root = new FakeNode('section');
+  const drafts = [];
+  renderGradeApprovalForm(root, {
+    status: 'available', submissionId: 'submission-1'
+  }, document, x => drafts.push(x));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const form = walk(root).find(n => n.tag === 'form');
+  const score = walk(form).find(n => n.tag === 'input' && n.name === 'score');
+  const confirm = walk(form).find(n => n.tag === 'input' && n.name === 'acknowledge');
+  confirm.checked = true;
+  for (const value of ['101', '100.001', '-1', '1.0051', 'NaN', '', '1e2']) {
+    score.value = value;
+    form.events.submit({ preventDefault() {} });
+  }
+  assert.equal(drafts.length, 0);
+  for (const value of ['0', '1.005', '99.999', '100']) {
+    score.value = value;
+    form.events.submit({ preventDefault() {} });
+  }
+  assert.deepEqual(drafts.map(x => x.score), [0, 1.005, 99.999, 100]);
+  renderGradeApprovalForm(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /99.999/);
+  renderGradeApprovalForm(root, { status: 'no-selection' }, document);
+  assert.match(visibleText(root), /select a submission/i);
+});
+
+test('grade action appears only for instructor/admin, not teaching assistant', () => {
+  const row = { id: 'submission-1', assignmentId: 'assignment-1',
+    studentId: 'student-1', submittedAt: '2026-10-21T01:00:00Z' };
+  const root = new FakeNode('section');
+  const selected = [];
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  renderStaffSubmissions(root, {
+    status: 'available', role: 'teaching_assistant', submissions: [row]
+  }, document, null, id => selected.push(id));
+  assert.equal(walk(root).filter(n => n.tag === 'button').length, 0);
+  renderStaffSubmissions(root, {
+    status: 'available', role: 'instructor', submissions: [row]
+  }, document, null, id => selected.push(id));
+  const buttons = walk(root).filter(n => n.tag === 'button');
+  assert.equal(buttons.length, 1);
+  assert.match(buttons[0].textContent, /approve grade/i);
+  buttons[0].events.click();
+  assert.deepEqual(selected, ['submission-1']);
 });
