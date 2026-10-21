@@ -24,6 +24,74 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Source test only. Real Editor/Player execution remains the final
+        // local Codex verification gate; no simulated pH or note fixture.
+        [UnityTest]
+        public IEnumerator M3_ResearchLessonTransfersAndRecordsActualNativePHIntoOfflineNotebook()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string notePath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var name = "measurement-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, name);
+                notePath = Path.Combine(Application.persistentDataPath, "sessions", name + ".plv-notes");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Measure));
+                Assert.That(sessions.CanRecordCurrentNativePH, Is.False,
+                    "An empty receiver has no recordable Native pH.");
+                Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False);
+                Assert.That(sessions.ReadNotebookEntries(), Is.Empty);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
+                for (var i = 0; i < 200 && !sessions.CanRecordCurrentNativePH; ++i)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(sessions.CanRecordCurrentNativePH, Is.True,
+                    driver.Session.ReadSnapshot());
+                var revision = driver.CurrentLabView.Vessels.Single(v => v.Id == "receiver").MaterialRevision;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.True, sessions.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                var entries = sessions.ReadNotebookEntries();
+                Assert.That(entries.Count, Is.EqualTo(1));
+                Assert.That(entries[0].VesselId, Is.EqualTo("receiver"));
+                Assert.That(entries[0].EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(entries[0].Text, Does.Contain("material revision " + revision));
+                Assert.That(entries[0].Text, Does.Contain("Native pH"));
+                Assert.That(entries[0].Text, Does.Contain("database "));
+                Assert.That(entries[0].Text, Does.Contain("Research observation only"));
+                Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
+                    "Notebook navigation cannot duplicate a measurement action.");
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                if (notePath != null)
+                    foreach (var suffix in new[] { "", ".bak", ".tmp" })
+                        if (File.Exists(notePath + suffix)) File.Delete(notePath + suffix);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         [UnityTest]
         public IEnumerator M1_StockBottleRendersActualNativeSourceWithoutInventingBuretteFill()
         {
