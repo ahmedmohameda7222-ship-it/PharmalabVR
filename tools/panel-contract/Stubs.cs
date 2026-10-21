@@ -81,6 +81,7 @@ namespace PharmaLabVR.Core
         public PharmaLabVR.Lab.LabViewModel CurrentLabView { get; } = new();
         public bool IsTimeHeld { get; private set; }
         public bool IsNativePaused { get; private set; }
+        public bool SourceNeedsPreparation { get; set; }
         public bool NativeRecoveryReady { get; set; }
         public string HoldReason { get; private set; } = "";
         public string CurrentMode { get; set; } = "Desktop";

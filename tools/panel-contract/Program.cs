@@ -97,6 +97,38 @@ internal static class Program
               !staleXrLabel.Contains("7.13") && staleXrLabel.Contains("IPhreeqc-research"),
             "XR status label implied a current value for stale Native chemistry.");
 
+        // M1 onboarding: the initial Native Pause is a controlled stock-setup
+        // phase with real preparation actions, not a dead Pause menu.
+        var onboardingNative = new CoreDriver { SourceNeedsPreparation = true };
+        Check(onboardingNative.PauseSession(), "Initial Native setup pause fixture failed.");
+        var onboardingRouter = new ScreenRouter();
+        onboardingRouter.Configure(onboardingNative);
+        Check(onboardingRouter.Current.ScreenId == ScreenId.Lab &&
+              onboardingRouter.Current.SupportedActions.Contains("PrepareResearchStock") &&
+              onboardingRouter.Current.SupportedActions.Contains("SelectResearchLesson") &&
+              !onboardingRouter.Current.SupportedActions.Contains("PipetteDispense") &&
+              !onboardingRouter.Current.SupportedActions.Contains("FillBurette") &&
+              !onboardingRouter.Current.SupportedActions.Contains("Load"),
+            "First-run setup must expose stock/lesson choices but no material transfer or load.");
+        onboardingRouter.Show(ScreenId.Settings);
+        Check(onboardingRouter.ReturnFromSettings() &&
+              onboardingRouter.Current.ScreenId == ScreenId.Lab,
+            "Initial stock-setup Settings cannot return to its Native-held workspace.");
+        onboardingNative.SetHold(true);
+        Check(onboardingRouter.Current.ScreenId == ScreenId.Hold,
+            "Real input loss must supersede the initial stock-setup workspace.");
+        onboardingNative.SetHold(false);
+        Check(onboardingRouter.Current.ScreenId == ScreenId.Lab,
+            "Recovered startup input hold incorrectly stranded stock preparation.");
+        onboardingNative.SourceNeedsPreparation = false;
+        onboardingNative.UpdateView();
+        Check(onboardingRouter.Current.ScreenId == ScreenId.Pause &&
+              !onboardingRouter.Current.SupportedActions.Contains("PrepareResearchStock"),
+            "Ordinary Native Pause must not retain startup-only stock actions.");
+        onboardingRouter.Show(ScreenId.Lab);
+        Check(onboardingRouter.Current.ScreenId == ScreenId.Pause,
+            "Normal paused Native authority admitted live Lab navigation.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(

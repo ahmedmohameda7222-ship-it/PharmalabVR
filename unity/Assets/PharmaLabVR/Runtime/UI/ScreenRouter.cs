@@ -217,11 +217,11 @@ namespace PharmaLabVR.UI
                     selectedEntityId = "source";
                     beforeSettings = ScreenId.Lab;
                     beforeInterruptedSettings = ScreenId.Lab;
-                    beforeHold = core != null && core.IsNativePaused
-                        ? ScreenId.Pause : ScreenId.Lab;
+                    beforeHold = core != null && core.IsNativePaused &&
+                        !core.SourceNeedsPreparation ? ScreenId.Pause : ScreenId.Lab;
                     screen = core != null && core.IsTimeHeld
-                        ? ScreenId.Hold : core != null && core.IsNativePaused
-                            ? ScreenId.Pause : ScreenId.Lab;
+                        ? ScreenId.Hold : core != null && core.IsNativePaused &&
+                          !core.SourceNeedsPreparation ? ScreenId.Pause : ScreenId.Lab;
                 }
                 else if (core != null && screen == ScreenId.Lab)
                 {
@@ -229,10 +229,11 @@ namespace PharmaLabVR.UI
                     // pause/hold state, rather than assuming a running Lab.
                     if (core.IsTimeHeld)
                     {
-                        beforeHold = core.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                        beforeHold = core.IsNativePaused && !core.SourceNeedsPreparation
+                            ? ScreenId.Pause : ScreenId.Lab;
                         screen = ScreenId.Hold;
                     }
-                    else if (core.IsNativePaused)
+                    else if (core.IsNativePaused && !core.SourceNeedsPreparation)
                         screen = ScreenId.Pause;
                 }
             }
@@ -244,10 +245,11 @@ namespace PharmaLabVR.UI
         {
             if (driver != null && driver.IsTimeHeld && id != ScreenId.Hold &&
                 id != ScreenId.Review && id != ScreenId.Settings) return;
-            // Panel navigation is public. Never expose live Lab actions when
-            // the authoritative Native session is still paused; only the
-            // shared controller's successful Native Continue can clear pause.
-            if (driver != null && driver.IsNativePaused && id == ScreenId.Lab)
+            // Initial paused stock preparation is a controlled setup workspace,
+            // NOT permission to simulate or transfer material. Real subsequent
+            // Native Pause/SessionLoad still requires explicit Continue.
+            if (driver != null && driver.IsNativePaused &&
+                !driver.SourceNeedsPreparation && id == ScreenId.Lab)
             {
                 if (screen == ScreenId.Lab)
                 {
@@ -285,7 +287,8 @@ namespace PharmaLabVR.UI
             }
             // A late Native Pause while Settings is visible must not
             // restore a live Lab solely from previously captured UI history.
-            if (destination == ScreenId.Lab && driver != null && driver.IsNativePaused)
+            if (destination == ScreenId.Lab && driver != null &&
+                driver.IsNativePaused && !driver.SourceNeedsPreparation)
                 destination = ScreenId.Pause;
             Show(destination);
             return screen == destination;
@@ -445,10 +448,11 @@ namespace PharmaLabVR.UI
             {
                 if (driver.IsTimeHeld)
                 {
-                    beforeHold = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                    beforeHold = driver.IsNativePaused && !driver.SourceNeedsPreparation
+                        ? ScreenId.Pause : ScreenId.Lab;
                     screen = ScreenId.Hold;
                 }
-                else if (driver.IsNativePaused)
+                else if (driver.IsNativePaused && !driver.SourceNeedsPreparation)
                     screen = ScreenId.Pause;
             }
             var view = driver?.CurrentLabView;
@@ -473,6 +477,9 @@ namespace PharmaLabVR.UI
                     (confirmedRecoveryReady ?
                         new[] { "Save", "Load", "Review", "Settings", "Continue" } :
                         new[] { "Save", "Load", "Review", "Settings" }),
+                ScreenId.Lab when driver != null && driver.SourceNeedsPreparation =>
+                    new[] { "PrepareResearchStock", "PrepareReserveStock", "PrepareRinseWater",
+                        "SelectResearchLesson", "Settings" },
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",

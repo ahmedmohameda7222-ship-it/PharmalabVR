@@ -61,6 +61,44 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator M1_FirstNativeSetupLetsStudentChooseLessonAndPrepareStock()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panel = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab),
+                    "Initial Native stock setup must be accessible, not hidden behind Pause.");
+                Assert.That(router.Current.SupportedActions, Does.Contain("PrepareResearchStock"));
+                Assert.That(router.Current.SupportedActions, Does.Not.Contain("FillBurette"));
+                Assert.That(panel.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True);
+                Assert.That(panel.HasResearchLesson, Is.True);
+                Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", 0.05), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(driver.SourceNeedsPreparation, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(driver.CurrentLabView.Vessels.Single(item => item.Id == "source")
+                    .CommittedVolumeM3, Is.GreaterThan(0d));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator P06_02_SetupConfirmLoadsNativeBackedLabInSelectedMode()
         {
 #if UNITY_EDITOR
