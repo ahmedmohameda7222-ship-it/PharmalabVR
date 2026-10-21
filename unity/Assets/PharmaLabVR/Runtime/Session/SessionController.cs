@@ -88,7 +88,14 @@ namespace PharmaLabVR.Session
             router?.Configure(driver);
             panels?.Configure(router, driver, this);
             spatialPanel?.Configure(router, panels, driver);
-            if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
+            if (!string.IsNullOrEmpty(sessionName) &&
+                !string.Equals(saveName, sessionName, StringComparison.Ordinal))
+            {
+                // A different saved-file identity cannot reuse an old
+                // baseline comparison, even with the same Native driver.
+                recordedCache.InvalidateComparison();
+                saveName = sessionName;
+            }
         }
 
         private void OnEnable()
@@ -786,6 +793,10 @@ namespace PharmaLabVR.Session
             {
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
                 LastDurableSavePath = saves.Save(driver.Session, Path.Combine(Application.persistentDataPath, "sessions"), saveName);
+                // SaveService returned a confirmed durable path. A cached
+                // comparison against the previous saved baseline is no
+                // longer valid; the Native Review remains unchanged.
+                recordedCache.InvalidateComparison();
                 LastError = null;
                 router?.MarkSaved();
                 return true;

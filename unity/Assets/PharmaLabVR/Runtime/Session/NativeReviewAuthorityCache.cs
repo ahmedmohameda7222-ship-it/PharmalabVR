@@ -16,6 +16,11 @@ namespace PharmaLabVR.Session
         public TReview Review { get; set; }
         public TComparison Comparison { get; set; }
 
+        // Replacing a durable saved-run baseline does not change the
+        // authoritative Native recorded Review. Only its comparison to the
+        // previous baseline becomes stale.
+        public void InvalidateComparison() => Comparison = null;
+
         public void Observe(object driver, ulong restorationEpoch)
         {
             if (observed && ReferenceEquals(boundDriver, driver) &&
