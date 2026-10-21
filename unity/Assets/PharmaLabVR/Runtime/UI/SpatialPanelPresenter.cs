@@ -396,7 +396,8 @@ namespace PharmaLabVR.UI
             SetButton("Open review", state.SupportedActions.Contains("Review") &&
                 !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : 30f);
+                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f :
+                    state.ScreenId == ScreenId.Notebook ? -82f : 30f);
             SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("Notebook"));
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
@@ -409,8 +410,9 @@ namespace PharmaLabVR.UI
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
-                state.ScreenId != ScreenId.Settings &&
-                state.ScreenId != ScreenId.Notebook && state.ScreenId != ScreenId.Review);
+                state.ScreenId != ScreenId.Settings && state.ScreenId != ScreenId.Review);
+            buttons["Save session"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Notebook ? -194f : -250f);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
             SetButton("Settings", state.SupportedActions.Contains("Settings"));
             SetButton("Back", state.SupportedActions.Contains("Back"));

@@ -82,12 +82,26 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
                     "Notebook navigation cannot duplicate a measurement action.");
                 Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1));
+                Assert.That(router.Current.SupportedActions, Does.Contain("Save"));
+                Assert.That(router.Current.SupportedActions, Does.Contain("Review"));
+                Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
+                Assert.That(File.Exists(sessions.LastDurableSavePath), Is.True);
+                Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(sessions.RecordedReview, Is.Not.Null,
+                    "Saved notebook observation must be reachable from recorded review.");
             }
             finally
             {
                 if (notePath != null)
-                    foreach (var suffix in new[] { "", ".bak", ".tmp" })
-                        if (File.Exists(notePath + suffix)) File.Delete(notePath + suffix);
+                {
+                    foreach (var file in new[] {
+                        notePath, notePath + ".bak", notePath + ".tmp",
+                        notePath.Replace(".plv-notes", ".plv.json"),
+                        notePath.Replace(".plv-notes", ".plv.json.bak"),
+                        notePath.Replace(".plv-notes", ".plv.json.tmp") })
+                        if (File.Exists(file)) File.Delete(file);
+                }
                 SceneManager.UnloadSceneAsync(scene);
             }
         }

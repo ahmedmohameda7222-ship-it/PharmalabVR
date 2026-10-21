@@ -179,6 +179,13 @@ internal static class Program
         Check(!notePanels.Request(PanelAction.RecordCurrentPH) &&
               noteSession.NotebookAppendCalls == 1,
             "Rejected measurement attempt appended an unverified note.");
+        noteRouter.Show(ScreenId.Notebook);
+        Check(noteRouter.Current.SupportedActions.Contains("Save") &&
+              noteRouter.Current.SupportedActions.Contains("Review") &&
+              notePanels.Request(PanelAction.Save) &&
+              notePanels.Request(PanelAction.Review) &&
+              noteRouter.Current.ScreenId == ScreenId.Review,
+            "Notebook-to-durable-save-to-recorded-review journey is not routable.");
 
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
