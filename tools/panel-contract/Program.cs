@@ -237,6 +237,45 @@ internal static class Program
               !predictionPanels.Request(PanelAction.RecordResearchPrediction, "below-7"),
             "Shared first-run Desktop/XR prediction did not durably request a single annotation.");
 
+        // M3 learner review RED: a saved Native session's review must show
+        // this branch's durable prediction and observation annotations,
+        // including after a lesson controller is reconstructed.
+        var researchNotes = new NotebookService();
+        var learningDirectory = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-learning-review-" + Guid.NewGuid().ToString("N"));
+        var learningPath = System.IO.Path.Combine(learningDirectory, "study.plv-notes");
+        try
+        {
+            researchNotes.Append(learningPath, "student-branch", "7", "receiver",
+                "Student hypothesis: receiver pH below 7.");
+            researchNotes.Append(learningPath, "student-branch", "11", "receiver",
+                "Native pH 6.20 · material revision 3 · event 11 · database pinned-db.");
+            researchNotes.Append(learningPath, "different-tenant-branch", "14", "source",
+                "Private unrelated student annotation.");
+            var notes = researchNotes.Read(learningPath, "student-branch");
+            var result = ResearchLearningReview.Render(notes, "student-branch", false);
+            Check(result.Contains("2 student annotations") &&
+                  result.Contains("Student hypothesis") && result.Contains("Native pH 6.20") &&
+                  result.Contains("event 7") && result.Contains("event 11") &&
+                  !result.Contains("unrelated"),
+                "Recorded review must render durable branch-linked student findings without cross-branch disclosure.");
+            var compact = ResearchLearningReview.Render(notes, "student-branch", true);
+            Check(compact.Length < 320 && compact.Contains("6.20") &&
+                  compact.Contains("Student hypothesis"),
+                "XR recorded review must expose readable learner findings.");
+            var isolated = ResearchLearningReview.Render(notes, "different-tenant-branch", false);
+            Check(!isolated.Contains("6.20") && !isolated.Contains("hypothesis"),
+                "Other Native branch review must not inherit this student's annotations.");
+            Check(ResearchLearningReview.Render(Array.Empty<NotebookEntry>(),
+                "student-branch", false).Contains("No student annotations"),
+                "Empty notebook must not imply measured or completed work.");
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(learningDirectory))
+                System.IO.Directory.Delete(learningDirectory, true);
+        }
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
