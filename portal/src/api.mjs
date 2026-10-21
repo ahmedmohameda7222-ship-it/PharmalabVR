@@ -187,6 +187,83 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return Object.freeze(result);
   }
 
+  // Role is a UI hint only: PostgREST SELECTs use authenticated JWT and
+  // existing institution-scoped policies. No service key or direct writes.
+  // This is a bounded overview of the first 100 RLS-visible rows per type,
+  // NOT an assertion that the user's university has only these records.
+  async function staffOverview(session, institutionId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(institutionId))
+      throw new Error('Active instructor institution required');
+    const active = await memberships(current);
+    const staff = active.find(row => row.institutionId === institutionId &&
+      ['university_admin', 'instructor', 'teaching_assistant'].includes(row.role));
+    if (!staff) throw new Error('Active university staff institution required');
+
+    async function read(resource, select, filters = {}) {
+      const url = new URL('/rest/v1/' + resource, project);
+      url.searchParams.set('select', select);
+      url.searchParams.set('institution_id', 'eq.' + institutionId);
+      for (const [key, value] of Object.entries(filters))
+        url.searchParams.set(key, value);
+      url.searchParams.set('limit', '100');
+      const rows = await request(url.pathname + url.search, {}, current.accessToken);
+      if (!Array.isArray(rows) || rows.length > 100)
+        throw invalid(resource + ' staff list');
+      return rows;
+    }
+
+    const courseRows = await read('courses', 'id,institution_id,code,name,term');
+    const seenCourses = new Set();
+    const courses = courseRows.map(row => {
+      if (!canonicalUuid(row?.id) || row.institution_id !== institutionId ||
+          seenCourses.has(row.id) ||
+          typeof row.code !== 'string' || !row.code.trim() || row.code.length > 40 ||
+          typeof row.name !== 'string' || !row.name.trim() || row.name.length > 200 ||
+          typeof row.term !== 'string' || !row.term.trim() || row.term.length > 160)
+        throw invalid('staff course');
+      seenCourses.add(row.id);
+      return Object.freeze({ id: row.id, institutionId,
+        code: row.code, name: row.name, term: row.term });
+    });
+
+    const sectionRows = await read('course_sections',
+      'id,institution_id,course_id,section_code');
+    const seenSections = new Map();
+    const sections = sectionRows.map(row => {
+      if (!canonicalUuid(row?.id) || row.institution_id !== institutionId ||
+          !seenCourses.has(row.course_id) || seenSections.has(row.id) ||
+          typeof row.section_code !== 'string' ||
+          !row.section_code.trim() || row.section_code.length > 160)
+        throw invalid('staff section');
+      seenSections.set(row.id, row.course_id);
+      return Object.freeze({ id: row.id, institutionId,
+        courseId: row.course_id, sectionCode: row.section_code });
+    });
+
+    const assignmentRows = await read('assignments',
+      'id,institution_id,course_id,section_id,title,published_at,due_at',
+      { published_at: 'not.is.null' });
+    const seenAssignments = new Set();
+    const assignments = assignmentRows.map(row => {
+      if (!canonicalUuid(row?.id) || row.institution_id !== institutionId ||
+          seenAssignments.has(row.id) || !canonicalUuid(row.course_id) ||
+          !canonicalUuid(row.section_id) ||
+          seenSections.get(row.section_id) !== row.course_id ||
+          typeof row.title !== 'string' || !row.title.trim() ||
+          row.title.length > 200)
+        throw invalid('staff assignment');
+      seenAssignments.add(row.id);
+      return Object.freeze({ id: row.id, institutionId,
+        courseId: row.course_id, sectionId: row.section_id,
+        title: row.title, publishedAt: timestamp(row.published_at),
+        dueAt: row.due_at == null ? null : timestamp(row.due_at) });
+    });
+    return Object.freeze({ institutionId, role: staff.role,
+      courses: Object.freeze(courses), sections: Object.freeze(sections),
+      assignments: Object.freeze(assignments) });
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -275,5 +352,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, assignmentLesson, signOut });
 }
