@@ -227,6 +227,37 @@ internal static class Program
             catch (InvalidDataException) { refusedCorruptSavedPair = true; }
             Require(refusedCorruptSavedPair,
                 "Invalid primary and backup produced an invented comparison baseline.");
+            // P06.02 Native session review/compare caches are presentation
+            // data and must be cleared on accepted restore or new authority.
+            // A failed Native operation does not advance the restoration epoch.
+            var reviewCache = new NativeReviewAuthorityCache<string, string>();
+            var authorityA = new object();
+            var authorityB = new object();
+            reviewCache.Observe(authorityA, 3UL);
+            reviewCache.Review = "Native pre-restart review";
+            reviewCache.Comparison = "Native pre-restart comparison";
+            reviewCache.Observe(authorityA, 3UL);
+            Require(reviewCache.Review != null && reviewCache.Comparison != null,
+                "Unchanged Native authority unexpectedly invalidated recorded-only caches.");
+            reviewCache.Observe(authorityA, 4UL);
+            Require(reviewCache.Review == null && reviewCache.Comparison == null,
+                "Same CoreDriver Native restart leaked prior review/comparison cache.");
+            reviewCache.Review = "Current restored run";
+            reviewCache.Comparison = "Current comparison";
+            reviewCache.Observe(authorityA, 4UL);
+            Require(reviewCache.Review != null && reviewCache.Comparison != null,
+                "Re-reading identical Native epoch erased the active recorded review.");
+            reviewCache.Observe(authorityB, 4UL);
+            Require(reviewCache.Review == null && reviewCache.Comparison == null,
+                "Different Native CoreDriver with identical epoch reused review/comparison.");
+            reviewCache.Review = "No longer in scene";
+            reviewCache.Comparison = "Old branch";
+            reviewCache.Observe(null, 0UL);
+            Require(reviewCache.Review == null && reviewCache.Comparison == null,
+                "Detached Native authority exposed old Review and comparison.");
+            reviewCache.Observe(null, 0UL);
+            Require(reviewCache.Review == null && reviewCache.Comparison == null,
+                "Repeated missing Native context created a recorded-only cache.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally

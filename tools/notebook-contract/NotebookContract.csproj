@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NativeReviewAuthorityCache.cs" Link="NativeReviewAuthorityCache.cs" />
     <Compile Include="StubUnityJson.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs" Link="NotebookService.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/PortableSessionArchive.cs" Link="PortableSessionArchive.cs" />
