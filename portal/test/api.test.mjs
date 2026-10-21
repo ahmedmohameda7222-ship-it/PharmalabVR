@@ -59,6 +59,18 @@ function harness(options = {}) {
         published_at: '2026-10-20T02:00:00Z'
       }], options.lessonStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/courses') {
+      return mockResponse(options.courses ?? [{
+        id: courseA, institution_id: institutionB,
+        code: 'CHEM101', name: 'Foundations', term: 'Fall 2026'
+      }], options.coursesStatus ?? 200);
+    }
+    if (uri.pathname === '/rest/v1/course_sections') {
+      return mockResponse(options.sections ?? [{
+        id: sectionA, institution_id: institutionB, course_id: courseA,
+        section_code: 'LAB01'
+      }], options.sectionsStatus ?? 200);
+    }
     if (uri.pathname === '/rest/v1/assignments') {
       return mockResponse(options.assignments ?? [{
         id: assignmentA, institution_id: institutionA, section_id: sectionA,
@@ -248,4 +260,75 @@ test('hung current-session logout is bounded and never claims server revocation'
   const { api } = harness({ logoutHangs: true, requestTimeoutMs: 25 });
   const session = await api.signIn('learner@example.edu', 'private-password');
   assert.equal(await deadline(api.signOut(session)), false);
+});
+
+test('instructor sees only RLS-visible tenant courses, sections and published assignments', async () => {
+  const { api, calls } = harness({ assignments: [{
+    id: assignmentA, institution_id: institutionB, section_id: sectionA,
+    course_id: courseA, lesson_version_id: lessonA,
+    title: 'Controlled lab', published_at: '2026-10-20T02:00:00Z', due_at: null
+  }] });
+  const session = await api.signIn('instructor@example.edu', 'private-password');
+  const overview = await api.staffOverview(session, institutionB);
+  assert.equal(overview.institutionId, institutionB);
+  assert.equal(overview.role, 'instructor');
+  assert.deepEqual(overview.courses.map(x => x.code), ['CHEM101']);
+  assert.deepEqual(overview.sections.map(x => x.sectionCode), ['LAB01']);
+  assert.deepEqual(overview.assignments.map(x => x.title), ['Controlled lab']);
+  for (const route of ['/rest/v1/courses', '/rest/v1/course_sections', '/rest/v1/assignments']) {
+    const reads = calls.filter(x => x.url.pathname === route);
+    assert.equal(reads.length, 1, route);
+    assert.equal(reads[0].url.searchParams.get('institution_id'), 'eq.' + institutionB);
+    assert.equal(reads[0].init.headers.Authorization, 'Bearer ' + token);
+    assert.equal(reads[0].init.method, 'GET');
+  }
+  assert.equal(calls.find(c => c.url.pathname === '/rest/v1/assignments')
+    .url.searchParams.get('published_at'), 'not.is.null');
+});
+
+test('student or other-university selections never reach instructor REST routes', async () => {
+  const { api, calls } = harness();
+  const session = await api.signIn('learner@example.edu', 'private-password');
+  await assert.rejects(() => api.staffOverview(session, institutionA), /staff|instructor/i);
+  await assert.rejects(() => api.staffOverview(session,
+    'cccccccc-cccc-4ccc-8ccc-cccccccccccc'), /staff|instructor/i);
+  assert.equal(calls.filter(x => ['/rest/v1/courses', '/rest/v1/course_sections']
+    .includes(x.url.pathname)).length, 0);
+});
+
+test('foreign and inconsistent instructor metadata is rejected, never displayed', async () => {
+  const cases = [
+    { courses: [{ id: courseA, institution_id: institutionA,
+      code: 'FOREIGN', name: 'Foreign', term: 'Fall' }] },
+    { sections: [{ id: sectionA, institution_id: institutionA,
+      course_id: courseA, section_code: 'FOREIGN' }] },
+    { sections: [{ id: sectionA, institution_id: institutionB,
+      course_id: institutionA, section_code: 'WRONG' }] },
+    { courses: [{ id: courseA, institution_id: institutionB,
+      code: 'CHEM101', name: 'Foundations', term: 'Fall 2026' },
+      { id: courseA, institution_id: institutionB,
+      code: 'CHEM102', name: 'Duplicate', term: 'Fall 2026' }] },
+    { assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: institutionA,
+      title: 'Wrong section', published_at: '2026-10-20T02:00:00Z', due_at: null }] },
+    { assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA,
+      title: 'Unpublished', published_at: null, due_at: null }] }
+  ];
+  for (const options of cases) {
+    const { api } = harness(options);
+    const session = await api.signIn('instructor@example.edu', 'private-password');
+    await assert.rejects(() => api.staffOverview(session, institutionB),
+      /invalid|unavailable/i);
+  }
+});
+
+test('staff metadata RLS denial fails closed without suggesting empty coursework', async () => {
+  for (const options of [
+    { coursesStatus: 403 }, { sectionsStatus: 403 }, { assignmentsStatus: 403 }
+  ]) {
+    const { api } = harness(options);
+    const session = await api.signIn('instructor@example.edu', 'private-password');
+    await assert.rejects(() => api.staffOverview(session, institutionB), /unavailable/i);
+  }
 });
