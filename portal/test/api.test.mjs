@@ -51,6 +51,9 @@ function harness(options = {}) {
         { institution_id: institutionB, role: 'instructor', status: 'active' }
       ], options.membershipsStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/rpc/university_publish_assignment')
+      return mockResponse(options.publishedId ??
+        '77777777-7777-4777-8777-777777777777', options.publishStatus ?? 200);
     if (uri.pathname === '/rest/v1/rubric_versions') {
       return mockResponse(options.rubrics ?? [{
         id: '66666666-6666-4666-8666-666666666666',
@@ -365,4 +368,59 @@ test('student cannot retrieve instructor publication choices', async () => {
   await assert.rejects(() => api.staffPublicationOptions(session, institutionA, sectionA),
     /staff|instructor/i);
   assert.equal(calls.filter(x => x.url.pathname === '/rest/v1/rubric_versions').length, 0);
+});
+
+test('instructor publication uses existing idempotent RPC, never table INSERT', async () => {
+  const rubricId = '66666666-6666-4666-8666-666666666666';
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const { api, calls } = harness({ assignments: [], lessonRows: [{
+    id: lessonA, institution_id: institutionB, course_id: courseA,
+    version: 1, published_at: '2026-10-20T02:00:00Z'
+  }] });
+  const session = await api.signIn('instructor@example.edu', 'password');
+  const result = await api.staffPublishAssignment(session, {
+    institutionId: institutionB, sectionId: sectionA,
+    lessonVersionId: lessonA, rubricVersionId: rubricId,
+    title: '  Laboratory introduction  ', dueAt: null, requestId
+  });
+  assert.equal(result, '77777777-7777-4777-8777-777777777777');
+  const rpc = calls.find(x => x.url.pathname === '/rest/v1/rpc/university_publish_assignment');
+  assert.ok(rpc);
+  assert.equal(rpc.init.method, 'POST');
+  assert.equal(rpc.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(rpc.init.body), {
+    p_institution_id: institutionB, p_section_id: sectionA,
+    p_lesson_version_id: lessonA, p_rubric_version_id: rubricId,
+    p_title: 'Laboratory introduction', p_due_at: null, p_request_id: requestId
+  });
+  assert.equal(calls.filter(x => x.url.pathname === '/rest/v1/assignments' &&
+    x.init.method !== 'GET').length, 0);
+});
+
+test('invalid instructor requests and refused RPC cannot claim publication', async () => {
+  const rubricId = '66666666-6666-4666-8666-666666666666';
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const options = { assignments: [], lessonRows: [{
+    id: lessonA, institution_id: institutionB, course_id: courseA,
+    version: 1, published_at: '2026-10-20T02:00:00Z'
+  }] };
+  const good = { institutionId: institutionB, sectionId: sectionA,
+    lessonVersionId: lessonA, rubricVersionId: rubricId,
+    title: 'Lesson assignment', dueAt: null, requestId };
+  const h = harness(options);
+  const session = await h.api.signIn('instructor@example.edu', 'password');
+  for (const draft of [
+    { ...good, requestId: 'invalid' }, { ...good, title: ' ' },
+    { ...good, institutionId: institutionA },
+    { ...good, lessonVersionId: institutionA },
+    { ...good, dueAt: '2020-01-01T00:00:00Z' }
+  ])
+    await assert.rejects(() => h.api.staffPublishAssignment(session, draft));
+  assert.equal(h.calls.filter(c => c.url.pathname.includes('/rpc/')).length, 0);
+  for (const failure of [{ publishStatus: 403 }, { publishedId: 'invalid' }]) {
+    const r = harness({ ...options, ...failure });
+    const actor = await r.api.signIn('instructor@example.edu', 'password');
+    await assert.rejects(() => r.api.staffPublishAssignment(actor, good),
+      /unavailable|Invalid/i);
+  }
 });
