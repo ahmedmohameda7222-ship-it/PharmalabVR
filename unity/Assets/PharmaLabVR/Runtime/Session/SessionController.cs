@@ -20,8 +20,37 @@ namespace PharmaLabVR.Session
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
         public string LastError { get; private set; }
-        public RecordedSessionReview RecordedReview { get; private set; }
-        public RecordedRunComparison CurrentComparison { get; private set; }
+        private readonly NativeReviewAuthorityCache<RecordedSessionReview,
+            RecordedRunComparison> recordedCache = new();
+        private CoreDriver subscribedNativeDriver;
+
+        public RecordedSessionReview RecordedReview
+        {
+            get
+            {
+                ReconcileNativeReviewAuthority();
+                return recordedCache.Review;
+            }
+            private set
+            {
+                ReconcileNativeReviewAuthority();
+                recordedCache.Review = value;
+            }
+        }
+
+        public RecordedRunComparison CurrentComparison
+        {
+            get
+            {
+                ReconcileNativeReviewAuthority();
+                return recordedCache.Comparison;
+            }
+            private set
+            {
+                ReconcileNativeReviewAuthority();
+                recordedCache.Comparison = value;
+            }
+        }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
         public static Rect DesktopHudBounds => new Rect(12f, 12f,
@@ -36,6 +65,7 @@ namespace PharmaLabVR.Session
 
         private void Awake()
         {
+            ReconcileNativeReviewAuthority();
             router = GetComponent<ScreenRouter>();
             if (router == null) router = gameObject.AddComponent<ScreenRouter>();
             router.Configure(driver);
@@ -49,11 +79,51 @@ namespace PharmaLabVR.Session
 
         public void Configure(CoreDriver coreDriver, string sessionName = null)
         {
+            if (!ReferenceEquals(driver, coreDriver))
+                DetachNativeRestoration();
             driver = coreDriver;
+            ReconcileNativeReviewAuthority();
+            if (isActiveAndEnabled)
+                AttachNativeRestoration();
             router?.Configure(driver);
             panels?.Configure(router, driver, this);
             spatialPanel?.Configure(router, panels, driver);
             if (!string.IsNullOrEmpty(sessionName)) saveName = sessionName;
+        }
+
+        private void OnEnable()
+        {
+            ReconcileNativeReviewAuthority();
+            AttachNativeRestoration();
+        }
+
+        private void OnDisable() => DetachNativeRestoration();
+        private void OnDestroy() => DetachNativeRestoration();
+
+        private void AttachNativeRestoration()
+        {
+            if (ReferenceEquals(subscribedNativeDriver, driver)) return;
+            DetachNativeRestoration();
+            if (driver == null) return;
+            driver.NativeSessionRestored += OnNativeSessionRestored;
+            subscribedNativeDriver = driver;
+        }
+
+        private void DetachNativeRestoration()
+        {
+            if (subscribedNativeDriver != null)
+                subscribedNativeDriver.NativeSessionRestored -= OnNativeSessionRestored;
+            subscribedNativeDriver = null;
+        }
+
+        private void OnNativeSessionRestored() => ReconcileNativeReviewAuthority();
+
+        private void ReconcileNativeReviewAuthority()
+        {
+            // This check also handles restoring while the controller is
+            // disabled, unsubscribed or temporarily missing the event.
+            recordedCache.Observe(driver, driver != null ?
+                driver.NativeRestorationEpoch : 0UL);
         }
 
         public bool CanReleaseTool
