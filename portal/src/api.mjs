@@ -308,6 +308,50 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
       courseId: section.courseId, lessons, rubrics });
   }
 
+  // The existing server-side RPC enforces instructor/section authority,
+  // immutable published version pins, audit and exact-request idempotency.
+  // No direct academic table write and no claimed Native attestation.
+  async function staffPublishAssignment(session, draft) {
+    const current = requireSession(session);
+    if (!draft || !canonicalUuid(draft.institutionId) ||
+        !canonicalUuid(draft.sectionId) ||
+        !canonicalUuid(draft.lessonVersionId) ||
+        !canonicalUuid(draft.rubricVersionId) ||
+        !canonicalUuid(draft.requestId) ||
+        typeof draft.title !== 'string' ||
+        draft.title.trim().length < 2 || draft.title.trim().length > 200)
+      throw new Error('Invalid instructor assignment publication request');
+    const title = draft.title.trim();
+    let dueAt = null;
+    if (draft.dueAt != null) {
+      dueAt = timestamp(draft.dueAt);
+      if (Date.parse(dueAt) <= clock())
+        throw new Error('Assignment due date must be in the future');
+    }
+    // Client checks are fail-closed presentation constraints. Real
+    // authorization and request replay detection run on the RPC server.
+    const choices = await staffPublicationOptions(current,
+      draft.institutionId, draft.sectionId);
+    if (!choices.lessons.some(x => x.id === draft.lessonVersionId) ||
+        !choices.rubrics.some(x => x.id === draft.rubricVersionId))
+      throw new Error('Published same-course lesson and rubric required');
+
+    const result = await request('/rest/v1/rpc/university_publish_assignment', {
+      method: 'POST',
+      body: {
+        p_institution_id: draft.institutionId,
+        p_section_id: draft.sectionId,
+        p_lesson_version_id: draft.lessonVersionId,
+        p_rubric_version_id: draft.rubricVersionId,
+        p_title: title,
+        p_due_at: dueAt,
+        p_request_id: draft.requestId
+      }
+    }, current.accessToken);
+    if (!canonicalUuid(result)) throw invalid('assignment publication identity');
+    return result;
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -396,5 +440,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, assignmentLesson, signOut });
 }
