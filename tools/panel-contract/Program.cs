@@ -577,6 +577,46 @@ internal static class Program
             Check(heldPauseRouter.Current.ScreenId == ScreenId.Pause &&
                   heldPauseDriver.IsNativePaused,
                 "Releasing a Native Hold resurrected live Lab over paused authority.");
+            // P06.02/P11: Native RestartCheckpoint and accepted SessionLoad
+            // replace the authority inside the SAME Unity CoreDriver object.
+            // The event fires BEFORE its new Native snapshot is published.
+            var importedAuthority = new CoreDriver { CurrentNativeBranchId = "old-authority" };
+            var importedRouter = new ScreenRouter();
+            importedRouter.Configure(importedAuthority);
+            importedRouter.Show(ScreenId.Inspect, "receiver");
+            importedRouter.MarkSaved();
+            Check(!importedRouter.Current.Dirty && importedRouter.Current.SelectedEntityId == "receiver",
+                "Same-driver restore fixture did not establish an old saved inspection.");
+            importedRouter.Show(ScreenId.Settings);
+            Check(importedRouter.Current.ScreenId == ScreenId.Settings,
+                "Same-driver restore fixture did not enter old Settings.");
+            importedAuthority.RaiseNativeSessionRestored();
+            Check(importedRouter.Current.ScreenId == ScreenId.Hold &&
+                  importedRouter.Current.SaveState == "Unsaved" &&
+                  importedRouter.Current.Dirty &&
+                  importedRouter.Current.SelectedEntityId == "source" &&
+                  !importedRouter.Current.SupportedActions.Contains("PipetteDispense"),
+                "NativeSessionRestored reused a stale Settings, Save, or selected vessel.");
+            Check(!importedRouter.ReturnFromSettings(),
+                "Native SessionLoad restored the previous session's Settings Back history.");
+            importedAuthority.CurrentNativeBranchId = "imported-authority";
+            importedAuthority.SetHold(true);
+            importedAuthority.UpdateView();
+            Check(importedRouter.Current.ScreenId == ScreenId.Hold &&
+                  importedRouter.Current.NativeRevision == "7" &&
+                  importedRouter.Current.Dirty,
+                "A new Native snapshot resurrected the previous authority's saved label.");
+            importedAuthority.SetHold(false);
+            Check(importedRouter.Current.ScreenId != ScreenId.Settings &&
+                  importedRouter.Current.ScreenId != ScreenId.Inspect,
+                "Releasing SessionLoad Hold resurrected the old inspection Settings.");
+
+            var unrelatedAuthority = new CoreDriver();
+            importedRouter.Configure(unrelatedAuthority);
+            importedAuthority.RaiseNativeSessionRestored();
+            Check(importedRouter.Current.ScreenId == ScreenId.Lab &&
+                  importedRouter.Current.SelectedEntityId == "source",
+                "A detached NativeSessionRestored event modified the new CoreDriver panel.");
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
