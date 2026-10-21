@@ -411,6 +411,33 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return result;
   }
 
+  // Existing GoTrue-verified student must already hold an active student
+  // membership. The university admin RPC validates that server-side,
+  // including the section, verified email and exact request replay.
+  async function adminEnrollStudent(session, draft) {
+    if (!draft || !canonicalUuid(draft.institutionId) ||
+        !canonicalUuid(draft.sectionId) ||
+        !canonicalUuid(draft.studentId) ||
+        !canonicalUuid(draft.requestId))
+      throw new Error('Invalid university student enrollment request');
+    const current = await requireUniversityAdmin(session, draft.institutionId);
+    const overview = await staffOverview(current, draft.institutionId);
+    if (overview.role !== 'university_admin' ||
+        !overview.sections.some(x => x.id === draft.sectionId))
+      throw new Error('Administrator section is unavailable');
+    const result = await request('/rest/v1/rpc/university_enroll_student', {
+      method: 'POST', body: {
+        p_institution_id: draft.institutionId,
+        p_section_id: draft.sectionId,
+        p_student_id: draft.studentId,
+        p_request_id: draft.requestId
+      }
+    }, current.accessToken);
+    if (result !== 'Enrolled' && result !== 'AlreadyEnrolled')
+      throw invalid('enrollment confirmation');
+    return result;
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -499,5 +526,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, adminEnrollStudent, assignmentLesson, signOut });
 }
