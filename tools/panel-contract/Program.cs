@@ -703,6 +703,24 @@ internal static class Program
             Check(pendingRestoreRouter.Current.SupportedActions.Contains("Continue"),
                 "Pending replacement snapshot did not authorize recovery after publication.");
             disableLifecycle.Invoke(pendingRestoreRouter, null);
+            // If the router sees NativeSessionRestored while active, then
+            // goes inactive before LabViewChanged, reactivation must still
+            // recognize the now-published epoch and not remain stuck.
+            var midRestoreNative = new CoreDriver { NativeRecoveryReady = true };
+            var midRestoreRouter = new ScreenRouter();
+            midRestoreRouter.Configure(midRestoreNative);
+            midRestoreNative.SetHold(true);
+            midRestoreNative.RaiseNativeSessionRestored();
+            Check(midRestoreRouter.Current.ScreenId == ScreenId.Hold &&
+                  !midRestoreRouter.Current.SupportedActions.Contains("Continue"),
+                "In-flight Native restore incorrectly admitted Continue.");
+            disableLifecycle.Invoke(midRestoreRouter, null);
+            midRestoreNative.UpdateView(); // publication while temporarily inactive
+            enableLifecycle.Invoke(midRestoreRouter, null);
+            Check(midRestoreRouter.Current.ScreenId == ScreenId.Hold &&
+                  midRestoreRouter.Current.SupportedActions.Contains("Continue"),
+                "Observed restore event then disabled router never recognized published recovery.");
+            disableLifecycle.Invoke(midRestoreRouter, null);
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
