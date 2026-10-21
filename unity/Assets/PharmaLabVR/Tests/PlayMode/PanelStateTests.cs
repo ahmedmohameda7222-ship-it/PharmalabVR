@@ -839,6 +839,66 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // Authored only: requires real Unity Editor and pinned Native IPhreeqc.
+        // This covers the SAME CoreDriver with a newly imported CoreSession,
+        // not the replacement-MonoBehaviour test or the headless test stub.
+        [UnityTest]
+        public IEnumerator P06_02_NativeSessionImportClearsStaleSettingsAndSavedPanel()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                var original = driver.Session;
+                Assert.That(router.Current, Is.Not.Null);
+                router.Show(ScreenId.Inspect, "receiver");
+                Assert.That(router.Current.SelectedEntityId, Is.EqualTo("receiver"));
+                router.MarkSaved(); // Presentation fixture, NOT a disk Save.
+                Assert.That(router.Current.SaveState, Is.EqualTo("Saved"));
+                router.Show(ScreenId.Settings);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+
+                imported = CoreSession.ImportSession(original.ExportSession(),
+                    driver.ScientificDatabasePath);
+                driver.ReplaceSession(imported);
+                imported = null;
+                Assert.That(driver.Session, Is.Not.SameAs(original));
+                Assert.That(original.IsOpen, Is.False);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.NativeRecoveryReady, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(router.Current.Dirty, Is.True);
+                Assert.That(router.Current.SelectedEntityId, Is.EqualTo("source"));
+                Assert.That(router.ReturnFromSettings(), Is.False,
+                    "Imported Native session must not reopen the old Settings history.");
+                Assert.That(router.Current.SupportedActions, Does.Not.Contain("PipetteDispense"),
+                    "Native SessionLoad Hold must not expose live chemical tools.");
+            }
+            finally
+            {
+                imported?.Dispose();
+                foreach (var root in scene.GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P07_03_DesktopNativeImportEntersSessionLoadHoldWithRevisionPreserved()
         {
