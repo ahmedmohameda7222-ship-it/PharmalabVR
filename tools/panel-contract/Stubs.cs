@@ -86,6 +86,7 @@ namespace PharmaLabVR.Core
         public event Action<PharmaLabVR.Lab.LabViewModel> LabViewChanged;
         public event Action<bool> HoldChanged;
         public event Action NativeSessionRestored;
+        public ulong NativeRestorationEpoch { get; private set; }
         public bool SelectMeasurementVessel(string id) =>
             CurrentLabView.Vessels.Exists(vessel => vessel.Id == id);
         public bool PauseSession()
@@ -108,7 +109,11 @@ namespace PharmaLabVR.Core
             HoldReason = held ? "FocusLoss" : "";
             HoldChanged?.Invoke(held);
         }
-        public void RaiseNativeSessionRestored() => NativeSessionRestored?.Invoke();
+        public void RaiseNativeSessionRestored()
+        {
+            NativeRestorationEpoch++;
+            NativeSessionRestored?.Invoke();
+        }
         public void UpdateView() => LabViewChanged?.Invoke(CurrentLabView);
     }
 }

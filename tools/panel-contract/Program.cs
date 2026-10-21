@@ -611,6 +611,36 @@ internal static class Program
                   importedRouter.Current.ScreenId != ScreenId.Inspect,
                 "Releasing SessionLoad Hold resurrected the old inspection Settings.");
 
+            // P06.02: while the router is inactive, OnDisable unsubscribes
+            // from Native events. A restored session must be recognized
+            // when OnEnable reattaches, even with reused branch/sequence.
+            var sleepingNative = new CoreDriver { CurrentNativeBranchId = "reused-branch" };
+            var sleepingRouter = new ScreenRouter();
+            sleepingRouter.Configure(sleepingNative);
+            sleepingRouter.Show(ScreenId.Inspect, "receiver");
+            sleepingRouter.MarkSaved();
+            sleepingRouter.Show(ScreenId.Settings);
+            Check(sleepingRouter.Current.ScreenId == ScreenId.Settings &&
+                  sleepingRouter.Current.SaveState == "Saved",
+                "Disabled-router fixture did not establish stale presentation.");
+            var disableLifecycle = typeof(ScreenRouter).GetMethod("OnDisable",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            var enableLifecycle = typeof(ScreenRouter).GetMethod("OnEnable",
+                System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+            Check(disableLifecycle != null && enableLifecycle != null,
+                "Native panel lifecycle test cannot invoke real component callbacks.");
+            disableLifecycle.Invoke(sleepingRouter, null);
+            sleepingNative.RaiseNativeSessionRestored();
+            Check(sleepingRouter.Current.ScreenId == ScreenId.Settings,
+                "Disabled router unexpectedly observed an unsubscribed restore event.");
+            enableLifecycle.Invoke(sleepingRouter, null);
+            Check(sleepingRouter.Current.ScreenId == ScreenId.Hold &&
+                  sleepingRouter.Current.SaveState == "Unsaved" &&
+                  sleepingRouter.Current.Dirty &&
+                  sleepingRouter.Current.SelectedEntityId == "source",
+                "Reenabled router missed Native restoration while inactive.");
+            disableLifecycle.Invoke(sleepingRouter, null);
+
             var unrelatedAuthority = new CoreDriver();
             importedRouter.Configure(unrelatedAuthority);
             importedAuthority.RaiseNativeSessionRestored();
