@@ -26,7 +26,10 @@ namespace PharmaLabVR.Core
             var tool = FindNamed(roots, "DesktopResearchTool");
             var vessel = FindNamed(roots, "ReceiverVessel");
             if (tool == null || vessel == null) return;
-            source = CreateLiquid(tool, "NativeSourceLiquid", 0.012f, 0.46f, 0f);
+            // The generated burette already has persistent liquid and meniscus.
+            source = tool.GetComponent<LiquidPresenter>();
+            if (source == null)
+                source = CreateLiquid(tool, "NativeSourceLiquid", 0.012f, 0.46f, 0f);
             receiver = CreateLiquid(vessel, "NativeReceiverLiquid", 0.75f, 0.8f, -0.5f);
             DecorateLab(roots, tool, vessel);
             var dropVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -84,6 +87,10 @@ namespace PharmaLabVR.Core
                     new Vector3(0.23f, 0.486f, 0.2f), new Vector3(0.75f, 0.008f, 0.56f),
                     new Color(0.32f, 0.39f, 0.40f), false);
             }
+            // Only legacy tools need runtime decoration; the authored
+            // ResearchBurette prefab already contains these mesh assets.
+            if (tool.GetComponent<ToolPresenter>() == null)
+            {
             var body = tool.Find("CalibratedBody");
             if (body != null && body.TryGetComponent<Renderer>(out var bodyRenderer)) bodyRenderer.enabled = false;
             for (var index = 0; index < 4; index++)
@@ -100,11 +107,16 @@ namespace PharmaLabVR.Core
             var tip = Primitive(tool, "OutletTip", PrimitiveType.Cylinder,
                 new Vector3(0f, -0.018f, 0f), new Vector3(0.005f, 0.025f, 0.005f),
                 Color.white, false);
-            var outletExit = new GameObject("OutletExit").transform;
-            outletExit.SetParent(tool, false);
+            var outletExit = tool.Find("OutletExit");
+            if (outletExit == null)
+            {
+                outletExit = new GameObject("OutletExit").transform;
+                outletExit.SetParent(tool, false);
+            }
             var tipMesh = tip.GetComponent<MeshFilter>().sharedMesh;
             outletExit.localPosition = tip.transform.localPosition +
                 Vector3.up * (tipMesh.bounds.min.y * tip.transform.localScale.y);
+            }
             if (vessel.TryGetComponent<Renderer>(out var vesselRenderer)) vesselRenderer.enabled = false;
             Primitive(vessel, "BeakerBase", PrimitiveType.Cylinder,
                 new Vector3(0f, -0.45f, 0f), new Vector3(0.52f, 0.04f, 0.52f),
@@ -139,7 +151,16 @@ namespace PharmaLabVR.Core
             foreach (var vessel in state.Vessels)
             {
                 if (vessel.CapacityM3 <= 0.0) continue;
-                if (vessel.Id == "source") source.Configure(source.transform.Find("NativeSourceLiquid"), vessel.CapacityM3, 0.46f, 0f);
+                if (vessel.Id == "source")
+                {
+                    var authoredLiquid = source.transform.Find("CommittedLiquid");
+                    var liquid = authoredLiquid != null ? authoredLiquid :
+                        source.transform.Find("NativeSourceLiquid");
+                    if (liquid != null)
+                        source.Configure(liquid, vessel.CapacityM3,
+                            authoredLiquid != null ? 0.48f : 0.46f,
+                            authoredLiquid != null ? -0.24f : 0f);
+                }
                 if (vessel.Id == "receiver") receiver.Configure(receiver.transform.Find("NativeReceiverLiquid"), vessel.CapacityM3, 0.8f, -0.5f);
                 if (vessel.Id == "source") source.SetCommittedVolume(vessel.CommittedVolumeM3);
                 if (vessel.Id == "receiver") receiver.SetCommittedVolume(vessel.CommittedVolumeM3);

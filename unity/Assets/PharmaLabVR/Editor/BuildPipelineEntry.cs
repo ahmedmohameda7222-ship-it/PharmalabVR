@@ -233,28 +233,27 @@ namespace PharmaLabVR.Editor
             holdAnchor.AddComponent<DesktopHoldAnchorFollower>().Configure(
                 camera.transform,
                 new Vector3(0.25f, -0.18f, 0.65f));
-            var researchTool = new GameObject("ResearchBurette");
+            // Use the same persisted, graduated asset for Desktop and XR.
+            // Its meniscus/liquid display follows Native state; no primitive stand-in.
+            var burettePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            if (burettePrefab == null)
+                throw new InvalidOperationException("Missing generated ResearchBurette prefab.");
+            var researchTool = (GameObject)PrefabUtility.InstantiatePrefab(burettePrefab);
             researchTool.name = "DesktopResearchTool";
-            researchTool.transform.SetParent(lab.transform);
-            researchTool.transform.localPosition = new Vector3(0.25f, 0.63f, 0.2f);
-            var toolVisual = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            toolVisual.name = "CalibratedBody";
-            toolVisual.transform.SetParent(researchTool.transform, false);
-            toolVisual.transform.localPosition = new Vector3(0f, 0.25f, 0f);
-            toolVisual.transform.localScale = new Vector3(0.025f, 0.25f, 0.025f);
-            var outlet = new GameObject("OutletExit").transform;
-            outlet.SetParent(researchTool.transform, false);
-            var mesh = toolVisual.GetComponent<MeshFilter>().sharedMesh;
-            outlet.localPosition = new Vector3(0f, (float)ResearchOutletGeometry.BottomLocalY(
-                toolVisual.transform.localPosition.y, mesh.bounds.min.y,
-                toolVisual.transform.localScale.y), 0f);
-            // Geometry is research-only; no certified burette calibration
-            // or guaranteed landing trajectory is implied by this marker.
+            researchTool.transform.SetParent(lab.transform, false);
+            researchTool.transform.localPosition = new Vector3(0.25f, 0.90f, 0.2f);
+            if (researchTool.transform.Find("OutletExit") == null ||
+                researchTool.GetComponent<ToolPresenter>() == null ||
+                researchTool.GetComponent<LiquidPresenter>() == null)
+                throw new InvalidOperationException("ResearchBurette lacks Native presentation or outlet geometry.");
             researchTool.AddComponent<DesktopGrabbable>();
-            var body = researchTool.AddComponent<Rigidbody>();
+            var body = researchTool.GetComponent<Rigidbody>();
+            var grab = researchTool.GetComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            if (body == null || grab == null)
+                throw new InvalidOperationException("ResearchBurette requires its authored rigidbody and XR grip.");
             body.useGravity = false;
             body.isKinematic = false;
-            var grab = researchTool.AddComponent<UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
             grab.interactionManager = xrInteractionManager;
             grab.throwOnDetach = false;
             grab.forceGravityOnDetach = false;
@@ -446,7 +445,9 @@ namespace PharmaLabVR.Editor
         private static void PrepareForBuild(BuildTarget target, bool vrFirst)
         {
             AssetDatabase.Refresh(ImportAssetOptions.ForceSynchronousImport);
-            ConfigureNativePlugins();
+            // Tracked scene YAML may lag asset-generation source. Rebuild the
+            // complete first-use graph before every Player build.
+            AllAssets();
             ConfigureOpenXrLoaders(target != BuildTarget.StandaloneWindows64 || vrFirst, true);
             foreach (var scene in Scenes)
                 if (!File.Exists(scene)) throw new FileNotFoundException("Generated build scene is missing.", scene);

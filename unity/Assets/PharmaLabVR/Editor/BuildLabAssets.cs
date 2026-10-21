@@ -141,6 +141,16 @@ namespace PharmaLabVR.Editor
             liquid.transform.SetParent(root.transform, false);
             liquid.transform.localScale = new Vector3(0.014f, 0f, 0.014f);
             liquid.GetComponent<Collider>().enabled = false;
+            // A single persisted outlet anchors geometry-based input and Native visuals.
+            var glass = CreateMaterial("ResearchBuretteGlass",
+                new Color(0.74f, 0.88f, 0.94f, 0.54f), 0.02f, 0.76f);
+            var tip = Part(root.transform, "OutletTip", PrimitiveType.Cylinder,
+                new Vector3(0f, -0.248f, 0f), new Vector3(0.006f, 0.018f, 0.006f), glass);
+            var outlet = new GameObject("OutletExit").transform;
+            outlet.SetParent(root.transform, false);
+            outlet.localPosition = tip.transform.localPosition +
+                Vector3.up * (tip.GetComponent<MeshFilter>().sharedMesh.bounds.min.y *
+                              tip.transform.localScale.y);
             var meniscus = root.AddComponent<MeniscusPresenter>();
             meniscus.Configure(root.transform, 0.00005, 0.48f, -0.24f, 0.006f);
             // Runtime-generated meshes/materials are NOT persistent prefab references.

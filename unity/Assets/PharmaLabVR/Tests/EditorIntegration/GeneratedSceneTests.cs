@@ -38,6 +38,43 @@ namespace PharmaLabVR.Tests.EditorIntegration
         }
 
         [Test]
+        public void M1_GeneratedLabUsesTheActualNativeBoundBurettePrefab()
+        {
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(tool), Is.True,
+                "Selectable Desktop/XR burette must be the authored apparatus, not a primitive stand-in.");
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(tool), Is.SameAs(prefab));
+            Assert.That(tool.GetComponent<ToolPresenter>(), Is.Not.Null);
+            Assert.That(tool.GetComponent<LiquidPresenter>(), Is.Not.Null);
+            Assert.That(tool.GetComponent<MeniscusPresenter>(), Is.Not.Null);
+            Assert.That(tool.GetComponent<DesktopGrabbable>(), Is.Not.Null);
+            Assert.That(tool.GetComponent<ToolMount>(), Is.Not.Null);
+            Assert.That(tool.GetComponentsInChildren<Transform>(true)
+                .Count(item => item.name == "OutletExit"), Is.EqualTo(1));
+            Assert.That(tool.GetComponentsInChildren<Transform>(true)
+                .Any(item => item.name == "CommittedLiquid"), Is.True);
+        }
+
+        [Test]
+        public void M1_LabSceneContainsDistinctNativeInstrumentViews()
+        {
+            var pipette = FindInActiveScene("ResearchPipette");
+            var bottle = FindInActiveScene("ResearchStockBottle");
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(pipette), Is.True);
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(bottle), Is.True);
+            Assert.That(pipette.GetComponent<PipetteActuator>(), Is.Not.Null);
+            Assert.That(bottle.GetComponent<BottlePourActuator>(), Is.Not.Null);
+            Assert.That(pipette.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(bottle.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(FindInActiveScene("ReceiverVessel"), Is.Not.Null);
+            Assert.That(FindInActiveScene("SessionController"), Is.Not.Null);
+            Assert.That(FindInActiveScene("CoreDriver"), Is.Not.Null);
+        }
+
+        [Test]
         public void B01_GeneratedLabContainsConfiguredXriOriginControllersAndInteractors()
         {
             var xrRig = FindInActiveScene("XRPlayerRig");
