@@ -93,7 +93,8 @@ export function renderLesson(target, state, documentSource = globalThis.document
 // Instructor/admin academic overview is a view of JWT/RLS-returned rows,
 // not proof of membership grants and never an editable gradebook.
 // All university-supplied strings are inert textContent.
-export function renderStaffOverview(target, state, documentSource = globalThis.document) {
+export function renderStaffOverview(target, state, documentSource = globalThis.document,
+  onSectionSelect = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -149,6 +150,14 @@ export function renderStaffOverview(target, state, documentSource = globalThis.d
         const sectionHeading = documentSource.createElement('h4');
         sectionHeading.textContent = 'Section ' + section.sectionCode;
         sectionItem.append(sectionHeading);
+        if (typeof onSectionSelect === 'function' &&
+            ['instructor', 'university_admin'].includes(state.overview.role)) {
+          const selectButton = documentSource.createElement('button');
+          selectButton.type = 'button';
+          selectButton.textContent = 'Publish assignment in this section';
+          selectButton.addEventListener('click', () => onSectionSelect(section.id));
+          sectionItem.append(selectButton);
+        }
         const inSection = assignments.filter(a => a.sectionId === section.id);
         if (inSection.length === 0) {
           const empty = documentSource.createElement('p');
@@ -174,4 +183,91 @@ export function renderStaffOverview(target, state, documentSource = globalThis.d
   }
   fragment.append(list);
   target.replaceChildren(fragment);
+}
+
+
+// Uses only already-published server-sourced version references; the callback
+// is not authorization. The server RPC checks instructor role, section,
+// immutable content pins and idempotent request identity.
+export function renderPublicationForm(target, state, documentSource = globalThis.document,
+  onPublish = null) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const paragraph = documentSource.createElement('p');
+    paragraph.textContent = value;
+    target.replaceChildren(paragraph);
+  };
+  if (state?.status === 'no-selection') {
+    message('Select a section from the instructor overview to publish an assignment.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading published lesson and rubric versions…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Published lesson and rubric choices could not be loaded.');
+    return;
+  }
+  const options = state?.options;
+  if (state?.status !== 'available' || !options ||
+      !Array.isArray(options.lessons) || !Array.isArray(options.rubrics))
+    throw new TypeError('Published assignment choices required');
+  if (options.lessons.length === 0 || options.rubrics.length === 0) {
+    message('No published lesson or rubric version is available for this course.');
+    return;
+  }
+  const form = documentSource.createElement('form');
+  const introduction = documentSource.createElement('p');
+  introduction.textContent =
+    'Choose immutable published versions. Publishing is audited by your university server.';
+  form.append(introduction);
+  const namedInput = (name, label, type) => {
+    const elementLabel = documentSource.createElement('label');
+    elementLabel.textContent = label;
+    const input = documentSource.createElement('input');
+    input.name = name;
+    input.type = type;
+    input.value = '';
+    if (name === 'title') { input.required = true; input.maxLength = 200; }
+    elementLabel.append(input);
+    form.append(elementLabel);
+    return input;
+  };
+  const versionSelect = (name, label, versions) => {
+    const elementLabel = documentSource.createElement('label');
+    elementLabel.textContent = label;
+    const input = documentSource.createElement('select');
+    input.name = name;
+    for (const version of versions) {
+      const option = documentSource.createElement('option');
+      option.value = version.id;
+      option.textContent = 'Published version ' + version.version + ' — ' + version.id;
+      input.append(option);
+    }
+    input.value = versions[0].id;
+    elementLabel.append(input);
+    form.append(elementLabel);
+    return input;
+  };
+  const title = namedInput('title', 'Assignment title', 'text');
+  const lesson = versionSelect('lessonVersionId', 'Published lesson', options.lessons);
+  const rubric = versionSelect('rubricVersionId', 'Published rubric', options.rubrics);
+  const due = namedInput('dueAt', 'Due date (optional, local time)', 'datetime-local');
+  const submit = documentSource.createElement('button');
+  submit.type = 'submit';
+  submit.textContent = 'Publish assignment';
+  form.append(submit);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (typeof onPublish !== 'function') return;
+    const date = due.value
+      ? new Date(due.value).toISOString() : null;
+    onPublish({ sectionId: options.sectionId,
+      lessonVersionId: lesson.value, rubricVersionId: rubric.value,
+      title: title.value, dueAt: date });
+  });
+  target.replaceChildren(form);
 }
