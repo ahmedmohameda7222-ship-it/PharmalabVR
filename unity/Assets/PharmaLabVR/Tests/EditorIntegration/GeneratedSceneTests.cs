@@ -59,6 +59,35 @@ namespace PharmaLabVR.Tests.EditorIntegration
         }
 
         [Test]
+        public void M2_AuxiliaryInstrumentsAreRealDesktopAndXRGrasps()
+        {
+            var manager = FindInActiveScene("XRInteractionManager").GetComponent<XRInteractionManager>();
+            foreach (var expected in new[] {
+                ("ResearchPipette", "research-pipette-visual"),
+                ("ResearchStockBottle", "research-stock-bottle-visual")
+            })
+            {
+                var instrument = FindInActiveScene(expected.Item1);
+                var desktopGrab = instrument.GetComponent<DesktopGrabbable>();
+                Assert.That(desktopGrab, Is.Not.Null);
+                Assert.That(desktopGrab.ToolId, Is.EqualTo(expected.Item2));
+                var body = instrument.GetComponent<Rigidbody>();
+                Assert.That(body, Is.Not.Null);
+                Assert.That(body.isKinematic, Is.True);
+                var xrGrab = instrument.GetComponent<XRGrabInteractable>();
+                Assert.That(xrGrab, Is.Not.Null);
+                Assert.That(xrGrab.interactionManager, Is.SameAs(manager));
+                Assert.That(xrGrab.throwOnDetach, Is.False);
+                Assert.That(instrument.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            }
+            var burette = FindInActiveScene("DesktopResearchTool");
+            Assert.That(burette.GetComponent<DesktopGrabbable>().ToolId, Is.EqualTo("research-tool"));
+            var adapter = FindInActiveScene("DesktopPlayerRig").GetComponent<DesktopInputAdapter>();
+            Assert.That(adapter, Is.Not.Null);
+            Assert.That(adapter.IsHoldingNativeTool, Is.False);
+        }
+
+        [Test]
         public void M2_ActualBuretteStopcockTracksUserInputAndClosesSafely()
         {
             var tool = FindInActiveScene("DesktopResearchTool");

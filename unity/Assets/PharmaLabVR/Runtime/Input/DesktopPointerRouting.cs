@@ -7,11 +7,23 @@ namespace PharmaLabVR.Input
     public static class DesktopPointerRouting
     {
         public static DesktopPointerAction Resolve(bool hasHeldTool, bool shiftPressed,
-                                                   bool leftPressed, bool overUi, bool enabled)
+                                                   bool leftPressed, bool overUi, bool enabled) =>
+            ResolveForHeldInstrument(hasHeldTool, true, shiftPressed,
+                leftPressed, overUi, enabled);
+
+        // Only a held registered burette grants pointer actuation. Auxiliary
+        // pipette/bottle physical selection is movement, never Native chemistry.
+        public static DesktopPointerAction ResolveForHeldInstrument(bool hasHeldTool,
+            bool isNativeBurette, bool shiftPressed, bool leftPressed,
+            bool overUi, bool enabled)
         {
             if (!enabled || overUi || !hasHeldTool || !leftPressed)
                 return DesktopPointerAction.None;
-            return shiftPressed ? DesktopPointerAction.ToolDrag : DesktopPointerAction.Valve;
+            return !isNativeBurette || shiftPressed ?
+                DesktopPointerAction.ToolDrag : DesktopPointerAction.Valve;
         }
+
+        public static bool ShouldSampleHeldAsNative(bool hasHeldTool,
+            bool isNativeBurette) => hasHeldTool && isNativeBurette;
     }
 }

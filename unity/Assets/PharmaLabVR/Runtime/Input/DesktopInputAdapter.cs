@@ -25,8 +25,10 @@ namespace PharmaLabVR.Input
         private bool awaitingFocusContinue;
         private bool pointerDragActive;
         private Vector3 initialDragOffset;
+        private bool heldToolOriginalKinematic;
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
+        public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
 
         private void Awake() => RefreshRegisteredToolId();
 
@@ -100,8 +102,10 @@ namespace PharmaLabVR.Input
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
             var shiftHeld = Keyboard.current != null &&
                 (Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed);
-            var pointerAction = DesktopPointerRouting.Resolve(heldTool != null, shiftHeld,
-                Mouse.current != null && Mouse.current.leftButton.isPressed, pointerOverUi, inputEnabled);
+            var pointerAction = DesktopPointerRouting.ResolveForHeldInstrument(
+                heldTool != null, IsHoldingNativeTool, shiftHeld,
+                Mouse.current != null && Mouse.current.leftButton.isPressed,
+                pointerOverUi, inputEnabled);
             if (pointerAction == DesktopPointerAction.ToolDrag)
             {
                 actuator = 0f; // A physical drag is never a valve opening.
@@ -115,8 +119,11 @@ namespace PharmaLabVR.Input
                     Mathf.Clamp01(actuator + Mouse.current.delta.ReadValue().x * 0.005f) : 0f;
             }
             ManipulateHeldTool(pointerOverUi);
-            var sampledTool = heldTool != null ? heldTool : registeredTool;
-            var sampledActuator = heldTool != null ? actuator : 0f;
+            // Native geometry and tool ID remain those of the registered
+            // burette even while an auxiliary research instrument is held.
+            var sampledTool = registeredTool;
+            var sampledActuator = DesktopPointerRouting.ShouldSampleHeldAsNative(
+                heldTool != null, IsHoldingNativeTool) ? actuator : 0f;
             instrumentPresenter?.PresentActuatorInput(sampledActuator);
             return new[] { LabGeometryAdapter.BuildSample(
                 heldToolId, ++sequence, nowNs, labFrame, sampledTool, sampledActuator,
@@ -200,7 +207,7 @@ namespace PharmaLabVR.Input
             var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
             if (grabbable == null) return;
             BeginHold(grabbable.transform);
-            heldToolId = grabbable.ToolId;
+            if (IsHoldingNativeTool) heldToolId = grabbable.ToolId;
         }
 
         private bool TryPlaceHeldTool()
@@ -234,7 +241,7 @@ namespace PharmaLabVR.Input
             // aligned root to the actual collider surface, not arbitrary y.
             heldTool.position = nearest.point + up * 0.005f;
             if (heldTool.TryGetComponent<Rigidbody>(out var heldBody))
-                heldBody.isKinematic = false;
+                heldBody.isKinematic = heldToolOriginalKinematic;
             heldTool = null;
             pointerDragActive = false;
             return true;
@@ -244,7 +251,11 @@ namespace PharmaLabVR.Input
         {
             heldTool = tool;
             pointerDragActive = false;
-            if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body)) body.isKinematic = true;
+            if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body))
+            {
+                heldToolOriginalKinematic = body.isKinematic;
+                body.isKinematic = true;
+            }
         }
 
         private void ManipulateHeldTool(bool pointerOverUi)
@@ -276,5 +287,12 @@ namespace PharmaLabVR.Input
     {
         [SerializeField] private string toolId = "research-tool";
         public string ToolId => toolId;
+
+        public void Configure(string id)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new System.ArgumentException("Physical tool identity is required.", nameof(id));
+            toolId = id;
+        }
     }
 }

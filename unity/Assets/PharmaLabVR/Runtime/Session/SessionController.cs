@@ -672,9 +672,10 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
-                GUILayout.Label("Desktop controls: F select/place on the bench; Shift+left-drag = held tool plane; " +
-                    "left-drag = held burette valve; mouse wheel = held height / empty-hand zoom; " +
-                    "Q/E = held tilt; right-drag = camera; WASD = camera; Esc = Native Pause.");
+                GUILayout.Label("Desktop: F selects/places burette, pipette or bottle on the bench. " +
+                    "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
+                    "Held pipette/bottle: left-drag moves the visual tool; metered transfer uses Native UI. " +
+                    "Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
                 GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");

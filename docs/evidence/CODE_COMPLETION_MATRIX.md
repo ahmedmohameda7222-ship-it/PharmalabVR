@@ -97,3 +97,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P11.02/P12.02 Partial (source):** Desktop and XR recorded Review display local branch-scoped student predictions and pH annotations alongside, but explicitly separate from, Native observations/receipts. Desktop includes an Open Notebook action. Imported/recoverable recorded-only branches never inherit unrelated active-branch notes.
 - **Test evidence:** Headless C# tests use real durable NotebookService writes, reads and branch isolation. A RED commit identified missing product implementation; the following integrated source commit adds a branch-filtered learner-review renderer. Unity Editor/PlayMode/Player/XR remains NOT_RUN, official acceptance statuses unchanged.
+
+## M2 auxiliary apparatus physical handling — 21 October 2026
+
+- **P07.01/P07.02/P08.02 Partial (source):** Native-metered stock bottle and pipette are physically selectable via Desktop F and assigned explicitly to the current XR manager. Desktop left-drag moves these auxiliary props, restores their original kinematic Rigidbody on bench placement and never turns their pose into the registered burette's Native geometry/stopcock command. Measured science remains the explicit Native command path.
+- **Tests:** RED test-only HEAD `82f86e7` failed compilation on missing routing functions as expected. Headless C# tests for new routing and authored Unity Editor test source are added for GREEN. No Unity Editor/PlayMode/Player/XR run; formal VerifiedLocal/acceptance ledger unchanged.

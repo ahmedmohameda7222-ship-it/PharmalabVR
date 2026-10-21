@@ -186,6 +186,9 @@ namespace PharmaLabVR.Editor
                 var toolInstance = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
                 toolInstance.transform.SetParent(lab.transform, false);
                 toolInstance.transform.localPosition = item.Item2;
+                toolInstance.AddComponent<DesktopGrabbable>().Configure(
+                    item.Item1 == "ResearchPipette" ?
+                        "research-pipette-visual" : "research-stock-bottle-visual");
             }
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
@@ -212,6 +215,16 @@ namespace PharmaLabVR.Editor
             var interactionManager = new GameObject("XRInteractionManager");
             interactionManager.transform.SetParent(lab.transform, false);
             var xrInteractionManager = interactionManager.AddComponent<XRInteractionManager>();
+            foreach (var auxiliary in lab.GetComponentsInChildren<NativeMeteredInstrumentVisual>(true))
+            {
+                var grip = auxiliary.GetComponent<
+                    UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+                if (grip == null)
+                    throw new InvalidOperationException("Authored Native instrument lacks XR grip.");
+                grip.interactionManager = xrInteractionManager;
+                grip.throwOnDetach = false;
+                grip.forceGravityOnDetach = false;
+            }
             var leftController = CreateXrController(cameraOffset.transform, true, xrInteractionManager);
             var rightController = CreateXrController(cameraOffset.transform, false, xrInteractionManager);
             var xrInput = xrRig.AddComponent<XRInputAdapter>();
