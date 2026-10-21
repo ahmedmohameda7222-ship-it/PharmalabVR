@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.EventSystems;
 using PharmaLabVR.Core;
 using PharmaLabVR.Session;
+using PharmaLabVR.Tools;
 
 namespace PharmaLabVR.Input
 {
@@ -15,6 +16,7 @@ namespace PharmaLabVR.Input
         [SerializeField] private Transform holdAnchor;
         [SerializeField] private LabCaptureTarget captureTarget;
         [SerializeField] private CoreDriver coreDriver;
+        [SerializeField] private ToolPresenter instrumentPresenter;
         [SerializeField] private string heldToolId = "desktop-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
@@ -34,6 +36,7 @@ namespace PharmaLabVR.Input
             viewCamera = camera;
             holdAnchor = anchor;
             registeredTool = tool;
+            instrumentPresenter = tool != null ? tool.GetComponent<ToolPresenter>() : null;
             captureTarget = target;
             geometryProfileHash = profileHash;
             coreDriver = driver;
@@ -47,6 +50,7 @@ namespace PharmaLabVR.Input
                 inputEnabled = false;
                 awaitingFocusContinue = true;
                 actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
                 Debug.LogWarning("InputHold: focus was lost; explicit Continue is required.");
             }
@@ -65,13 +69,21 @@ namespace PharmaLabVR.Input
         {
             RefreshRegisteredToolId();
             if (awaitingFocusContinue && registeredTool != null)
+            {
+                instrumentPresenter?.PresentActuatorInput(0f);
                 return new[] { LabGeometryAdapter.BuildSample(heldToolId, ++sequence, nowNs, labFrame,
                     registeredTool, 0f, geometryProfileHash, true) };
-            if (!inputEnabled || registeredTool == null) return System.Array.Empty<LabInputSample>();
+            }
+            if (!inputEnabled || registeredTool == null)
+            {
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return System.Array.Empty<LabInputSample>();
+            }
             if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 // Esc always wins over F/pick and world manipulation this frame.
                 actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
                 coreDriver?.transform.root.GetComponentInChildren<SessionController>(true)
                     ?.RequestDesktopPause();
                 return System.Array.Empty<LabInputSample>();
@@ -79,6 +91,7 @@ namespace PharmaLabVR.Input
             if (coreDriver != null && (coreDriver.IsNativePaused || coreDriver.IsTimeHeld))
             {
                 actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
                 return System.Array.Empty<LabInputSample>();
             }
@@ -104,6 +117,7 @@ namespace PharmaLabVR.Input
             ManipulateHeldTool(pointerOverUi);
             var sampledTool = heldTool != null ? heldTool : registeredTool;
             var sampledActuator = heldTool != null ? actuator : 0f;
+            instrumentPresenter?.PresentActuatorInput(sampledActuator);
             return new[] { LabGeometryAdapter.BuildSample(
                 heldToolId, ++sequence, nowNs, labFrame, sampledTool, sampledActuator,
                 geometryProfileHash, true, captureTarget != null ?
@@ -113,6 +127,7 @@ namespace PharmaLabVR.Input
         public void ResetBaselines()
         {
             actuator = 0f;
+            instrumentPresenter?.PresentActuatorInput(0f);
             pointerDragActive = false;
             awaitingFocusContinue = false;
             inputEnabled = gameObject.activeInHierarchy;
@@ -125,7 +140,12 @@ namespace PharmaLabVR.Input
         public void SetEnabled(bool value)
         {
             inputEnabled = value && !awaitingFocusContinue;
-            if (!value) { actuator = 0f; pointerDragActive = false; }
+            if (!value)
+            {
+                actuator = 0f;
+                pointerDragActive = false;
+                instrumentPresenter?.PresentActuatorInput(0f);
+            }
         }
 
         private static bool ShouldAdjustActuator(bool pointerOverUi, bool leftButtonPressed) => leftButtonPressed && !pointerOverUi;

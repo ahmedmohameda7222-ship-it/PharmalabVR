@@ -16,6 +16,10 @@ namespace PharmaLabVR.Tools
             actuator = valve;
         }
 
+        public void PresentActuatorInput(float actuator01) => actuator?.SetNormalized(actuator01);
+
+        private void OnDisable() => actuator?.Close();
+
         public void ApplyCommittedState(double volumeM3, float actuator01)
         {
             liquid?.SetCommittedVolume(volumeM3);

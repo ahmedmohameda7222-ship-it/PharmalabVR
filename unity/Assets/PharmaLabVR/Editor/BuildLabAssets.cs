@@ -183,6 +183,10 @@ namespace PharmaLabVR.Editor
             InstrumentMeshBuilder.BuildBuretteGraduations(root.transform, 0.22f, 0.44f, 0.02f,
                 graduationInk);
             var valve = root.AddComponent<ValveActuator>();
+            var stopcock = Part(root.transform, "StopcockLever", PrimitiveType.Cube,
+                new Vector3(0f, -0.228f, 0f), new Vector3(0.08f, 0.012f, 0.014f),
+                CreateMaterial("ResearchStopcock", new Color(0.86f, 0.43f, 0.13f), 0.09f, 0.30f));
+            valve.ConfigureHandle(stopcock.transform);
             root.AddComponent<ToolPresenter>().Configure("burette-50ml-research-v1", liquidPresenter, valve);
             root.AddComponent<Rigidbody>().isKinematic = false;
             var grip = root.AddComponent<XRGrabInteractable>();

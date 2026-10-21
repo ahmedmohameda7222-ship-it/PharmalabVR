@@ -59,6 +59,26 @@ namespace PharmaLabVR.Tests.EditorIntegration
         }
 
         [Test]
+        public void M2_ActualBuretteStopcockTracksUserInputAndClosesSafely()
+        {
+            var tool = FindInActiveScene("DesktopResearchTool");
+            var handle = tool.transform.Find("StopcockLever");
+            var valve = tool.GetComponent<ValveActuator>();
+            var presenter = tool.GetComponent<ToolPresenter>();
+            Assert.That(handle, Is.Not.Null, "A real handle mesh must ship with the instrument.");
+            Assert.That(valve, Is.Not.Null);
+            Assert.That(presenter, Is.Not.Null);
+            presenter.PresentActuatorInput(0.7f);
+            Assert.That(valve.NormalizedOpening, Is.EqualTo(0.7f).Within(0.001f));
+            Assert.That(Quaternion.Angle(handle.localRotation, Quaternion.identity),
+                Is.GreaterThan(10f), "Actual input must visibly move the stopcock.");
+            presenter.PresentActuatorInput(0f);
+            Assert.That(valve.NormalizedOpening, Is.Zero);
+            Assert.That(Quaternion.Angle(handle.localRotation, Quaternion.identity),
+                Is.LessThan(0.01f), "Released or held input closes the physical handle.");
+        }
+
+        [Test]
         public void M1_ReceiverBeakerIsAPersistentNativeBoundPrefab()
         {
             var receiver = FindInActiveScene("ReceiverVessel");

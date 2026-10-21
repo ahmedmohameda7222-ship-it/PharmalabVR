@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEngine.XR.Interaction.Toolkit;
 using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
+using PharmaLabVR.Core;
+using PharmaLabVR.Tools;
 
 namespace PharmaLabVR.Input
 {
@@ -15,6 +17,8 @@ namespace PharmaLabVR.Input
         [SerializeField] private Transform registeredTool;
         [SerializeField] private XRGrabInteractable grabInteractable;
         [SerializeField] private LabCaptureTarget captureTarget;
+        [SerializeField] private CoreDriver coreDriver;
+        [SerializeField] private ToolPresenter instrumentPresenter;
         [SerializeField] private string toolId = "research-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
@@ -27,7 +31,8 @@ namespace PharmaLabVR.Input
             Transform tool,
             XRGrabInteractable grab,
             LabCaptureTarget target,
-            string profileHash)
+            string profileHash,
+            CoreDriver driver = null)
         {
             labFrame = frame;
             leftActionController = left;
@@ -35,6 +40,8 @@ namespace PharmaLabVR.Input
             leftController = left != null ? left.transform : null;
             rightController = right != null ? right.transform : null;
             registeredTool = tool;
+            instrumentPresenter = tool != null ? tool.GetComponent<ToolPresenter>() : null;
+            coreDriver = driver;
             grabInteractable = grab;
             captureTarget = target;
             geometryProfileHash = profileHash;
@@ -42,12 +49,18 @@ namespace PharmaLabVR.Input
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
-            if (!inputEnabled || labFrame == null || leftController == null || rightController == null || registeredTool == null)
+            if (!inputEnabled || labFrame == null || leftController == null ||
+                rightController == null || registeredTool == null)
+            {
+                instrumentPresenter?.PresentActuatorInput(0f);
                 return System.Array.Empty<LabInputSample>();
+            }
             var selected = grabInteractable != null && grabInteractable.isSelected;
             var owner = selected ? SelectingController() : null;
             var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
-            var actuator = selected ? Actuator(owner, directBodyGrip) : 0f;
+            var blocked = coreDriver != null &&
+                (coreDriver.IsTimeHeld || coreDriver.IsNativePaused);
+            var actuator = selected && !blocked ? Actuator(owner, directBodyGrip) : 0f;
             // Every admitted recovery baseline must reflect actual head and both
             // controller tracking. An unheld tool is not evidence of tracked XR.
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
@@ -55,6 +68,10 @@ namespace PharmaLabVR.Input
                 head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracked) && tracked;
             var trackingValid = XRTrackingAdmission.HasFreshTracking(
                 headTracked, Tracked(leftActionController), Tracked(rightActionController));
+            // Never show an apparently open valve if Native will reject input
+            // because hand/head tracking or ownership is not valid.
+            if (!trackingValid || (selected && !Tracked(owner))) actuator = 0f;
+            instrumentPresenter?.PresentActuatorInput(actuator);
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
@@ -96,11 +113,15 @@ namespace PharmaLabVR.Input
             return action != null && action.enabled && action.ReadValue<float>() > 0.5f;
         }
 
-        public void ResetBaselines() { }
+        public void ResetBaselines() => instrumentPresenter?.PresentActuatorInput(0f);
         public void AdvanceSequence(string id, ulong watermark)
         {
             if (id == toolId && sequence < watermark) sequence = watermark;
         }
-        public void SetEnabled(bool value) { inputEnabled = value; }
+        public void SetEnabled(bool value)
+        {
+            inputEnabled = value;
+            if (!value) instrumentPresenter?.PresentActuatorInput(0f);
+        }
     }
 }

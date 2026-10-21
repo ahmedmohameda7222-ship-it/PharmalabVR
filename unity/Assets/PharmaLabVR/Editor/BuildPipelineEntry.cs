@@ -284,7 +284,7 @@ namespace PharmaLabVR.Editor
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
                 researchTool.transform, captureTarget, "burette-50ml-research-v1", coreDriver);
             xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,
-                captureTarget, "burette-50ml-research-v1");
+                captureTarget, "burette-50ml-research-v1", coreDriver);
             var modes = new GameObject("ModeCoordinator").AddComponent<ModeCoordinator>();
             modes.transform.SetParent(lab.transform);
             modes.Configure(desktopRig, xrRig, coreDriver);

@@ -11,6 +11,16 @@ namespace PharmaLabVR.Tools
         public event Action<float> Changed;
         public float NormalizedOpening => normalizedOpening;
 
+        // The serialized handle is a view of the physical input only;
+        // the Native scientific authority alone decides whether flow occurs.
+        public void ConfigureHandle(Transform handle)
+        {
+            if (handle == null) throw new ArgumentNullException(nameof(handle));
+            visualHandle = handle;
+            visualHandle.localRotation = Quaternion.Euler(
+                0f, 0f, -maximumRotationDegrees * normalizedOpening);
+        }
+
         public void SetNormalized(float value)
         {
             var next = Mathf.Clamp01(value);
