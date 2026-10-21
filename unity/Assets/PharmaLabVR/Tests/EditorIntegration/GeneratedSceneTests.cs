@@ -59,6 +59,25 @@ namespace PharmaLabVR.Tests.EditorIntegration
         }
 
         [Test]
+        public void M1_ReceiverBeakerIsAPersistentNativeBoundPrefab()
+        {
+            var receiver = FindInActiveScene("ReceiverVessel");
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchReceiver.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(PrefabUtility.IsPartOfPrefabInstance(receiver), Is.True);
+            Assert.That(PrefabUtility.GetCorrespondingObjectFromSource(receiver), Is.SameAs(prefab));
+            Assert.That(receiver.GetComponent<LiquidPresenter>(), Is.Not.Null);
+            var meniscus = receiver.GetComponent<MeniscusPresenter>();
+            Assert.That(meniscus, Is.Not.Null);
+            Assert.That(AssetDatabase.Contains(meniscus.Surface.GetComponent<MeshFilter>().sharedMesh),
+                Is.True, "Receiver meniscus needs persisted mesh geometry.");
+            Assert.That(receiver.GetComponentsInChildren<Transform>(true)
+                .Count(item => item.name.StartsWith("AuthoredReceiverWall")), Is.EqualTo(16));
+            Assert.That(receiver.GetComponent<LabCaptureTarget>(), Is.Not.Null);
+        }
+
+        [Test]
         public void M1_LabSceneContainsDistinctNativeInstrumentViews()
         {
             var pipette = FindInActiveScene("ResearchPipette");

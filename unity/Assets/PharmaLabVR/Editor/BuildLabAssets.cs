@@ -12,6 +12,7 @@ namespace PharmaLabVR.Editor
         public static void Generate()
         {
             Directory.CreateDirectory("Assets/PharmaLabVR/Prefabs/Tools");
+            Directory.CreateDirectory("Assets/PharmaLabVR/Prefabs/Vessels");
             Directory.CreateDirectory("Assets/PharmaLabVR/Prefabs/UI");
             Directory.CreateDirectory("Assets/PharmaLabVR/Prefabs/Environment");
             Directory.CreateDirectory("Assets/PharmaLabVR/Materials");
@@ -19,6 +20,7 @@ namespace PharmaLabVR.Editor
             GenerateResearchBurette();
             GenerateResearchPipette();
             GenerateResearchStockBottle();
+            GenerateResearchReceiver();
             GenerateMeasurementPanel();
             AssetDatabase.SaveAssets();
         }
@@ -286,6 +288,79 @@ namespace PharmaLabVR.Editor
                 root.AddComponent<XRGrabInteractable>();
                 PrefabUtility.SaveAsPrefabAsset(root,
                     "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
+
+
+        // Serialized laboratory receiver. The geometry and visible liquid are
+        // authored once as a prefab; only Native snapshots can set fill.
+        private static void GenerateResearchReceiver()
+        {
+            var glass = CreateMaterial("ReceiverBeakerGlass",
+                new Color(0.70f, 0.87f, 0.91f, 0.28f), 0.04f, 0.82f);
+            glass.SetOverrideTag("RenderType", "Transparent");
+            if (glass.HasProperty("_Surface")) glass.SetFloat("_Surface", 1f);
+            if (glass.HasProperty("_SrcBlend"))
+                glass.SetFloat("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (glass.HasProperty("_DstBlend"))
+                glass.SetFloat("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (glass.HasProperty("_ZWrite")) glass.SetFloat("_ZWrite", 0f);
+            glass.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            glass.EnableKeyword("_ALPHABLEND_ON");
+            glass.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+            EditorUtility.SetDirty(glass);
+            var ink = CreateMaterial("ReceiverGraduationInk",
+                new Color(0.08f, 0.20f, 0.23f), 0f, 0.12f);
+            var fluid = CreateMaterial("ReceiverCommittedLiquid",
+                new Color(0.18f, 0.56f, 0.79f, 0.75f), 0f, 0.52f);
+            var root = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            root.name = "ResearchReceiver";
+            try
+            {
+                // The hidden original cylinder retains one reliable pick/capture
+                // collider, while the authored transparent walls show the fluid.
+                root.GetComponent<MeshRenderer>().enabled = false;
+                Part(root.transform, "BeakerFoot", PrimitiveType.Cylinder,
+                    new Vector3(0f, -0.45f, 0f), new Vector3(0.90f, 0.028f, 0.90f), glass);
+                const int segments = 16;
+                for (var i = 0; i < segments; ++i)
+                {
+                    var degrees = 360f * i / segments;
+                    var radians = degrees * Mathf.Deg2Rad;
+                    var wall = Part(root.transform, "AuthoredReceiverWall " + i,
+                        PrimitiveType.Cube,
+                        new Vector3(0.46f * Mathf.Cos(radians), 0f,
+                            0.46f * Mathf.Sin(radians)),
+                        new Vector3(0.19f, 0.90f, 0.025f), glass);
+                    wall.transform.localRotation = Quaternion.Euler(0f, 90f - degrees, 0f);
+                }
+                for (var mark = 1; mark <= 5; ++mark)
+                    Part(root.transform, "ReceiverGraduation " + mark, PrimitiveType.Cube,
+                        new Vector3(-0.46f, -0.36f + 0.14f * mark, -0.08f),
+                        new Vector3(0.08f, 0.006f, 0.008f), ink);
+                var fill = Part(root.transform, "NativeReceiverLiquid", PrimitiveType.Cylinder,
+                    Vector3.zero, new Vector3(0.75f, 0f, 0.75f), fluid);
+                var meniscus = root.AddComponent<MeniscusPresenter>();
+                meniscus.Configure(root.transform, 1.0, 0.8f, -0.5f, 0.35f);
+                const string meshPath = "Assets/PharmaLabVR/Materials/ResearchReceiverMeniscus.asset";
+                var surfaceMesh = meniscus.Surface.GetComponent<MeshFilter>();
+                var savedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
+                if (savedMesh == null)
+                    AssetDatabase.CreateAsset(surfaceMesh.sharedMesh, meshPath);
+                else
+                {
+                    Object.DestroyImmediate(surfaceMesh.sharedMesh);
+                    surfaceMesh.sharedMesh = savedMesh;
+                }
+                var surfaceRenderer = meniscus.Surface.GetComponent<MeshRenderer>();
+                if (surfaceRenderer.sharedMaterial != null &&
+                    !AssetDatabase.Contains(surfaceRenderer.sharedMaterial))
+                    Object.DestroyImmediate(surfaceRenderer.sharedMaterial);
+                surfaceRenderer.sharedMaterial = fluid;
+                root.AddComponent<LiquidPresenter>().Configure(fill.transform, 1.0, 0.8f, -0.5f);
+                PrefabUtility.SaveAsPrefabAsset(root,
+                    "Assets/PharmaLabVR/Prefabs/Vessels/ResearchReceiver.prefab");
             }
             finally { Object.DestroyImmediate(root); }
         }

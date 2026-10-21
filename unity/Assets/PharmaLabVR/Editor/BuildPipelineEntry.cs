@@ -263,9 +263,13 @@ namespace PharmaLabVR.Editor
             dock.transform.rotation = researchTool.transform.rotation;
             researchTool.AddComponent<ToolMount>().Configure(dock.transform, body, grab);
             xrRig.AddComponent<RecoveryAlignment>().Configure(xrOrigin, dock.transform);
-            var receiver = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            var receiverPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchReceiver.prefab");
+            if (receiverPrefab == null)
+                throw new InvalidOperationException("Missing generated research receiver beaker.");
+            var receiver = (GameObject)PrefabUtility.InstantiatePrefab(receiverPrefab);
             receiver.name = "ReceiverVessel";
-            receiver.transform.SetParent(lab.transform);
+            receiver.transform.SetParent(lab.transform, false);
             receiver.transform.localPosition = new Vector3(0.25f, 0.53f, 0.2f);
             receiver.transform.localScale = new Vector3(0.10f, 0.08f, 0.10f);
             var receiverBody = receiver.AddComponent<Rigidbody>();

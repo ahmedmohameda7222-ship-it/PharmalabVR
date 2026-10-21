@@ -30,7 +30,9 @@ namespace PharmaLabVR.Core
             source = tool.GetComponent<LiquidPresenter>();
             if (source == null)
                 source = CreateLiquid(tool, "NativeSourceLiquid", 0.012f, 0.46f, 0f);
-            receiver = CreateLiquid(vessel, "NativeReceiverLiquid", 0.75f, 0.8f, -0.5f);
+            receiver = vessel.GetComponent<LiquidPresenter>();
+            if (receiver == null)
+                receiver = CreateLiquid(vessel, "NativeReceiverLiquid", 0.75f, 0.8f, -0.5f);
             DecorateLab(roots, tool, vessel);
             var dropVisual = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             dropVisual.name = "NativePendingDrop";
@@ -117,6 +119,10 @@ namespace PharmaLabVR.Core
             outletExit.localPosition = tip.transform.localPosition +
                 Vector3.up * (tipMesh.bounds.min.y * tip.transform.localScale.y);
             }
+            // Keep legacy scene compatibility, but never add duplicate
+            // run-time beaker walls over a serialized receiver prefab.
+            if (vessel.Find("AuthoredReceiverWall 0") == null)
+            {
             if (vessel.TryGetComponent<Renderer>(out var vesselRenderer)) vesselRenderer.enabled = false;
             Primitive(vessel, "BeakerBase", PrimitiveType.Cylinder,
                 new Vector3(0f, -0.45f, 0f), new Vector3(0.52f, 0.04f, 0.52f),
@@ -128,6 +134,7 @@ namespace PharmaLabVR.Core
                     new Vector3(0.48f * Mathf.Cos(angle), 0f, 0.48f * Mathf.Sin(angle)),
                     new Vector3(0.035f, 0.9f, 0.035f),
                     new Color(0.80f, 0.86f, 0.88f), false);
+            }
             }
         }
 
