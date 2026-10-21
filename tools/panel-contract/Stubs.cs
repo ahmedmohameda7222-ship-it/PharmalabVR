@@ -194,6 +194,17 @@ namespace PharmaLabVR.Session
         public string LastError => null;
         public string LastInstrumentReceipt => null;
         public bool HasResearchLesson { get; private set; }
+        public bool CanRecordResearchPrediction { get; set; } = true;
+        public string ResearchPredictionSummary => CanRecordResearchPrediction ?
+            "Prediction not recorded." : "Student prediction recorded.";
+        public bool RecordResearchPrediction(string selection)
+        {
+            if (!CanRecordResearchPrediction ||
+                !PharmaLabVR.Protocols.ResearchLessonJourney.IsSupportedPrediction(selection)) return false;
+            NotebookAppendCalls++;
+            CanRecordResearchPrediction = false;
+            return true;
+        }
         public string ResearchLessonSummary => HasResearchLesson ?
             "Research lesson selected · Native-driven observations." : "Free laboratory.";
         public bool SelectResearchLesson(string id)

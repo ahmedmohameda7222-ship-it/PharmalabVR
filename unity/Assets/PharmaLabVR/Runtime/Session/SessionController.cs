@@ -108,6 +108,49 @@ namespace PharmaLabVR.Session
         [SerializeField] private TextAsset strongAcidProtocol;
         [SerializeField] private TextAsset mixedAcidProtocol;
         private ResearchLessonJourney selectedResearchLesson;
+        private string selectedResearchPrediction;
+        public bool CanRecordResearchPrediction =>
+            driver?.Session != null && driver.Session.IsOpen &&
+            router?.Current?.ScreenId == ScreenId.Lab &&
+            selectedResearchLesson?.CanPredict(driver.CurrentNativeBranchId,
+                driver.CurrentLabView, driver.IsTimeHeld, selectedResearchPrediction) == true;
+        public string ResearchPredictionSummary => selectedResearchLesson == null ?
+            "Select a Research lesson before making a prediction." :
+            string.IsNullOrEmpty(selectedResearchPrediction) ?
+                "Prediction not recorded. Choose before transferring material." :
+                "Student prediction recorded: " +
+                (selectedResearchPrediction == "below-7" ? "receiver pH below 7" :
+                 "receiver pH at least 7") + " (not a Native result).";
+
+        public bool RecordResearchPrediction(string prediction)
+        {
+            try
+            {
+                if (!CanRecordResearchPrediction ||
+                    !ResearchLessonJourney.IsSupportedPrediction(prediction))
+                    throw new InvalidOperationException(
+                        "Choose one supported prediction before transferring receiver material.");
+                var expected = prediction == "below-7" ? "below 7" : "at least 7";
+                var note = "Student hypothesis for " + selectedResearchLesson.Definition.id +
+                    ": receiver pH predicted " + expected +
+                    ". This is a learner prediction, not a Native result or certified endpoint.";
+                var view = driver.CurrentLabView;
+                if (view.EventSequence != router.Current.NativeRevision)
+                    throw new InvalidOperationException("Native event changed before prediction.");
+                notebook.Append(NotebookFilePath(), driver.Session.BranchId,
+                    view.EventSequence, "receiver", note);
+                selectedResearchPrediction = prediction; // only after durable note append
+                LastError = null;
+                router.Show(ScreenId.Lab);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
         public string ResearchLessonSummary => selectedResearchLesson == null ?
             "Free laboratory · no lesson selected. Choose a Research lesson to follow its procedure." :
             selectedResearchLesson.Summary(driver?.CurrentNativeBranchId,
@@ -136,6 +179,7 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("Research lesson identity mismatch.");
                 selectedResearchLesson = new ResearchLessonJourney(
                     definition, driver.CurrentNativeBranchId);
+                selectedResearchPrediction = null;
                 LastError = null;
                 if (router?.Current != null) router.Show(ScreenId.Lab);
                 return true;
@@ -222,6 +266,7 @@ namespace PharmaLabVR.Session
             LastInstrumentReceipt = null;
             // Imported/restarted Native branches cannot inherit lesson progress.
             selectedResearchLesson = null;
+            selectedResearchPrediction = null;
             ReconcileNativeReviewAuthority();
         }
 
@@ -528,6 +573,14 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.SelectResearchLesson, "mixed-acid-titration-research");
                 GUILayout.Label(ResearchLessonSummary);
                 if (HasResearchLesson) GUILayout.Label(ResearchLessonSteps);
+                GUILayout.Label(ResearchPredictionSummary);
+                if (CanRecordResearchPrediction)
+                {
+                    if (GUILayout.Button("Predict: receiver pH below 7", GUILayout.Height(32f)))
+                        panels?.Request(PanelAction.RecordResearchPrediction, "below-7");
+                    if (GUILayout.Button("Predict: receiver pH at least 7", GUILayout.Height(32f)))
+                        panels?.Request(PanelAction.RecordResearchPrediction, "at-least-7");
+                }
                 GUILayout.Label(LabBenchReadout.NextAction(driver.CurrentLabView,
                     driver.SourceNeedsPreparation, driver.IsNativePaused, driver.IsTimeHeld));
                 GUILayout.Label(LabBenchReadout.Inventory(driver.CurrentLabView));

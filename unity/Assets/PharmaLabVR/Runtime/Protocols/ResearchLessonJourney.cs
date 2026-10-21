@@ -26,6 +26,23 @@ namespace PharmaLabVR.Protocols
                 (i + 1).ToString() + ". " + step));
         }
 
+        public static bool IsSupportedPrediction(string choice) =>
+            choice == "below-7" || choice == "at-least-7";
+
+        // Prediction is learner intent, recorded before any material reaches
+        // the receiving vessel. No result can be inferred from this choice.
+        public bool CanPredict(string liveBranchId, LabViewModel native, bool held,
+            string existingChoice)
+        {
+            if (held || !string.IsNullOrEmpty(existingChoice) ||
+                !string.Equals(liveBranchId, BranchId, StringComparison.Ordinal) ||
+                native?.Vessels == null || string.IsNullOrWhiteSpace(native.EventSequence))
+                return false;
+            return native.Vessels.Any(vessel => vessel.Id == "receiver" &&
+                IsRepresented(vessel.CommittedVolumeM3, vessel.CapacityM3) &&
+                vessel.CommittedVolumeM3 == 0d);
+        }
+
         public string Summary(string liveNativeBranchId, LabViewModel native,
             bool paused, bool held)
         {

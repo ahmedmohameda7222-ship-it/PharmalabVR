@@ -479,14 +479,14 @@ namespace PharmaLabVR.UI
                         new[] { "Save", "Load", "Review", "Settings" }),
                 ScreenId.Lab when driver != null && driver.SourceNeedsPreparation =>
                     new[] { "PrepareResearchStock", "PrepareReserveStock", "PrepareRinseWater",
-                        "SelectResearchLesson", "Settings" },
+                        "SelectResearchLesson", "RecordResearchPrediction", "Settings" },
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson" } :
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction" } :
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson" },
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?

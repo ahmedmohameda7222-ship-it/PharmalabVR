@@ -164,10 +164,20 @@ namespace PharmaLabVR.UI
                 () => panels?.Request(PanelAction.BottleRefill));
             AddInstrumentButton("Prime burette 0.05 ml", -82f,
                 () => panels?.Request(PanelAction.FillBurette));
-            AddInstrumentButton("Strong acid lesson", -138f,
-                () => panels?.Request(PanelAction.SelectResearchLesson, "strong-acid-titration-research"));
-            AddInstrumentButton("Mixed acid lesson", -194f,
-                () => panels?.Request(PanelAction.SelectResearchLesson, "mixed-acid-titration-research"));
+            AddInstrumentButton("Strong acid lesson", -138f, () =>
+            {
+                if (panels?.Request(PanelAction.SelectResearchLesson, "strong-acid-titration-research") == true)
+                    instrumentPage = 3;
+            });
+            AddInstrumentButton("Mixed acid lesson", -194f, () =>
+            {
+                if (panels?.Request(PanelAction.SelectResearchLesson, "mixed-acid-titration-research") == true)
+                    instrumentPage = 3;
+            });
+            AddInstrumentButton("Predict pH below 7", 30f,
+                () => panels?.Request(PanelAction.RecordResearchPrediction, "below-7"));
+            AddInstrumentButton("Predict pH at least 7", -26f,
+                () => panels?.Request(PanelAction.RecordResearchPrediction, "at-least-7"));
             AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
@@ -439,6 +449,8 @@ namespace PharmaLabVR.UI
                     !driver.IsNativePaused && !driver.IsTimeHeld;
                 var validRinse = mayTransfer && driver.RinseWaterPrepared;
                 var operating = instrumentPage == 1;
+                var setupPage = instrumentPage == 2;
+                var predictionPage = instrumentPage == 3;
                 SetButton("Pipette aspirate 0.05 ml", operating && mayTransfer);
                 SetButton("Pipette dispense 0.05 ml", operating && mayTransfer &&
                     panels != null && panels.CanPipetteDispense);
@@ -446,21 +458,25 @@ namespace PharmaLabVR.UI
                 SetButton("Rinse pipette", operating && validRinse);
                 SetButton("Rinse bottle", operating && validRinse);
                 SetButton("Stock setup", operating);
-                SetButton("Choose stock", !operating && driver.SourceNeedsPreparation);
-                SetButton("Prepare chosen stock", !operating && driver.SourceNeedsPreparation);
-                SetButton("Prepare rinse water", !operating && driver.SourceNeedsPreparation);
-                SetButton("Prepare reserve stock", !operating &&
+                SetButton("Choose stock", setupPage && driver.SourceNeedsPreparation);
+                SetButton("Prepare chosen stock", setupPage && driver.SourceNeedsPreparation);
+                SetButton("Prepare rinse water", setupPage && driver.SourceNeedsPreparation);
+                SetButton("Prepare reserve stock", setupPage &&
                     driver.SourceNeedsPreparation && !driver.ReserveStockPrepared);
-                SetButton("Choose concentration", !operating &&
+                SetButton("Choose concentration", setupPage &&
                     driver.SourceNeedsPreparation && driver.ResearchConcentrations.Count > 0);
-                SetButton("Switch pipette to reserve", !operating &&
+                SetButton("Switch pipette to reserve", setupPage &&
                     mayTransfer && driver.ReserveStockPrepared);
-                SetButton("Refill bottle 0.01 ml", !operating &&
+                SetButton("Refill bottle 0.01 ml", setupPage &&
                     mayTransfer && driver.ReserveStockPrepared);
-                SetButton("Prime burette 0.05 ml", !operating &&
+                SetButton("Prime burette 0.05 ml", setupPage &&
                     mayTransfer && panels != null && panels.CanFillBurette);
-                SetButton("Strong acid lesson", !operating && mayTransfer);
-                SetButton("Mixed acid lesson", !operating && mayTransfer);
+                SetButton("Strong acid lesson", setupPage);
+                SetButton("Mixed acid lesson", setupPage);
+                SetButton("Predict pH below 7", predictionPage &&
+                    panels != null && panels.CanRecordResearchPrediction);
+                SetButton("Predict pH at least 7", predictionPage &&
+                    panels != null && panels.CanRecordResearchPrediction);
                 SetButton("Back to instruments", !operating);
                 SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
@@ -472,7 +488,10 @@ namespace PharmaLabVR.UI
                     concentrationLabel.text = "Concentration: " +
                         concentration.ToString("0.00") + " mol/L";
                 }
-                detail.text = driver.SourceNeedsPreparation ?
+                detail.text = predictionPage ?
+                    (panels?.ResearchLessonSummary ?? "Research lesson unavailable.") + "\n" +
+                    (panels?.ResearchPredictionSummary ?? "Select a prediction.") :
+                    driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
                     (panels?.ResearchLessonSummary ?? "Free Research laboratory") + "\n" +
                     "Measured Research tools. Pipette staged Native tip: " +
@@ -492,6 +511,7 @@ namespace PharmaLabVR.UI
                     "Prepare reserve stock", "Choose concentration",
                     "Switch pipette to reserve", "Refill bottle 0.01 ml",
                     "Prime burette 0.05 ml", "Strong acid lesson", "Mixed acid lesson",
+                    "Predict pH below 7", "Predict pH at least 7",
                     "Back to instruments", "Exit tools" }) SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));

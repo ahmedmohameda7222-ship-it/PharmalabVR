@@ -187,6 +187,41 @@ internal static class Program
               noteRouter.Current.ScreenId == ScreenId.Review,
             "Notebook-to-durable-save-to-recorded-review journey is not routable.");
 
+        // P12.02 student-prediction admission is scoped to the Native branch
+        // and an actually empty receiver; hypothesis never mutates material.
+        var predictiveView = new LabViewModel();
+        var predictiveDefinition = new ProtocolDefinition {
+            schemaVersion = 1, id = "strong-acid-titration-research",
+            maturity = "Research", certifiedScoring = false,
+            steps = new[] { "Prepare", "Transfer", "Inspect" }
+        };
+        var predictionJourney = new ResearchLessonJourney(predictiveDefinition, "predict-branch");
+        Check(predictionJourney.CanPredict("predict-branch", predictiveView, false, null),
+            "Learner cannot predict before starting the physical experiment.");
+        Check(!predictionJourney.CanPredict("wrong-branch", predictiveView, false, null) &&
+              !predictionJourney.CanPredict("predict-branch", predictiveView, true, null) &&
+              !predictionJourney.CanPredict("predict-branch", predictiveView, false, "below-7"),
+            "Prediction must not be duplicated across branch/hold/prior selection.");
+        predictiveView.Vessels[1].CommittedVolumeM3 = 1e-8;
+        Check(!predictionJourney.CanPredict("predict-branch", predictiveView, false, null),
+            "Prediction must precede, not follow, Native receiver material transfer.");
+        Check(ResearchLessonJourney.IsSupportedPrediction("below-7") &&
+              ResearchLessonJourney.IsSupportedPrediction("at-least-7") &&
+              !ResearchLessonJourney.IsSupportedPrediction("made-up-endpoint"),
+            "Prediction permits only the two explicitly student-authored hypotheses.");
+        var predictorDriver = new CoreDriver { SourceNeedsPreparation = true };
+        predictorDriver.PauseSession();
+        var predictionRouter = new ScreenRouter();
+        predictionRouter.Configure(predictorDriver);
+        var predictionPanels = new LabPanelController();
+        var predictionSession = new SessionController();
+        predictionPanels.Configure(predictionRouter, predictorDriver, predictionSession);
+        Check(predictionRouter.Current.SupportedActions.Contains("RecordResearchPrediction") &&
+              predictionPanels.Request(PanelAction.RecordResearchPrediction, "below-7") &&
+              predictionSession.NotebookAppendCalls == 1 &&
+              !predictionPanels.Request(PanelAction.RecordResearchPrediction, "below-7"),
+            "Shared first-run Desktop/XR prediction did not durably request a single annotation.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
