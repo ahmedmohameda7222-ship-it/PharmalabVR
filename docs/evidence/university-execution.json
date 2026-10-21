@@ -132,6 +132,13 @@
         "functionalSha": "37170465f8216236053cd320636351c45c1590a1",
         "remoteVersion": "20261018210953",
         "verified": "15/15 local migrations; 56 DO blocks with real RLS and rollback, push 39166396995 and PR 39166400384; live denied-role smoke passed."
+      },
+      "portalAssignmentPublication": {
+        "status": "SourceOnly_ExistingDeployedRPCCalled_NoRealInstructorPilot",
+        "source": "portal/src/api.mjs staffPublicationOptions + staffPublishAssignment, portal/src/view.mjs and portal/app.mjs at 9b60e97",
+        "test": "34 portal Node fake HTTP/DOM assertions, existing disposable Supabase server RPC SQL suite; no actual production academic writes",
+        "trust": "Server security definer RPC alone authorizes instructor/section/immutable content versions; client JWT role hints never grant permission. Unique request ID persists across a retry of the unchanged draft in the same active form. Not a trusted scientific evidence or graded submission.",
+        "remaining": "Real verified instructor Auth + browser/section publication acceptance and teaching user roles, UI for course/section/enrollment/lesson/rubric creation and grade+feedback."
       }
     },
     {
@@ -306,6 +313,30 @@
         "latestHeadlessEvidence": "At b8b4972 Native PR 39396357041 panel-routing SUCCESS: 18/18 portal source-linked Node tests and node --check browser source. Native Ubuntu, Native Windows, and disposable Supabase PR 39396357029 require separate full exact-SHA conclusion inspection.",
         "behavior": "Student selects an RLS-visible published assignment, client refetches its exact tenant/section/course/pinned lesson-version metadata then GETs the published same-tenant same-course lesson_versions row; content_json shown as inert JSON text with declared content_sha256 string, never executed or interpreted as Native science. Denies foreign, stale/absent, duplicate or unpublished details and clears UI on request failure.",
         "trustLimit": "PostgreSQL jsonb::text SHA256 claimed by server is NOT independently verified using JS JSON.stringify, and is not scientific attestation. Only fresh authenticated Auth+RLS can authorize server rows; no live service, real student or browser was exercised. Unity and hardware NOT_RUN."
+      },
+      "instructorAcademicPortal": {
+        "status": "CodeFirst_StaffReadAndAssignmentPublicationSource_HeadlessPassed_RealBrowserAndHumanPilotNotRun",
+        "staffReadRed": "9ec95f8bb099905fb56b7a31c5e98620ce70cda9",
+        "staffReadRedEvidence": "Native PR 39570428945 failed four intended missing staffOverview tests",
+        "staffReadGreen": "370cb0d98344d355f3c8042abf72e3228247fb41",
+        "staffViewRed": "9b82e1fecc59adceaf9a40cc3bcd2cd415172ec4",
+        "staffViewRedEvidence": "Native PR 39570768080 failed missing renderStaffOverview module export",
+        "staffViewGreen": "341e97feee2bd33c4274966dab8e8e49e6835147",
+        "staffUI": "bfbfb00372e3c5c8078427ed74925b9cdec27a2e",
+        "staffUIVerified": "Native PR 39571096688, disposable Supabase PR 39571096344 exact source SHA completed SUCCESS",
+        "versionOptionsRed": "3dc7cea8f1677e8ec43fa4bc2dd1d678aaf6bff9",
+        "versionOptionsRedEvidence": "Native PR 39571560460 failed two intended missing staffPublicationOptions cases",
+        "versionOptionsGreen": "b1ff0363a4c3887e2873a29585c248a82f2b1348",
+        "assignmentRpcRed": "a2b350b135ab774fde5d720b660a313fe61c526c",
+        "assignmentRpcRedEvidence": "Native PR 39571891203 failed missing staffPublishAssignment in two new tests",
+        "assignmentRpcGreen": "101431a5a5e59466876bc36d4b63d3a22d8aa26d",
+        "assignmentFormRed": "902eb2bdd52d11e88a461a253ba859389b65f08d",
+        "assignmentFormRedEvidence": "Native PR 39572252263 failed missing renderPublicationForm named export",
+        "assignmentFormGreen": "0fd1d8c37b0477b2fdac1ff8a4504fa5db05691f",
+        "browserWiring": "9b60e97bfa143c90e32556b3a84b1227f33a758c",
+        "headlessEvidence": "At integrated source SHA 9b60e97 Native PR 39572756948 panel-routing SUCCESS: 34/34 portal Node synthetic HTTP/DOM tests, plus node --check portal modules; disposable Supabase PR 39572756980 SUCCESS. Windows/Ubuntu matrix last exact SHA conclusively checked separately.",
+        "scope": "In-memory verified GoTrue account JWT; fresh active RLS membership; bounded tenant+course+section-staff list reads; immutable published lesson/rubric version choices; English staff hierarchy; explicit section selection; public.university_publish_assignment only (NOT assignment table INSERT), existing audited server authorization and request-id idempotency. Instructor/admin can publish, teaching assistant read-only. No scientific attestations or grades.",
+        "limits": "Synthetic Node tests not real browser or human Auth pilot; 100-row query caps are preview not exhaustive administrative audit. Production Supabase already has publication RPC; no new live function or migration deployed. Real owner university creation, student learning/lesson editor, rubric UI, grade/submission/feedback admin UX, actual browser accessibility, Unity Editor/Player/XR still NOT_RUN; U05/G-U1 OPEN."
       }
     }
   ],
