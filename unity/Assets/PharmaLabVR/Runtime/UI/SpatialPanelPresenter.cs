@@ -163,6 +163,10 @@ namespace PharmaLabVR.UI
                 () => panels?.Request(PanelAction.BottleRefill));
             AddInstrumentButton("Prime burette 0.05 ml", -82f,
                 () => panels?.Request(PanelAction.FillBurette));
+            AddInstrumentButton("Strong acid lesson", -138f,
+                () => panels?.Request(PanelAction.SelectResearchLesson, "strong-acid-titration-research"));
+            AddInstrumentButton("Mixed acid lesson", -194f,
+                () => panels?.Request(PanelAction.SelectResearchLesson, "mixed-acid-titration-research"));
             AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
@@ -449,6 +453,8 @@ namespace PharmaLabVR.UI
                     mayTransfer && driver.ReserveStockPrepared);
                 SetButton("Prime burette 0.05 ml", !operating &&
                     mayTransfer && panels != null && panels.CanFillBurette);
+                SetButton("Strong acid lesson", !operating && mayTransfer);
+                SetButton("Mixed acid lesson", !operating && mayTransfer);
                 SetButton("Back to instruments", !operating);
                 SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
@@ -462,6 +468,7 @@ namespace PharmaLabVR.UI
                 }
                 detail.text = driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
+                    (panels?.ResearchLessonSummary ?? "Free Research laboratory") + "\n" +
                     "Measured Research tools. Pipette staged Native tip: " +
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
                     " ml; 0.10 ml remains as research hold-up. " +
@@ -478,7 +485,8 @@ namespace PharmaLabVR.UI
                     "Choose stock", "Prepare chosen stock", "Prepare rinse water",
                     "Prepare reserve stock", "Choose concentration",
                     "Switch pipette to reserve", "Refill bottle 0.01 ml",
-                    "Prime burette 0.05 ml", "Back to instruments", "Exit tools" }) SetButton(name, false);
+                    "Prime burette 0.05 ml", "Strong acid lesson", "Mixed acid lesson",
+                    "Back to instruments", "Exit tools" }) SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
             }

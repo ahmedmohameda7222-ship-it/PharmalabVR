@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -24,6 +24,9 @@ namespace PharmaLabVR.UI
         public string LastError => sessions?.LastError;
         public string LastInstrumentReceipt => sessions?.LastInstrumentReceipt;
         public string NotebookSummary => sessions?.NotebookSummary ?? "Research notebook unavailable.";
+        public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
+            "Research lesson unavailable.";
+        public bool HasResearchLesson => sessions?.HasResearchLesson == true;
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
         {
@@ -88,6 +91,8 @@ namespace PharmaLabVR.UI
                     return sessions.TryBottleMeasuredPour();
                 case PanelAction.FillBurette:
                     return sessions.TryFillBuretteFromBottle();
+                case PanelAction.SelectResearchLesson:
+                    return sessions.SelectResearchLesson(entityId);
                 case PanelAction.BottleRinse:
                     return sessions.TryBottleWaterRinse();
                 case PanelAction.Inspect:

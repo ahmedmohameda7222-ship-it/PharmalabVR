@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.Lab;
+using PharmaLabVR.Protocols;
 using PharmaLabVR.Input;
 using PharmaLabVR.Session;
 using PharmaLabVR.UI;
@@ -95,6 +96,40 @@ internal static class Program
         Check(staleXrLabel.Contains("Stale") && staleXrLabel.Contains("--") &&
               !staleXrLabel.Contains("7.13") && staleXrLabel.Contains("IPhreeqc-research"),
             "XR status label implied a current value for stale Native chemistry.");
+
+        // M3: genuine authored Research lesson content is delivered to a
+        // branch-scoped, non-grading observer of real Native material state.
+        var strongJson = System.Text.Json.JsonDocument.Parse(
+            System.IO.File.ReadAllText("unity/Assets/PharmaLabVR/Content/Protocols/strong-acid-titration.json"));
+        var mixedJson = System.Text.Json.JsonDocument.Parse(
+            System.IO.File.ReadAllText("unity/Assets/PharmaLabVR/Content/Protocols/mixed-acid-titration.json"));
+        Check(strongJson.RootElement.GetProperty("steps").GetArrayLength() >= 4 &&
+              mixedJson.RootElement.GetProperty("steps").GetArrayLength() >= 4 &&
+              !strongJson.RootElement.GetProperty("certifiedScoring").GetBoolean() &&
+              !mixedJson.RootElement.GetProperty("certifiedScoring").GetBoolean(),
+            "Two real ungraded lesson procedures are required for the student Lab.");
+        var definition = new ProtocolDefinition
+        {
+            schemaVersion = 1, id = "strong-acid-titration-research",
+            maturity = "Research", certifiedScoring = false,
+            steps = new[] { "Prepare supported stock", "Deliver measured aliquot", "Inspect and review" }
+        };
+        var lesson = new ResearchLessonJourney(definition, "native-branch-1");
+        var emptyLessonView = new LabViewModel();
+        Check(lesson.Summary("native-branch-1", emptyLessonView, true, false).Contains("Pause"),
+            "A paused Native lesson cannot present a completed or transferable procedure.");
+        Check(lesson.Summary("other-branch", emptyLessonView, false, false).Contains("branch"),
+            "A restored or forked Native session must invalidate previous lesson context.");
+        emptyLessonView.Vessels[0].CommittedVolumeM3 = 2.5e-5;
+        emptyLessonView.Vessels[1].CommittedVolumeM3 = 1e-8;
+        Check(lesson.Summary("native-branch-1", emptyLessonView, false, false).Contains("pH"),
+            "A real receiver material increment must direct learner to measured Native pH.");
+        Check(lesson.Instructions.Contains("Inspect and review") &&
+              lesson.Instructions.Contains("Prepare supported stock"),
+            "Installed course instruction text is not shown to learners.");
+        Check(!lesson.Summary("native-branch-1", emptyLessonView, false, false)
+                .Contains("Certified"),
+            "Research-only course incorrectly claimed certified performance.");
 
         // M1/M2 first-use student bench: this text is derived only from the
         // Native vessel view and cannot turn a missing or held state into success.

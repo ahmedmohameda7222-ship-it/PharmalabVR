@@ -183,6 +183,16 @@ namespace PharmaLabVR.Session
         public double PipetteTipVolumeM3 => DispensePermitted ? 1.5e-7 : 5e-8;
         public string LastError => null;
         public string LastInstrumentReceipt => null;
+        public bool HasResearchLesson { get; private set; }
+        public string ResearchLessonSummary => HasResearchLesson ?
+            "Research lesson selected · Native-driven observations." : "Free laboratory.";
+        public bool SelectResearchLesson(string id)
+        {
+            if (id != "strong-acid-titration-research" &&
+                id != "mixed-acid-titration-research") return false;
+            HasResearchLesson = true;
+            return true;
+        }
         public int ParkCalls { get; private set; }
         public bool ParkToolAtDock()
         {

@@ -292,6 +292,13 @@ namespace PharmaLabVR.Editor
             new GameObject("LabPanels").transform.SetParent(lab.transform);
             var sessionController = new GameObject("SessionController").AddComponent<PharmaLabVR.Session.SessionController>();
             sessionController.Configure(coreDriver);
+            var strongAcidLesson = AssetDatabase.LoadAssetAtPath<TextAsset>(
+                "Assets/PharmaLabVR/Content/Protocols/strong-acid-titration.json");
+            var mixedAcidLesson = AssetDatabase.LoadAssetAtPath<TextAsset>(
+                "Assets/PharmaLabVR/Content/Protocols/mixed-acid-titration.json");
+            if (strongAcidLesson == null || mixedAcidLesson == null)
+                throw new InvalidOperationException("The two Research lesson definitions must ship with Lab.");
+            sessionController.ConfigureResearchLessons(strongAcidLesson, mixedAcidLesson);
             sessionController.transform.SetParent(lab.transform);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);

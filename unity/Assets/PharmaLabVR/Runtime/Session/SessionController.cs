@@ -7,6 +7,7 @@ using PharmaLabVR.Lab;
 using PharmaLabVR.UI;
 using PharmaLabVR.Tools;
 using PharmaLabVR.Input;
+using PharmaLabVR.Protocols;
 using UnityEngine;
 
 namespace PharmaLabVR.Session
@@ -55,6 +56,48 @@ namespace PharmaLabVR.Session
         }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
+        [SerializeField] private TextAsset strongAcidProtocol;
+        [SerializeField] private TextAsset mixedAcidProtocol;
+        private ResearchLessonJourney selectedResearchLesson;
+        public string ResearchLessonSummary => selectedResearchLesson == null ?
+            "Free laboratory · no lesson selected. Choose a Research lesson to follow its procedure." :
+            selectedResearchLesson.Summary(driver?.CurrentNativeBranchId,
+                driver?.CurrentLabView, driver?.IsNativePaused == true, driver?.IsTimeHeld == true);
+        public string ResearchLessonSteps => selectedResearchLesson == null ?
+            string.Empty : selectedResearchLesson.Instructions;
+        public bool HasResearchLesson => selectedResearchLesson != null;
+        public void ConfigureResearchLessons(TextAsset strongAcid, TextAsset mixedAcid)
+        {
+            strongAcidProtocol = strongAcid;
+            mixedAcidProtocol = mixedAcid;
+        }
+
+        public bool SelectResearchLesson(string id)
+        {
+            try
+            {
+                if (driver?.Session == null || router?.Current?.ScreenId != ScreenId.Lab ||
+                    driver.IsTimeHeld)
+                    throw new InvalidOperationException("Choose a lesson in the active Native Lab.");
+                var file = id == "strong-acid-titration-research" ? strongAcidProtocol :
+                    id == "mixed-acid-titration-research" ? mixedAcidProtocol : null;
+                if (file == null) throw new InvalidOperationException("Research lesson asset unavailable.");
+                var definition = JsonUtility.FromJson<ProtocolDefinition>(file.text);
+                if (definition == null || definition.id != id)
+                    throw new InvalidOperationException("Research lesson identity mismatch.");
+                selectedResearchLesson = new ResearchLessonJourney(
+                    definition, driver.CurrentNativeBranchId);
+                LastError = null;
+                if (router?.Current != null) router.Show(ScreenId.Lab);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
         public static Rect DesktopHudBounds => new Rect(12f, 12f,
             Mathf.Max(1f, Mathf.Min(370f, Screen.width - 24f)),
             Mathf.Max(1f, Mathf.Min(620f, Screen.height - 24f)));
@@ -128,6 +171,8 @@ namespace PharmaLabVR.Session
         private void OnNativeSessionRestored()
         {
             LastInstrumentReceipt = null;
+            // Imported/restarted Native branches cannot inherit lesson progress.
+            selectedResearchLesson = null;
             ReconcileNativeReviewAuthority();
         }
 
@@ -428,6 +473,12 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Lab)
             {
                 GUILayout.Label("First experiment · Research-only, not a certified endpoint");
+                if (GUILayout.Button("Guide: strong-acid research", GUILayout.Height(32f)))
+                    panels?.Request(PanelAction.SelectResearchLesson, "strong-acid-titration-research");
+                if (GUILayout.Button("Guide: mixed-acid research", GUILayout.Height(32f)))
+                    panels?.Request(PanelAction.SelectResearchLesson, "mixed-acid-titration-research");
+                GUILayout.Label(ResearchLessonSummary);
+                if (HasResearchLesson) GUILayout.Label(ResearchLessonSteps);
                 GUILayout.Label(LabBenchReadout.NextAction(driver.CurrentLabView,
                     driver.SourceNeedsPreparation, driver.IsNativePaused, driver.IsTimeHeld));
                 GUILayout.Label(LabBenchReadout.Inventory(driver.CurrentLabView));
