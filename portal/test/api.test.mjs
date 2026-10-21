@@ -54,6 +54,8 @@ function harness(options = {}) {
     if (uri.pathname === '/rest/v1/rpc/university_create_course')
       return mockResponse(options.courseResult ??
         '99999999-9999-4999-8999-999999999999', options.courseRpcStatus ?? 200);
+    if (uri.pathname === '/rest/v1/rpc/university_enroll_student')
+      return mockResponse(options.enrollStatusText ?? 'Enrolled', options.enrollRpcStatus ?? 200);
     if (uri.pathname === '/rest/v1/rpc/university_create_section')
       return mockResponse(options.sectionResult ??
         'aaaaaaaa-aaaa-4aaa-8aaa-000000000001', options.sectionRpcStatus ?? 200);
@@ -497,4 +499,44 @@ test('university creation excludes instructor, foreign university and malformed 
     sectionCode: 'LAB01', requestId: '88888888-8888-4888-8888-888888888888'
   }));
   assert.equal(admin.calls.filter(c => c.url.pathname.includes('/rpc/')).length, 0);
+});
+
+test('university admin enrollment uses existing audited RPC with verified student ID', async () => {
+  const h = harness({ memberships: [{
+    institution_id: institutionB, role: 'university_admin', status: 'active'
+  }], assignments: [] });
+  const session = await h.api.signIn('admin@example.edu', 'password');
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  assert.equal(await h.api.adminEnrollStudent(session, {
+    institutionId: institutionB, sectionId: sectionA,
+    studentId: student, requestId
+  }), 'Enrolled');
+  const rpc = h.calls.find(x => x.url.pathname === '/rest/v1/rpc/university_enroll_student');
+  assert.equal(rpc.init.method, 'POST');
+  assert.equal(rpc.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(rpc.init.body), {
+    p_institution_id: institutionB, p_section_id: sectionA,
+    p_student_id: student, p_request_id: requestId
+  });
+  assert.equal(h.calls.filter(x => x.url.pathname === '/rest/v1/enrollments').length, 0);
+});
+
+test('enrollment never trusts instructor, wrong section, refused RPC or invented result', async () => {
+  const payload = { institutionId: institutionB, sectionId: sectionA,
+    studentId: student, requestId: '88888888-8888-4888-8888-888888888888' };
+  const instructor = harness();
+  const instructorSession = await instructor.api.signIn('teacher@example.edu', 'password');
+  await assert.rejects(() => instructor.api.adminEnrollStudent(instructorSession, payload),
+    /admin/i);
+  assert.equal(instructor.calls.filter(x => x.url.pathname.includes('/rpc/')).length, 0);
+  for (const variants of [
+    { enrollRpcStatus: 403 }, { enrollStatusText: 'Unknown' }
+  ]) {
+    const h = harness({ ...variants, assignments: [], memberships: [{
+      institution_id: institutionB, role: 'university_admin', status: 'active'
+    }] });
+    const session = await h.api.signIn('admin@example.edu', 'password');
+    await assert.rejects(() => h.api.adminEnrollStudent(session, payload),
+      /unavailable|Invalid/i);
+  }
 });
