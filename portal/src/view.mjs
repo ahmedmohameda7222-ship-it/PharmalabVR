@@ -271,3 +271,105 @@ export function renderPublicationForm(target, state, documentSource = globalThis
   });
   target.replaceChildren(form);
 }
+
+
+// University-admin-only UI affordance; actual permissions, tenancy and
+// request idempotency are enforced by existing Supabase RPCs.
+export function renderAdminSetup(target, state, documentSource = globalThis.document,
+  onCreateCourse = null, onCreateSection = null) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const p = documentSource.createElement('p');
+    p.textContent = value;
+    target.replaceChildren(p);
+  };
+  if (state?.status === 'no-admin-context') {
+    message('Select an active university administrator institution.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading institution administration…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Institution administration could not be loaded.');
+    return;
+  }
+  if (state?.status !== 'available' || !Array.isArray(state.courses))
+    throw new TypeError('RLS-visible administrator course list required');
+
+  const root = documentSource.createElement('div');
+  const warning = documentSource.createElement('p');
+  warning.textContent = 'These actions create audited academic metadata only, never Native scientific outcomes.';
+  root.append(warning);
+  const makeInput = (form, name, labelText, maximum) => {
+    const label = documentSource.createElement('label');
+    label.textContent = labelText;
+    const input = documentSource.createElement('input');
+    input.name = name;
+    input.type = 'text';
+    input.required = true;
+    input.maxLength = maximum;
+    input.value = '';
+    label.append(input);
+    form.append(label);
+    return input;
+  };
+  const createCourse = documentSource.createElement('form');
+  const courseHeader = documentSource.createElement('h3');
+  courseHeader.textContent = 'Create course';
+  createCourse.append(courseHeader);
+  const code = makeInput(createCourse, 'code', 'Course code (uppercase)', 40);
+  const name = makeInput(createCourse, 'name', 'Course name', 200);
+  const term = makeInput(createCourse, 'term', 'Term identifier', 32);
+  const courseSubmit = documentSource.createElement('button');
+  courseSubmit.type = 'submit';
+  courseSubmit.textContent = 'Create course';
+  createCourse.append(courseSubmit);
+  createCourse.addEventListener('submit', event => {
+    event.preventDefault();
+    if (typeof onCreateCourse === 'function')
+      onCreateCourse({ code: code.value, name: name.value, term: term.value });
+  });
+  root.append(createCourse);
+
+  if (!state.courses.length) {
+    const empty = documentSource.createElement('p');
+    empty.textContent = 'Create a course first to add a section.';
+    root.append(empty);
+  } else {
+    const createSection = documentSource.createElement('form');
+    const sectionHeader = documentSource.createElement('h3');
+    sectionHeader.textContent = 'Create section';
+    createSection.append(sectionHeader);
+    const sectionLabel = documentSource.createElement('label');
+    sectionLabel.textContent = 'Parent course';
+    const courseSelect = documentSource.createElement('select');
+    courseSelect.name = 'courseId';
+    for (const course of state.courses) {
+      const option = documentSource.createElement('option');
+      option.value = course.id;
+      option.textContent = course.code + ' — ' + course.name;
+      courseSelect.append(option);
+    }
+    courseSelect.value = state.courses[0].id;
+    sectionLabel.append(courseSelect);
+    createSection.append(sectionLabel);
+    const sectionCode = makeInput(createSection, 'sectionCode',
+      'Section code (uppercase)', 20);
+    const sectionSubmit = documentSource.createElement('button');
+    sectionSubmit.type = 'submit';
+    sectionSubmit.textContent = 'Create section';
+    createSection.append(sectionSubmit);
+    createSection.addEventListener('submit', event => {
+      event.preventDefault();
+      if (typeof onCreateSection === 'function')
+        onCreateSection({ courseId: courseSelect.value,
+          sectionCode: sectionCode.value });
+    });
+    root.append(createSection);
+  }
+  target.replaceChildren(root);
+}
