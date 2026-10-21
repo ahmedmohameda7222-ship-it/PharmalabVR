@@ -669,6 +669,40 @@ internal static class Program
             oldReadyNative.UpdateView();
             Check(snapshotGate.Current.SupportedActions.Contains("Continue"),
                 "Fresh confirmed recovery-ready Native snapshot remained blocked.");
+            // A disabled Unity panel may miss BOTH the accepted Native
+            // restore notification and the replacement LabViewChanged.
+            // On reactivation a previously published, recovery-ready
+            // snapshot must be usable; an unpublished one must stay held.
+            var postRestoreNative = new CoreDriver { NativeRecoveryReady = true };
+            var postRestoreRouter = new ScreenRouter();
+            postRestoreRouter.Configure(postRestoreNative);
+            postRestoreNative.SetHold(true);
+            postRestoreRouter.Show(ScreenId.Settings);
+            disableLifecycle.Invoke(postRestoreRouter, null);
+            postRestoreNative.RaiseNativeSessionRestored();
+            postRestoreNative.NativeRecoveryReady = true;
+            postRestoreNative.UpdateView(); // published while router was disabled
+            enableLifecycle.Invoke(postRestoreRouter, null);
+            Check(postRestoreRouter.Current.ScreenId == ScreenId.Hold &&
+                  postRestoreRouter.Current.SaveState == "Unsaved" &&
+                  postRestoreRouter.Current.SupportedActions.Contains("Continue"),
+                "Inactive panel ignored an already published recovery-ready Native snapshot.");
+            disableLifecycle.Invoke(postRestoreRouter, null);
+
+            var pendingRestoreNative = new CoreDriver { NativeRecoveryReady = true };
+            var pendingRestoreRouter = new ScreenRouter();
+            pendingRestoreRouter.Configure(pendingRestoreNative);
+            pendingRestoreNative.SetHold(true);
+            disableLifecycle.Invoke(pendingRestoreRouter, null);
+            pendingRestoreNative.RaiseNativeSessionRestored();
+            enableLifecycle.Invoke(pendingRestoreRouter, null);
+            Check(pendingRestoreRouter.Current.ScreenId == ScreenId.Hold &&
+                  !pendingRestoreRouter.Current.SupportedActions.Contains("Continue"),
+                "Inactive panel admitted Continue before the replacement Native snapshot.");
+            pendingRestoreNative.UpdateView();
+            Check(pendingRestoreRouter.Current.SupportedActions.Contains("Continue"),
+                "Pending replacement snapshot did not authorize recovery after publication.");
+            disableLifecycle.Invoke(pendingRestoreRouter, null);
             var driver = new CoreDriver();
             var router = new ScreenRouter();
             router.Configure(driver);
