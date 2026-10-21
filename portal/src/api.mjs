@@ -496,7 +496,11 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
           row.status !== 'approved' ||
           typeof row.score !== 'number' || !Number.isFinite(row.score) ||
           row.score < 0 || row.score > 100 ||
-          !Number.isInteger(row.score * 1000))
+          // PostgreSQL numeric(8,3) survives JSON as an IEEE-754 number.
+          // Binary multiplication may put a valid x.xxx just below an
+          // integer (1.005 * 1000). Compare its 3-decimal round-trip
+          // instead of requiring exact integer multiplication.
+          Number(row.score.toFixed(3)) !== row.score)
         throw invalid('approved student grade');
       seenGrades.add(row.id);
       gradedSubmissions.add(row.submission_id);
