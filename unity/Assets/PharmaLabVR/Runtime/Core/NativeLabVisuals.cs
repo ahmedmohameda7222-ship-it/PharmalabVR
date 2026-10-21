@@ -155,13 +155,11 @@ namespace PharmaLabVR.Core
         {
             if (source == null || receiver == null) return;
             if (state?.Vessels == null) return;
+            var authoredBurette = source.GetComponent<ToolPresenter>() != null;
             foreach (var vessel in state.Vessels)
             {
                 if (vessel.CapacityM3 <= 0.0) continue;
-                // Native 'source' is the stock bottle, not a filled burette.
-                // The authored burette stays empty until a separately supported
-                // Native inventory explicitly justifies rendering its fill.
-                if (vessel.Id == "source" && source.GetComponent<ToolPresenter>() == null)
+                if (vessel.Id == (authoredBurette ? "burette" : "source"))
                 {
                     var authoredLiquid = source.transform.Find("CommittedLiquid");
                     var liquid = authoredLiquid != null ? authoredLiquid :
@@ -172,7 +170,7 @@ namespace PharmaLabVR.Core
                             authoredLiquid != null ? -0.24f : 0f);
                 }
                 if (vessel.Id == "receiver") receiver.Configure(receiver.transform.Find("NativeReceiverLiquid"), vessel.CapacityM3, 0.8f, -0.5f);
-                if (vessel.Id == "source" && source.GetComponent<ToolPresenter>() == null)
+                if (vessel.Id == (authoredBurette ? "burette" : "source"))
                     source.SetCommittedVolume(vessel.CommittedVolumeM3);
                 if (vessel.Id == "receiver") receiver.SetCommittedVolume(vessel.CommittedVolumeM3);
             }

@@ -179,6 +179,7 @@ namespace PharmaLabVR.Session
         public bool CanLoadSavedSession => LoadPermitted;
         public bool DispensePermitted { get; set; } = true;
         public bool CanPipetteDispense => DispensePermitted;
+        public bool CanFillBurette => true;
         public double PipetteTipVolumeM3 => DispensePermitted ? 1.5e-7 : 5e-8;
         public string LastError => null;
         public string LastInstrumentReceipt => null;
@@ -227,6 +228,7 @@ namespace PharmaLabVR.Session
         public bool TryPipetteDispense() { MeteredCalls++; return true; }
         public bool TryPipetteWaterRinse() { MeteredCalls++; return true; }
         public bool TryBottleMeasuredPour() { MeteredCalls++; return true; }
+        public bool TryFillBuretteFromBottle() { MeteredCalls++; return true; }
         public bool TryBottleWaterRinse() { MeteredCalls++; return true; }
         public bool TryPipetteSwitchReserve() { MeteredCalls++; return true; }
         public bool TryBottleRefillFromReserve() { MeteredCalls++; return true; }

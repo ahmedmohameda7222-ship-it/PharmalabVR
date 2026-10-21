@@ -97,6 +97,47 @@ namespace PharmaLabVR.Tests.PlayMode
             finally { SceneManager.UnloadSceneAsync(scene); }
         }
 
+        [UnityTest]
+        public IEnumerator M2_NativeBuretteFillDebitsStockAndUpdatesVisibleGraduatedTool()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var burette = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(child => child.name == "DesktopResearchTool")
+                    .GetComponent<LiquidPresenter>();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(sessions.CanFillBurette, Is.False);
+                Assert.That(sessions.SelectStock("hcl", 0.05), Is.True, sessions.LastError);
+                var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                var stockBefore = before.vessels.Single(v => v.id == "source").inventory.researchAdditiveVolumeM3;
+                Assert.That(before.vessels.Single(v => v.id == "burette").inventory.researchAdditiveVolumeM3, Is.Zero);
+                Assert.That(sessions.CanFillBurette, Is.True);
+                Assert.That(sessions.TryFillBuretteFromBottle(), Is.True, sessions.LastError);
+                var after = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(after.vessels.Single(v => v.id == "source").inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(stockBefore - 5e-8).Within(1e-10));
+                Assert.That(after.vessels.Single(v => v.id == "burette").inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(5e-8).Within(1e-10));
+                Assert.That(burette.CommittedVolumeM3, Is.EqualTo(5e-8).Within(1e-10));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Burette prime 0.05 ml"));
+                Assert.That(driver.PauseSession(), Is.True);
+                Assert.That(sessions.TryFillBuretteFromBottle(), Is.False);
+                Assert.That(sessions.LastInstrumentReceipt, Is.Null);
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         [Test]
         public void P05_03_ComputeHoldCannotOfferContinueWithoutNativeRecovery()
         {

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -19,6 +19,7 @@ namespace PharmaLabVR.UI
         public bool CanParkTool => sessions?.CanParkTool == true;
         public bool CanLoadSavedSession => sessions?.CanLoadSavedSession == true;
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
+        public bool CanFillBurette => sessions?.CanFillBurette == true;
         public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
         public string LastError => sessions?.LastError;
         public string LastInstrumentReceipt => sessions?.LastInstrumentReceipt;
@@ -85,6 +86,8 @@ namespace PharmaLabVR.UI
                     return sessions.TryPipetteWaterRinse();
                 case PanelAction.BottlePour:
                     return sessions.TryBottleMeasuredPour();
+                case PanelAction.FillBurette:
+                    return sessions.TryFillBuretteFromBottle();
                 case PanelAction.BottleRinse:
                     return sessions.TryBottleWaterRinse();
                 case PanelAction.Inspect:

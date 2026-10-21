@@ -161,6 +161,8 @@ namespace PharmaLabVR.UI
                 () => panels?.Request(PanelAction.PipetteSwitchReserve));
             AddInstrumentButton("Refill bottle 0.01 ml", -26f,
                 () => panels?.Request(PanelAction.BottleRefill));
+            AddInstrumentButton("Prime burette 0.05 ml", -82f,
+                () => panels?.Request(PanelAction.FillBurette));
             AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
@@ -445,6 +447,8 @@ namespace PharmaLabVR.UI
                     mayTransfer && driver.ReserveStockPrepared);
                 SetButton("Refill bottle 0.01 ml", !operating &&
                     mayTransfer && driver.ReserveStockPrepared);
+                SetButton("Prime burette 0.05 ml", !operating &&
+                    mayTransfer && panels != null && panels.CanFillBurette);
                 SetButton("Back to instruments", !operating);
                 SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
@@ -474,7 +478,7 @@ namespace PharmaLabVR.UI
                     "Choose stock", "Prepare chosen stock", "Prepare rinse water",
                     "Prepare reserve stock", "Choose concentration",
                     "Switch pipette to reserve", "Refill bottle 0.01 ml",
-                    "Back to instruments", "Exit tools" }) SetButton(name, false);
+                    "Prime burette 0.05 ml", "Back to instruments", "Exit tools" }) SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
             }

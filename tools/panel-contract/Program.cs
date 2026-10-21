@@ -126,6 +126,14 @@ internal static class Program
         Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
             "Invalid Native quantity must never display as a real receiver measurement.");
 
+        // Priming a burette is a bounded Native TransferFixed between real vessels.
+        var burettePrime = ResearchInstrumentPayloads.RefillFromPreparedStock(
+            "source", "burette", "spill", 5e-8);
+        Check(burettePrime.Contains("\"sourceInventoryId\":\"source\"") &&
+              burettePrime.Contains("\"destinationInventoryId\":\"burette\"") &&
+              burettePrime.Contains("\"value\":5E-08"),
+            "Native burette prime must debit source and credit a distinct vessel.");
+
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.
         var placedBottle = ResearchInstrumentPayloads.Place("bottle-1", "source", "spill",

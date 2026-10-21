@@ -476,7 +476,11 @@ namespace PharmaLabVR.Session
             }
             if (screen == ScreenId.Lab && !driver.SourceNeedsPreparation)
             {
-                GUILayout.Label("Native Research instruments · no calibrated physical flow");
+                GUILayout.Label("Native Research instruments · no certified physical calibration");
+                GUI.enabled = CanFillBurette;
+                var requestPrime = GUILayout.Button("Burette: prime 0.05 ml from stock", GUILayout.Height(32f));
+                GUI.enabled = true;
+                if (requestPrime) TryFillBuretteFromBottle();
                 if (GUILayout.Button("Pipette: aspirate 0.05 ml", GUILayout.Height(32f)))
                     TryPipetteAspirate();
                 GUILayout.Label($"Pipette tip: {PipetteTipVolumeM3 * 1e6:0.00} ml (Research retained tip 0.10 ml). " +
@@ -635,6 +639,51 @@ namespace PharmaLabVR.Session
             return TryResearchCommand("Pipette dispense 0.05 ml", () => ResearchPipette.Dispense(
                 ResearchInstrumentPayloads.DefaultPipetteDispenseM3));
         }
+        // 0.05 mL is the precision-session transport budget for one Native solve.
+        // This is a deliberate small prime, NOT an instant 50 mL refill.
+        private const double BurettePrimeM3 = 5e-8;
+
+        public bool CanFillBurette
+        {
+            get
+            {
+                if (driver?.Session == null || driver.CurrentLabView?.Vessels == null ||
+                    driver.SourceNeedsPreparation || driver.IsNativePaused || driver.IsTimeHeld)
+                    return false;
+                var vessels = driver.CurrentLabView.Vessels;
+                var stock = vessels.FirstOrDefault(item => item.Id == "source");
+                var burette = vessels.FirstOrDefault(item => item.Id == "burette");
+                if (string.IsNullOrEmpty(stock.Id) || string.IsNullOrEmpty(burette.Id) ||
+                    stock.CommittedVolumeM3 + 1e-12 < BurettePrimeM3 ||
+                    burette.CapacityM3 - burette.CommittedVolumeM3 + 1e-12 < BurettePrimeM3)
+                    return false;
+                if (driver.CurrentMode == "VR")
+                    return driver.transform.root.GetComponentInChildren<ToolMount>(true)?.IsMounted == true;
+                if (driver.CurrentMode == "Desktop")
+                    return driver.transform.root.GetComponentInChildren<DesktopInputAdapter>(true)?.HasHeldTool != true;
+                return false;
+            }
+        }
+
+        public bool TryFillBuretteFromBottle()
+        {
+            if (!CanFillBurette)
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Park the burette and prepare sufficient Native stock before priming.";
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+            return TryResearchCommand("Burette prime 0.05 ml", () =>
+            {
+                var commands = new LabCommandService(driver.Session);
+                return commands.Submit("TransferFixed",
+                    ResearchInstrumentPayloads.RefillFromPreparedStock(
+                        "source", "burette", "spill", BurettePrimeM3),
+                    commands.CaptureTouchedRevisions("source", "burette"));
+            });
+        }
+
         public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
             () => ResearchBottle.Pour(1e-8));
         public bool TryPipetteWaterRinse() => TryResearchCommand("Pipette rinse 0.01 ml",

@@ -368,10 +368,12 @@ namespace PharmaLabVR.Core
         {
             RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.00005}"));
             RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
+            // The burette owns a real empty Native vessel, not the bottle inventory.
+            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"burette\",\"capacityM3\":0.00005}"));
             RequireAccepted(Session.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
             RequireAccepted(Session.SubmitOrdered(
                 "PlaceTool",
-                "{\"toolId\":\"research-tool\",\"sourceInventoryId\":\"source\",\"overflowSinkId\":\"spill\",\"coordinateFrame\":\"lab\",\"geometryProfileHash\":\"burette-50ml-research-v1\",\"profileRevision\":\"1\"}"));
+                "{\"toolId\":\"research-tool\",\"sourceInventoryId\":\"burette\",\"overflowSinkId\":\"spill\",\"coordinateFrame\":\"lab\",\"geometryProfileHash\":\"burette-50ml-research-v1\",\"profileRevision\":\"1\"}"));
             RequireAccepted(Session.SubmitOrdered("Pause"));
         }
 

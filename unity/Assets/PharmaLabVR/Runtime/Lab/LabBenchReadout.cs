@@ -12,14 +12,16 @@ namespace PharmaLabVR.Lab
         {
             if (snapshot?.Vessels == null) return "Native bench inventory unavailable.";
             return Format(snapshot, "source", "Stock bottle") + "\n" +
+                   Format(snapshot, "burette", "Burette") + "\n" +
                    Format(snapshot, "receiver", "Receiver");
         }
 
         public static string Compact(LabViewModel snapshot)
         {
             if (snapshot?.Vessels == null) return "Native inventory unavailable.";
-            return Format(snapshot, "source", "Stock") + " | " +
-                   Format(snapshot, "receiver", "Receiver");
+            return CompactVolume(snapshot, "source", "Stock") + " | " +
+                   CompactVolume(snapshot, "burette", "Burette") + " | " +
+                   CompactVolume(snapshot, "receiver", "Receiver");
         }
 
         public static string NextAction(LabViewModel snapshot, bool needsStockPreparation,
@@ -43,6 +45,17 @@ namespace PharmaLabVR.Lab
                 source.CommittedVolumeM3 <= 0d)
                 return "Native stock inventory unavailable or empty; do not attempt a pour.";
             return "Transfer 0.01 mL with the research stock bottle, then Inspect receiver.";
+        }
+
+        private static string CompactVolume(LabViewModel view, string id, string title)
+        {
+            if (!view.Vessels.Any(item => item.Id == id)) return title + " --";
+            var vessel = view.Vessels.First(item => item.Id == id);
+            if (!ValidVolume(vessel.CommittedVolumeM3, vessel.CapacityM3))
+                return title + " --";
+            return title + " " +
+                (vessel.CommittedVolumeM3 * 1e6).ToString("0.00", CultureInfo.InvariantCulture) +
+                " mL";
         }
 
         private static string Format(LabViewModel view, string id, string title)
