@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -175,4 +175,22 @@ test('publication form never claims successful assignment after failed read', ()
   assert.match(visibleText(root), /could not be loaded/i);
   renderPublicationForm(root, { status: 'no-selection' }, document);
   assert.match(visibleText(root), /select a section/i);
+});
+
+test('admin can create first course before any section exists', () => {
+  const root = new FakeNode('section');
+  const submitted = [];
+  renderAdminSetup(root, { status: 'available', courses: [] }, document,
+    x => submitted.push(x));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const forms = walk(root).filter(n => n.tag === 'form');
+  assert.equal(forms.length, 1);
+  for (const input of walk(forms[0]).filter(n => n.tag === 'input'))
+    input.value = input.name === 'code' ? 'CHEM101' :
+      input.name === 'term' ? 'Fall2026' : 'Laboratory chemistry';
+  forms[0].events.submit({ preventDefault() {} });
+  assert.deepEqual(submitted[0], {
+    code: 'CHEM101', name: 'Laboratory chemistry', term: 'Fall2026'
+  });
+  assert.match(visibleText(root), /create a course first/i);
 });
