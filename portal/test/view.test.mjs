@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -300,4 +300,59 @@ test('instructor or TA can select a section for read-only submissions without pu
   assert.match(buttons[0].textContent, /view submissions/i);
   buttons[0].events.click();
   assert.deepEqual(seen, ['section-1']);
+});
+
+test('feedback form preserves explicit private default and student release choice', () => {
+  const root = new FakeNode('section');
+  const sent = [];
+  renderFeedbackForm(root, { status: 'available',
+    submissionId: 'submission-1' }, document, draft => sent.push(draft));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const form = walk(root).find(n => n.tag === 'form');
+  assert.ok(form);
+  const body = walk(form).find(n => n.tag === 'textarea');
+  const release = walk(form).find(n => n.tag === 'input' && n.type === 'checkbox');
+  assert.ok(body);
+  assert.ok(release);
+  body.value = 'Check the measured results';
+  release.checked = false;
+  form.events.submit({ preventDefault() {} });
+  assert.deepEqual(sent[0], {
+    submissionId: 'submission-1', body: 'Check the measured results',
+    studentVisible: false
+  });
+  release.checked = true;
+  form.events.submit({ preventDefault() {} });
+  assert.equal(sent[1].studentVisible, true);
+  assert.match(visibleText(root), /student/i);
+});
+
+test('feedback form refuses absent choice and clears older author content after failure', () => {
+  const root = new FakeNode('section');
+  renderFeedbackForm(root, { status: 'available', submissionId: 'submission-1' },
+    document, () => {});
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  walk(root).find(n => n.tag === 'textarea').value = 'Private draft';
+  renderFeedbackForm(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /Private draft/);
+  renderFeedbackForm(root, { status: 'no-selection' }, document);
+  assert.match(visibleText(root), /select a submission/i);
+});
+
+test('only instructor or admin staff preview provides an explicit feedback action', () => {
+  const row = { id: 'submission-1', studentId: 'student-1',
+    assignmentId: 'assignment-1', submittedAt: '2026-10-21T01:00:00Z' };
+  const root = new FakeNode('section');
+  const sent = [];
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  renderStaffSubmissions(root, { status: 'available', role: 'teaching_assistant',
+    submissions: [row] }, document, id => sent.push(id));
+  assert.equal(walk(root).filter(n => n.tag === 'button').length, 0);
+  renderStaffSubmissions(root, { status: 'available', role: 'instructor',
+    submissions: [row] }, document, id => sent.push(id));
+  const buttons = walk(root).filter(n => n.tag === 'button');
+  assert.equal(buttons.length, 1);
+  buttons[0].events.click();
+  assert.deepEqual(sent, ['submission-1']);
 });
