@@ -873,8 +873,20 @@ namespace PharmaLabVR.Tests.PlayMode
 
                 imported = CoreSession.ImportSession(original.ExportSession(),
                     driver.ScientificDatabasePath);
-                driver.ReplaceSession(imported);
+                var sawNativeRestoreSignal = false;
+                var prematureContinue = false;
+                System.Action captureBeforePublish = () =>
+                {
+                    sawNativeRestoreSignal = true;
+                    prematureContinue = router.Current.SupportedActions.Contains("Continue");
+                };
+                driver.NativeSessionRestored += captureBeforePublish;
+                try { driver.ReplaceSession(imported); }
+                finally { driver.NativeSessionRestored -= captureBeforePublish; }
                 imported = null;
+                Assert.That(sawNativeRestoreSignal, Is.True);
+                Assert.That(prematureContinue, Is.False,
+                    "NativeSessionRestored is before PublishSnapshot; stale recovery cannot offer Continue.");
                 Assert.That(driver.Session, Is.Not.SameAs(original));
                 Assert.That(original.IsOpen, Is.False);
                 Assert.That(driver.IsTimeHeld, Is.True);
