@@ -264,6 +264,50 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
       assignments: Object.freeze(assignments) });
   }
 
+  // Existing server-published immutable versions, for an instructor
+  // selecting a course-bound assignment. RLS is enforced per SELECT.
+  // This does not publish, grade or amend scientific evidence.
+  async function staffPublicationOptions(session, institutionId, sectionId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(sectionId)) throw new Error('Instructor section required');
+    const overview = await staffOverview(current, institutionId);
+    if (overview.role !== 'instructor' && overview.role !== 'university_admin')
+      throw new Error('Instructor or administrator required');
+    const section = overview.sections.find(row => row.id === sectionId);
+    if (!section) throw new Error('Instructor section unavailable');
+
+    async function read(resource) {
+      const url = new URL('/rest/v1/' + resource, project);
+      url.searchParams.set('select',
+        'id,institution_id,course_id,version,published_at');
+      url.searchParams.set('institution_id', 'eq.' + institutionId);
+      url.searchParams.set('course_id', 'eq.' + section.courseId);
+      url.searchParams.set('published_at', 'not.is.null');
+      url.searchParams.set('order', 'version.desc');
+      url.searchParams.set('limit', '100');
+      const rows = await request(url.pathname + url.search, {},
+        current.accessToken);
+      if (!Array.isArray(rows) || rows.length > 100)
+        throw invalid(resource + ' published versions');
+      const seen = new Set();
+      return Object.freeze(rows.map(row => {
+        if (!canonicalUuid(row?.id) || seen.has(row.id) ||
+            row.institution_id !== institutionId ||
+            row.course_id !== section.courseId ||
+            !Number.isSafeInteger(row.version) ||
+            row.version < 1 || row.version > 1000000)
+          throw invalid(resource + ' identity');
+        seen.add(row.id);
+        return Object.freeze({ id: row.id, courseId: section.courseId,
+          version: row.version, publishedAt: timestamp(row.published_at) });
+      }));
+    }
+    const lessons = await read('lesson_versions');
+    const rubrics = await read('rubric_versions');
+    return Object.freeze({ institutionId, sectionId,
+      courseId: section.courseId, lessons, rubrics });
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -352,5 +396,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, assignmentLesson, signOut });
 }
