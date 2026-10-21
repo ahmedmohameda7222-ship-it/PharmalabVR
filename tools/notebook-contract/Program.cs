@@ -258,6 +258,21 @@ internal static class Program
             reviewCache.Observe(null, 0UL);
             Require(reviewCache.Review == null && reviewCache.Comparison == null,
                 "Repeated missing Native context created a recorded-only cache.");
+            // An accepted durable Save or new saved-baseline context must
+            // invalidate only the old saved-run comparison, not the Native
+            // recorded Review of the same unchanged authority.
+            reviewCache.Observe(authorityA, 5UL);
+            reviewCache.Review = "Current Native recorded observations";
+            reviewCache.Comparison = "Old saved baseline";
+            reviewCache.InvalidateComparison();
+            Require(reviewCache.Review == "Current Native recorded observations" &&
+                reviewCache.Comparison == null,
+                "Durable saved baseline change retained obsolete comparison or lost current Review.");
+            reviewCache.Comparison = "Old course's saved baseline";
+            reviewCache.InvalidateComparison();
+            Require(reviewCache.Comparison == null &&
+                reviewCache.Review == "Current Native recorded observations",
+                "Switching saved session context retained a previous course comparison.");
             Console.WriteLine("P11.02 headless NotebookService checks passed: " + assertions);
         }
         finally
