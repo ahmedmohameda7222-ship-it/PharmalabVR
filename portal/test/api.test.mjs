@@ -51,6 +51,13 @@ function harness(options = {}) {
         { institution_id: institutionB, role: 'instructor', status: 'active' }
       ], options.membershipsStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/rubric_versions') {
+      return mockResponse(options.rubrics ?? [{
+        id: '66666666-6666-4666-8666-666666666666',
+        institution_id: institutionB, course_id: courseA,
+        version: 2, published_at: '2026-10-20T02:00:00Z'
+      }], options.rubricStatus ?? 200);
+    }
     if (uri.pathname === '/rest/v1/lesson_versions') {
       return mockResponse(options.lessonRows ?? [{
         id: lessonA, institution_id: institutionA, course_id: courseA,
@@ -331,4 +338,31 @@ test('staff metadata RLS denial fails closed without suggesting empty coursework
     const session = await api.signIn('instructor@example.edu', 'private-password');
     await assert.rejects(() => api.staffOverview(session, institutionB), /unavailable/i);
   }
+});
+
+test('instructor publication options only read already published same-course versions', async () => {
+  const { api, calls } = harness({ assignments: [], lessonRows: [{
+    id: lessonA, institution_id: institutionB, course_id: courseA,
+    version: 1, published_at: '2026-10-20T02:00:00Z'
+  }] });
+  const session = await api.signIn('teacher@example.edu', 'password');
+  const options = await api.staffPublicationOptions(session, institutionB, sectionA);
+  assert.equal(options.courseId, courseA);
+  assert.equal(options.sectionId, sectionA);
+  assert.equal(options.lessons[0].id, lessonA);
+  assert.equal(options.rubrics[0].version, 2);
+  for (const pathname of ['/rest/v1/lesson_versions', '/rest/v1/rubric_versions']) {
+    const query = calls.find(x => x.url.pathname === pathname);
+    assert.equal(query.url.searchParams.get('institution_id'), 'eq.' + institutionB);
+    assert.equal(query.url.searchParams.get('course_id'), 'eq.' + courseA);
+    assert.equal(query.url.searchParams.get('published_at'), 'not.is.null');
+  }
+});
+
+test('student cannot retrieve instructor publication choices', async () => {
+  const { api, calls } = harness();
+  const session = await api.signIn('learner@example.edu', 'password');
+  await assert.rejects(() => api.staffPublicationOptions(session, institutionA, sectionA),
+    /staff|instructor/i);
+  assert.equal(calls.filter(x => x.url.pathname === '/rest/v1/rubric_versions').length, 0);
 });
