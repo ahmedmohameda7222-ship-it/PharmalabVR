@@ -210,3 +210,23 @@ test('admin section creation pins one visible institution course', () => {
   sectionForm.events.submit({ preventDefault() {} });
   assert.deepEqual(sent[0], { courseId: 'course-1', sectionCode: 'LAB02' });
 });
+
+test('administrator enrollment form selects existing section and verified student UUID', () => {
+  const root = new FakeNode('section');
+  const received = [];
+  renderAdminSetup(root, { status: 'available', courses: [
+    { id: 'course-1', code: 'CHEM101', name: 'Foundations', term: 'Fall' }
+  ], sections: [
+    { id: 'section-1', courseId: 'course-1', sectionCode: 'LAB01' }
+  ] }, document, null, null, value => received.push(value));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const forms = walk(root).filter(n => n.tag === 'form');
+  assert.equal(forms.length, 3);
+  const form = forms[2];
+  const studentId = walk(form).find(n => n.tag === 'input');
+  studentId.value = '11111111-1111-4111-8111-111111111111';
+  form.events.submit({ preventDefault() {} });
+  assert.deepEqual(received[0], {
+    sectionId: 'section-1', studentId: studentId.value
+  });
+});
