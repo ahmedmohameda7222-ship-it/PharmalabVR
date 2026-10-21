@@ -81,6 +81,9 @@ function harness(options = {}) {
       return mockResponse(options.submissions ?? [], options.submissionStatus ?? 200);
     if (uri.pathname === '/rest/v1/grades')
       return mockResponse(options.grades ?? [], options.gradeStatus ?? 200);
+    if (uri.pathname === '/rest/v1/rpc/university_approve_grade')
+      return mockResponse(options.approvedGradeId ??
+        'cccccccc-cccc-4ccc-8ccc-cccccccccccc', options.approveGradeStatus ?? 200);
     if (uri.pathname === '/rest/v1/rpc/university_record_feedback')
       return mockResponse(options.feedbackRecordedId ??
         'aaaaaaaa-aaaa-4aaa-8aaa-000000000002', options.feedbackRpcStatus ?? 200);
@@ -747,4 +750,113 @@ test('approved numeric(8,3) grades remain readable under IEEE-754 rounding', asy
   const session = await invalid.api.signIn('learner@example.edu', 'password');
   await assert.rejects(() => invalid.api.studentResults(session, institutionA,
     assignmentA), /Invalid/i);
+});
+
+
+test('instructor grade approval uses audited one-time RPC only after staff-visible submission', async () => {
+  const sub = '77777777-7777-4777-8777-777777777777';
+  const requestId = '88888888-8888-4888-8888-888888888888';
+  const h = harness({
+    submissions: [{ id: sub, institution_id: institutionB, course_id: courseA,
+      section_id: sectionA, assignment_id: assignmentA,
+      student_id: student, submitted_at: '2026-10-21T01:00:00Z' }],
+    assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+      published_at: '2026-10-20T02:00:00Z', due_at: null }]
+  });
+  const session = await h.api.signIn('teacher@example.edu', 'password');
+  const id = await h.api.staffApproveGrade(session, {
+    institutionId: institutionB, sectionId: sectionA,
+    submissionId: sub, score: 87.125, requestId
+  });
+  assert.equal(id, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  const req = h.calls.find(x =>
+    x.url.pathname === '/rest/v1/rpc/university_approve_grade');
+  assert.ok(req);
+  assert.equal(req.init.method, 'POST');
+  assert.equal(req.init.headers.Authorization, 'Bearer ' + token);
+  assert.deepEqual(JSON.parse(req.init.body), {
+    p_institution_id: institutionB, p_submission_id: sub,
+    p_score: 87.125, p_request_id: requestId
+  });
+  assert.equal(h.calls.some(x =>
+    x.url.pathname === '/rest/v1/grades' && x.init.method !== 'GET'), false);
+});
+
+test('grade approval is instructor/admin only, never teaching assistant or student', async () => {
+  const sub = '77777777-7777-4777-8777-777777777777';
+  const draft = { institutionId: institutionB, sectionId: sectionA,
+    submissionId: sub, score: 42.125,
+    requestId: '88888888-8888-4888-8888-888888888888' };
+  for (const role of ['teaching_assistant', 'student']) {
+    const h = harness({ memberships: [{
+      institution_id: institutionB, role, status: 'active'
+    }] });
+    const session = await h.api.signIn('role@example.edu', 'password');
+    await assert.rejects(() => h.api.staffApproveGrade(session, draft),
+      /instructor|administrator/i);
+    assert.equal(h.calls.filter(c => c.url.pathname.includes('/rpc/')).length, 0);
+    assert.equal(h.calls.filter(c => c.url.pathname === '/rest/v1/submissions').length, 0);
+  }
+});
+
+test('grade approval rejects invalid and over-precision scores before any RPC', async () => {
+  const h = harness();
+  const session = await h.api.signIn('teacher@example.edu', 'password');
+  const valid = { institutionId: institutionB, sectionId: sectionA,
+    submissionId: '77777777-7777-4777-8777-777777777777',
+    score: 50, requestId: '88888888-8888-4888-8888-888888888888' };
+  for (const invalid of [-0.001, 100.001, 1.0051, NaN,
+    Infinity, '87.125', null]) {
+    await assert.rejects(() => h.api.staffApproveGrade(session,
+      { ...valid, score: invalid }), /Invalid|score/i);
+  }
+  for (const invalid of [{ ...valid, requestId: 'invalid' },
+    { ...valid, institutionId: institutionA },
+    { ...valid, submissionId: institutionA }])
+    await assert.rejects(() => h.api.staffApproveGrade(session, invalid));
+  assert.equal(h.calls.filter(x => x.url.pathname.includes('/rpc/')).length, 0);
+});
+
+test('grade approval remains unconfirmed on server denial or malformed result', async () => {
+  const sub = '77777777-7777-4777-8777-777777777777';
+  const shared = {
+    submissions: [{ id: sub, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, assignment_id: assignmentA,
+      student_id: student, submitted_at: '2026-10-21T01:00:00Z' }],
+    assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+      published_at: '2026-10-20T02:00:00Z', due_at: null }]
+  };
+  for (const fault of [{ approveGradeStatus: 403 },
+    { approveGradeStatus: 409 },
+    { approvedGradeId: 'unverified' },
+    { approvedGradeId: { id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' } }]) {
+    const h = harness({ ...shared, ...fault });
+    const session = await h.api.signIn('teacher@example.edu', 'password');
+    await assert.rejects(() => h.api.staffApproveGrade(session, {
+      institutionId: institutionB, sectionId: sectionA, submissionId: sub,
+      score: 100, requestId: '88888888-8888-4888-8888-888888888888'
+    }), /unavailable|Invalid/i);
+  }
+});
+
+test('grade approval accepts only three-place numeric scores at boundaries', async () => {
+  const sub = '77777777-7777-4777-8777-777777777777';
+  const h = harness({
+    submissions: [{ id: sub, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, assignment_id: assignmentA,
+      student_id: student, submitted_at: '2026-10-21T01:00:00Z' }],
+    assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+      published_at: '2026-10-20T02:00:00Z', due_at: null }]
+  });
+  const session = await h.api.signIn('teacher@example.edu', 'password');
+  for (const score of [0, 0.001, 1.005, 99.999, 100])
+    assert.equal(await h.api.staffApproveGrade(session, {
+      institutionId: institutionB, sectionId: sectionA, submissionId: sub,
+      score, requestId: '88888888-8888-4888-8888-888888888888'
+    }), 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+  // Synthetic server ignores idempotency. Real PostgreSQL enforces exact
+  // request UUID payload identity, already tested in disposable SQL CI.
 });
