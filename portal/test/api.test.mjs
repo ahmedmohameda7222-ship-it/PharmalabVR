@@ -77,6 +77,12 @@ function harness(options = {}) {
         published_at: '2026-10-20T02:00:00Z'
       }], options.lessonStatus ?? 200);
     }
+    if (uri.pathname === '/rest/v1/submissions')
+      return mockResponse(options.submissions ?? [], options.submissionStatus ?? 200);
+    if (uri.pathname === '/rest/v1/grades')
+      return mockResponse(options.grades ?? [], options.gradeStatus ?? 200);
+    if (uri.pathname === '/rest/v1/feedback')
+      return mockResponse(options.feedback ?? [], options.feedbackStatus ?? 200);
     if (uri.pathname === '/rest/v1/courses') {
       return mockResponse(options.courses ?? [{
         id: courseA, institution_id: institutionB,
@@ -538,5 +544,104 @@ test('enrollment never trusts instructor, wrong section, refused RPC or invented
     const session = await h.api.signIn('admin@example.edu', 'password');
     await assert.rejects(() => h.api.adminEnrollStudent(session, payload),
       /unavailable|Invalid/i);
+  }
+});
+
+test('student views only owned assignment submission and released grade/feedback under RLS', async () => {
+  const h = harness({
+    submissions: [{ id: '77777777-7777-4777-8777-777777777777', institution_id: institutionA,
+      section_id: sectionA, assignment_id: assignmentA, student_id: student,
+      submitted_at: '2026-10-21T01:00:00Z' }],
+    grades: [{ id: '88888888-8888-4888-8888-888888888888', institution_id: institutionA,
+      submission_id: '77777777-7777-4777-8777-777777777777', status: 'approved', score: 87.125 }],
+    feedback: [{ id: '99999999-9999-4999-8999-999999999999', institution_id: institutionA,
+      submission_id: '77777777-7777-4777-8777-777777777777', body: 'Revise the analysis', student_visible: true,
+      created_at: '2026-10-21T02:00:00Z' }]
+  });
+  const session = await h.api.signIn('learner@example.edu', 'password');
+  const result = await h.api.studentResults(session, institutionA, assignmentA);
+  assert.equal(result.submissions.length, 1);
+  assert.equal(result.grades[0].score, 87.125);
+  assert.equal(result.feedback[0].body, 'Revise the analysis');
+  for (const resource of ['/rest/v1/submissions', '/rest/v1/grades', '/rest/v1/feedback']) {
+    const query = h.calls.find(x => x.url.pathname === resource);
+    assert.equal(query.url.searchParams.get('institution_id'), 'eq.' + institutionA);
+    assert.equal(query.init.headers.Authorization, 'Bearer ' + token);
+    assert.equal(query.init.method, 'GET');
+  }
+  assert.equal(h.calls.find(x => x.url.pathname === '/rest/v1/submissions')
+    .url.searchParams.get('student_id'), 'eq.' + student);
+  assert.equal(h.calls.find(x => x.url.pathname === '/rest/v1/grades')
+    .url.searchParams.get('status'), 'eq.approved');
+  assert.equal(h.calls.find(x => x.url.pathname === '/rest/v1/feedback')
+    .url.searchParams.get('student_visible'), 'eq.true');
+});
+
+test('student without a recorded submission gets empty academic results, not a fabricated grade', async () => {
+  const h = harness();
+  const session = await h.api.signIn('learner@example.edu', 'password');
+  const result = await h.api.studentResults(session, institutionA, assignmentA);
+  assert.deepEqual(result, { submissions: [], grades: [], feedback: [] });
+  assert.equal(h.calls.some(c => c.url.pathname === '/rest/v1/grades'), false);
+  await assert.rejects(() => h.api.studentResults(session, institutionB, assignmentA), /student/i);
+});
+
+test('student rejects foreign student, submission, private feedback, draft grade and bad score rows', async () => {
+  const baseSubmission = { id: '77777777-7777-4777-8777-777777777777', institution_id: institutionA,
+    section_id: sectionA, assignment_id: assignmentA, student_id: student,
+    submitted_at: '2026-10-21T01:00:00Z' };
+  const cases = [
+    { submissions: [{ ...baseSubmission, student_id: institutionB }] },
+    { submissions: [{ ...baseSubmission, institution_id: institutionB }] },
+    { submissions: [baseSubmission], grades: [{ id: '88888888-8888-4888-8888-888888888888',
+      institution_id: institutionA, submission_id: '77777777-7777-4777-8777-777777777777', status: 'draft', score: 55 }] },
+    { submissions: [baseSubmission], grades: [{ id: '88888888-8888-4888-8888-888888888888',
+      institution_id: institutionA, submission_id: '77777777-7777-4777-8777-777777777777', status: 'approved', score: 101 }] },
+    { submissions: [baseSubmission], feedback: [{ id: '99999999-9999-4999-8999-999999999999',
+      institution_id: institutionA, submission_id: '77777777-7777-4777-8777-777777777777', body: 'Secret',
+      student_visible: false, created_at: '2026-10-21T02:00:00Z' }] }
+  ];
+  for (const c of cases) {
+    const h = harness(c);
+    const session = await h.api.signIn('learner@example.edu', 'password');
+    await assert.rejects(() => h.api.studentResults(session, institutionA, assignmentA),
+      /Invalid|unavailable/i);
+  }
+});
+
+test('instructor sees only staff-authorized section submissions; student cannot access', async () => {
+  const h = harness({ submissions: [{ id: '77777777-7777-4777-8777-777777777777', institution_id: institutionB,
+    course_id: courseA, section_id: sectionA, assignment_id: assignmentA,
+    student_id: student, submitted_at: '2026-10-21T01:00:00Z' }],
+    assignments: [{ id: assignmentA, institution_id: institutionB,
+      course_id: courseA, section_id: sectionA, title: 'Controlled lab',
+      published_at: '2026-10-20T02:00:00Z', due_at: null }]
+  });
+  const session = await h.api.signIn('instructor@example.edu', 'password');
+  const rows = await h.api.staffSubmissions(session, institutionB, sectionA);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].studentId, student);
+  const req = h.calls.find(c => c.url.pathname === '/rest/v1/submissions');
+  assert.equal(req.url.searchParams.get('section_id'), 'eq.' + sectionA);
+  assert.equal(req.url.searchParams.get('institution_id'), 'eq.' + institutionB);
+  const studentOnly = harness({ memberships: [{ institution_id: institutionB,
+    role: 'student', status: 'active' }] });
+  const ss = await studentOnly.api.signIn('learner@example.edu', 'password');
+  await assert.rejects(() => studentOnly.api.staffSubmissions(ss, institutionB, sectionA),
+    /staff/i);
+  assert.equal(studentOnly.calls.some(c => c.url.pathname === '/rest/v1/submissions'), false);
+});
+
+test('RLS-denied academic result routes remain unavailable, not empty', async () => {
+  for (const variants of [{ submissionStatus: 403 }, { gradeStatus: 403 },
+    { feedbackStatus: 403 }]) {
+    const h = harness({ ...variants, submissions: [{
+      id: '77777777-7777-4777-8777-777777777777', institution_id: institutionA, section_id: sectionA,
+      assignment_id: assignmentA, student_id: student,
+      submitted_at: '2026-10-21T01:00:00Z'
+    }] });
+    const session = await h.api.signIn('learner@example.edu', 'password');
+    await assert.rejects(() => h.api.studentResults(session, institutionA, assignmentA),
+      /unavailable/i);
   }
 });
