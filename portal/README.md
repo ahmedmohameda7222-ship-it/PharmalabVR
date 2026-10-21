@@ -25,8 +25,9 @@ and submit an assignment through the existing authenticated
 `public.university_publish_assignment` RPC with a per-draft idempotency key.
 Publication is an academic server operation, never a chemistry calculation,
 Native receipt attestation or direct assignment-table mutation. The first 100 records per category are shown;
-this is not a complete institutional audit. Staff workflows other than the existing
-assignment-publication RPC remain incomplete: no enrollment or invitation UI,
+this is not a complete institutional audit. Course and section creation also use existing audited university-admin-only
+server RPCs, with exact per-draft retry identifiers. Other staff workflows remain
+incomplete: no enrollment or invitation UI,
 lesson/rubric editor, evidence upload, grading or feedback portal. Auth token is
 in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
 `scope=local` (not global). Failed HTTP does not mean the refresh token was

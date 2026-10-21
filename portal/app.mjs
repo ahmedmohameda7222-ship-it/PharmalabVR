@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -18,10 +18,15 @@ const staffOverviewArea = document.getElementById('staff-overview');
 const publishArea = document.getElementById('publish-area');
 const publishChoices = document.getElementById('publish-choices');
 const publishStatus = document.getElementById('publish-status');
+const adminArea = document.getElementById('admin-area');
+const adminSetupArea = document.getElementById('admin-setup');
+const adminStatus = document.getElementById('admin-status');
 const clearButton = document.getElementById('clear-session');
 let currentSession = null;
 let currentGeneration = 0;
 let publicationSelection = null;
+let adminRequests = new Map();
+let adminSubmitting = false;
 let api = null;
 
 function setText(target, value) { target.textContent = value; }
@@ -39,10 +44,16 @@ function clearSession() {
   renderLesson(lessonArea, { status: 'no-selection' });
   staffArea.hidden = true;
   renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
+  adminArea.hidden = true;
+  renderAdminSetup(adminSetupArea, { status: 'no-admin-context' });
   publishArea.hidden = true;
   publicationSelection = null;
   renderPublicationForm(publishChoices, { status: 'no-selection' });
   setText(publishStatus, '');
+  adminArea.hidden = true;
+  adminRequests = new Map();
+  renderAdminSetup(adminSetupArea, { status: 'no-admin-context' });
+  setText(adminStatus, '');
   setText(authStatus, 'Session cleared from this tab. Sign in to continue.');
 }
 clearButton.addEventListener('click', clearSession);
@@ -118,6 +129,47 @@ async function openPublishedLesson(assignmentId) {
   }
 }
 
+async function createAcademicMetadata(kind, draft) {
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  if (!session || !tenant || role !== 'university_admin' || adminSubmitting) return;
+  const generation = currentGeneration;
+  const fingerprint = kind + ':' + JSON.stringify(draft);
+  if (!adminRequests.has(fingerprint)) {
+    if (adminRequests.size >= 32) adminRequests = new Map();
+    adminRequests.set(fingerprint, crypto.randomUUID());
+  }
+  const requestId = adminRequests.get(fingerprint);
+  adminSubmitting = true;
+  setText(adminStatus, 'Submitting to the university academic server…');
+  try {
+    const params = { ...draft, institutionId: tenant, requestId };
+    const createdId = kind === 'course'
+      ? await api.adminCreateCourse(session, params)
+      : await api.adminCreateSection(session, params);
+    if (generation === currentGeneration && session === currentSession &&
+        institutionSelect.value === tenant) {
+      setText(adminStatus, 'Created ' + kind + ' confirmed by server: ' + createdId);
+      const overview = await api.staffOverview(session, tenant);
+      if (generation === currentGeneration && session === currentSession) {
+        renderStaffOverview(staffOverviewArea, { status: 'available', overview },
+          document, openStaffSection);
+        renderAdminSetup(adminSetupArea, { status: 'available',
+          courses: overview.courses }, document,
+          draft => createAcademicMetadata('course', draft),
+          draft => createAcademicMetadata('section', draft));
+      }
+    }
+  } catch {
+    if (generation === currentGeneration && session === currentSession)
+      setText(adminStatus,
+        'Creation not confirmed. An unchanged retry retains the same request ID.');
+  } finally {
+    adminSubmitting = false;
+  }
+}
+
 function publicationContext() {
   const role = institutionSelect.selectedOptions[0]?.dataset.role;
   return currentSession && ['university_admin', 'instructor'].includes(role)
@@ -183,6 +235,10 @@ async function openStaffSection(sectionId) {
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
   publicationSelection = null;
+  adminRequests = new Map();
+  adminArea.hidden = true;
+  setText(adminStatus, '');
+  renderAdminSetup(adminSetupArea, { status: 'no-admin-context' });
   publishArea.hidden = true;
   setText(publishStatus, '');
   renderPublicationForm(publishChoices, { status: 'no-selection' });
@@ -194,6 +250,9 @@ institutionSelect.addEventListener('change', async () => {
     renderAssignments(assignmentsArea, { status: 'no-student-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
     staffArea.hidden = !staff;
+    adminArea.hidden = role !== 'university_admin';
+    if (role === 'university_admin')
+      renderAdminSetup(adminSetupArea, { status: 'loading' });
     renderStaffOverview(staffOverviewArea, { status: staff ? 'loading' : 'no-staff-context' });
     if (staff) {
       const session = currentSession;
@@ -203,9 +262,16 @@ institutionSelect.addEventListener('change', async () => {
             institutionSelect.value === tenant)
           renderStaffOverview(staffOverviewArea, { status: 'available', overview },
             document, openStaffSection);
+        if (generation === currentGeneration && role === 'university_admin')
+          renderAdminSetup(adminSetupArea, { status: 'available',
+            courses: overview.courses }, document,
+            draft => createAcademicMetadata('course', draft),
+            draft => createAcademicMetadata('section', draft));
       } catch {
         if (generation === currentGeneration && currentSession === session)
           renderStaffOverview(staffOverviewArea, { status: 'unavailable' });
+        if (generation === currentGeneration && role === 'university_admin')
+          renderAdminSetup(adminSetupArea, { status: 'unavailable' });
       }
     }
     return;
