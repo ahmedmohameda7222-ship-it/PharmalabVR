@@ -52,6 +52,12 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
                 Assert.That(panels.Request(PanelAction.SelectResearchLesson,
                     "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.RecordResearchPrediction, "below-7"),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1));
+                Assert.That(sessions.ReadNotebookEntries()[0].Text, Does.Contain("Student hypothesis"));
+                Assert.That(panels.Request(PanelAction.RecordResearchPrediction, "at-least-7"),
+                    Is.False, "A second prediction must not overwrite the original hypothesis.");
                 Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
                     Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
@@ -59,7 +65,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(sessions.CanRecordCurrentNativePH, Is.False,
                     "An empty receiver has no recordable Native pH.");
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False);
-                Assert.That(sessions.ReadNotebookEntries(), Is.Empty);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1),
+                    "A rejected empty-receiver measurement must not alter the prediction note.");
                 Assert.That(panels.Request(PanelAction.Lab), Is.True);
                 Assert.That(panels.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
@@ -72,16 +79,18 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.True, sessions.LastError);
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
                 var entries = sessions.ReadNotebookEntries();
-                Assert.That(entries.Count, Is.EqualTo(1));
-                Assert.That(entries[0].VesselId, Is.EqualTo("receiver"));
-                Assert.That(entries[0].EventSequence, Is.EqualTo(eventSequence));
-                Assert.That(entries[0].Text, Does.Contain("material revision " + revision));
-                Assert.That(entries[0].Text, Does.Contain("Native pH"));
-                Assert.That(entries[0].Text, Does.Contain("database "));
-                Assert.That(entries[0].Text, Does.Contain("Research observation only"));
+                Assert.That(entries.Count, Is.EqualTo(2));
+                Assert.That(entries[0].Text, Does.Contain("Student hypothesis"));
+                Assert.That(entries[0].Text, Does.Contain("below 7"));
+                Assert.That(entries[1].VesselId, Is.EqualTo("receiver"));
+                Assert.That(entries[1].EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(entries[1].Text, Does.Contain("material revision " + revision));
+                Assert.That(entries[1].Text, Does.Contain("Native pH"));
+                Assert.That(entries[1].Text, Does.Contain("database "));
+                Assert.That(entries[1].Text, Does.Contain("Research observation only"));
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
                     "Notebook navigation cannot duplicate a measurement action.");
-                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1));
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Save"));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Review"));
                 Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
