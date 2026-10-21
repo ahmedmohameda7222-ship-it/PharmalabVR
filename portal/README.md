@@ -1,7 +1,7 @@
-# PharmaLabVR University portal — U05 code-first, read-only
+# PharmaLabVR University portal — U03/U05 code-first academic source
 
-This is a **static English-only student portal source slice**, not a deployed
-production portal or completed academic synchronization. No external front-end
+This is a **static English-only student and instructor portal source slice**, not a deployed
+production portal, complete instructor administration suite, or completed academic synchronization. No external front-end
 dependencies or build service are required.
 
 ## Configuration and local static hosting
@@ -25,9 +25,9 @@ and submit an assignment through the existing authenticated
 `public.university_publish_assignment` RPC with a per-draft idempotency key.
 Publication is an academic server operation, never a chemistry calculation,
 Native receipt attestation or direct assignment-table mutation. The first 100 records per category are shown;
-this is not a complete institutional audit. It supports staff and student reading,
-not enrollment, invitations,
-instructor/admin workflows, uploads, grading or publishing. Auth token is
+this is not a complete institutional audit. Staff workflows other than the existing
+assignment-publication RPC remain incomplete: no enrollment or invitation UI,
+lesson/rubric editor, evidence upload, grading or feedback portal. Auth token is
 in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
 `scope=local` (not global). Failed HTTP does not mean the refresh token was
 revoked; even successful logout does not revoke existing JWT access tokens
@@ -36,8 +36,9 @@ sign in again.
 
 ## Verification and limits
 
-`node --test portal/test/*.test.mjs` checks the source-linked Auth/tenant
-contract and safe view output with synthetic HTTP and DOM fixtures only.
+`node --test portal/test/*.test.mjs` checks the source-linked Auth/tenant,
+read-only staff overview, published version selection, and idempotent server
+assignment-publication request contract with synthetic HTTP/DOM fixtures only.
 It is also invoked from the existing GitHub Native headless workflow.
 These are **not** browser, production Auth, Unity, RLS or student-pilot tests.
 Supabase RLS and email verification are server-owned. Assignment metadata is
