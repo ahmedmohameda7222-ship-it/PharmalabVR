@@ -494,7 +494,7 @@ export function renderStudentResults(target, state, documentSource = globalThis.
 // It does not display private evidence bytes, approve grades or promote staged
 // unverified artifacts. The UI role never substitutes for PostgreSQL policy.
 export function renderStaffSubmissions(target, state, documentSource = globalThis.document,
-  onFeedback = null) {
+  onFeedback = null, onGradeApproval = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -538,6 +538,14 @@ export function renderStaffSubmissions(target, state, documentSource = globalThi
       button.type = 'button';
       button.textContent = 'Record instructor feedback';
       button.addEventListener('click', () => onFeedback(sub.id));
+      item.append(button);
+    }
+    if (typeof onGradeApproval === 'function' &&
+        ['instructor', 'university_admin'].includes(state.role)) {
+      const button = documentSource.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Approve grade for this submission';
+      button.addEventListener('click', () => onGradeApproval(sub.id));
       item.append(button);
     }
     list.append(item);
@@ -610,6 +618,86 @@ export function renderFeedbackForm(target, state, documentSource = globalThis.do
       return;
     onSubmit({ submissionId: state.submissionId,
       body: body.value, studentVisible: release.checked === true });
+  });
+  target.replaceChildren(form);
+}
+
+
+// Academic grade approval is an irreversible, server-owned decision. This
+// confirms a rubric score only; it does not certify an IPhreeqc measurement
+// or promote staged Native evidence to a trusted scientific attestation.
+export function renderGradeApprovalForm(target, state,
+  documentSource = globalThis.document, onApprove = null) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const p = documentSource.createElement('p');
+    p.textContent = value;
+    target.replaceChildren(p);
+  };
+  if (state?.status === 'no-selection') {
+    message('Select a submission from the section preview to approve a grade.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading grade approval context…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Grade approval form could not be loaded.');
+    return;
+  }
+  if (state?.status !== 'available' ||
+      typeof state.submissionId !== 'string' || !state.submissionId)
+    throw new TypeError('Visible staff submission required for grade approval');
+
+  const form = documentSource.createElement('form');
+  const explanation = documentSource.createElement('p');
+  explanation.textContent =
+    'Irreversible academic grade approval for submission ' + state.submissionId +
+    '. This is not scientific attestation of Native evidence. ' +
+    'Approved grades cannot be changed without a separate audited appeal process.';
+  form.append(explanation);
+  const scoreLabel = documentSource.createElement('label');
+  scoreLabel.textContent = 'Approved score (0–100%, up to three decimal places)';
+  const scoreInput = documentSource.createElement('input');
+  scoreInput.name = 'score';
+  scoreInput.type = 'number';
+  scoreInput.required = true;
+  scoreInput.min = '0';
+  scoreInput.max = '100';
+  scoreInput.step = '0.001';
+  scoreInput.value = '';
+  scoreLabel.append(scoreInput);
+  form.append(scoreLabel);
+  const acknowledgeLabel = documentSource.createElement('label');
+  acknowledgeLabel.textContent =
+    'I independently reviewed the academic submission and understand approval is irreversible.';
+  const acknowledge = documentSource.createElement('input');
+  acknowledge.type = 'checkbox';
+  acknowledge.name = 'acknowledge';
+  acknowledge.checked = false;
+  acknowledgeLabel.append(acknowledge);
+  form.append(acknowledgeLabel);
+  const button = documentSource.createElement('button');
+  button.type = 'submit';
+  button.textContent = 'Approve immutable academic grade';
+  form.append(button);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (typeof onApprove !== 'function' || acknowledge.checked !== true)
+      return;
+    const raw = scoreInput.value;
+    // Avoid exponent notation, whitespace coercion, out-of-range values and
+    // precision unsupported by the existing PostgreSQL numeric(8,3) RPC.
+    if (!/^(?:100(?:\.0{1,3})?|[0-9]{1,2}(?:\.[0-9]{1,3})?)$/.test(raw))
+      return;
+    const score = Number(raw);
+    if (!Number.isFinite(score) || score < 0 || score > 100 ||
+        Number(score.toFixed(3)) !== score)
+      return;
+    onApprove({ submissionId: state.submissionId, score });
   });
   target.replaceChildren(form);
 }
