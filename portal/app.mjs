@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm, renderGradeApprovalForm } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -22,6 +22,9 @@ const staffSubmissionsBody = document.getElementById('staff-submissions');
 const feedbackArea = document.getElementById('feedback-area');
 const feedbackFormArea = document.getElementById('feedback-form');
 const feedbackStatus = document.getElementById('feedback-status');
+const gradeArea = document.getElementById('grade-area');
+const gradeFormArea = document.getElementById('grade-form');
+const gradeStatus = document.getElementById('grade-status');
 const publishArea = document.getElementById('publish-area');
 const publishChoices = document.getElementById('publish-choices');
 const publishStatus = document.getElementById('publish-status');
@@ -36,6 +39,7 @@ let adminRequests = new Map();
 let adminSubmitting = false;
 let selectedStaffSection = null;
 let feedbackSelection = null;
+let gradeSelection = null;
 let api = null;
 
 function setText(target, value) { target.textContent = value; }
@@ -57,6 +61,10 @@ function clearSession() {
   renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
   feedbackArea.hidden = true;
   feedbackSelection = null;
+  gradeSelection = null;
+  gradeArea.hidden = true;
+  renderGradeApprovalForm(gradeFormArea, { status: 'no-selection' });
+  setText(gradeStatus, '');
   selectedStaffSection = null;
   renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
   setText(feedbackStatus, '');
@@ -204,11 +212,73 @@ async function submitInstructorFeedback(draft) {
   }
 }
 
+async function submitInstructorGrade(draft) {
+  const selection = gradeSelection;
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  if (!selection || !session || !tenant ||
+      !['instructor', 'university_admin'].includes(role) ||
+      draft.submissionId !== selection.submissionId ||
+      selection.sectionId !== selectedStaffSection ||
+      selection.submitting || selection.approved) return;
+
+  const fingerprint = JSON.stringify(draft);
+  if (selection.fingerprint !== fingerprint) {
+    selection.fingerprint = fingerprint;
+    selection.requestId = crypto.randomUUID();
+  }
+  selection.submitting = true;
+  const generation = currentGeneration;
+  setText(gradeStatus, 'Requesting irreversible university grade approval…');
+  try {
+    const id = await api.staffApproveGrade(session, {
+      ...draft, institutionId: tenant,
+      sectionId: selection.sectionId, requestId: selection.requestId
+    });
+    if (generation === currentGeneration && currentSession === session &&
+        institutionSelect.value === tenant && gradeSelection === selection) {
+      selection.approved = true;
+      setText(gradeStatus, 'University server confirmed immutable academic grade ' +
+        id + '. This is not Native scientific attestation.');
+    }
+  } catch {
+    if (generation === currentGeneration && currentSession === session &&
+        gradeSelection === selection)
+      setText(gradeStatus,
+        'Grade NOT confirmed. The unchanged draft keeps its request ID on retry. ' +
+        'Reconcile any previous request before creating a new grade.');
+  } finally {
+    selection.submitting = false;
+  }
+}
+
+function openGradeForSubmission(submissionId) {
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  if (!currentSession || !selectedStaffSection ||
+      !['instructor', 'university_admin'].includes(role)) return;
+  ++currentGeneration;
+  feedbackSelection = null;
+  feedbackArea.hidden = true;
+  renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
+  setText(feedbackStatus, '');
+  gradeSelection = { sectionId: selectedStaffSection, submissionId,
+    fingerprint: null, requestId: null, submitting: false, approved: false };
+  gradeArea.hidden = false;
+  setText(gradeStatus, '');
+  renderGradeApprovalForm(gradeFormArea, { status: 'available',
+    submissionId }, document, submitInstructorGrade);
+}
+
 function openFeedbackForSubmission(submissionId) {
   const role = institutionSelect.selectedOptions[0]?.dataset.role;
   if (!currentSession || !selectedStaffSection ||
       !['instructor', 'university_admin'].includes(role)) return;
   ++currentGeneration;
+  gradeSelection = null;
+  gradeArea.hidden = true;
+  renderGradeApprovalForm(gradeFormArea, { status: 'no-selection' });
+  setText(gradeStatus, '');
   feedbackSelection = { sectionId: selectedStaffSection, submissionId,
     fingerprint: null, requestId: null, submitting: false };
   feedbackArea.hidden = false;
@@ -225,6 +295,10 @@ async function openStaffSubmissions(sectionId) {
       !['instructor', 'teaching_assistant', 'university_admin'].includes(role)) return;
   const generation = ++currentGeneration;
   selectedStaffSection = sectionId;
+  gradeSelection = null;
+  gradeArea.hidden = true;
+  renderGradeApprovalForm(gradeFormArea, { status: 'no-selection' });
+  setText(gradeStatus, '');
   feedbackSelection = null;
   feedbackArea.hidden = true;
   renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
@@ -241,7 +315,8 @@ async function openStaffSubmissions(sectionId) {
     if (generation === currentGeneration && currentSession === session &&
         institutionSelect.value === tenant)
       renderStaffSubmissions(staffSubmissionsBody, {
-        status: 'available', submissions, role }, document, openFeedbackForSubmission);
+        status: 'available', submissions, role }, document,
+        openFeedbackForSubmission, openGradeForSubmission);
   } catch {
     if (generation === currentGeneration && currentSession === session)
       renderStaffSubmissions(staffSubmissionsBody, { status: 'unavailable' });
@@ -362,6 +437,10 @@ async function openStaffSection(sectionId) {
 
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
+  gradeSelection = null;
+  gradeArea.hidden = true;
+  renderGradeApprovalForm(gradeFormArea, { status: 'no-selection' });
+  setText(gradeStatus, '');
   feedbackArea.hidden = true;
   feedbackSelection = null;
   selectedStaffSection = null;

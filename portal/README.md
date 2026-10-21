@@ -31,7 +31,12 @@ this is not a complete institutional audit. Course/section creation and enrollme
 use existing audited university-admin-only RPCs, with exact per-draft retry IDs.
 Creation of user identities or membership grants is not part of this portal. Other staff workflows remain
 incomplete: no new-user signup or invitation administration,
-lesson/rubric editor, evidence upload or grade approval portal. Assigned instructors
+lesson/rubric editor, signed evidence upload and grade appeal workflow. The
+instructor/admin grade form now calls the existing audited
+`university_approve_grade` RPC only after a separate explicit irreversible
+approval acknowledgement, with a bounded 0–100% three-decimal score and a
+stable per-draft retry UUID. A confirmed academic grade is NOT Native
+scientific attestation. Assigned instructors
 can append feedback with an explicit private-by-default student-release choice,
 through the existing audited feedback RPC; teaching assistants cannot submit it. Auth token is
 in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
