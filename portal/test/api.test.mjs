@@ -721,3 +721,30 @@ test('feedback RPC 403 or noncanonical result cannot become a confirmed post', a
     }), /unavailable|Invalid/i);
   }
 });
+
+test('approved numeric(8,3) grades remain readable under IEEE-754 rounding', async () => {
+  const submissionId = '77777777-7777-4777-8777-777777777777';
+  const base = {
+    submissions: [{ id: submissionId, institution_id: institutionA,
+      section_id: sectionA, assignment_id: assignmentA, student_id: student,
+      submitted_at: '2026-10-21T01:00:00Z' }]
+  };
+  for (const score of [1.005, 99.999, 0.001]) {
+    const h = harness({ ...base, grades: [{
+      id: '88888888-8888-4888-8888-888888888888',
+      institution_id: institutionA, submission_id: submissionId,
+      status: 'approved', score
+    }] });
+    const session = await h.api.signIn('learner@example.edu', 'password');
+    assert.equal((await h.api.studentResults(session, institutionA,
+      assignmentA)).grades[0].score, score);
+  }
+  const invalid = harness({ ...base, grades: [{
+    id: '88888888-8888-4888-8888-888888888888',
+    institution_id: institutionA, submission_id: submissionId,
+    status: 'approved', score: 1.0051
+  }] });
+  const session = await invalid.api.signIn('learner@example.edu', 'password');
+  await assert.rejects(() => invalid.api.studentResults(session, institutionA,
+    assignmentA), /Invalid/i);
+});
