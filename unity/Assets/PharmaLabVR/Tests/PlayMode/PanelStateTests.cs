@@ -957,6 +957,110 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // Authored for owner's final Unity campaign with a real Native
+        // CoreSession and existing SaveService. No Unity execution in CI.
+        [UnityTest]
+        public IEnumerator P06_02_RestartCheckpointInvalidatesRecordedReviewAndComparison()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string savedPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                sessions.Configure(driver, "p06-restore-cache-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(sessions.CreateCheckpoint(), Is.True, sessions.LastError);
+                Assert.That(sessions.Save(), Is.True, sessions.LastError);
+                savedPath = sessions.LastDurableSavePath;
+                Assert.That(sessions.OpenReview(), Is.True, sessions.LastError);
+                router.Show(ScreenId.Review);
+                Assert.That(sessions.OpenSavedComparison(), Is.True, sessions.LastError);
+                Assert.That(sessions.RecordedReview, Is.Not.Null);
+                Assert.That(sessions.CurrentComparison, Is.Not.Null);
+                var beforeEpoch = driver.NativeRestorationEpoch;
+                Assert.That(sessions.RestartCheckpoint(), Is.True, sessions.LastError);
+                Assert.That(driver.NativeRestorationEpoch, Is.EqualTo(beforeEpoch + 1UL));
+                Assert.That(sessions.RecordedReview, Is.Null,
+                    "Restarted checkpoint must never display the previous Native recorded review.");
+                Assert.That(sessions.CurrentComparison, Is.Null,
+                    "Restarted checkpoint must never display an obsolete saved-run comparison.");
+                Assert.That(sessions.ComparisonSummary, Is.EqualTo("No recorded run comparison is open."));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+            }
+            finally
+            {
+                if (savedPath != null && File.Exists(savedPath)) File.Delete(savedPath);
+                if (savedPath != null && File.Exists(savedPath + ".bak")) File.Delete(savedPath + ".bak");
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator P06_02_DisabledSessionControllerCannotExposePreImportReviewCache()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            string savedPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                sessions.Configure(driver, "p06-disabled-review-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(sessions.Save(), Is.True, sessions.LastError);
+                savedPath = sessions.LastDurableSavePath;
+                Assert.That(sessions.OpenReview(), Is.True, sessions.LastError);
+                router.Show(ScreenId.Review);
+                Assert.That(sessions.OpenSavedComparison(), Is.True, sessions.LastError);
+                var oldNative = driver.Session;
+                var epoch = driver.NativeRestorationEpoch;
+                sessions.enabled = false;
+                imported = CoreSession.ImportSession(oldNative.ExportSession(),
+                    driver.ScientificDatabasePath);
+                driver.ReplaceSession(imported);
+                imported = null;
+                Assert.That(driver.NativeRestorationEpoch, Is.EqualTo(epoch + 1UL));
+                Assert.That(sessions.RecordedReview, Is.Null,
+                    "Reading the disabled controller must invalidate a missed restore epoch.");
+                Assert.That(sessions.CurrentComparison, Is.Null);
+                sessions.enabled = true;
+                Assert.That(sessions.RecordedReview, Is.Null);
+                Assert.That(sessions.CurrentComparison, Is.Null);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+            }
+            finally
+            {
+                imported?.Dispose();
+                if (savedPath != null && File.Exists(savedPath)) File.Delete(savedPath);
+                if (savedPath != null && File.Exists(savedPath + ".bak")) File.Delete(savedPath + ".bak");
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P07_03_DesktopNativeImportEntersSessionLoadHoldWithRevisionPreserved()
         {
