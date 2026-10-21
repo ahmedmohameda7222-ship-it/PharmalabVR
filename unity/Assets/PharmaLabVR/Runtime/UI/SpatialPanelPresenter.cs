@@ -91,6 +91,7 @@ namespace PharmaLabVR.UI
             AddButton("Inspect receiver", 30f, PanelAction.Inspect, "receiver");
             AddButton("Inspect source", -26f, PanelAction.Inspect, "source");
             AddButton("Measure", -82f, PanelAction.Measure, "receiver");
+            AddButton("Record Native pH", -306f, PanelAction.RecordCurrentPH);
             AddButton("Open review", -138f, PanelAction.Review);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
@@ -380,6 +381,9 @@ namespace PharmaLabVR.UI
             SetButton("Inspect receiver", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Inspect source", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Measure", state.SupportedActions.Contains("Measure"));
+            SetButton("Record Native pH",
+                state.SupportedActions.Contains("RecordCurrentPH") &&
+                panels != null && panels.CanRecordCurrentNativePH);
             // Keep the Lab controls on distinct physical hit targets. While
             // docked, Review remains reachable through Pause -> Review;
             // once released the same slot returns to the direct Review action.

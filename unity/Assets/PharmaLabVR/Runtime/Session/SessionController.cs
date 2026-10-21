@@ -23,6 +23,55 @@ namespace PharmaLabVR.Session
         public string LastError { get; private set; }
         // Exact accepted Native command identity, not a predicted material result.
         public string LastInstrumentReceipt { get; private set; }
+
+        public bool CanRecordCurrentNativePH
+        {
+            get
+            {
+                if (driver?.Session == null || !driver.Session.IsOpen ||
+                    driver.IsTimeHeld || driver.IsNativePaused ||
+                    (router?.Current?.ScreenId != ScreenId.Inspect &&
+                     router?.Current?.ScreenId != ScreenId.Measure))
+                    return false;
+                try
+                {
+                    NativeMeasurementNote.Build(driver.CurrentLabView,
+                        driver.SelectedMeasurementVesselId,
+                        driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
+                        driver.Measurement?.DisplayValue);
+                    return router.Current.SelectedEntityId == driver.SelectedMeasurementVesselId &&
+                        router.Current.NativeRevision == driver.CurrentLabView.EventSequence;
+                }
+                catch (InvalidOperationException) { return false; }
+            }
+        }
+
+        // A measurement is an offline notebook annotation tied to the exact
+        // Native branch, event and material revision. It is never a grade.
+        public bool RecordCurrentNativeMeasurement()
+        {
+            try
+            {
+                if (!CanRecordCurrentNativePH)
+                    throw new InvalidOperationException(
+                        "Only a current, revision-matched Native pH reading can be recorded.");
+                var view = driver.CurrentLabView;
+                var vessel = driver.SelectedMeasurementVesselId;
+                var note = NativeMeasurementNote.Build(view, vessel,
+                    driver.Measurement.Availability, driver.Measurement.DisplayValue);
+                notebook.Append(NotebookFilePath(), driver.Session.BranchId,
+                    view.EventSequence, vessel, note);
+                LastError = null;
+                router.Show(ScreenId.Notebook);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
         private readonly NativeReviewAuthorityCache<RecordedSessionReview,
             RecordedRunComparison> recordedCache = new();
         private CoreDriver subscribedNativeDriver;
@@ -571,6 +620,12 @@ namespace PharmaLabVR.Session
                 if (measurement != null) GUILayout.Label(measurement.Explanation);
                 if (screen == ScreenId.Inspect && GUILayout.Button("Measure selected vessel", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Measure, router.Current.SelectedEntityId);
+                var wasEnabled = GUI.enabled;
+                GUI.enabled = wasEnabled && CanRecordCurrentNativePH;
+                var recordReading = GUILayout.Button("Record current Native pH in notebook",
+                    GUILayout.Height(36f));
+                GUI.enabled = wasEnabled;
+                if (recordReading) panels?.Request(PanelAction.RecordCurrentPH);
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
             }
             if (GUILayout.Button("Pause", GUILayout.Height(44f))) panels?.Request(PanelAction.Pause);
@@ -833,7 +888,7 @@ namespace PharmaLabVR.Session
                 if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
                 return "Research notebook · " + entries.Count + " event-linked notes\n" +
                     "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
-                    preview + "\nDesktop: write a note; XR: read recorded notes.";
+                    preview + "\nDesktop: write notes; Desktop/XR: record current Native pH.";
             }
         }
 

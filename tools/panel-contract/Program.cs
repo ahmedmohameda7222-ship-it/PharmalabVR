@@ -129,6 +129,57 @@ internal static class Program
         Check(onboardingRouter.Current.ScreenId == ScreenId.Pause,
             "Normal paused Native authority admitted live Lab navigation.");
 
+        // A notebook reading is not typed by the user or inferred from
+        // a lesson. It is bound to a Current Native pH and matching vessel revision.
+        var noteView = new LabViewModel();
+        noteView.Vessels[1].MaterialRevision = "3";
+        noteView.Vessels[1].CommittedVolumeM3 = 1e-8;
+        noteView.Observations[0].Support = "Supported";
+        noteView.Observations[0].Freshness = "Current";
+        noteView.Observations[0].AsOfMaterialRevision = "3";
+        noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        var nativeNote = NativeMeasurementNote.Build(noteView, "receiver",
+            MeasurementAvailability.Current, "7.13");
+        Check(nativeNote.Contains("pH 7.13") && nativeNote.Contains("revision 3") &&
+              nativeNote.Contains("event 7") && nativeNote.Contains("sha256:research-db") &&
+              nativeNote.Contains("IPhreeqc-research"),
+            "Recorded pH note must preserve actual Native event, material and model identity.");
+        var staleDenied = false;
+        noteView.Observations[0].AsOfMaterialRevision = "2";
+        try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
+        catch (InvalidOperationException) { staleDenied = true; }
+        Check(staleDenied, "Old measurement revision was allowed into the notebook.");
+        noteView.Observations[0].AsOfMaterialRevision = "3";
+        var unsupportedDenied = false;
+        try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Stale, "7.13"); }
+        catch (InvalidOperationException) { unsupportedDenied = true; }
+        Check(unsupportedDenied, "A stale display was recorded as a current pH result.");
+        var nonfiniteDenied = false;
+        try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "NaN"); }
+        catch (InvalidOperationException) { nonfiniteDenied = true; }
+        Check(nonfiniteDenied, "A non-finite pH value was admitted into the notebook.");
+        var missingModelDenied = false;
+        noteView.Observations[0].DatabaseIdentity = "";
+        try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
+        catch (InvalidOperationException) { missingModelDenied = true; }
+        Check(missingModelDenied, "A reading without the actual Native model package was recorded.");
+        noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        var noteRouter = new ScreenRouter();
+        noteRouter.Configure(new CoreDriver());
+        noteRouter.Show(ScreenId.Measure, "receiver");
+        var notePanels = new LabPanelController();
+        var noteSession = new SessionController();
+        notePanels.Configure(noteRouter, new CoreDriver(), noteSession);
+        Check(noteRouter.Current.SupportedActions.Contains("RecordCurrentPH"),
+            "Native pH record action missing from the shared measurement page.");
+        Check(notePanels.Request(PanelAction.RecordCurrentPH) &&
+              noteSession.NotebookAppendCalls == 1,
+            "Measurement recording does not route through the shared Desktop/XR panel.");
+        noteSession.CanRecordCurrentNativePH = false;
+        Check(!notePanels.Request(PanelAction.RecordCurrentPH) &&
+              noteSession.NotebookAppendCalls == 1,
+            "Rejected measurement attempt appended an unverified note.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(

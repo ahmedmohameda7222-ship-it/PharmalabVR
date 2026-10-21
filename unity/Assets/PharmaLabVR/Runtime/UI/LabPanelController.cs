@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -27,6 +27,7 @@ namespace PharmaLabVR.UI
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;
+        public bool CanRecordCurrentNativePH => sessions?.CanRecordCurrentNativePH == true;
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)
         {
@@ -119,6 +120,8 @@ namespace PharmaLabVR.UI
                     return router.Current.ScreenId == ScreenId.Notebook;
                 case PanelAction.AddNotebookNote:
                     return sessions.AppendNotebookNote(entityId);
+                case PanelAction.RecordCurrentPH:
+                    return sessions.RecordCurrentNativeMeasurement();
                 case PanelAction.Settings:
                     router.Show(ScreenId.Settings);
                     return router.Current.ScreenId == ScreenId.Settings;

@@ -36,9 +36,11 @@ namespace PharmaLabVR.Lab
             public string Support { get; }
             public string Freshness { get; }
             public string Maturity { get; }
+            public string AsOfMaterialRevision { get; }
 
             public ObservationView(string vesselId, string observableId, string modelId,
-                string databaseIdentity, string support, string freshness, string maturity)
+                string databaseIdentity, string support, string freshness, string maturity,
+                string asOfMaterialRevision = null)
             {
                 VesselId = vesselId;
                 ObservableId = observableId;
@@ -47,6 +49,7 @@ namespace PharmaLabVR.Lab
                 Support = support;
                 Freshness = freshness;
                 Maturity = maturity;
+                AsOfMaterialRevision = asOfMaterialRevision;
             }
         }
 
@@ -80,7 +83,8 @@ namespace PharmaLabVR.Lab
                 if (observation == null) throw new FormatException("Native observation view is incomplete.");
                 observations[index] = new ObservationView(observation.vesselId, observation.observableId,
                     observation.modelId, observation.databaseIdentity, observation.support,
-                    observation.freshness, observation.maturity);
+                    observation.freshness, observation.maturity,
+                    observation.asOfMaterialRevision);
             }
             return new LabViewModel(source.eventSequence, new ReadOnlyCollection<VesselView>(vessels),
                 new ReadOnlyCollection<ObservationView>(observations));
@@ -115,6 +119,7 @@ namespace PharmaLabVR.Lab
             public string support;
             public string freshness;
             public string maturity;
+            public string asOfMaterialRevision;
         }
     }
 }

@@ -33,6 +33,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/ResearchInstrumentPayloads.cs" Link="ResearchInstrumentPayloads.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs" Link="LabPanelController.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Lab/LabBenchReadout.cs" Link="LabBenchReadout.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Lab/NativeMeasurementNote.cs" Link="NativeMeasurementNote.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ProtocolDefinition.cs" Link="ProtocolDefinition.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ResearchLessonJourney.cs" Link="ResearchLessonJourney.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ResearchConcentrationSelection.cs" Link="ResearchConcentrationSelection.cs" />

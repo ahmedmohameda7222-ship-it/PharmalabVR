@@ -54,6 +54,8 @@ namespace PharmaLabVR.Lab
         public string Support { get; set; }
         public string Freshness { get; set; }
         public string Maturity { get; set; }
+        public string DatabaseIdentity { get; set; }
+        public string AsOfMaterialRevision { get; set; }
     }
     public sealed class LabViewModel
     {
@@ -139,6 +141,13 @@ namespace PharmaLabVR.Session
         public int SaveCalls { get; private set; }
         public int ReviewOpens { get; private set; }
         public int NotebookAppendCalls { get; private set; }
+        public bool CanRecordCurrentNativePH { get; set; } = true;
+        public bool RecordCurrentNativeMeasurement()
+        {
+            if (!CanRecordCurrentNativePH) return false;
+            NotebookAppendCalls++;
+            return true;
+        }
         public int PortableExportCalls { get; private set; }
         public int CsvExportCalls { get; private set; }
         public int SavedCompareCalls { get; private set; }
