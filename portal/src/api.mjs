@@ -352,6 +352,65 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     return result;
   }
 
+  // Academic creation is authorized and audited in the already-deployed
+  // security-definer RPCs, never via client INSERT or service-role keys.
+  async function requireUniversityAdmin(session, institutionId) {
+    const current = requireSession(session);
+    if (!canonicalUuid(institutionId))
+      throw new Error('Active university administrator required');
+    const active = await memberships(current);
+    if (!active.some(m => m.institutionId === institutionId &&
+        m.role === 'university_admin'))
+      throw new Error('Active university administrator required');
+    return current;
+  }
+
+  async function adminCreateCourse(session, draft) {
+    if (!draft || !canonicalUuid(draft.institutionId) ||
+        !canonicalUuid(draft.requestId) ||
+        typeof draft.code !== 'string' ||
+        !/^[A-Z0-9][A-Z0-9_-]{0,39}$/.test(draft.code) ||
+        typeof draft.term !== 'string' ||
+        !/^[A-Za-z0-9_-]{1,32}$/.test(draft.term) ||
+        typeof draft.name !== 'string' ||
+        draft.name.trim().length < 2 || draft.name.trim().length > 200)
+      throw new Error('Invalid university course request');
+    const current = await requireUniversityAdmin(session, draft.institutionId);
+    const result = await request('/rest/v1/rpc/university_create_course', {
+      method: 'POST', body: {
+        p_institution_id: draft.institutionId,
+        p_code: draft.code, p_name: draft.name.trim(),
+        p_term: draft.term, p_request_id: draft.requestId
+      }
+    }, current.accessToken);
+    if (!canonicalUuid(result)) throw invalid('created course identity');
+    return result;
+  }
+
+  async function adminCreateSection(session, draft) {
+    if (!draft || !canonicalUuid(draft.institutionId) ||
+        !canonicalUuid(draft.courseId) ||
+        !canonicalUuid(draft.requestId) ||
+        typeof draft.sectionCode !== 'string' ||
+        !/^[A-Z0-9][A-Z0-9_-]{0,19}$/.test(draft.sectionCode))
+      throw new Error('Invalid university section request');
+    const current = await requireUniversityAdmin(session, draft.institutionId);
+    const overview = await staffOverview(current, draft.institutionId);
+    if (overview.role !== 'university_admin' ||
+        !overview.courses.some(row => row.id === draft.courseId))
+      throw new Error('Administrator course is not accessible');
+    const result = await request('/rest/v1/rpc/university_create_section', {
+      method: 'POST', body: {
+        p_institution_id: draft.institutionId,
+        p_course_id: draft.courseId,
+        p_section_code: draft.sectionCode,
+        p_request_id: draft.requestId
+      }
+    }, current.accessToken);
+    if (!canonicalUuid(result)) throw invalid('created section identity');
+    return result;
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -440,5 +499,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, assignmentLesson, signOut });
 }
