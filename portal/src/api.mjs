@@ -574,6 +574,12 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
         !draft.body.trim() || draft.body.length > 12000 ||
         typeof draft.studentVisible !== 'boolean')
       throw new Error('Invalid instructor feedback request');
+    // Reject read-only teaching assistants before fetching any unrelated
+    // staff metadata. The server RPC remains the authorization authority.
+    const active = await memberships(current);
+    if (!active.some(m => m.institutionId === draft.institutionId &&
+        ['instructor', 'university_admin'].includes(m.role)))
+      throw new Error('Assigned instructor or administrator required');
     const staff = await staffOverview(current, draft.institutionId);
     if (!['instructor', 'university_admin'].includes(staff.role))
       throw new Error('Assigned instructor or administrator required');
