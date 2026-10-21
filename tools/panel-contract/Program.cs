@@ -134,6 +134,14 @@ internal static class Program
               burettePrime.Contains("\"value\":5E-08"),
             "Native burette prime must debit source and credit a distinct vessel.");
 
+        bench.Vessels[1].CommittedVolumeM3 = 0;
+        bench.Vessels.Add(new VesselView { Id = "burette", MaterialRevision = "1",
+            CapacityM3 = 5e-5, CommittedVolumeM3 = 5e-8 });
+        Check(LabBenchReadout.NextAction(bench, false, false, false).Contains("Burette primed"),
+            "The live guided procedure did not surface the primed physical stopcock path.");
+        Check(LabBenchReadout.Inventory(bench).Contains("Burette: 0.050 mL"),
+            "The primed burette is not visible in the Native inventory readout.");
+
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.
         var placedBottle = ResearchInstrumentPayloads.Place("bottle-1", "source", "spill",

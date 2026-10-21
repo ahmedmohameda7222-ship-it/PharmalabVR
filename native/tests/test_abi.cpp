@@ -50,6 +50,64 @@ json command(const std::string& sequence, const std::string& type, json payload 
 }
 }  // namespace
 
+TEST_CASE("M2 first research burette primes from separate source under Native conservation") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "CreateVessel", {{"id", "burette"}, {"capacityM3", 5e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("4", "CreateSink", {{"id", "spill"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "PlaceTool",
+        {{"toolId", "research-tool"}, {"sourceInventoryId", "burette"},
+         {"overflowSinkId", "spill"}, {"coordinateFrame", "lab"},
+         {"geometryProfileHash", "burette-50ml-research-v1"}, {"profileRevision", "1"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("6", "Pause"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("7", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("8", "Continue"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto prime = command("9", "TransferFixed",
+        {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+         {"selection", "HomogeneousAqueousLiquid"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 5e-8}}},
+         {"captureFractions", {{{"destinationInventoryId", "burette"}, {"fraction", 1.0}}}},
+         {"overflowSinkId", "spill"}},
+        {{"source", "1"}, {"burette", "0"}});
+    submit(handle, prime);
+    CHECK(poll(handle)["accepted"].get<bool>());
+    const auto snapshot = json::parse(read_text(handle));
+    double sourceVolume = -1.0;
+    double buretteVolume = -1.0;
+    double receiverVolume = -1.0;
+    double totalChloride = 0.0;
+    for (const auto& vessel : snapshot["vessels"]) {
+        const auto volume = vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+        totalChloride += vessel["inventory"]["chlorideMol"].get<double>();
+        if (vessel["id"] == "source") sourceVolume = volume;
+        if (vessel["id"] == "burette") buretteVolume = volume;
+        if (vessel["id"] == "receiver") receiverVolume = volume;
+    }
+    CHECK(sourceVolume == doctest::Approx(2.5e-5 - 5e-8));
+    CHECK(buretteVolume == doctest::Approx(5e-8));
+    CHECK(receiverVolume == doctest::Approx(0.0));
+    CHECK(sourceVolume + buretteVolume + receiverVolume == doctest::Approx(2.5e-5));
+    CHECK(totalChloride == doctest::Approx(0.05 * 0.025));
+    submit(handle, prime);
+    CHECK(poll(handle)["code"] == "Accepted");  // replay must not debit twice
+    CHECK(json::parse(read_text(handle))["vessels"] == snapshot["vessels"]);
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("A01 ABI version and handle lifecycle") {
     CHECK(plv_abi_version() == 1U);
     std::uint64_t handle = 0;

@@ -44,6 +44,14 @@ namespace PharmaLabVR.Lab
             if (!ValidVolume(source.CommittedVolumeM3, source.CapacityM3) ||
                 source.CommittedVolumeM3 <= 0d)
                 return "Native stock inventory unavailable or empty; do not attempt a pour.";
+            if (snapshot.Vessels.Any(vessel => vessel.Id == "burette"))
+            {
+                var burette = snapshot.Vessels.First(vessel => vessel.Id == "burette");
+                if (ValidVolume(burette.CommittedVolumeM3, burette.CapacityM3) &&
+                    burette.CommittedVolumeM3 > 0d)
+                    return "Burette primed: release/hold, aim outlet and open stopcock; inspect receiver.";
+                return "Prime the parked burette from Native stock, or transfer 0.01 mL by bottle.";
+            }
             return "Transfer 0.01 mL with the research stock bottle, then Inspect receiver.";
         }
 
