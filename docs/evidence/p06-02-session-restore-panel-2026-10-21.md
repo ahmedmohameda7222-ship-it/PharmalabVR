@@ -13,3 +13,7 @@
 
 ## Remaining
 Review/Compare caches in `SessionController` still require an independently source-tested invalidation path for accepted checkpoint restarts. Full hardware/Unity testing deferred to owner Codex. Canonical P06.02 remains Open; 66 original statuses 15 VerifiedLocal/51 Open, G-R1 and G-U1 Open. Production Supabase untouched, English-only permanent, no Unity Cloud CI, no PR merge.
+
+## Follow-up: event missed while panel disabled
+- RED `09aaf888b28a52b757e21b8005be84694719f3dc`, [PR 39545814205](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39545814205): actual `ScreenRouter` OnDisable → simulated `NativeSessionRestored` → OnEnable retains old Settings/Saved/Inspect, proving bare event subscription is insufficient across Unity panel reactivation.
+- GREEN `c3ef4c466a9ae07443096e3d1f6d1a666c5e37bf`: bounded process-local `NativeRestorationEpoch` in actual `CoreDriver` incremented only at accepted restore; `ScreenRouter.Refresh` reconciles missed epochs and conservatively re-enters Hold. [Native PR 39545974966](https://github.com/ahmedmohameda7222-ship-it/PharmalabVR/actions/runs/39545974966) panel passed **317 C# source-linked assertions and six mutated RED/restore GREEN checks**. Latest exact-SHA matrix and disposable Supabase separately tracked; actual Unity PlayMode `P06_02_DisabledPanelReactivatesIntoNativeSessionLoadHold` authored `6a516dc`, NOT_RUN. This epoch is not a material revision or scientific attestation.

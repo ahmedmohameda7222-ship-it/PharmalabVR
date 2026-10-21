@@ -746,7 +746,7 @@
             "P06.01"
           ],
           "status": "Open",
-          "codeCommit": "e765e3a2b7cf9042a40b71c714bcfd9bf2f85d34",
+          "codeCommit": "c3ef4c466a9ae07443096e3d1f6d1a666c5e37bf",
           "evidence": [
             "docs/evidence/p06-02-progress.md",
             "docs/evidence/artifact-manifest-p06-02.json",
@@ -782,7 +782,8 @@
             "2026-10-20 P06.02 Native authority replacement: RED 98d9ec6, Native PR 39399647502 headless rejected stale Settings/inspection/Saved state; GREEN 2e316f2 source resets old Native binding, old events detached, same-branch/same-sequence resets, new Native Pause/Hold honored. Unity fake-null destroyed CoreDriver fix d7bc30d, authored PlayMode MonoBehaviour source b11d626, Unity NOT_RUN.",
             "2026-10-20 P06.02 direct Live Lab bypass admission: RED 8ef2678 Native PR 39400373586 headless failed 'Direct router Show(Lab) displayed live tools without Native Continue'; GREEN 2f7271e disallows direct Lab while Native paused and sends Settings Back to Pause on late pause, real Unity scene PlayMode test authored 01c55b7 NOT_RUN. Updated mutation expected earlier fail-closed Review guard at 24f7e6; PR Native 39401131571 panel-routing SUCCESS (301 source-linked assertions + six mutation RED/restore GREEN), Windows/Ubuntu jobs pending when recorded.",
             "2026-10-20 P06.02 asynchronous Native Pause snapshot routing: test-first initial  bf2f87d compiled failed due preexisting interruptedRouter local; corrected RED 8fbea9a headless PR 39402118903 failed expected 'Native Pause update left an apparently live Lab screen' (exit 134). GREEN 828ef12 source reconciles Lab->Native Hold/Pause before publishing PanelState on LabViewChanged, and after Hold release; real Native PlayMode source extended 305c52c, NOT_RUN. Source-linked exact-SHA Native/isolated CI pending at evidence writing.",
-            "2026-10-21 same-CoreDriver NativeSessionRestored presentation consistency: RED 1a28c5b Native PR 39544692436 panel-routing failed 'NativeSessionRestored reused a stale Settings, Save, or selected vessel' exit 134; GREEN e765e3a subscribes and detaches the real CoreDriver.NativeSessionRestored signal, resets selected vessel/history/saved markers to Unsaved, immediately displays Hold before imported snapshot, no implicit scientific Continue. Exact GREEN PR 39544907113 C# 313 assertions and 6 mutation RED/restore GREEN, Native Ubuntu/Windows SUCCESS; disposable Supabase PR 39544907092 SUCCESS. Real CoreSession import Unity PlayMode source 6d28a75 authored, NOT_RUN. Task remains Open."
+            "2026-10-21 same-CoreDriver NativeSessionRestored presentation consistency: RED 1a28c5b Native PR 39544692436 panel-routing failed 'NativeSessionRestored reused a stale Settings, Save, or selected vessel' exit 134; GREEN e765e3a subscribes and detaches the real CoreDriver.NativeSessionRestored signal, resets selected vessel/history/saved markers to Unsaved, immediately displays Hold before imported snapshot, no implicit scientific Continue. Exact GREEN PR 39544907113 C# 313 assertions and 6 mutation RED/restore GREEN, Native Ubuntu/Windows SUCCESS; disposable Supabase PR 39544907092 SUCCESS. Real CoreSession import Unity PlayMode source 6d28a75 authored, NOT_RUN. Task remains Open.",
+            "2026-10-21 P06.02 disabled Unity panel Native restore epoch: RED 09aaf888 headless PR 39545814205 expected 'Reenabled router missed Native restoration while inactive'; GREEN c3ef4c4 adds local CoreDriver.NativeRestorationEpoch on accepted RestartCheckpoint/ReplaceSession and ScreenRouter observed epoch/Refresh reconciliation. Native PR 39545974966 panel 317 source-linked assertions and six mutation RED/restore GREEN PASS; Native Windows/Ubuntu and disposable Supabase conclusions to be checked at exact source SHA. Unity enabled/disabled Lab scene PlayMode test authored 6a516dc, NOT_RUN."
           ],
           "externalEvidence": [],
           "acceptanceScope": "Partial: native-backed routing and recorded Review; new Boot/Settings posture/hand/bench-view/text/caption/motion/contrast/audio preference state and presentation wiring, paused-Review native Continue guard, Back from Settings and dynamic Desktop HUD bounds. 39 headless C# routing assertions and an intentionally mutated Review-return RED/GREEN at 37440f1 verify source logic against test adapters only. New Unity PlayMode tests authored but never executed at this SHA; no Unity compile/render, Desktop Player or injected tracked-ray action proof. Full VR Settings parity, real UI input journeys, scene references, physical geometry/reach, English-only UI completeness and P06.02 acceptance remain open.",
@@ -2276,9 +2277,9 @@
       "G-R1"
     ]
   },
-  "actualHead": "6d28a75e535479bb072b9ba90fd24f72980a2370",
-  "functionalCodeSha": "e765e3a2b7cf9042a40b71c714bcfd9bf2f85d34",
-  "currentTask": "P06.02 same-driver NativeSessionRestored panel reset completed code-first; next investigate restored Review/Compare cache and real Unity acceptance; 66 canonical statuses unchanged.",
+  "actualHead": "6a516dcbdcf9c32623eb518a8d0221d5e39c399a",
+  "functionalCodeSha": "c3ef4c466a9ae07443096e3d1f6d1a666c5e37bf",
+  "currentTask": "P06.02 Native restoration same-driver and disabled-panel presentation epoch; headless C# contract passed, real Unity Editor/Player/XR NOT_RUN; roadmap P06.02 still Open.",
   "lastVerifiedTask": "P06.01",
   "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
   "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
