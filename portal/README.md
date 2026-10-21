@@ -4,7 +4,7 @@ This is a **static English-only student and instructor portal source slice**, no
 production portal, complete instructor administration suite, or completed academic synchronization. Student accounts can request only their own RLS-visible submitted attempts, approved
 grades and explicitly released instructor feedback; staff can preview submissions
 for their RLS-visible sections. These views do not authenticate Native evidence
-or approve grades. No external front-end dependencies or build service are required.
+or approve grades, and recording feedback never constitutes scientific validation. No external front-end dependencies or build service are required.
 
 ## Configuration and local static hosting
 
@@ -31,7 +31,9 @@ this is not a complete institutional audit. Course/section creation and enrollme
 use existing audited university-admin-only RPCs, with exact per-draft retry IDs.
 Creation of user identities or membership grants is not part of this portal. Other staff workflows remain
 incomplete: no new-user signup or invitation administration,
-lesson/rubric editor, evidence upload, grading or feedback portal. Auth token is
+lesson/rubric editor, evidence upload or grade approval portal. Assigned instructors
+can append feedback with an explicit private-by-default student-release choice,
+through the existing audited feedback RPC; teaching assistants cannot submit it. Auth token is
 in-memory for the current tab; no local or session storage. Session end immediately clears local memory and attempts Auth logout with
 `scope=local` (not global). Failed HTTP does not mean the refresh token was
 revoked; even successful logout does not revoke existing JWT access tokens

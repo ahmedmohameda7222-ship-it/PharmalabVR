@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions, renderFeedbackForm } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -19,6 +19,9 @@ const studentResultsArea = document.getElementById('student-results-area');
 const studentResultsBody = document.getElementById('student-results');
 const staffSubmissionsArea = document.getElementById('staff-submissions-area');
 const staffSubmissionsBody = document.getElementById('staff-submissions');
+const feedbackArea = document.getElementById('feedback-area');
+const feedbackFormArea = document.getElementById('feedback-form');
+const feedbackStatus = document.getElementById('feedback-status');
 const publishArea = document.getElementById('publish-area');
 const publishChoices = document.getElementById('publish-choices');
 const publishStatus = document.getElementById('publish-status');
@@ -31,6 +34,8 @@ let currentGeneration = 0;
 let publicationSelection = null;
 let adminRequests = new Map();
 let adminSubmitting = false;
+let selectedStaffSection = null;
+let feedbackSelection = null;
 let api = null;
 
 function setText(target, value) { target.textContent = value; }
@@ -50,6 +55,11 @@ function clearSession() {
   staffSubmissionsArea.hidden = true;
   renderStudentResults(studentResultsBody, { status: 'no-selection' });
   renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
+  feedbackArea.hidden = true;
+  feedbackSelection = null;
+  selectedStaffSection = null;
+  renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
+  setText(feedbackStatus, '');
   staffArea.hidden = true;
   renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
   adminArea.hidden = true;
@@ -159,6 +169,54 @@ async function openStudentResults(assignmentId) {
   }
 }
 
+async function submitInstructorFeedback(draft) {
+  const selection = feedbackSelection;
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  if (!selection || !session || !tenant ||
+      !['instructor', 'university_admin'].includes(role) ||
+      draft.submissionId !== selection.submissionId ||
+      selection.submitting) return;
+  const fingerprint = JSON.stringify(draft);
+  if (selection.fingerprint !== fingerprint) {
+    selection.fingerprint = fingerprint;
+    selection.requestId = crypto.randomUUID();
+  }
+  selection.submitting = true;
+  const generation = currentGeneration;
+  setText(feedbackStatus, 'Recording feedback with the university server…');
+  try {
+    const id = await api.staffRecordFeedback(session, {
+      ...draft, institutionId: tenant,
+      sectionId: selection.sectionId, requestId: selection.requestId
+    });
+    if (generation === currentGeneration && currentSession === session &&
+        institutionSelect.value === tenant && feedbackSelection === selection)
+      setText(feedbackStatus, 'Server confirmed feedback ' + id +
+        (draft.studentVisible ? ' — released to student.' : ' — private to authorized staff.'));
+  } catch {
+    if (generation === currentGeneration && currentSession === session &&
+        feedbackSelection === selection)
+      setText(feedbackStatus, 'Feedback not confirmed. The same draft retains its request ID on retry.');
+  } finally {
+    selection.submitting = false;
+  }
+}
+
+function openFeedbackForSubmission(submissionId) {
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  if (!currentSession || !selectedStaffSection ||
+      !['instructor', 'university_admin'].includes(role)) return;
+  ++currentGeneration;
+  feedbackSelection = { sectionId: selectedStaffSection, submissionId,
+    fingerprint: null, requestId: null, submitting: false };
+  feedbackArea.hidden = false;
+  setText(feedbackStatus, '');
+  renderFeedbackForm(feedbackFormArea, { status: 'available',
+    submissionId }, document, submitInstructorFeedback);
+}
+
 async function openStaffSubmissions(sectionId) {
   const session = currentSession;
   const tenant = institutionSelect.value;
@@ -166,6 +224,11 @@ async function openStaffSubmissions(sectionId) {
   if (!session || !tenant ||
       !['instructor', 'teaching_assistant', 'university_admin'].includes(role)) return;
   const generation = ++currentGeneration;
+  selectedStaffSection = sectionId;
+  feedbackSelection = null;
+  feedbackArea.hidden = true;
+  renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
+  setText(feedbackStatus, '');
   // A different section changes the preview and any instructor publish
   // draft. Never leave a previous section's publication selection active.
   publicationSelection = null;
@@ -178,7 +241,7 @@ async function openStaffSubmissions(sectionId) {
     if (generation === currentGeneration && currentSession === session &&
         institutionSelect.value === tenant)
       renderStaffSubmissions(staffSubmissionsBody, {
-        status: 'available', submissions });
+        status: 'available', submissions, role }, document, openFeedbackForSubmission);
   } catch {
     if (generation === currentGeneration && currentSession === session)
       renderStaffSubmissions(staffSubmissionsBody, { status: 'unavailable' });
@@ -276,6 +339,10 @@ async function openStaffSection(sectionId) {
   const generation = ++currentGeneration;
   const selection = { sectionId, fingerprint: null, requestId: null, submitting: false };
   publicationSelection = selection;
+  selectedStaffSection = null;
+  feedbackSelection = null;
+  feedbackArea.hidden = true;
+  renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
   staffSubmissionsArea.hidden = true;
   renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
   publishArea.hidden = false;
@@ -295,6 +362,11 @@ async function openStaffSection(sectionId) {
 
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
+  feedbackArea.hidden = true;
+  feedbackSelection = null;
+  selectedStaffSection = null;
+  renderFeedbackForm(feedbackFormArea, { status: 'no-selection' });
+  setText(feedbackStatus, '');
   studentResultsArea.hidden = true;
   staffSubmissionsArea.hidden = true;
   renderStudentResults(studentResultsBody, { status: 'no-selection' });
