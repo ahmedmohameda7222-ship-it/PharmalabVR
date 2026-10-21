@@ -535,6 +535,31 @@ internal static class Program
             "Invalid physical pose must fail closed before any Rigidbody release");
         // P10.01 held-tool mouse plane drag has priority over left-drag valve;
         // both routes share exclusive ownership and obey HUD focus.
+        // M2: holding a real visual-only pipette/stock bottle must never
+        // turn pointer motion into a Native burette valve command. They can
+        // still be moved on the workbench with an ordinary left drag.
+        Check(DesktopPointerRouting.ResolveForHeldInstrument(true, false, false,
+                  true, false, true) == DesktopPointerAction.ToolDrag &&
+              DesktopPointerRouting.ResolveForHeldInstrument(true, false, true,
+                  true, false, true) == DesktopPointerAction.ToolDrag,
+            "Auxiliary research instruments need physical dragging without virtual burette flow.");
+        Check(DesktopPointerRouting.ResolveForHeldInstrument(true, true, false,
+                  true, false, true) == DesktopPointerAction.Valve &&
+              DesktopPointerRouting.ResolveForHeldInstrument(true, true, true,
+                  true, false, true) == DesktopPointerAction.ToolDrag,
+            "Graduated burette must preserve left-drag valve and Shift+drag movement.");
+        Check(DesktopPointerRouting.ResolveForHeldInstrument(true, false, false,
+                  true, true, true) == DesktopPointerAction.None &&
+              DesktopPointerRouting.ResolveForHeldInstrument(true, false, false,
+                  true, false, false) == DesktopPointerAction.None &&
+              DesktopPointerRouting.ResolveForHeldInstrument(false, false, false,
+                  true, false, true) == DesktopPointerAction.None,
+            "UI capture, disabled mode and empty hands must prevent all object manipulation.");
+        Check(DesktopPointerRouting.ShouldSampleHeldAsNative(true, false) == false &&
+              DesktopPointerRouting.ShouldSampleHeldAsNative(true, true) == true &&
+              DesktopPointerRouting.ShouldSampleHeldAsNative(false, false) == false,
+            "An auxiliary held tool cannot masquerade as the registered Native burette.");
+
         Check(DesktopPointerRouting.Resolve(true, true, true, false, true) == DesktopPointerAction.ToolDrag,
             "Shift + left-drag with a held instrument must move its world pose");
         Check(DesktopPointerRouting.Resolve(true, false, true, false, true) == DesktopPointerAction.Valve,
