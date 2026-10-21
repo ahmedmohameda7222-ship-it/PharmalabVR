@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using PharmaLabVR.Core;
+using PharmaLabVR.Lab;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -365,6 +366,11 @@ namespace PharmaLabVR.UI
                     "Select a vessel to inspect. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
+            if (state.ScreenId == ScreenId.Lab)
+                detail.text = "Native research bench\n" +
+                    LabBenchReadout.Compact(driver.CurrentLabView) + "\n" +
+                    LabBenchReadout.NextAction(driver.CurrentLabView,
+                        driver.SourceNeedsPreparation, driver.IsNativePaused, driver.IsTimeHeld);
             SetButton("Inspect receiver", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Inspect source", state.SupportedActions.Contains("Inspect") && state.ScreenId == ScreenId.Lab);
             SetButton("Measure", state.SupportedActions.Contains("Measure"));

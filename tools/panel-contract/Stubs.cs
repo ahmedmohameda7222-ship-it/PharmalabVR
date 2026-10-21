@@ -42,6 +42,9 @@ namespace PharmaLabVR.Lab
     public sealed class VesselView
     {
         public string Id { get; set; }
+        public string MaterialRevision { get; set; } = "0";
+        public double CapacityM3 { get; set; } = 5e-5;
+        public double CommittedVolumeM3 { get; set; }
     }
     public sealed class ObservationView
     {
@@ -178,6 +181,7 @@ namespace PharmaLabVR.Session
         public bool CanPipetteDispense => DispensePermitted;
         public double PipetteTipVolumeM3 => DispensePermitted ? 1.5e-7 : 5e-8;
         public string LastError => null;
+        public string LastInstrumentReceipt => null;
         public int ParkCalls { get; private set; }
         public bool ParkToolAtDock()
         {

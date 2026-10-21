@@ -3,6 +3,7 @@
 using System;
 using System.Linq;
 using PharmaLabVR.Core;
+using PharmaLabVR.Lab;
 using PharmaLabVR.Input;
 using PharmaLabVR.Session;
 using PharmaLabVR.UI;
@@ -94,6 +95,36 @@ internal static class Program
         Check(staleXrLabel.Contains("Stale") && staleXrLabel.Contains("--") &&
               !staleXrLabel.Contains("7.13") && staleXrLabel.Contains("IPhreeqc-research"),
             "XR status label implied a current value for stale Native chemistry.");
+
+        // M1/M2 first-use student bench: this text is derived only from the
+        // Native vessel view and cannot turn a missing or held state into success.
+        var bench = new LabViewModel();
+        bench.Vessels[0].CommittedVolumeM3 = 2.5e-5;
+        bench.Vessels[0].MaterialRevision = "1";
+        bench.Vessels[1].CommittedVolumeM3 = 0;
+        bench.Vessels[1].MaterialRevision = "0";
+        var readout = LabBenchReadout.Inventory(bench);
+        Check(readout.Contains("Stock bottle: 25.000 mL (Native rev 1)") &&
+              readout.Contains("Receiver: 0.000 mL (Native rev 0)"),
+            "The first-use bench failed to display real Native material volumes.");
+        Check(LabBenchReadout.NextAction(bench, false, false, false).Contains("Transfer"),
+            "The empty receiver must offer a supported Native transfer.");
+        bench.Vessels[0].CommittedVolumeM3 -= 1e-8;
+        bench.Vessels[1].CommittedVolumeM3 += 1e-8;
+        Check(LabBenchReadout.Inventory(bench).Contains("Receiver: 0.010 mL"),
+            "Accepted transfers must change the live Native receiver readout.");
+        Check(LabBenchReadout.NextAction(bench, false, false, false).Contains("Inspect"),
+            "Receiver inventory must offer actual inspection, not a fabricated scientific result.");
+        Check(LabBenchReadout.NextAction(bench, false, false, true).Contains("Hold") &&
+              LabBenchReadout.NextAction(bench, false, true, false).Contains("Pause"),
+            "An interrupted or paused lab cannot recommend transferring material.");
+        Check(LabBenchReadout.NextAction(bench, true, false, false).Contains("Prepare"),
+            "Empty Native setup should direct the learner to stock preparation.");
+        Check(LabBenchReadout.Inventory(null).Contains("unavailable"),
+            "A missing Native session was represented as a real filled vessel.");
+        bench.Vessels[1].CommittedVolumeM3 = double.NaN;
+        Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
+            "Invalid Native quantity must never display as a real receiver measurement.");
 
         // P03.02: exercise the actual pure production payload builder through
         // the independent .NET compiler. Unity/Native runtime execution is separate.

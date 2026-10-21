@@ -425,6 +425,13 @@ namespace PharmaLabVR.Session
                 GUILayout.EndArea();
                 return;
             }
+            if (screen == ScreenId.Lab)
+            {
+                GUILayout.Label("First experiment · Research-only, not a certified endpoint");
+                GUILayout.Label(LabBenchReadout.NextAction(driver.CurrentLabView,
+                    driver.SourceNeedsPreparation, driver.IsNativePaused, driver.IsTimeHeld));
+                GUILayout.Label(LabBenchReadout.Inventory(driver.CurrentLabView));
+            }
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation)
             {
                 GUILayout.Label("Prepare the source stock · Research aqueous profile");
