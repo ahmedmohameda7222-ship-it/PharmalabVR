@@ -899,6 +899,64 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // Deferred Unity PlayMode campaign: the panel is intentionally
+        // disabled during real Native import. The restoration event cannot
+        // arrive through its detached listener; the Native epoch must still
+        // invalidate stale presentation on reactivation.
+        [UnityTest]
+        public IEnumerator P06_02_DisabledPanelReactivatesIntoNativeSessionLoadHold()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                var original = driver.Session;
+                var previousEpoch = driver.NativeRestorationEpoch;
+                router.Show(ScreenId.Inspect, "receiver");
+                router.MarkSaved(); // UI fixture only; no file saved.
+                router.Show(ScreenId.Settings);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+                router.enabled = false;
+                imported = CoreSession.ImportSession(original.ExportSession(),
+                    driver.ScientificDatabasePath);
+                driver.ReplaceSession(imported);
+                imported = null;
+                Assert.That(driver.NativeRestorationEpoch, Is.EqualTo(previousEpoch + 1UL));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                router.enabled = true;
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(router.Current.SelectedEntityId, Is.EqualTo("source"));
+                Assert.That(router.Current.Dirty, Is.True);
+                Assert.That(router.ReturnFromSettings(), Is.False);
+                Assert.That(router.Current.SupportedActions,
+                    Does.Not.Contain("PipetteDispense"));
+                Assert.That(original.IsOpen, Is.False);
+            }
+            finally
+            {
+                imported?.Dispose();
+                foreach (var root in scene.GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P07_03_DesktopNativeImportEntersSessionLoadHoldWithRevisionPreserved()
         {
