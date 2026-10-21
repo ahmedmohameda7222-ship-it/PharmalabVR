@@ -194,3 +194,19 @@ test('admin can create first course before any section exists', () => {
   });
   assert.match(visibleText(root), /create a course first/i);
 });
+
+test('admin section creation pins one visible institution course', () => {
+  const root = new FakeNode('section');
+  const sent = [];
+  renderAdminSetup(root, { status: 'available', courses: [
+    { id: 'course-1', name: 'Chemistry', code: 'CHEM101', term: 'Fall2026' }
+  ] }, document, null, x => sent.push(x));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const forms = walk(root).filter(n => n.tag === 'form');
+  assert.equal(forms.length, 2);
+  const sectionForm = forms[1];
+  const code = walk(sectionForm).find(n => n.tag === 'input');
+  code.value = 'LAB02';
+  sectionForm.events.submit({ preventDefault() {} });
+  assert.deepEqual(sent[0], { courseId: 'course-1', sectionCode: 'LAB02' });
+});
