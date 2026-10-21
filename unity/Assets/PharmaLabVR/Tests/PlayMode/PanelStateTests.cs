@@ -979,6 +979,79 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // NativeSessionRestored is synchronous. The router sees it, then
+        // temporarily becomes inactive before the replacement snapshot
+        // is published. OnEnable must use the published restoration epoch
+        // rather than waiting forever for a LabViewChanged it missed.
+        [UnityTest]
+        public IEnumerator P06_02_DisabledAfterRestoreSignalRecoversPublishedNativeSnapshot()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            CoreSession imported = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var previous = driver.Session;
+                var originalEpoch = driver.NativeRestorationEpoch;
+                var unpublishedGate = typeof(ScreenRouter).GetField(
+                    "awaitingRestoredNativeSnapshot",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(unpublishedGate, Is.Not.Null,
+                    "The presentation-only Native publication gate was not available.");
+                imported = CoreSession.ImportSession(previous.ExportSession(),
+                    driver.ScientificDatabasePath);
+                var restoreSignalObserved = false;
+                System.Action disableBetweenRestoreAndPublication = () =>
+                {
+                    restoreSignalObserved =
+                        router.Current.ScreenId == ScreenId.Hold &&
+                        router.Current.SaveState == "Unsaved" &&
+                        (bool)unpublishedGate.GetValue(router);
+                    router.enabled = false;
+                };
+                driver.NativeSessionRestored += disableBetweenRestoreAndPublication;
+                try { driver.ReplaceSession(imported); }
+                finally { driver.NativeSessionRestored -= disableBetweenRestoreAndPublication; }
+                imported = null;
+                Assert.That(restoreSignalObserved, Is.True,
+                    "The restore notification must close UI access before snapshot publication.");
+                Assert.That(router.enabled, Is.False);
+                Assert.That(driver.NativeRestorationEpoch, Is.EqualTo(originalEpoch + 1UL));
+                Assert.That(driver.NativePublishedRestorationEpoch,
+                    Is.EqualTo(driver.NativeRestorationEpoch));
+                Assert.That((bool)unpublishedGate.GetValue(router), Is.True,
+                    "The detached panel should still be pending its missed publication.");
+                router.enabled = true;
+                Assert.That((bool)unpublishedGate.GetValue(router), Is.False,
+                    "A published replacement snapshot must clear pending state on reactivation.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(router.Current.SaveState, Is.EqualTo("Unsaved"));
+                Assert.That(router.Current.Dirty, Is.True);
+                Assert.That(router.Current.SupportedActions, Does.Not.Contain("PipetteDispense"));
+                Assert.That(previous.IsOpen, Is.False);
+            }
+            finally
+            {
+                imported?.Dispose();
+                foreach (var root in scene.GetRootGameObjects())
+                    Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         // Authored for owner's final Unity campaign with a real Native
         // CoreSession and existing SaveService. No Unity execution in CI.
         [UnityTest]
