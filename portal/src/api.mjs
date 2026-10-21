@@ -561,6 +561,39 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     }));
   }
 
+  // Append-only authored academic feedback. Release-to-student is a
+  // separate deliberate boolean; this cannot authenticate Native chemistry
+  // or approve, replace or calculate academic grades.
+  async function staffRecordFeedback(session, draft) {
+    const current = requireSession(session);
+    if (!draft || !canonicalUuid(draft.institutionId) ||
+        !canonicalUuid(draft.sectionId) ||
+        !canonicalUuid(draft.submissionId) ||
+        !canonicalUuid(draft.requestId) ||
+        typeof draft.body !== 'string' ||
+        !draft.body.trim() || draft.body.length > 12000 ||
+        typeof draft.studentVisible !== 'boolean')
+      throw new Error('Invalid instructor feedback request');
+    const staff = await staffOverview(current, draft.institutionId);
+    if (!['instructor', 'university_admin'].includes(staff.role))
+      throw new Error('Assigned instructor or administrator required');
+    const submissions = await staffSubmissions(current,
+      draft.institutionId, draft.sectionId);
+    if (!submissions.some(x => x.id === draft.submissionId))
+      throw new Error('Instructor submission unavailable');
+    const result = await request('/rest/v1/rpc/university_record_feedback', {
+      method: 'POST', body: {
+        p_institution_id: draft.institutionId,
+        p_submission_id: draft.submissionId,
+        p_body: draft.body,
+        p_student_visible: draft.studentVisible,
+        p_request_id: draft.requestId
+      }
+    }, current.accessToken);
+    if (!canonicalUuid(result)) throw invalid('recorded instructor feedback identity');
+    return result;
+  }
+
   // Read-only detail of an assigned and published lesson. First confirm
   // assignment visibility through the student's fresh tenant-scoped RLS list,
   // then read the persisted assignment's pinned lesson_version_id and
@@ -649,5 +682,5 @@ export function createUniversityPortalApi({ projectUrl, publishableKey,
     } catch { return false; }
   }
 
-  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, adminEnrollStudent, studentResults, staffSubmissions, assignmentLesson, signOut });
+  return Object.freeze({ signIn, memberships, assignments, staffOverview, staffPublicationOptions, staffPublishAssignment, adminCreateCourse, adminCreateSection, adminEnrollStudent, studentResults, staffSubmissions, staffRecordFeedback, assignmentLesson, signOut });
 }
