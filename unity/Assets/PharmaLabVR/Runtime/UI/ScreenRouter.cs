@@ -186,6 +186,7 @@ namespace PharmaLabVR.UI
         private string savedBranchId;
         private string saveState = "Unsaved";
         private ulong observedRestorationEpoch;
+        private bool awaitingRestoredNativeSnapshot;
         private bool attached;
 
         public void Configure(CoreDriver core)
@@ -197,6 +198,7 @@ namespace PharmaLabVR.UI
                 var hadAuthority = !ReferenceEquals(driver, null);
                 Detach();
                 driver = core;
+                awaitingRestoredNativeSnapshot = false;
                 observedRestorationEpoch = core != null
                     ? core.NativeRestorationEpoch : 0UL;
                 if (hadAuthority)
@@ -353,7 +355,17 @@ namespace PharmaLabVR.UI
             attached = false;
         }
 
-        private void OnLabViewChanged(LabViewModel _) => Refresh();
+        private void OnLabViewChanged(LabViewModel _)
+        {
+            // In CoreDriver.PublishSnapshot the Native view is populated
+            // before LabViewChanged. This is the first authoritative point
+            // where its recoveryReady flag may admit a Continue action.
+            if (driver != null &&
+                observedRestorationEpoch != driver.NativeRestorationEpoch)
+                OnNativeSessionRestored();
+            awaitingRestoredNativeSnapshot = false;
+            Refresh();
+        }
 
         private void OnNativeSessionRestored()
         {
@@ -373,6 +385,7 @@ namespace PharmaLabVR.UI
             beforeSettings = ScreenId.Lab;
             beforeInterruptedSettings = ScreenId.Lab;
             beforeHold = ScreenId.Pause;
+            awaitingRestoredNativeSnapshot = true;
             // SessionLoad/CheckpointRestart must remain held until Native
             // explicitly publishes its recovery state. The caller can
             // MarkSaved only after a separately validated save import.
@@ -427,15 +440,19 @@ namespace PharmaLabVR.UI
             var nativeBranch = driver?.CurrentNativeBranchId;
             var dirty = savedRevision == null || savedRevision != nativeRevision ||
                         savedBranchId != nativeBranch;
+            // Never inherit the outgoing session's cached recovery permission
+            // between NativeSessionRestored and the replacement snapshot.
+            var confirmedRecoveryReady = driver != null &&
+                !awaitingRestoredNativeSnapshot && driver.NativeRecoveryReady;
             var actions = screen switch
             {
                 ScreenId.Home => new[] { "EnterDesktop", "EnterVR" },
                 ScreenId.Setup => new[] { "Home", "ConfirmSetup" },
                 ScreenId.Hold => driver != null && driver.CurrentMode == "VR" ?
-                    (driver.NativeRecoveryReady ?
+                    (confirmedRecoveryReady ?
                         new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
                         new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
-                    (driver != null && driver.NativeRecoveryReady ?
+                    (confirmedRecoveryReady ?
                         new[] { "Save", "Load", "Review", "Settings", "Continue" } :
                         new[] { "Save", "Load", "Review", "Settings" }),
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
