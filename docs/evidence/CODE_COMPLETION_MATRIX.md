@@ -92,3 +92,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 - **P12.02 Partial source advance (not acceptance):** Learners explicitly choose a pre-transfer pH prediction in Desktop/XR. It is a branch/event-linked notebook annotation, never a solver command, manufactured observation, grade or certified endpoint. Explanations/comparison and Unity action-driven verification remain open.
 - **Evidence boundary:** Headless .NET CI validates the pH note construction and shared panel routing; Unity Editor/PlayMode/Player/XR journey on this source remains **NOT_RUN** until the local Codex verification campaign. The official 15 VerifiedLocal / 51 Open, and G-R1 / G-U1 statuses remain unchanged.
 - **Next:** complete student prediction/observation/explanation and review semantics, plus actual XR/desktop scene verification. No claim of scientific endpoint certification.
+
+## M3 learner-results Review integration — 21 October 2026
+
+- **P11.02/P12.02 Partial (source):** Desktop and XR recorded Review display local branch-scoped student predictions and pH annotations alongside, but explicitly separate from, Native observations/receipts. Desktop includes an Open Notebook action. Imported/recoverable recorded-only branches never inherit unrelated active-branch notes.
+- **Test evidence:** Headless C# tests use real durable NotebookService writes, reads and branch isolation. A RED commit identified missing product implementation; the following integrated source commit adds a branch-filtered learner-review renderer. Unity Editor/PlayMode/Player/XR remains NOT_RUN, official acceptance statuses unchanged.

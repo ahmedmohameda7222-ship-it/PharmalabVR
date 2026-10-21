@@ -24,6 +24,8 @@ namespace PharmaLabVR.UI
         public string LastError => sessions?.LastError;
         public string LastInstrumentReceipt => sessions?.LastInstrumentReceipt;
         public string NotebookSummary => sessions?.NotebookSummary ?? "Research notebook unavailable.";
+        public string LearningReviewSummary => sessions?.LearningReviewSummary ?? "Student notes unavailable.";
+        public string LearningReviewCompact => sessions?.LearningReviewCompact ?? "Student notes unavailable.";
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;

@@ -67,6 +67,7 @@ namespace PharmaLabVR.Session
                         driver.Measurement.Availability, driver.Measurement.DisplayValue);
                 notebook.Append(NotebookFilePath(), driver.Session.BranchId,
                     view.EventSequence, vessel, note);
+                InvalidateLearningReview();
                 LastError = null;
                 router.Show(ScreenId.Notebook);
                 return true;
@@ -111,6 +112,57 @@ namespace PharmaLabVR.Session
         }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
+        private RecordedSessionReview cachedLearningReviewSource;
+        private string cachedLearningReviewFull;
+        private string cachedLearningReviewCompact;
+
+        private void InvalidateLearningReview()
+        {
+            cachedLearningReviewSource = null;
+            cachedLearningReviewFull = null;
+            cachedLearningReviewCompact = null;
+        }
+
+        public string LearningReviewSummary => LearningReview(false);
+        public string LearningReviewCompact => LearningReview(true);
+
+        private string LearningReview(bool compact)
+        {
+            var recorded = RecordedReview;
+            if (recorded == null) return "Recorded study review unavailable.";
+            if (!ReferenceEquals(recorded, cachedLearningReviewSource))
+            {
+                // A recoverable saved branch never borrows the live branch's notes.
+                if (driver?.Session == null || !driver.Session.IsOpen ||
+                    recorded.BranchId != driver.Session.BranchId)
+                {
+                    cachedLearningReviewFull =
+                        "Local student notebook unavailable for this recorded branch.";
+                    cachedLearningReviewCompact = cachedLearningReviewFull;
+                }
+                else
+                {
+                    try
+                    {
+                        var notes = notebook.Read(NotebookFilePath(), recorded.BranchId);
+                        cachedLearningReviewFull =
+                            ResearchLearningReview.Render(notes, recorded.BranchId, false);
+                        cachedLearningReviewCompact =
+                            ResearchLearningReview.Render(notes, recorded.BranchId, true);
+                    }
+                    catch (Exception error) when (error is IOException ||
+                           error is UnauthorizedAccessException ||
+                           error is ArgumentException)
+                    {
+                        cachedLearningReviewFull =
+                            "Local notebook unavailable: " + error.Message;
+                        cachedLearningReviewCompact = "Local notebook unavailable.";
+                    }
+                }
+                cachedLearningReviewSource = recorded;
+            }
+            return compact ? cachedLearningReviewCompact : cachedLearningReviewFull;
+        }
         [SerializeField] private TextAsset strongAcidProtocol;
         [SerializeField] private TextAsset mixedAcidProtocol;
         private ResearchLessonJourney selectedResearchLesson;
@@ -145,6 +197,7 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("Native event changed before prediction.");
                 notebook.Append(NotebookFilePath(), driver.Session.BranchId,
                     view.EventSequence, "receiver", note);
+                InvalidateLearningReview();
                 selectedResearchPrediction = prediction; // only after durable note append
                 LastError = null;
                 router.Show(ScreenId.Lab);
@@ -273,6 +326,7 @@ namespace PharmaLabVR.Session
             // Imported/restarted Native branches cannot inherit lesson progress.
             selectedResearchLesson = null;
             selectedResearchPrediction = null;
+            InvalidateLearningReview();
             ReconcileNativeReviewAuthority();
         }
 
@@ -485,9 +539,13 @@ namespace PharmaLabVR.Session
                     foreach (var observation in RecordedReview.Observations)
                         GUILayout.Label($"Recorded {observation.vesselId} pH: {observation.DisplayValue} " +
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
+                    GUILayout.Label(LearningReviewSummary);
                 }
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Lab);
+                if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
+                    GUILayout.Button("Open student notebook", GUILayout.Height(38f)))
+                    panels?.Request(PanelAction.Notebook);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Export recorded observations + commands (CSV)", GUILayout.Height(44f)))
@@ -964,6 +1022,7 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("Native event revision changed before note commit.");
                 notebook.Append(NotebookFilePath(), driver.Session.BranchId, nativeRevision,
                     router.Current.SelectedEntityId, value);
+                InvalidateLearningReview();
                 LastError = null;
                 router.Show(ScreenId.Notebook);
                 return true;
@@ -1134,6 +1193,7 @@ namespace PharmaLabVR.Session
         {
             RecordedReview = null;
             CurrentComparison = null;
+            InvalidateLearningReview();
         }
 
         public bool ContinueFrom(string path)

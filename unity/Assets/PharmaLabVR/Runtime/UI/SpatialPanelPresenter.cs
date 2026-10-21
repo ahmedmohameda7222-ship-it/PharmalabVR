@@ -544,7 +544,8 @@ namespace PharmaLabVR.UI
                     "Accepted" : recorded.CommandReceipts[recorded.CommandReceipts.Count - 1].OutcomeCode);
             return "Recorded · no recomputation\n" +
                 (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values)) +
-                "\n" + latest;
+                "\n" + latest + "\n" +
+                (panels?.LearningReviewCompact ?? "Local student notebook unavailable.");
         }
     }
 }
