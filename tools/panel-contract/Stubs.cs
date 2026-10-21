@@ -171,6 +171,7 @@ namespace PharmaLabVR.Session
         public string NotebookSummary => "Headless note stub; not a Native observation.";
         public string LearningReviewSummary => "Local student notes.";
         public string LearningReviewCompact => "Local student notes.";
+        public string LastLearnerCsvExportPath => null;
         public bool AppendNotebookNote(string note)
         {
             if (string.IsNullOrWhiteSpace(note)) return false;

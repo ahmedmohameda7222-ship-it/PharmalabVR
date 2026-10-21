@@ -26,6 +26,7 @@ namespace PharmaLabVR.UI
         public string NotebookSummary => sessions?.NotebookSummary ?? "Research notebook unavailable.";
         public string LearningReviewSummary => sessions?.LearningReviewSummary ?? "Student notes unavailable.";
         public string LearningReviewCompact => sessions?.LearningReviewCompact ?? "Student notes unavailable.";
+        public bool HasLearnerCsvExport => !string.IsNullOrEmpty(sessions?.LastLearnerCsvExportPath);
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;

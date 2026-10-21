@@ -269,6 +269,22 @@ internal static class Program
             Check(ResearchLearningReview.Render(Array.Empty<NotebookEntry>(),
                 "student-branch", false).Contains("No student annotations"),
                 "Empty notebook must not imply measured or completed work.");
+            var studentCsv = ResearchLearningReview.RenderCsv(notes, "student-branch");
+            Check(studentCsv.Contains("studentAnnotation") &&
+                  studentCsv.Contains("Native pH 6.20") &&
+                  studentCsv.Contains("Student hypothesis") &&
+                  !studentCsv.Contains("different-tenant-branch"),
+                "Exported learner CSV leaked another branch or lost actual notebook results.");
+            var csvPath = System.IO.Path.Combine(learningDirectory, "learner-results.csv");
+            ResearchLearningReview.WriteCsv(csvPath, notes, "student-branch");
+            Check(System.IO.File.ReadAllText(csvPath) == studentCsv,
+                "Learner results CSV did not persist to offline disk.");
+            researchNotes.Append(learningPath, "formula-branch", "15", "receiver",
+                "=HYPERLINK(\"https://invalid.example\",\"x\")");
+            var safeCsv = ResearchLearningReview.RenderCsv(
+                researchNotes.Read(learningPath, "formula-branch"), "formula-branch");
+            Check(safeCsv.Contains("\"'=HYPERLINK") && !safeCsv.Contains("student-branch"),
+                "Untrusted student annotation was exported as a spreadsheet formula.");
         }
         finally
         {

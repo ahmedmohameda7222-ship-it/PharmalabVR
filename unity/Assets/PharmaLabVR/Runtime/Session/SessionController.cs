@@ -20,6 +20,7 @@ namespace PharmaLabVR.Session
         public string LastDurableSavePath { get; private set; }
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
+        public string LastLearnerCsvExportPath { get; private set; }
         public string LastError { get; private set; }
         // Exact accepted Native command identity, not a predicted material result.
         public string LastInstrumentReceipt { get; private set; }
@@ -548,7 +549,7 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.Notebook);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Settings);
-                if (GUILayout.Button("Export recorded observations + commands (CSV)", GUILayout.Height(44f)))
+                if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;
                 GUI.enabled = comparisonEnabled && CanCompareSaved;
@@ -557,7 +558,9 @@ namespace PharmaLabVR.Session
                 GUI.enabled = comparisonEnabled;
                 if (requestComparison) panels?.Request(PanelAction.CompareSaved);
                 if (!string.IsNullOrEmpty(LastCsvExportPath))
-                    GUILayout.Label("CSV written: " + LastCsvExportPath);
+                    GUILayout.Label("Native results CSV written: " + LastCsvExportPath);
+                if (!string.IsNullOrEmpty(LastLearnerCsvExportPath))
+                    GUILayout.Label("Student annotations CSV written: " + LastLearnerCsvExportPath);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
@@ -1037,15 +1040,29 @@ namespace PharmaLabVR.Session
         public bool ExportRecordedCsv()
         {
             LastCsvExportPath = null;
+            LastLearnerCsvExportPath = null;
             try
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
                     throw new InvalidOperationException("CSV export requires an open recorded Native Review.");
                 var notesPath = NotebookFilePath(); // Enforces safe session file naming.
                 var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv-results.csv");
-                SessionExportService.WriteCsv(target, RecordedReview);
+                var review = RecordedReview;
+                SessionExportService.WriteCsv(target, review);
                 LastCsvExportPath = target;
+                // Preserve the scientific CSV schema; a separate file contains
+                // local learner annotations only for the same Native branch.
+                if (driver?.Session != null && driver.Session.IsOpen &&
+                    driver.Session.BranchId == review.BranchId)
+                {
+                    var localNotes = notebook.Read(notesPath, review.BranchId);
+                    var learnerTarget = Path.Combine(Path.GetDirectoryName(notesPath),
+                        saveName + ".plv-student-annotations.csv");
+                    ResearchLearningReview.WriteCsv(learnerTarget, localNotes, review.BranchId);
+                    LastLearnerCsvExportPath = learnerTarget;
+                }
                 LastError = null;
+                router.Show(ScreenId.Review);
                 return true;
             }
             catch (Exception error)
