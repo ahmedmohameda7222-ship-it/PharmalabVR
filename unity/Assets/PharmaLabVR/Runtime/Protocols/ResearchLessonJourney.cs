@@ -37,39 +37,47 @@ namespace PharmaLabVR.Protocols
             if (native?.Vessels == null)
                 return title + "Native material state unavailable; no progress can be inferred.";
             if (paused) return title + "Pause: material frozen. Continue through the Native session.";
-            var source = native.Vessels.FirstOrDefault(v => v.Id == "source");
-            var receiver = native.Vessels.FirstOrDefault(v => v.Id == "receiver");
-            if (string.IsNullOrEmpty(source.Id) || !IsRepresented(source))
+            if (!native.Vessels.Any(v => v.Id == "source"))
                 return title + "Prepare supported Native stock in Setup.";
-            if (string.IsNullOrEmpty(receiver.Id) || !IsRepresented(receiver))
+            if (!native.Vessels.Any(v => v.Id == "receiver"))
+                return title + "Native receiver unavailable; no delivery evidence.";
+            var source = native.Vessels.First(v => v.Id == "source");
+            var receiver = native.Vessels.First(v => v.Id == "receiver");
+            if (!IsRepresented(source.CommittedVolumeM3, source.CapacityM3))
+                return title + "Prepare supported Native stock in Setup.";
+            if (!IsRepresented(receiver.CommittedVolumeM3, receiver.CapacityM3))
                 return title + "Native receiver unavailable; no delivery evidence.";
             if (Definition.id == "mixed-acid-titration-research")
             {
-                var reserve = native.Vessels.FirstOrDefault(v => v.Id == "reserve-stock");
-                if (string.IsNullOrEmpty(reserve.Id) || !IsRepresented(reserve) ||
+                if (!native.Vessels.Any(v => v.Id == "reserve-stock"))
+                    return title + "Secondary prepared Native stock missing. This mixed-acid procedure is incomplete.";
+                var reserve = native.Vessels.First(v => v.Id == "reserve-stock");
+                if (!IsRepresented(reserve.CommittedVolumeM3, reserve.CapacityM3) ||
                     reserve.CommittedVolumeM3 <= 0d)
                     return title + "Secondary prepared Native stock missing. This mixed-acid procedure is incomplete.";
             }
             if (receiver.CommittedVolumeM3 <= 0d)
                 return title + "Native stock present; deliver an aliquot into the receiver using accepted commands.";
-            var ph = native.Observations?.FirstOrDefault(item =>
-                item.VesselId == "receiver" && item.ObservableId == "pH");
-            if (ph == null || ph.Support != "Supported" || ph.Freshness != "Current")
+            if (native.Observations == null ||
+                !native.Observations.Any(item => item.VesselId == "receiver" &&
+                    item.ObservableId == "pH" && item.Support == "Supported" &&
+                    item.Freshness == "Current"))
                 return title + "Material in receiver (Native rev " + receiver.MaterialRevision +
                     "). Inspect pH; await a supported Current observation, then Save/Review.";
+            var ph = native.Observations.First(item => item.VesselId == "receiver" &&
+                item.ObservableId == "pH" && item.Support == "Supported" &&
+                item.Freshness == "Current");
             return title + "Receiver has material (Native rev " + receiver.MaterialRevision +
                 "). Native pH reports Supported/Current, maturity " + ph.Maturity +
                 ". Record it in Notebook, Save, then open recorded Review. No endpoint inferred.";
         }
 
-        private static bool IsRepresented(LabViewModel.VesselView vessel)
+        private static bool IsRepresented(double volumeM3, double capacityM3)
         {
-            return !double.IsNaN(vessel.CommittedVolumeM3) &&
-                !double.IsInfinity(vessel.CommittedVolumeM3) &&
-                !double.IsNaN(vessel.CapacityM3) &&
-                !double.IsInfinity(vessel.CapacityM3) &&
-                vessel.CapacityM3 > 0d && vessel.CommittedVolumeM3 >= 0d &&
-                vessel.CommittedVolumeM3 <= vessel.CapacityM3 + 1e-10;
+            return !double.IsNaN(volumeM3) && !double.IsInfinity(volumeM3) &&
+                !double.IsNaN(capacityM3) && !double.IsInfinity(capacityM3) &&
+                capacityM3 > 0d && volumeM3 >= 0d &&
+                volumeM3 <= capacityM3 + 1e-10;
         }
     }
 }
