@@ -1,7 +1,7 @@
 // Browser controller: all Auth tokens are held in module memory only.
 // No localStorage, sessionStorage, cookies, secrets, chemistry or grading.
 import { createUniversityPortalApi } from './src/api.mjs';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup } from './src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions } from './src/view.mjs';
 import { projectUrl, publishableKey } from './config.mjs';
 
 const signInForm = document.getElementById('sign-in');
@@ -15,6 +15,10 @@ const assignmentsArea = document.getElementById('assignments');
 const lessonArea = document.getElementById('lesson');
 const staffArea = document.getElementById('staff-area');
 const staffOverviewArea = document.getElementById('staff-overview');
+const studentResultsArea = document.getElementById('student-results-area');
+const studentResultsBody = document.getElementById('student-results');
+const staffSubmissionsArea = document.getElementById('staff-submissions-area');
+const staffSubmissionsBody = document.getElementById('staff-submissions');
 const publishArea = document.getElementById('publish-area');
 const publishChoices = document.getElementById('publish-choices');
 const publishStatus = document.getElementById('publish-status');
@@ -42,6 +46,10 @@ function clearSession() {
   password.value = '';
   renderAssignments(assignmentsArea, { status: 'no-student-context' });
   renderLesson(lessonArea, { status: 'no-selection' });
+  studentResultsArea.hidden = true;
+  staffSubmissionsArea.hidden = true;
+  renderStudentResults(studentResultsBody, { status: 'no-selection' });
+  renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
   staffArea.hidden = true;
   renderStaffOverview(staffOverviewArea, { status: 'no-staff-context' });
   adminArea.hidden = true;
@@ -117,6 +125,8 @@ async function openPublishedLesson(assignmentId) {
     renderLesson(lessonArea, { status: 'no-selection' });
     return;
   }
+  studentResultsArea.hidden = true;
+  renderStudentResults(studentResultsBody, { status: 'no-selection' });
   renderLesson(lessonArea, { status: 'loading' });
   try {
     const lesson = await api.assignmentLesson(session, tenant, assignmentId);
@@ -126,6 +136,52 @@ async function openPublishedLesson(assignmentId) {
   } catch {
     if (generation === currentGeneration && currentSession === session)
       renderLesson(lessonArea, { status: 'unavailable' });
+  }
+}
+
+async function openStudentResults(assignmentId) {
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  if (!session || !tenant ||
+      institutionSelect.selectedOptions[0]?.dataset.role !== 'student') return;
+  const generation = ++currentGeneration;
+  studentResultsArea.hidden = false;
+  renderLesson(lessonArea, { status: 'no-selection' });
+  renderStudentResults(studentResultsBody, { status: 'loading' });
+  try {
+    const results = await api.studentResults(session, tenant, assignmentId);
+    if (generation === currentGeneration && currentSession === session &&
+        institutionSelect.value === tenant)
+      renderStudentResults(studentResultsBody, { status: 'available', results });
+  } catch {
+    if (generation === currentGeneration && currentSession === session)
+      renderStudentResults(studentResultsBody, { status: 'unavailable' });
+  }
+}
+
+async function openStaffSubmissions(sectionId) {
+  const session = currentSession;
+  const tenant = institutionSelect.value;
+  const role = institutionSelect.selectedOptions[0]?.dataset.role;
+  if (!session || !tenant ||
+      !['instructor', 'teaching_assistant', 'university_admin'].includes(role)) return;
+  const generation = ++currentGeneration;
+  // A different section changes the preview and any instructor publish
+  // draft. Never leave a previous section's publication selection active.
+  publicationSelection = null;
+  publishArea.hidden = true;
+  renderPublicationForm(publishChoices, { status: 'no-selection' });
+  staffSubmissionsArea.hidden = false;
+  renderStaffSubmissions(staffSubmissionsBody, { status: 'loading' });
+  try {
+    const submissions = await api.staffSubmissions(session, tenant, sectionId);
+    if (generation === currentGeneration && currentSession === session &&
+        institutionSelect.value === tenant)
+      renderStaffSubmissions(staffSubmissionsBody, {
+        status: 'available', submissions });
+  } catch {
+    if (generation === currentGeneration && currentSession === session)
+      renderStaffSubmissions(staffSubmissionsBody, { status: 'unavailable' });
   }
 }
 
@@ -156,7 +212,7 @@ async function createAcademicMetadata(kind, draft) {
       const overview = await api.staffOverview(session, tenant);
       if (generation === currentGeneration && session === currentSession) {
         renderStaffOverview(staffOverviewArea, { status: 'available', overview },
-          document, openStaffSection);
+          document, openStaffSection, openStaffSubmissions);
         renderAdminSetup(adminSetupArea, { status: 'available',
           courses: overview.courses, sections: overview.sections }, document,
           draft => createAcademicMetadata('course', draft),
@@ -203,7 +259,7 @@ async function submitPublication(draft) {
       const overview = await api.staffOverview(ctx.session, ctx.tenant);
       if (generation === currentGeneration && publicationSelection === selection)
         renderStaffOverview(staffOverviewArea, { status: 'available', overview },
-          document, openStaffSection);
+          document, openStaffSection, openStaffSubmissions);
     }
   } catch {
     if (generation === currentGeneration && publicationSelection === selection)
@@ -220,6 +276,8 @@ async function openStaffSection(sectionId) {
   const generation = ++currentGeneration;
   const selection = { sectionId, fingerprint: null, requestId: null, submitting: false };
   publicationSelection = selection;
+  staffSubmissionsArea.hidden = true;
+  renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
   publishArea.hidden = false;
   setText(publishStatus, '');
   renderPublicationForm(publishChoices, { status: 'loading' });
@@ -237,6 +295,10 @@ async function openStaffSection(sectionId) {
 
 institutionSelect.addEventListener('change', async () => {
   const generation = ++currentGeneration;
+  studentResultsArea.hidden = true;
+  staffSubmissionsArea.hidden = true;
+  renderStudentResults(studentResultsBody, { status: 'no-selection' });
+  renderStaffSubmissions(staffSubmissionsBody, { status: 'no-selection' });
   publicationSelection = null;
   adminRequests = new Map();
   adminArea.hidden = true;
@@ -264,7 +326,7 @@ institutionSelect.addEventListener('change', async () => {
         if (generation === currentGeneration && currentSession === session &&
             institutionSelect.value === tenant)
           renderStaffOverview(staffOverviewArea, { status: 'available', overview },
-            document, openStaffSection);
+            document, openStaffSection, openStaffSubmissions);
         if (generation === currentGeneration && role === 'university_admin')
           renderAdminSetup(adminSetupArea, { status: 'available',
             courses: overview.courses, sections: overview.sections }, document,
@@ -290,7 +352,7 @@ institutionSelect.addEventListener('change', async () => {
     if (generation === currentGeneration && currentSession === session &&
         institutionSelect.value === tenant)
       renderAssignments(assignmentsArea, { status: 'available', assignments },
-        document, openPublishedLesson);
+        document, openPublishedLesson, openStudentResults);
   } catch {
     if (generation === currentGeneration)
       renderAssignments(assignmentsArea, { status: 'unavailable' });

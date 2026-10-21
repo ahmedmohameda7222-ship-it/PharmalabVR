@@ -1,8 +1,10 @@
 # PharmaLabVR University portal — U03/U05 code-first academic source
 
 This is a **static English-only student and instructor portal source slice**, not a deployed
-production portal, complete instructor administration suite, or completed academic synchronization. No external front-end
-dependencies or build service are required.
+production portal, complete instructor administration suite, or completed academic synchronization. Student accounts can request only their own RLS-visible submitted attempts, approved
+grades and explicitly released instructor feedback; staff can preview submissions
+for their RLS-visible sections. These views do not authenticate Native evidence
+or approve grades. No external front-end dependencies or build service are required.
 
 ## Configuration and local static hosting
 
