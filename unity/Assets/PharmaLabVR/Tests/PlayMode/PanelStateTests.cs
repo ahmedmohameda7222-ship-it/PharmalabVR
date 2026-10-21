@@ -1061,6 +1061,66 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // A saved baseline is durable evidence, separate from the
+        // currently observed Native Review. A replacement save or changed
+        // save-file context invalidates a cached comparison without editing
+        // or recomputing any scientific observations.
+        [UnityTest]
+        public IEnumerator P06_02_NewDurableSaveInvalidatesOnlyPriorRecordedComparison()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode("Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab", new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string savedPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var uniqueName = "p06-compare-save-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, uniqueName);
+                var beforeRevision = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.Save(), Is.True, sessions.LastError);
+                savedPath = sessions.LastDurableSavePath;
+                Assert.That(sessions.OpenReview(), Is.True, sessions.LastError);
+                router.Show(ScreenId.Review);
+                Assert.That(sessions.OpenSavedComparison(), Is.True, sessions.LastError);
+                var activeReview = sessions.RecordedReview;
+                Assert.That(activeReview, Is.Not.Null);
+                Assert.That(sessions.CurrentComparison, Is.Not.Null);
+
+                // A second durable Save replaces this baseline even if its
+                // Native chemistry revision happens to be identical.
+                Assert.That(sessions.Save(), Is.True, sessions.LastError);
+                Assert.That(sessions.RecordedReview, Is.SameAs(activeReview));
+                Assert.That(sessions.CurrentComparison, Is.Null);
+                Assert.That(sessions.ComparisonSummary, Is.EqualTo("No recorded run comparison is open."));
+                Assert.That(sessions.OpenSavedComparison(), Is.True, sessions.LastError);
+                Assert.That(sessions.CurrentComparison, Is.Not.Null);
+
+                // Switching saved-run identity on the same Native driver
+                // must not keep comparing against a previous course file.
+                sessions.Configure(driver, "p06-new-baseline-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(sessions.RecordedReview, Is.SameAs(activeReview));
+                Assert.That(sessions.CurrentComparison, Is.Null);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(beforeRevision));
+            }
+            finally
+            {
+                if (savedPath != null && File.Exists(savedPath)) File.Delete(savedPath);
+                if (savedPath != null && File.Exists(savedPath + ".bak")) File.Delete(savedPath + ".bak");
+                foreach (var root in scene.GetRootGameObjects()) Object.DestroyImmediate(root);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+            yield return null;
+        }
+
         [UnityTest]
         public IEnumerator P07_03_DesktopNativeImportEntersSessionLoadHoldWithRevisionPreserved()
         {
