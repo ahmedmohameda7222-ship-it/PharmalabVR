@@ -337,6 +337,7 @@ namespace PharmaLabVR.UI
             if (attached || driver == null) return;
             driver.LabViewChanged += OnLabViewChanged;
             driver.HoldChanged += OnHoldChanged;
+            driver.NativeSessionRestored += OnNativeSessionRestored;
             attached = true;
         }
 
@@ -345,10 +346,32 @@ namespace PharmaLabVR.UI
             if (!attached || driver == null) return;
             driver.LabViewChanged -= OnLabViewChanged;
             driver.HoldChanged -= OnHoldChanged;
+            driver.NativeSessionRestored -= OnNativeSessionRestored;
             attached = false;
         }
 
         private void OnLabViewChanged(LabViewModel _) => Refresh();
+
+        private void OnNativeSessionRestored()
+        {
+            // CoreDriver fires this after an accepted Native checkpoint
+            // restart or CoreSession replacement, but BEFORE publishing
+            // the replacement snapshot. The same MonoBehaviour is not the
+            // same session authority. Never reuse any old saved label,
+            // inspected vessel, or Settings/Review/Back history.
+            savedRevision = null;
+            savedBranchId = null;
+            saveState = "Unsaved";
+            selectedEntityId = "source";
+            beforeSettings = ScreenId.Lab;
+            beforeInterruptedSettings = ScreenId.Lab;
+            beforeHold = ScreenId.Pause;
+            // SessionLoad/CheckpointRestart must remain held until Native
+            // explicitly publishes its recovery state. The caller can
+            // MarkSaved only after a separately validated save import.
+            screen = ScreenId.Hold;
+            Refresh();
+        }
 
         private void OnHoldChanged(bool held)
         {
