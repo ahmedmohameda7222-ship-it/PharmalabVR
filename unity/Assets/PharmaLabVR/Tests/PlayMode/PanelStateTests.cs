@@ -875,10 +875,12 @@ namespace PharmaLabVR.Tests.PlayMode
                     driver.ScientificDatabasePath);
                 var sawNativeRestoreSignal = false;
                 var prematureContinue = false;
+                var publishedBeforeRestoreView = false;
                 System.Action captureBeforePublish = () =>
                 {
                     sawNativeRestoreSignal = true;
                     prematureContinue = router.Current.SupportedActions.Contains("Continue");
+                    publishedBeforeRestoreView = driver.NativePublishedRestorationEpoch == driver.NativeRestorationEpoch;
                 };
                 driver.NativeSessionRestored += captureBeforePublish;
                 try { driver.ReplaceSession(imported); }
@@ -887,6 +889,11 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(sawNativeRestoreSignal, Is.True);
                 Assert.That(prematureContinue, Is.False,
                     "NativeSessionRestored is before PublishSnapshot; stale recovery cannot offer Continue.");
+                Assert.That(publishedBeforeRestoreView, Is.False,
+                    "Restore event cannot claim a replacement Native snapshot was already published.");
+                Assert.That(driver.NativePublishedRestorationEpoch,
+                    Is.EqualTo(driver.NativeRestorationEpoch),
+                    "A successful imported Native snapshot must advance the local published epoch.");
                 Assert.That(driver.Session, Is.Not.SameAs(original));
                 Assert.That(original.IsOpen, Is.False);
                 Assert.That(driver.IsTimeHeld, Is.True);
@@ -947,6 +954,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 driver.ReplaceSession(imported);
                 imported = null;
                 Assert.That(driver.NativeRestorationEpoch, Is.EqualTo(previousEpoch + 1UL));
+                Assert.That(driver.NativePublishedRestorationEpoch,
+                    Is.EqualTo(driver.NativeRestorationEpoch),
+                    "Disabled panel must reattach to the already published imported snapshot.");
                 Assert.That(driver.IsTimeHeld, Is.True);
                 Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 router.enabled = true;
