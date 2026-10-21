@@ -276,7 +276,7 @@ export function renderPublicationForm(target, state, documentSource = globalThis
 // University-admin-only UI affordance; actual permissions, tenancy and
 // request idempotency are enforced by existing Supabase RPCs.
 export function renderAdminSetup(target, state, documentSource = globalThis.document,
-  onCreateCourse = null, onCreateSection = null) {
+  onCreateCourse = null, onCreateSection = null, onEnrollStudent = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -370,6 +370,38 @@ export function renderAdminSetup(target, state, documentSource = globalThis.docu
           sectionCode: sectionCode.value });
     });
     root.append(createSection);
+  }
+  if (Array.isArray(state.sections) && state.sections.length > 0) {
+    const enrollForm = documentSource.createElement('form');
+    const enrollHeader = documentSource.createElement('h3');
+    enrollHeader.textContent = 'Enroll verified existing student';
+    enrollForm.append(enrollHeader);
+    const sectionLabel = documentSource.createElement('label');
+    sectionLabel.textContent = 'Authorized section';
+    const sectionSelect = documentSource.createElement('select');
+    sectionSelect.name = 'sectionId';
+    for (const section of state.sections) {
+      const option = documentSource.createElement('option');
+      option.value = section.id;
+      option.textContent = section.sectionCode + ' — ' + section.courseId;
+      sectionSelect.append(option);
+    }
+    sectionSelect.value = state.sections[0].id;
+    sectionLabel.append(sectionSelect);
+    enrollForm.append(sectionLabel);
+    const studentId = makeInput(enrollForm, 'studentId',
+      'Existing verified student user UUID', 36);
+    const enrollmentButton = documentSource.createElement('button');
+    enrollmentButton.type = 'submit';
+    enrollmentButton.textContent = 'Enroll student';
+    enrollForm.append(enrollmentButton);
+    enrollForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (typeof onEnrollStudent === 'function')
+        onEnrollStudent({ sectionId: sectionSelect.value,
+          studentId: studentId.value });
+    });
+    root.append(enrollForm);
   }
   target.replaceChildren(root);
 }
