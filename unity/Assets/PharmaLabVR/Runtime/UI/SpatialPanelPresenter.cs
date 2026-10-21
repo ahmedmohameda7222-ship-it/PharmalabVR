@@ -456,6 +456,8 @@ namespace PharmaLabVR.UI
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
                     " ml; 0.10 ml remains as research hold-up. " +
                     "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml.";
+                if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
+                    detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))
                     detail.text += "\n" + panels.LastError;
             }

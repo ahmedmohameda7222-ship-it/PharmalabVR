@@ -57,6 +57,42 @@ namespace PharmaLabVR.Tests.PlayMode
                     "The authored bottle fill must reflect committed Native source inventory.");
                 Assert.That(burette.CommittedVolumeM3, Is.Zero,
                     "Preparing stock is not proof of filling the physical burette.");
+                var receiver = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(item => item.name == "ReceiverVessel")
+                    .GetComponent<LiquidPresenter>();
+                var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                var initialSource = before.vessels.Single(item => item.id == "source")
+                    .inventory.researchAdditiveVolumeM3;
+                var initialReceiver = before.vessels.Single(item => item.id == "receiver")
+                    .inventory.researchAdditiveVolumeM3;
+                var routed = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true))
+                    .Single();
+                Assert.That(routed.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Bottle pour 0.01 ml"));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted command #"));
+                var after = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(after.vessels.Single(item => item.id == "source")
+                    .inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(initialSource - 1e-8).Within(1e-10));
+                Assert.That(after.vessels.Single(item => item.id == "receiver")
+                    .inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(initialReceiver + 1e-8).Within(1e-10));
+                Assert.That(receiver.CommittedVolumeM3,
+                    Is.EqualTo(initialReceiver + 1e-8).Within(1e-10),
+                    "The visible receiver must display the post-receipt Native material.");
+                Assert.That(bottle.DisplayedVolumeM3,
+                    Is.EqualTo(initialSource - 1e-8).Within(1e-10));
+                Assert.That(burette.CommittedVolumeM3, Is.Zero);
+                Assert.That(driver.PauseSession(), Is.True);
+                Assert.That(sessions.TryBottleMeasuredPour(), Is.False,
+                    "A held/paused Native session must not accept a fresh measured pour.");
+                Assert.That(sessions.LastInstrumentReceipt, Is.Null,
+                    "Rejected operations must not leave a misleading accepted receipt.");
+                Assert.That(sessions.LastError, Is.Not.Empty);
+                var held = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(held.vessels.Single(item => item.id == "receiver")
+                    .inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(initialReceiver + 1e-8).Within(1e-10));
             }
             finally { SceneManager.UnloadSceneAsync(scene); }
         }

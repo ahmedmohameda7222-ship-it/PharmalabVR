@@ -21,6 +21,7 @@ namespace PharmaLabVR.UI
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
         public string LastError => sessions?.LastError;
+        public string LastInstrumentReceipt => sessions?.LastInstrumentReceipt;
         public string NotebookSummary => sessions?.NotebookSummary ?? "Research notebook unavailable.";
 
         public void ConfigureBoot(ScreenRouter screenRouter, BootMenu bootMenu)

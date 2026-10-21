@@ -20,6 +20,8 @@ namespace PharmaLabVR.Session
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
         public string LastError { get; private set; }
+        // Exact accepted Native command identity, not a predicted material result.
+        public string LastInstrumentReceipt { get; private set; }
         private readonly NativeReviewAuthorityCache<RecordedSessionReview,
             RecordedRunComparison> recordedCache = new();
         private CoreDriver subscribedNativeDriver;
@@ -123,7 +125,11 @@ namespace PharmaLabVR.Session
             subscribedNativeDriver = null;
         }
 
-        private void OnNativeSessionRestored() => ReconcileNativeReviewAuthority();
+        private void OnNativeSessionRestored()
+        {
+            LastInstrumentReceipt = null;
+            ReconcileNativeReviewAuthority();
+        }
 
         private void ReconcileNativeReviewAuthority()
         {
@@ -521,6 +527,8 @@ namespace PharmaLabVR.Session
             if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
                 GUILayout.Button("Open research notebook", GUILayout.Height(44f)))
                 panels?.Request(PanelAction.Notebook);
+            if (!string.IsNullOrEmpty(LastInstrumentReceipt))
+                GUILayout.Label(LastInstrumentReceipt);
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -560,8 +568,9 @@ namespace PharmaLabVR.Session
             }
         }
 
-        private bool TryResearchCommand(Func<LabCommandReceipt> command)
+        private bool TryResearchCommand(string action, Func<LabCommandReceipt> command)
         {
+            LastInstrumentReceipt = null;
             try
             {
                 if (driver?.Session == null || driver.SourceNeedsPreparation ||
@@ -570,13 +579,20 @@ namespace PharmaLabVR.Session
                 var receipt = command();
                 if (!receipt.Accepted)
                     throw new InvalidOperationException("Native instrument refused: " + receipt.Code);
-                driver.RefreshAfterInstrumentCommand();
+                // This message reports only what the Native receipt confirms.
+                // Observable volumes must always come from PublishSnapshot.
+                LastInstrumentReceipt = action + " · Native accepted command #" +
+                    receipt.CommandSequence;
                 LastError = null;
+                driver.RefreshAfterInstrumentCommand();
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return true;
             }
             catch (Exception error)
             {
+                LastInstrumentReceipt = null;
                 LastError = error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return false;
             }
         }
@@ -597,26 +613,31 @@ namespace PharmaLabVR.Session
             ResearchInstrumentPayloads.CanDispensePipette(PipetteTipVolumeM3,
                 ResearchInstrumentPayloads.DefaultPipetteDispenseM3);
 
-        public bool TryPipetteAspirate() => TryResearchCommand(() => ResearchPipette.Aspirate(5e-8));
+        public bool TryPipetteAspirate() => TryResearchCommand("Pipette aspirate 0.05 ml",
+            () => ResearchPipette.Aspirate(5e-8));
 
         public bool TryPipetteDispense()
         {
             if (!CanPipetteDispense)
             {
+                LastInstrumentReceipt = null;
                 LastError = "Pipette retained tip is 0.10 ml (Research). " +
                     "Aspirate additional real prepared stock before dispensing 0.05 ml.";
                 return false;
             }
-            return TryResearchCommand(() => ResearchPipette.Dispense(
+            return TryResearchCommand("Pipette dispense 0.05 ml", () => ResearchPipette.Dispense(
                 ResearchInstrumentPayloads.DefaultPipetteDispenseM3));
         }
-        public bool TryBottleMeasuredPour() => TryResearchCommand(() => ResearchBottle.Pour(1e-8));
-        public bool TryPipetteWaterRinse() => TryResearchCommand(() => ResearchPipette.Rinse(1e-8));
-        public bool TryBottleWaterRinse() => TryResearchCommand(() => ResearchBottle.Rinse(1e-8));
-        public bool TryPipetteSwitchReserve() => TryResearchCommand(() =>
-            ResearchPipette.SwitchPreparedSource("reserve-stock"));
-        public bool TryBottleRefillFromReserve() => TryResearchCommand(() =>
-            ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
+        public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
+            () => ResearchBottle.Pour(1e-8));
+        public bool TryPipetteWaterRinse() => TryResearchCommand("Pipette rinse 0.01 ml",
+            () => ResearchPipette.Rinse(1e-8));
+        public bool TryBottleWaterRinse() => TryResearchCommand("Bottle rinse 0.01 ml",
+            () => ResearchBottle.Rinse(1e-8));
+        public bool TryPipetteSwitchReserve() => TryResearchCommand("Pipette switch to reserve",
+            () => ResearchPipette.SwitchPreparedSource("reserve-stock"));
+        public bool TryBottleRefillFromReserve() => TryResearchCommand("Bottle refill 0.01 ml",
+            () => ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
 
         public bool TryPrepareResearchReserveStock(string stockId, double concentrationMolPerL)
         {
