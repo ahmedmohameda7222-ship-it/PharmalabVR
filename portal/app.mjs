@@ -147,7 +147,9 @@ async function createAcademicMetadata(kind, draft) {
     const params = { ...draft, institutionId: tenant, requestId };
     const createdId = kind === 'course'
       ? await api.adminCreateCourse(session, params)
-      : await api.adminCreateSection(session, params);
+      : kind === 'section'
+        ? await api.adminCreateSection(session, params)
+        : await api.adminEnrollStudent(session, params);
     if (generation === currentGeneration && session === currentSession &&
         institutionSelect.value === tenant) {
       setText(adminStatus, 'Created ' + kind + ' confirmed by server: ' + createdId);
@@ -156,9 +158,10 @@ async function createAcademicMetadata(kind, draft) {
         renderStaffOverview(staffOverviewArea, { status: 'available', overview },
           document, openStaffSection);
         renderAdminSetup(adminSetupArea, { status: 'available',
-          courses: overview.courses }, document,
+          courses: overview.courses, sections: overview.sections }, document,
           draft => createAcademicMetadata('course', draft),
-          draft => createAcademicMetadata('section', draft));
+          draft => createAcademicMetadata('section', draft),
+          draft => createAcademicMetadata('enrollment', draft));
       }
     }
   } catch {
@@ -264,9 +267,10 @@ institutionSelect.addEventListener('change', async () => {
             document, openStaffSection);
         if (generation === currentGeneration && role === 'university_admin')
           renderAdminSetup(adminSetupArea, { status: 'available',
-            courses: overview.courses }, document,
+            courses: overview.courses, sections: overview.sections }, document,
             draft => createAcademicMetadata('course', draft),
-            draft => createAcademicMetadata('section', draft));
+            draft => createAcademicMetadata('section', draft),
+            draft => createAcademicMetadata('enrollment', draft));
       } catch {
         if (generation === currentGeneration && currentSession === session)
           renderStaffOverview(staffOverviewArea, { status: 'unavailable' });
