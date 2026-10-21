@@ -185,6 +185,7 @@ namespace PharmaLabVR.UI
         private string savedRevision;
         private string savedBranchId;
         private string saveState = "Unsaved";
+        private ulong observedRestorationEpoch;
         private bool attached;
 
         public void Configure(CoreDriver core)
@@ -196,6 +197,8 @@ namespace PharmaLabVR.UI
                 var hadAuthority = !ReferenceEquals(driver, null);
                 Detach();
                 driver = core;
+                observedRestorationEpoch = core != null
+                    ? core.NativeRestorationEpoch : 0UL;
                 if (hadAuthority)
                 {
                     // A replaced CoreDriver is a new authority even if its
@@ -354,6 +357,10 @@ namespace PharmaLabVR.UI
 
         private void OnNativeSessionRestored()
         {
+            // Record the epoch before Refresh to avoid recursion and to
+            // recognize a missed signal on later OnEnable/Configure.
+            if (driver != null)
+                observedRestorationEpoch = driver.NativeRestorationEpoch;
             // CoreDriver fires this after an accepted Native checkpoint
             // restart or CoreSession replacement, but BEFORE publishing
             // the replacement snapshot. The same MonoBehaviour is not the
@@ -391,6 +398,15 @@ namespace PharmaLabVR.UI
 
         private void Refresh()
         {
+            if (driver != null &&
+                observedRestorationEpoch != driver.NativeRestorationEpoch)
+            {
+                // When OnDisable detached event listeners, OnEnable still
+                // must invalidate stale Saved/Settings/Inspect after a
+                // restoration completed while this panel was inactive.
+                OnNativeSessionRestored();
+                return;
+            }
             // A focus/system adapter can pause or hold the Native authority
             // without a UI PanelAction. LabViewChanged and reactivation must
             // reconcile this truth before publishing live Lab actions.

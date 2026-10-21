@@ -22,6 +22,10 @@ namespace PharmaLabVR.Core
         public event Action<LabViewModel> LabViewChanged;
         public event Action<string> NativeEventReceived;
         public event Action NativeSessionRestored;
+        // Local presentation epoch only. Not a Native command sequence,
+        // proof of scientific origin, persisted clock or sync receipt.
+        // Detects a restoration missed while a Unity panel was disabled.
+        public ulong NativeRestorationEpoch { get; private set; }
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
         public string CurrentNativeBranchId => Session?.BranchId ?? string.Empty;
@@ -289,6 +293,7 @@ namespace PharmaLabVR.Core
             IsTimeHeld = true;
             accumulator = 0.0;
             HoldChanged?.Invoke(true);
+            NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
             PublishSnapshot();
             return true;
@@ -323,6 +328,7 @@ namespace PharmaLabVR.Core
             establishFrameClock = true;
             previous?.Dispose();
             SynchronizeInputSequences();
+            NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
             PublishSnapshot();
         }
