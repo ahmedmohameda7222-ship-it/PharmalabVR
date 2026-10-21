@@ -87,6 +87,7 @@ namespace PharmaLabVR.Core
         public event Action<bool> HoldChanged;
         public event Action NativeSessionRestored;
         public ulong NativeRestorationEpoch { get; private set; }
+        public ulong NativePublishedRestorationEpoch { get; private set; }
         public bool SelectMeasurementVessel(string id) =>
             CurrentLabView.Vessels.Exists(vessel => vessel.Id == id);
         public bool PauseSession()
@@ -114,7 +115,11 @@ namespace PharmaLabVR.Core
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
         }
-        public void UpdateView() => LabViewChanged?.Invoke(CurrentLabView);
+        public void UpdateView()
+        {
+            NativePublishedRestorationEpoch = NativeRestorationEpoch;
+            LabViewChanged?.Invoke(CurrentLabView);
+        }
     }
 }
 namespace PharmaLabVR.Input

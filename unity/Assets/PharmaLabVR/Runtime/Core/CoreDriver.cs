@@ -26,6 +26,10 @@ namespace PharmaLabVR.Core
         // proof of scientific origin, persisted clock or sync receipt.
         // Detects a restoration missed while a Unity panel was disabled.
         public ulong NativeRestorationEpoch { get; private set; }
+        // A local presentation marker. Advanced only after a Native
+        // snapshot has been read and converted for the current restored
+        // authority. NOT a signed scientific receipt or chemistry revision.
+        public ulong NativePublishedRestorationEpoch { get; private set; }
         public event Action<bool> HoldChanged;
         public CoreSession Session { get; private set; }
         public string CurrentNativeBranchId => Session?.BranchId ?? string.Empty;
@@ -568,6 +572,10 @@ namespace PharmaLabVR.Core
                 if (!selectedFound) Measurement.Present(MeasurementAvailability.Unsupported, "",
                     $"pH {SelectedMeasurementVesselId} · observation unavailable");
             }
+            // Publish this local epoch after the authoritative Native
+            // recovery flag and observation view have been read, before
+            // notifying panels. A restore event itself is NOT publication.
+            NativePublishedRestorationEpoch = NativeRestorationEpoch;
             var held = state?.hold != null && state.hold.active;
             if (held != IsTimeHeld)
             {

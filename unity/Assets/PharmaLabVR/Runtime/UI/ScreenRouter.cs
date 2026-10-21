@@ -198,7 +198,11 @@ namespace PharmaLabVR.UI
                 var hadAuthority = !ReferenceEquals(driver, null);
                 Detach();
                 driver = core;
-                awaitingRestoredNativeSnapshot = false;
+                // OnEnable/Configure may attach between a restore event
+                // and publication. The previous session's recoveryReady
+                // value must not authorize Continue in this interval.
+                awaitingRestoredNativeSnapshot = core != null &&
+                    core.NativePublishedRestorationEpoch != core.NativeRestorationEpoch;
                 observedRestorationEpoch = core != null
                     ? core.NativeRestorationEpoch : 0UL;
                 if (hadAuthority)
@@ -385,7 +389,12 @@ namespace PharmaLabVR.UI
             beforeSettings = ScreenId.Lab;
             beforeInterruptedSettings = ScreenId.Lab;
             beforeHold = ScreenId.Pause;
-            awaitingRestoredNativeSnapshot = true;
+            // A disabled panel may miss both events. If the replacement
+            // snapshot was published while this component was detached,
+            // the local publication epoch allows current recovery actions
+            // without waiting indefinitely for a second LabViewChanged.
+            awaitingRestoredNativeSnapshot = driver == null ||
+                driver.NativePublishedRestorationEpoch != driver.NativeRestorationEpoch;
             // SessionLoad/CheckpointRestart must remain held until Native
             // explicitly publishes its recovery state. The caller can
             // MarkSaved only after a separately validated save import.
