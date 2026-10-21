@@ -429,6 +429,15 @@ namespace PharmaLabVR.UI
                 OnNativeSessionRestored();
                 return;
             }
+            if (awaitingRestoredNativeSnapshot && driver != null &&
+                driver.NativePublishedRestorationEpoch == driver.NativeRestorationEpoch)
+            {
+                // This router may have received NativeSessionRestored and
+                // detached before LabViewChanged. The authoritative Native
+                // snapshot was read while inactive: do not permanently
+                // suppress an otherwise approved recovery action.
+                awaitingRestoredNativeSnapshot = false;
+            }
             // A focus/system adapter can pause or hold the Native authority
             // without a UI PanelAction. LabViewChanged and reactivation must
             // reconcile this truth before publishing live Lab actions.
