@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup } from '../src/view.mjs';
+import { renderAssignments, renderLesson, renderStaffOverview, renderPublicationForm, renderAdminSetup, renderStudentResults, renderStaffSubmissions } from '../src/view.mjs';
 
 class FakeNode {
   constructor(tag) { this.tag = tag; this.children = []; this.textContent = ''; this.events = {}; }
@@ -229,4 +229,75 @@ test('administrator enrollment form selects existing section and verified studen
   assert.deepEqual(received[0], {
     sectionId: 'section-1', studentId: studentId.value
   });
+});
+
+test('student outcomes show approved academic result and visible feedback only as inert text', () => {
+  const root = new FakeNode('section');
+  renderStudentResults(root, { status: 'available', results: {
+    submissions: [{ id: 'submission-1', submittedAt: '2026-10-21T01:00:00Z' }],
+    grades: [{ id: 'grade-1', submissionId: 'submission-1', score: 87.125 }],
+    feedback: [{ id: 'feedback-1', submissionId: 'submission-1',
+      body: '<img src=x onerror=alert(1)>',
+      createdAt: '2026-10-21T02:00:00Z' }]
+  } }, document);
+  assert.match(visibleText(root), /87\.125/);
+  assert.match(visibleText(root), /<img src=x onerror=alert\(1\)>/);
+  assert.match(visibleText(root), /academic/i);
+  renderStudentResults(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /87\.125/);
+});
+
+test('student no submission distinguishes verified empty results from failed authorization', () => {
+  const root = new FakeNode('section');
+  renderStudentResults(root, { status: 'available', results: {
+    submissions: [], grades: [], feedback: []
+  } }, document);
+  assert.match(visibleText(root), /no submitted attempt/i);
+  renderStudentResults(root, { status: 'no-selection' }, document);
+  assert.match(visibleText(root), /select a published assignment/i);
+  assert.doesNotMatch(visibleText(root), /no submitted attempt/i);
+});
+
+test('staff submissions render only RLS-visible metadata with explicit preview limit', () => {
+  const root = new FakeNode('section');
+  renderStaffSubmissions(root, { status: 'available', submissions: [{
+    id: 'submission-1', studentId: '<script>student</script>',
+    assignmentId: 'assignment-1', submittedAt: '2026-10-21T01:00:00Z'
+  }] }, document);
+  assert.match(visibleText(root), /<script>student<\/script>/);
+  assert.match(visibleText(root), /first 100/i);
+  renderStaffSubmissions(root, { status: 'unavailable' }, document);
+  assert.match(visibleText(root), /could not be loaded/i);
+  assert.doesNotMatch(visibleText(root), /script>student/i);
+});
+
+test('students can request outcome details explicitly without auto-loading during list render', () => {
+  const root = new FakeNode('section');
+  const seen = [];
+  renderAssignments(root, { status: 'available', assignments: [assignment] },
+    document, null, id => seen.push(id));
+  const item = root.children[0].children[0];
+  assert.equal(seen.length, 0);
+  const button = item.children.at(-1);
+  assert.equal(button.tag, 'button');
+  button.events.click();
+  assert.deepEqual(seen, ['a']);
+});
+
+test('instructor or TA can select a section for read-only submissions without publish access for TA', () => {
+  const root = new FakeNode('section');
+  const seen = [];
+  renderStaffOverview(root, { status: 'available', overview: {
+    role: 'teaching_assistant',
+    courses: [{ id: 'course-1', code: 'LAB', name: 'Safe', term: 'Fall' }],
+    sections: [{ id: 'section-1', courseId: 'course-1', sectionCode: 'LAB01' }],
+    assignments: []
+  } }, document, null, id => seen.push(id));
+  const walk = n => [n, ...n.children.flatMap(walk)];
+  const buttons = walk(root).filter(n => n.tag === 'button');
+  assert.equal(buttons.length, 1);
+  assert.match(buttons[0].textContent, /view submissions/i);
+  buttons[0].events.click();
+  assert.deepEqual(seen, ['section-1']);
 });
