@@ -88,6 +88,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries[1].Text, Does.Contain("Native pH"));
                 Assert.That(entries[1].Text, Does.Contain("database "));
                 Assert.That(entries[1].Text, Does.Contain("Research observation only"));
+                Assert.That(entries[1].Text, Does.Contain("Student prediction criterion"));
+                Assert.That(entries[1].Text, Does.Contain("Research reflection only"));
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
                     "Notebook navigation cannot duplicate a measurement action.");
                 Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2));

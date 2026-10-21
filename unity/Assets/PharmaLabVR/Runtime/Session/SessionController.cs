@@ -59,6 +59,12 @@ namespace PharmaLabVR.Session
                 var vessel = driver.SelectedMeasurementVesselId;
                 var note = NativeMeasurementNote.Build(view, vessel,
                     driver.Measurement.Availability, driver.Measurement.DisplayValue);
+                if (vessel == "receiver" && !string.IsNullOrEmpty(selectedResearchPrediction) &&
+                    selectedResearchLesson != null &&
+                    selectedResearchLesson.BranchId == driver.CurrentNativeBranchId)
+                    note += "\n" + ResearchLessonJourney.CompareRecordedPrediction(
+                        selectedResearchPrediction, view, vessel,
+                        driver.Measurement.Availability, driver.Measurement.DisplayValue);
                 notebook.Append(NotebookFilePath(), driver.Session.BranchId,
                     view.EventSequence, vessel, note);
                 LastError = null;

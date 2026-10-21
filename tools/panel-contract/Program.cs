@@ -140,6 +140,15 @@ internal static class Program
         noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
         var nativeNote = NativeMeasurementNote.Build(noteView, "receiver",
             MeasurementAvailability.Current, "7.13");
+        var predictionMatch = ResearchLessonJourney.CompareRecordedPrediction(
+            "at-least-7", noteView, "receiver", MeasurementAvailability.Current, "7.13");
+        var predictionMismatch = ResearchLessonJourney.CompareRecordedPrediction(
+            "below-7", noteView, "receiver", MeasurementAvailability.Current, "7.13");
+        Check(predictionMatch.Contains("criterion matched") &&
+              predictionMismatch.Contains("criterion not matched") &&
+              predictionMismatch.Contains("Research reflection only") &&
+              !predictionMatch.Contains("certified"),
+            "Learner reflection must compare actual Native pH to a selected threshold without grading.");
         Check(nativeNote.Contains("pH 7.13") && nativeNote.Contains("revision 3") &&
               nativeNote.Contains("event 7") && nativeNote.Contains("sha256:research-db") &&
               nativeNote.Contains("IPhreeqc-research"),
@@ -149,6 +158,12 @@ internal static class Program
         try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
         catch (InvalidOperationException) { staleDenied = true; }
         Check(staleDenied, "Old measurement revision was allowed into the notebook.");
+        var oldReflectionDenied = false;
+        try { ResearchLessonJourney.CompareRecordedPrediction("below-7",
+            noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
+        catch (InvalidOperationException) { oldReflectionDenied = true; }
+        Check(oldReflectionDenied,
+            "An outdated Native observation was admitted into a student prediction comparison.");
         noteView.Observations[0].AsOfMaterialRevision = "3";
         var unsupportedDenied = false;
         try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Stale, "7.13"); }

@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.Linq;
 using PharmaLabVR.Lab;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Protocols
 {
@@ -24,6 +26,27 @@ namespace PharmaLabVR.Protocols
             BranchId = nativeBranchId;
             Instructions = string.Join("\n", definition.steps.Select((step, i) =>
                 (i + 1).ToString() + ". " + step));
+        }
+
+        // Pure reflection against the student's own numeric criterion.
+        // The Native observation gate is reused; it never generates or
+        // adjusts scientific values, grades or experiment endpoints.
+        public static string CompareRecordedPrediction(string choice, LabViewModel native,
+            string vesselId, MeasurementAvailability availability, string displayedNativePH)
+        {
+            if (!IsSupportedPrediction(choice) || vesselId != "receiver")
+                throw new InvalidOperationException("A receiver pH hypothesis is required.");
+            NativeMeasurementNote.Build(native, vesselId, availability, displayedNativePH);
+            var ph = double.Parse(displayedNativePH, NumberStyles.Float,
+                CultureInfo.InvariantCulture);
+            var belowSeven = ph < 7d;
+            var predictedBelow = choice == "below-7";
+            return "Student prediction criterion: receiver pH " +
+                (predictedBelow ? "below 7" : "at least 7") +
+                ". Observed current Native pH " + ph.ToString("0.00", CultureInfo.InvariantCulture) +
+                " is " + (belowSeven ? "below 7" : "at least 7") +
+                "; criterion " + (predictedBelow == belowSeven ? "matched" : "not matched") +
+                ". Research reflection only; not a grade or endpoint.";
         }
 
         public static bool IsSupportedPrediction(string choice) =>
