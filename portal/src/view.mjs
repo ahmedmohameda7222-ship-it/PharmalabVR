@@ -493,7 +493,8 @@ export function renderStudentResults(target, state, documentSource = globalThis.
 // Staff review is a preview of RLS-visible submitted academic metadata only.
 // It does not display private evidence bytes, approve grades or promote staged
 // unverified artifacts. The UI role never substitutes for PostgreSQL policy.
-export function renderStaffSubmissions(target, state, documentSource = globalThis.document) {
+export function renderStaffSubmissions(target, state, documentSource = globalThis.document,
+  onFeedback = null) {
   if (!target || typeof target.replaceChildren !== 'function' ||
       !documentSource || typeof documentSource.createElement !== 'function')
     throw new TypeError('A DOM target and document are required');
@@ -531,8 +532,84 @@ export function renderStaffSubmissions(target, state, documentSource = globalThi
     item.textContent = 'Submission ' + sub.id +
       ' — student ' + sub.studentId +
       ' — assignment ' + sub.assignmentId;
+    if (typeof onFeedback === 'function' &&
+        ['instructor', 'university_admin'].includes(state.role)) {
+      const button = documentSource.createElement('button');
+      button.type = 'button';
+      button.textContent = 'Record instructor feedback';
+      button.addEventListener('click', () => onFeedback(sub.id));
+      item.append(button);
+    }
     list.append(item);
   }
   root.append(list);
   target.replaceChildren(root);
+}
+
+
+// Feedback is append-only on the academic server and defaults PRIVATE.
+// The visible-to-student choice is explicit and unselected by default.
+// Never render course or feedback text as executable HTML.
+export function renderFeedbackForm(target, state, documentSource = globalThis.document,
+  onSubmit = null) {
+  if (!target || typeof target.replaceChildren !== 'function' ||
+      !documentSource || typeof documentSource.createElement !== 'function')
+    throw new TypeError('A DOM target and document are required');
+  const message = value => {
+    const p = documentSource.createElement('p');
+    p.textContent = value;
+    target.replaceChildren(p);
+  };
+  if (state?.status === 'no-selection') {
+    message('Select a submission from the staff section preview to record feedback.');
+    return;
+  }
+  if (state?.status === 'loading') {
+    message('Loading feedback options…');
+    return;
+  }
+  if (state?.status === 'unavailable') {
+    message('Instructor feedback form could not be loaded.');
+    return;
+  }
+  if (state?.status !== 'available' ||
+      typeof state.submissionId !== 'string' || !state.submissionId)
+    throw new TypeError('Selected submission required for instructor feedback');
+
+  const form = documentSource.createElement('form');
+  const context = documentSource.createElement('p');
+  context.textContent = 'Append-only instructor feedback for submission ' +
+    state.submissionId + '. This does not verify Native evidence or approve a grade.';
+  form.append(context);
+  const label = documentSource.createElement('label');
+  label.textContent = 'Feedback text';
+  const body = documentSource.createElement('textarea');
+  body.name = 'body';
+  body.required = true;
+  body.maxLength = 12000;
+  body.value = '';
+  body.rows = 6;
+  label.append(body);
+  form.append(label);
+  const releaseLabel = documentSource.createElement('label');
+  releaseLabel.textContent = 'Release this feedback to the student (unchecked means private)';
+  const release = documentSource.createElement('input');
+  release.name = 'studentVisible';
+  release.type = 'checkbox';
+  release.checked = false;
+  releaseLabel.append(release);
+  form.append(releaseLabel);
+  const button = documentSource.createElement('button');
+  button.type = 'submit';
+  button.textContent = 'Record immutable feedback';
+  form.append(button);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    if (typeof onSubmit !== 'function' ||
+        !body.value.trim() || body.value.length > 12000)
+      return;
+    onSubmit({ submissionId: state.submissionId,
+      body: body.value, studentVisible: release.checked === true });
+  });
+  target.replaceChildren(form);
 }
