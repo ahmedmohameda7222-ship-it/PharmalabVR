@@ -397,6 +397,15 @@ internal static class Program
               readyExtra.Any(item => item.Name == "Prime burette 0.05 ml") &&
               !readyExtra.Any(item => item.Name == "Prepare reserve stock"),
             "Native-ready reserve/burette operations must not conflict with setup-only actions.");
+        var notebookChoice = ResearchInstrumentMenuLayout.Visible(
+            3, false, true, false, false, true, false, false, true);
+        Check(notebookChoice.Any(item => item.Name == "Open notebook" && item.Row == 2) &&
+              notebookChoice.Select(item => item.Row).Distinct().Count() == notebookChoice.Count,
+            "VR student lesson view must open the actual saved Notebook without overlapping predictions.");
+        var unavailableNotebook = ResearchInstrumentMenuLayout.Visible(
+            3, true, false, false, false, true, false, false, false);
+        Check(!unavailableNotebook.Any(item => item.Name == "Open notebook"),
+            "Startup scene cannot open a notebook before a supported Native lab state.");
         var choice = ResearchInstrumentMenuLayout.Visible(
             3, false, true, false, false, true, false, false);
         Check(choice.Any(item => item.Name == "Predict pH below 7") &&
