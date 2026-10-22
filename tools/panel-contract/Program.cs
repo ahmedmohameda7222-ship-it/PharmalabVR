@@ -491,6 +491,20 @@ internal static class Program
                 "Native pH 6.20 · material revision 3 · event 11 · database pinned-db.");
             researchNotes.Append(learningPath, "different-tenant-branch", "14", "source",
                 "Private unrelated student annotation.");
+            // A Native checkpoint at event 7 must not display/export local
+            // annotations from event 11 merely because the branch ID agrees.
+            var historical = researchNotes.Read(learningPath, "student-branch", "7");
+            Check(historical.Count == 1 && historical[0].EventSequence == "7" &&
+                  !historical[0].Text.Contains("Native pH 6.20"),
+                "Recorded checkpoint at event 7 exposed later event-11 learner evidence.");
+            Check(researchNotes.Read(learningPath, "student-branch", "11").Count == 2 &&
+                  researchNotes.Read(learningPath, "different-tenant-branch", "7").Count == 0,
+                "Bounded Notebook read dropped eligible notes or included the wrong branch.");
+            var malformedReadDenied = false;
+            try { researchNotes.Read(learningPath, "student-branch", "07"); }
+            catch (ArgumentException) { malformedReadDenied = true; }
+            Check(malformedReadDenied,
+                "Noncanonical Native event ceiling was accepted for saved learner evidence.");
             var notes = researchNotes.Read(learningPath, "student-branch");
             // A portable learner archive is untrusted offline evidence, not
             // a server attestation. Teaching preview must independently parse
