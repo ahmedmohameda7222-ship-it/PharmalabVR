@@ -181,6 +181,34 @@ internal static class Program
         catch (InvalidOperationException) { invalidMeasurementExplanationDenied = true; }
         Check(invalidMeasurementExplanationDenied,
             "A stale unsupported observation yielded a student explanation.");
+        // Rounded pH 7.00 MUST NOT decide a less-than-7 hypothesis.
+        // Native raw 6.999 and raw 7.001 legitimately have the SAME
+        // 2-decimal UI label, but opposite scientific threshold outcomes.
+        noteView.Observations[0].ValueAvailable = true;
+        noteView.Observations[0].ComputationState = "Ready";
+        noteView.Observations[0].Value = 6.999;
+        var rawBelow = ResearchLessonJourney.CompareRecordedPrediction(
+            "below-7", noteView, "receiver", MeasurementAvailability.Current, "7.00");
+        Check(rawBelow.Contains("criterion matched") && rawBelow.Contains("6.999"),
+            "Raw Native pH below 7 was incorrectly classified by rounded UI pH 7.00.");
+        noteView.Observations[0].Value = 7.001;
+        var rawAbove = ResearchLessonJourney.CompareRecordedPrediction(
+            "at-least-7", noteView, "receiver", MeasurementAvailability.Current, "7.00");
+        Check(rawAbove.Contains("criterion matched") && rawAbove.Contains("7.001"),
+            "Raw Native pH above 7 was incorrectly classified by rounded UI pH 7.00.");
+        var mismatchDenied = false;
+        try { NativeMeasurementNote.Build(noteView, "receiver",
+            MeasurementAvailability.Current, "6.35"); }
+        catch (InvalidOperationException) { mismatchDenied = true; }
+        Check(mismatchDenied, "UI pH inconsistent with Native observation was saved as evidence.");
+        noteView.Observations[0].Value = 7.13;
+        noteView.Observations[0].ValueAvailable = false;
+        var absentRawDenied = false;
+        try { NativeMeasurementNote.Build(noteView, "receiver",
+            MeasurementAvailability.Current, "7.13"); }
+        catch (InvalidOperationException) { absentRawDenied = true; }
+        Check(absentRawDenied, "An unavailable raw Native observation was accepted from display text.");
+        noteView.Observations[0].ValueAvailable = true;
         var staleDenied = false;
         noteView.Observations[0].AsOfMaterialRevision = "2";
         try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
