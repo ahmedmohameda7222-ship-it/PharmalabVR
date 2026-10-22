@@ -121,3 +121,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P07.01/P07.02 Partial:** Desktop pick/place F, Native Pause Esc and physical G are now captured in Unity Update (every rendered frame) rather than exclusively at the lower-frequency Native simulation tick. Direct-grip XR trigger presses are also captured every frame. A bounded one-shot ResearchPressBuffer bridges events to the next Native sample; no duplicate receipt and no pending request after focus loss, Pause/Hold, mode reset, owner change or timeout.
 - **Headless evidence:** RED contract commit 05d30b6 failed compilation on missing press buffer; current source includes production buffer and behavioral cancellation/replay tests. Native C++ scientific code is unchanged; Unity Editor/PlayMode/Player/XR still NOT_RUN and formal acceptance ledger unchanged.
+
+## M2 XR visible delivery status — 22 October 2026
+
+- **P07.02/P08.02 Partial:** The shared XR Lab panel now refreshes the physical receiver-alignment/Native-refusal message during LateUpdate, not only after panel navigation. The last acknowledged Native result remains in the existing instrument receipt view. An authored Unity PlayMode test checks that a geometry refusal is visible on the active Lab panel without changing scientific inventory. Unity execution remains NOT_RUN.

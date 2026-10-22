@@ -27,6 +27,42 @@ namespace PharmaLabVR.Tests.PlayMode
         // Verify actual authored outlet geometry and committed Native transfer
         // together. Headless policy tests cannot establish this Unity scene path.
         [UnityTest]
+        public IEnumerator M2_XRPhysicalDeliveryFailureIsVisibleWithoutPanelNavigation()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var xrInput = roots.SelectMany(root => root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                var panel = roots.SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var status = panel.GetComponentsInChildren<UnityEngine.UI.Text>(true)
+                    .Single(item => item.name == "Panel detail");
+                // The adaptation layer's feedback is a view-only explanation.
+                // Geometry rejection never issues a fake Native material event.
+                var field = typeof(XRInputAdapter).GetField(
+                    "<LastPhysicalDeliveryFeedback>k__BackingField",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                field.SetValue(xrInput, "Align the direct-gripped instrument outlet over the stationary receiver.");
+                driver.transform.root.GetComponentInChildren<ScreenRouter>(true).Show(ScreenId.Lab);
+                panel.SendMessage("LateUpdate", SendMessageOptions.DontRequireReceiver);
+                Assert.That(status.text, Does.Contain("Physical delivery:"));
+                Assert.That(status.text, Does.Contain("Align the direct-gripped instrument"));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator M2_ReceiverAlignedStockBottleHasActualNativeDeliveryPath()
         {
 #if UNITY_EDITOR

@@ -34,6 +34,8 @@ namespace PharmaLabVR.UI
         };
         private Text title;
         private Text detail;
+        private string baselineDetail = string.Empty;
+        private string lastPhysicalFeedback = null;
         private Image background;
         private readonly Dictionary<string, Button> buttons = new();
 
@@ -193,8 +195,24 @@ namespace PharmaLabVR.UI
 
         private void LateUpdate()
         {
-            if (panelRoot == null || !panelRoot.activeSelf || xrCamera == null || placedWithTrackedHead) return;
-            UpdatePlacement();
+            if (panelRoot == null || !panelRoot.activeSelf) return;
+            if (xrCamera != null && !placedWithTrackedHead) UpdatePlacement();
+            RefreshPhysicalDeliveryFeedback();
+        }
+
+        // The adapter can refuse geometry without a router transition.
+        // Refresh the Lab status independently of navigation, and keep the
+        // latest status in the first visible line on the XR panel.
+        private void RefreshPhysicalDeliveryFeedback()
+        {
+            if (detail == null || router?.Current?.ScreenId != ScreenId.Lab ||
+                driver == null) return;
+            var current = driver.transform.root
+                .GetComponentInChildren<XRInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
+            if (string.Equals(lastPhysicalFeedback, current, StringComparison.Ordinal)) return;
+            lastPhysicalFeedback = current;
+            detail.text = string.IsNullOrEmpty(current) ? baselineDetail :
+                "Physical delivery: " + current + "\n" + baselineDetail;
         }
 
         private void UpdatePlacement()
@@ -501,10 +519,6 @@ namespace PharmaLabVR.UI
                     "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml. " +
                     "Physical research delivery: direct-grip bottle/pipette, align outlet over the " +
                     "stationary receiver, then press trigger. Native acceptance is required.";
-                var physicalFeedback = driver.transform.root
-                    .GetComponentInChildren<XRInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
-                if (!string.IsNullOrEmpty(physicalFeedback))
-                    detail.text += "\nPhysical delivery: " + physicalFeedback;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))
@@ -530,6 +544,9 @@ namespace PharmaLabVR.UI
                     "Settings choice C", "Settings choice D", "Next settings", "Previous settings" })
                     SetButton(name, false);
             }
+            baselineDetail = detail.text;
+            lastPhysicalFeedback = null; // re-evaluate even when router updates mid-gesture
+            RefreshPhysicalDeliveryFeedback();
         }
 
         private void SetButton(string name, bool visible)
