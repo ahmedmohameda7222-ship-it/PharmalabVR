@@ -292,6 +292,38 @@ internal static class Program
                 System.IO.Directory.Delete(learningDirectory, true);
         }
 
+        // M3 reopen: an existing branch's durable first hypothesis must
+        // reappear on lesson reselection, without permitting a second answer.
+        var reopenedNotebook = new NotebookService();
+        var reopenedFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-hypothesis-reopen-" + Guid.NewGuid().ToString("N"));
+        var reopenedPath = System.IO.Path.Combine(reopenedFolder, "study.plv-notes");
+        try
+        {
+            reopenedNotebook.Append(reopenedPath, "local-branch-a", "5", "receiver",
+                "Student hypothesis for strong-acid-titration-research: receiver pH predicted below 7. " +
+                "This is a learner prediction, not a Native result or certified endpoint.");
+            reopenedNotebook.Append(reopenedPath, "local-branch-b", "6", "receiver",
+                "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+                "This is a learner prediction, not a Native result or certified endpoint.");
+            var recorded = reopenedNotebook.Read(reopenedPath, "local-branch-a");
+            Check(ResearchLessonJourney.RecoverSavedPrediction(
+                    recorded, "strong-acid-titration-research", "local-branch-a") == "below-7",
+                "Lesson reselection did not recover its previously durable learner prediction.");
+            Check(ResearchLessonJourney.RecoverSavedPrediction(
+                    recorded, "mixed-acid-titration-research", "local-branch-a") == null &&
+                  ResearchLessonJourney.RecoverSavedPrediction(
+                    recorded, "strong-acid-titration-research", "local-branch-b") == null &&
+                  ResearchLessonJourney.RecoverSavedPrediction(
+                    Array.Empty<NotebookEntry>(), "strong-acid-titration-research", "local-branch-a") == null,
+                "A different lesson, branch or empty notebook inherited a false prediction.");
+        }
+        finally
+        {
+            if (System.IO.Directory.Exists(reopenedFolder))
+                System.IO.Directory.Delete(reopenedFolder, true);
+        }
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
