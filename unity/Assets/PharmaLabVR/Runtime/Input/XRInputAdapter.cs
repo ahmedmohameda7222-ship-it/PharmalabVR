@@ -98,9 +98,9 @@ namespace PharmaLabVR.Input
             var prime = id == "research-stock-bottle-visual" && inlet != null &&
                 mount != null && mount.IsMounted &&
                 inlet.AdmitsBottle(physicalTool, true, coreDriver?.Session);
-            var ready = coreDriver != null && coreDriver.Session != null &&
-                !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
-                !coreDriver.IsTimeHeld;
+            var ready = IsOperatingLabScreen() && coreDriver != null &&
+                coreDriver.Session != null && !coreDriver.SourceNeedsPreparation &&
+                !coreDriver.IsNativePaused && !coreDriver.IsTimeHeld;
             var select = ResearchPhysicalSourceSelection.Resolve(
                 id, true, true, receiver,
                 primaryImmersed, reserveImmersed, primary, reserve, ready);
@@ -108,6 +108,15 @@ namespace PharmaLabVR.Input
             return ResearchAuxiliaryDelivery.Resolve(id, true, true,
                 receiver, source, prime, ready);
         }
+        private bool IsOperatingLabScreen()
+        {
+            var router = coreDriver != null ? coreDriver.transform.root
+                .GetComponentInChildren<ScreenRouter>(true) : null;
+            if (router?.Current == null) return false;
+            return ResearchLabScreenAdmission.MayActuate(
+                router.Current.ScreenId.ToString(), coreDriver?.Session?.IsOpen == true);
+        }
+
         private ActionBasedController deliveryPressOwner;
 
         private void ClearDeliveryPress()
@@ -181,9 +190,12 @@ namespace PharmaLabVR.Input
             }
             if (!inputEnabled || coreDriver == null ||
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
-                coreDriver.SourceNeedsPreparation)
+                coreDriver.SourceNeedsPreparation || !IsOperatingLabScreen())
             {
+                // XR equipment may still move visually on an alternate page,
+                // but only Lab may authorize a Native material gesture.
                 ClearDeliveryPress();
+                instrumentPresenter?.PresentActuatorInput(0f);
                 return;
             }
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
@@ -289,6 +301,7 @@ namespace PharmaLabVR.Input
             var owner = selected ? SelectingController() : null;
             var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
             var blocked = !restorationGestureGate.IsArmed ||
+                !IsOperatingLabScreen() ||
                 (coreDriver != null &&
                  (coreDriver.IsTimeHeld || coreDriver.IsNativePaused));
             var actuator = selected && !blocked ? Actuator(owner, directBodyGrip) : 0f;

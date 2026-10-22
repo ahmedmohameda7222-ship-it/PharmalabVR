@@ -1284,6 +1284,30 @@ internal static class Program
                 "source", "source", null, false),
             "A switched Native pipette must draw only from its real represented reserve vessel.");
 
+        var desktopPhysicalSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var xrPhysicalSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(desktopPhysicalSource.Contains("if (!IsOperatingLabScreen())") &&
+              desktopPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate(") &&
+              xrPhysicalSource.Contains("!IsOperatingLabScreen()") &&
+              xrPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate("),
+            "Physical Desktop/XR Native gestures lost Notebook/Review lab-screen isolation.");
+
+        // Physical material gestures must be admitted only from active Lab,
+        // never while the student records a branch-bound Notebook note,
+        // reviews recorded evidence, or navigates a paused/held screen.
+        Check(ResearchLabScreenAdmission.MayActuate("Lab", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Notebook", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Review", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Inspect", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Measure", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Pause", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Hold", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Lab", false) &&
+              !ResearchLabScreenAdmission.MayActuate(null, true),
+            "Physical material inputs leaked through non-Lab screens or Native Hold.");
+
         // Deliberate pipette contact with the *other* prepared stock first
         // requests a Native source switch. This must never aspirate any
         // material during the same trigger gesture.

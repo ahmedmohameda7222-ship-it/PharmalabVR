@@ -24,6 +24,57 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        [UnityTest]
+        public IEnumerator M2_DesktopNotebookAndReviewSampleNeutralWithoutNewNativeMaterial()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True);
+                var nativeRevision = driver.CurrentLabView.EventSequence;
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.True);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.False);
+                var notebookSample = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(notebookSample.Length, Is.EqualTo(1));
+                Assert.That(notebookSample[0].actuator01, Is.EqualTo(0f));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision));
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                var reviewSample = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(reviewSample.Length, Is.EqualTo(1));
+                Assert.That(reviewSample[0].actuator01, Is.EqualTo(0f));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision),
+                    "Recorded Review must not actuate Native lab material in the background.");
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.True);
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Simulates actual authored XR UI button events against the live
         // Native-backed student Notebook; tracked-ray hardware still requires
         // the final local Player campaign.

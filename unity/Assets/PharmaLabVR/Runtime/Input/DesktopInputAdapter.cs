@@ -95,9 +95,9 @@ namespace PharmaLabVR.Input
             var prime = physicalId == "research-stock-bottle-visual" &&
                 inlet != null && inlet.AdmitsBottle(physicalTool,
                     !IsHoldingNativeTool, coreDriver?.Session);
-            var ready = coreDriver != null && coreDriver.Session != null &&
-                !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
-                !coreDriver.IsNativePaused;
+            var ready = IsOperatingLabScreen() && coreDriver != null &&
+                coreDriver.Session != null && !coreDriver.SourceNeedsPreparation &&
+                !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused;
             var select = ResearchPhysicalSourceSelection.Resolve(
                 physicalId, true, true, receiver,
                 primaryImmersed, reserveImmersed, primary, reserve, ready);
@@ -105,6 +105,15 @@ namespace PharmaLabVR.Input
             return ResearchAuxiliaryDelivery.Resolve(physicalId, true, true,
                 receiver, source, prime, ready);
         }
+        private bool IsOperatingLabScreen()
+        {
+            var router = coreDriver != null ? coreDriver.transform.root
+                .GetComponentInChildren<ScreenRouter>(true) : null;
+            if (router?.Current == null) return false;
+            return ResearchLabScreenAdmission.MayActuate(
+                router.Current.ScreenId.ToString(), coreDriver?.Session?.IsOpen == true);
+        }
+
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
         public Transform CurrentHeldPhysicalTool => heldTool;
@@ -151,6 +160,18 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 coreDriver.transform.root.GetComponentInChildren<SessionController>(true)
                     ?.RequestDesktopPause();
+                return;
+            }
+            if (!IsOperatingLabScreen())
+            {
+                // Escape remains available above this branch. Notebook,
+                // recorded Review, and measuring pages cannot pick, drag,
+                // open a valve or queue old G commands in the background.
+                pickPress.Clear();
+                ClearDeliveryPress();
+                actuator = 0f;
+                pointerDragActive = false;
+                instrumentPresenter?.PresentActuatorInput(0f);
                 return;
             }
             if (Mouse.current == null || !Mouse.current.leftButton.isPressed)
@@ -276,6 +297,17 @@ namespace PharmaLabVR.Input
                 pickPress.Clear();
                 ClearDeliveryPress();
                 return System.Array.Empty<LabInputSample>();
+            }
+            if (!IsOperatingLabScreen())
+            {
+                actuator = 0f;
+                pointerDragActive = false;
+                pickPress.Clear();
+                ClearDeliveryPress();
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return new[] { LabGeometryAdapter.BuildSample(
+                    heldToolId, ++sequence, nowNs, labFrame, registeredTool,
+                    0f, geometryProfileHash, true) };
             }
             HandlePickOrPlace();
             HandlePhysicalDeliveryRequest();

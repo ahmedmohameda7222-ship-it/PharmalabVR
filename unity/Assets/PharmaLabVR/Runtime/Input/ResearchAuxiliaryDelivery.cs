@@ -17,6 +17,16 @@ namespace PharmaLabVR.Input
                 visibleBottleId, System.StringComparison.Ordinal);
     }
 
+    // Material gestures are a LAB operation. Notebook and recorded Review
+    // may observe/record real Native evidence but cannot actuate equipment
+    // in the background. Native Pause/Hold remains an independent gate.
+    public static class ResearchLabScreenAdmission
+    {
+        public static bool MayActuate(string screenId, bool nativeReady) =>
+            nativeReady && string.Equals(screenId, "Lab",
+                System.StringComparison.Ordinal);
+    }
+
     // A deliberate press while immersed in a DIFFERENT prepared stock asks
     // only to change the pipette's Native source. Student must press again to
     // aspirate, so no unobserved mixing/volume changes can be hidden by UI.

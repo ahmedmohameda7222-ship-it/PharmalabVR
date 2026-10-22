@@ -1083,7 +1083,8 @@ namespace PharmaLabVR.Session
             }
             if (screen == ScreenId.Notebook)
             {
-                GUILayout.Label("Research notebook · notes reference actual Native events.");
+                GUILayout.Label("Research notebook · notes reference actual Native events. " +
+                    "Physical material gestures are disabled until you return to Lab.");
                 var notes = ReadNotebookEntries();
                 foreach (var note in notes.Skip(Math.Max(0, notes.Count - 5)))
                     GUILayout.Label("Event " + note.EventSequence + " · " + note.VesselId +

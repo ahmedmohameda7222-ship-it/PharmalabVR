@@ -494,7 +494,9 @@ namespace PharmaLabVR.UI
                 ScreenId.Review => ReviewDetails(),
                 ScreenId.Learn => ResearchConceptReadout.Describe(
                     driver.CurrentLabView, state.SelectedEntityId),
-                ScreenId.Notebook => panels?.NotebookSummary ?? "Research notebook unavailable.",
+                ScreenId.Notebook => "Physical instrument transfers are inactive on this Notebook page. " +
+                    "Return to Lab to perform a deliberate Native action.\n" +
+                    (panels?.NotebookSummary ?? "Research notebook unavailable."),
                 ScreenId.Compare => panels?.ComparisonSummary ?? "Recorded comparison unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
                     state.SelectedEntityId,
