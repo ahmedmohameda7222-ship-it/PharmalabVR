@@ -144,6 +144,7 @@ namespace PharmaLabVR.UI
             AddInstrumentButton("Rinse bottle", -194f,
                 () => panels?.Request(PanelAction.BottleRinse));
             AddInstrumentButton("Stock setup", -250f, () => instrumentPage = 2);
+            AddInstrumentButton("More tools and lessons", -138f, () => instrumentPage = 4);
             AddInstrumentButton("Exit tools", -306f, () => instrumentPage = 0);
             AddInstrumentButton("Choose stock", 30f,
                 () => researchStockIndex = (researchStockIndex + 1) % ResearchStockIds.Length);
@@ -466,38 +467,20 @@ namespace PharmaLabVR.UI
                     "Research instruments" }) SetButton(name, false);
                 var mayTransfer = !driver.SourceNeedsPreparation &&
                     !driver.IsNativePaused && !driver.IsTimeHeld;
-                var validRinse = mayTransfer && driver.RinseWaterPrepared;
-                var operating = instrumentPage == 1;
-                var setupPage = instrumentPage == 2;
+                var visible = ResearchInstrumentMenuLayout.Visible(
+                    instrumentPage, driver.SourceNeedsPreparation, mayTransfer,
+                    driver.ReserveStockPrepared, panels != null && panels.CanFillBurette,
+                    panels != null && panels.CanRecordResearchPrediction,
+                    panels != null && panels.CanPipetteDispense, driver.RinseWaterPrepared);
+                foreach (var name in ResearchInstrumentMenuLayout.AllNames)
+                    SetButton(name, false);
+                foreach (var item in visible)
+                {
+                    SetButton(item.Name, true);
+                    buttons[item.Name].GetComponent<RectTransform>().anchoredPosition =
+                        new Vector2(0f, 30f - 56f * item.Row);
+                }
                 var predictionPage = instrumentPage == 3;
-                SetButton("Pipette aspirate 0.05 ml", operating && mayTransfer);
-                SetButton("Pipette dispense 0.05 ml", operating && mayTransfer &&
-                    panels != null && panels.CanPipetteDispense);
-                SetButton("Bottle pour 0.01 ml", operating && mayTransfer);
-                SetButton("Rinse pipette", operating && validRinse);
-                SetButton("Rinse bottle", operating && validRinse);
-                SetButton("Stock setup", operating);
-                SetButton("Choose stock", setupPage && driver.SourceNeedsPreparation);
-                SetButton("Prepare chosen stock", setupPage && driver.SourceNeedsPreparation);
-                SetButton("Prepare rinse water", setupPage && driver.SourceNeedsPreparation);
-                SetButton("Prepare reserve stock", setupPage &&
-                    driver.SourceNeedsPreparation && !driver.ReserveStockPrepared);
-                SetButton("Choose concentration", setupPage &&
-                    driver.SourceNeedsPreparation && driver.ResearchConcentrations.Count > 0);
-                SetButton("Switch pipette to reserve", setupPage &&
-                    mayTransfer && driver.ReserveStockPrepared);
-                SetButton("Refill bottle 0.01 ml", setupPage &&
-                    mayTransfer && driver.ReserveStockPrepared);
-                SetButton("Prime burette 0.05 ml", setupPage &&
-                    mayTransfer && panels != null && panels.CanFillBurette);
-                SetButton("Strong acid lesson", setupPage);
-                SetButton("Mixed acid lesson", setupPage);
-                SetButton("Predict pH below 7", predictionPage &&
-                    panels != null && panels.CanRecordResearchPrediction);
-                SetButton("Predict pH at least 7", predictionPage &&
-                    panels != null && panels.CanRecordResearchPrediction);
-                SetButton("Back to instruments", !operating);
-                SetButton("Exit tools", true);
                 var stockLabel = buttons["Choose stock"].GetComponentInChildren<Text>(true);
                 if (stockLabel != null) stockLabel.text = "Stock: " + ResearchStockIds[researchStockIndex];
                 var concentrationLabel = buttons["Choose concentration"].GetComponentInChildren<Text>(true);
@@ -526,14 +509,8 @@ namespace PharmaLabVR.UI
             }
             else
             {
-                foreach (var name in new[] { "Pipette aspirate 0.05 ml", "Pipette dispense 0.05 ml",
-                    "Bottle pour 0.01 ml", "Rinse pipette", "Rinse bottle", "Stock setup",
-                    "Choose stock", "Prepare chosen stock", "Prepare rinse water",
-                    "Prepare reserve stock", "Choose concentration",
-                    "Switch pipette to reserve", "Refill bottle 0.01 ml",
-                    "Prime burette 0.05 ml", "Strong acid lesson", "Mixed acid lesson",
-                    "Predict pH below 7", "Predict pH at least 7",
-                    "Back to instruments", "Exit tools" }) SetButton(name, false);
+                foreach (var name in ResearchInstrumentMenuLayout.AllNames)
+                    SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
             }

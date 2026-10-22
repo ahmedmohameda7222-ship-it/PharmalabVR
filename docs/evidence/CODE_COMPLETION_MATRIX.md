@@ -130,3 +130,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **M2/P07.01/P07.02 Partial:** Desktop G and XR direct-trigger intents now check unique receiver capture when first pressed, then recheck geometry at the later Native step. A press outside the receiving aperture cannot be retroactively admitted by moving the tool into place during the buffer window. Each XR intent is also bound to the specific tracked controller that originally pressed; a handoff/regrip cancels it. No Native material command can be issued without the existing guarded shared panel receipt.
 - **Testing boundary:** Headless ResearchAuxiliaryDelivery/ResearchPressBuffer tests validate the policy and replay cancellation. Unity scene/Player/XR timing is source-authored but remains NOT_RUN until the owner-authorized local Codex campaign.
+
+## M2/M3 XR research instrument menu layout — 22 October 2026
+
+- **P07.02 / P12.01 Partial:** Fixed actual overlapping ray-hit targets on the XR stock and experiment menu by splitting operations (page 1), preparation (page 2), pre-transfer student prediction (page 3) and reserve/lesson selection (page 4). All existing Native-controlled instrument commands remain available, now on distinct rows, and page transition buttons redraw immediately.
+- **Headless CI:** RED test-only commit `55f7055` failed on absent menu-layout source; new source enumerates active page controls and verifies unique row positions across preparation, reserve and learner states. Unity XR visual/integration still NOT_RUN; formal acceptance ledger unchanged.
