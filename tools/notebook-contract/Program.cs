@@ -67,6 +67,41 @@ internal static class Program
                 "Portable archive did not round-trip Native bytes and selected notes.");
             Require(recovered.NotebookSnapshot.Contains("PLV-NOTEBOOK-V1"),
                 "Portable archive silently dropped notes.");
+            // The student's portable checkpoint needs an isolated, durable,
+            // already-authenticated local Notebook before Native authority can
+            // be swapped. Never overwrite existing learner records.
+            var localImport = Path.Combine(root, "portable-restored.plv-notes");
+            NotebookService.InstallPortableSnapshot(localImport, recovered.NotebookSnapshot,
+                recovered.BranchId, recovered.EventSequence);
+            Require(notes.Read(localImport, "research-branch", "8").Count == 2,
+                "A portable student Notebook did not become locally readable.");
+            var importedBytes = File.ReadAllBytes(localImport);
+            var overwriteRefused = false;
+            try { NotebookService.InstallPortableSnapshot(localImport, recovered.NotebookSnapshot,
+                recovered.BranchId, recovered.EventSequence); }
+            catch (IOException) { overwriteRefused = true; }
+            Require(overwriteRefused &&
+                    Convert.ToBase64String(importedBytes) ==
+                    Convert.ToBase64String(File.ReadAllBytes(localImport)),
+                "Portable restore overwrote an existing journal.");
+            var foreignRefused = false;
+            var foreignTarget = Path.Combine(root, "foreign-restored.plv-notes");
+            try { NotebookService.InstallPortableSnapshot(foreignTarget, recovered.NotebookSnapshot,
+                "other-branch", recovered.EventSequence); }
+            catch (InvalidDataException) { foreignRefused = true; }
+            Require(foreignRefused && !File.Exists(foreignTarget),
+                "Foreign-branch portable notebook was created before identity rejection.");
+            var futureRefused = false;
+            try { NotebookService.InstallPortableSnapshot(foreignTarget, recovered.NotebookSnapshot,
+                recovered.BranchId, "7"); }
+            catch (InvalidDataException) { futureRefused = true; }
+            Require(futureRefused && !File.Exists(foreignTarget),
+                "Future event evidence was installed ahead of the Native checkpoint.");
+            notes.Append(localImport, "research-branch", "9", "receiver",
+                "New local reflection after verified portable import.");
+            Require(notes.Read(localImport, "research-branch").Count == 3,
+                "Restored Notebook did not support subsequent local learner work.");
+
             var bytes = File.ReadAllBytes(packed);
             bytes[bytes.Length - 1] ^= 0x01;
             File.WriteAllBytes(packed, bytes);

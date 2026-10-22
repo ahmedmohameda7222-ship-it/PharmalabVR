@@ -48,6 +48,11 @@ namespace PharmaLabVR.Session
                         instructorAnnotationIndex));
         private string selectedArchiveFileName;
         public string SelectedArchiveFileName => selectedArchiveFileName;
+        public string LastPortableImportSummary { get; private set; }
+        private bool CanUseLocalArchives =>
+            router?.Current?.ScreenId == ScreenId.Review ||
+            router?.Current?.ScreenId == ScreenId.Pause ||
+            router?.Current?.ScreenId == ScreenId.Hold;
         private IReadOnlyList<string> AvailableLocalArchiveNames()
         {
             var root = Path.Combine(Application.persistentDataPath, "sessions");
@@ -60,19 +65,36 @@ namespace PharmaLabVR.Session
                 catch (IOException) { return false; }
                 catch (UnauthorizedAccessException) { return false; }
             });
-            return OfflineArchivePicker.Names(root, candidates);
+            return OfflineArchivePicker.Names(root, candidates, 64);
         }
 
         public bool CanChooseLocalPortableArchive
         {
             get
             {
-                if (router?.Current?.ScreenId != ScreenId.Review) return false;
+                if (!CanUseLocalArchives) return false;
                 try { return AvailableLocalArchiveNames().Count > 0; }
                 catch (IOException) { return false; }
                 catch (UnauthorizedAccessException) { return false; }
             }
         }
+        public bool CanRestoreLocalPortableSession
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                if (screen != ScreenId.Pause && screen != ScreenId.Hold ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    (driver.CurrentMode != "Desktop" && driver.CurrentMode != "VR") ||
+                    (driver.CurrentMode == "VR" && !CanReleaseTool) ||
+                    !OfflineArchivePicker.ValidName(selectedArchiveFileName))
+                    return false;
+                try { return AvailableLocalArchiveNames().Contains(selectedArchiveFileName); }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
         public bool CanPreviewLocalPortableArchive
         {
             get
@@ -93,8 +115,9 @@ namespace PharmaLabVR.Session
         {
             try
             {
-                if (router?.Current?.ScreenId != ScreenId.Review)
-                    throw new InvalidOperationException("Choose a local archive in recorded Review.");
+                if (!CanUseLocalArchives)
+                    throw new InvalidOperationException(
+                        "Choose a local archive in recorded Review or paused/held Lab.");
                 var names = AvailableLocalArchiveNames();
                 if (names.Count == 0)
                     throw new InvalidDataException("No local .plvpack files are available.");
@@ -146,6 +169,93 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+        // Local student restore from an existing .plvpack is separate from
+        // read-only instructor Preview. No cloud, grading or attestation.
+        public bool RestoreSelectedLocalPortableSession()
+        {
+            CoreSession imported = null;
+            var priorSaveName = saveName;
+            string stagedSave = null;
+            string stagedNotes = null;
+            var adopted = false;
+            try
+            {
+                if (!CanRestoreLocalPortableSession)
+                    throw new InvalidOperationException(
+                        "Choose a local study pack in Pause/Hold; VR tools must be docked.");
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                var archivePath = Path.Combine(root, selectedArchiveFileName);
+                if ((File.GetAttributes(archivePath) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException("Linked or external packages cannot be restored.");
+                var data = PortableSessionArchive.Read(archivePath);
+                // The checksum is NOT a signature. Pinned IPhreeqc and
+                // the imported Native scientific identity decide live trust.
+                imported = CoreSession.ImportSession(data.NativeJson,
+                    driver.ScientificDatabasePath);
+                if (!string.Equals(imported.BranchId, data.BranchId,
+                        StringComparison.Ordinal))
+                    throw new InvalidDataException("Imported Native branch identity disagrees.");
+                var importedView = LabViewModel.FromNativeSnapshot(imported.ReadSnapshot());
+                if (importedView == null ||
+                    !string.Equals(importedView.EventSequence, data.EventSequence,
+                        StringComparison.Ordinal))
+                    throw new InvalidDataException("Imported Native event revision disagrees.");
+
+                // Separate UUID namespace: an imported classmate's pack cannot
+                // overwrite this student's current save or Notebook. All
+                // journal bytes are durably staged before touching live Native.
+                var name = "portable-" + Guid.NewGuid().ToString("N");
+                stagedNotes = Path.Combine(root, name + ".plv-notes");
+                var expectedSave = Path.Combine(root, name + ".plv.json");
+                if (File.Exists(stagedNotes) || File.Exists(expectedSave) ||
+                    File.Exists(stagedNotes + ".bak") || File.Exists(expectedSave + ".bak"))
+                    throw new IOException("Portable restore storage identity collision.");
+                NotebookService.InstallPortableSnapshot(stagedNotes,
+                    data.NotebookSnapshot, data.BranchId, data.EventSequence);
+                stagedSave = saves.Save(imported, root, name);
+
+                // Must switch the journal path BEFORE the restored Native
+                // snapshot is published: the lesson recovery subscriber needs
+                // this imported package's authenticated Notebook, not the old one.
+                saveName = name;
+                driver.ReplaceSession(imported);
+                adopted = true;
+                imported = null;
+                LastDurableSavePath = stagedSave;
+                LastPortableImportSummary = "Restored local package · Native branch " +
+                    data.BranchId + " · event " + data.EventSequence +
+                    ". New isolated offline session; Native SessionLoad Hold remains active. " +
+                    "Checksums are not identity or scientific attestation.";
+                LastError = null;
+                RecordedReview = null;
+                CurrentComparison = null;
+                router?.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                // Never dispose a session the Native driver actually adopted.
+                if (imported != null &&
+                    !ReferenceEquals(imported, driver?.Session))
+                    imported.Dispose();
+                adopted = adopted ||
+                    (imported != null && ReferenceEquals(imported, driver?.Session));
+                if (!adopted)
+                {
+                    saveName = priorSaveName;
+                    foreach (var candidate in new[] { stagedSave, stagedNotes })
+                        if (!string.IsNullOrEmpty(candidate))
+                            try { if (File.Exists(candidate)) File.Delete(candidate); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                }
+                LastPortableImportSummary = null;
+                LastError = "Portable student restore refused: " + error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
+
         public string LastError { get; private set; }
         // Exact accepted Native command identity, not a predicted material result.
         public string LastInstrumentReceipt { get; private set; }
@@ -575,6 +685,11 @@ namespace PharmaLabVR.Session
         private void OnNativeSessionRestored()
         {
             LastInstrumentReceipt = null;
+            LastPortableImportSummary = null;
+            LastDurableSavePath = null;
+            LastPortableArchivePath = null;
+            LastCsvExportPath = null;
+            LastLearnerCsvExportPath = null;
             // A restored session must not inherit unsaved in-memory guidance.
             // Rebuild only after the authoritative replacement Native snapshot.
             selectedResearchLesson = null;
@@ -820,7 +935,17 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalPortableArchive;
+                if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChoosePortableArchive);
+                GUI.enabled = CanRestoreLocalPortableSession;
+                if (GUILayout.Button("Restore selected local study package", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.RestorePortable);
                 GUI.enabled = true;
+                GUILayout.Label("Local study package: " + (SelectedArchiveFileName ?? "none") +
+                    " · checksum integrity does not prove identity or scientific attestation.");
+                if (!string.IsNullOrEmpty(LastPortableImportSummary))
+                    GUILayout.Label(LastPortableImportSummary);
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
@@ -835,7 +960,17 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalPortableArchive;
+                if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChoosePortableArchive);
+                GUI.enabled = CanRestoreLocalPortableSession;
+                if (GUILayout.Button("Restore selected local study package", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.RestorePortable);
                 GUI.enabled = true;
+                GUILayout.Label("Local study package: " + (SelectedArchiveFileName ?? "none") +
+                    " · checksum integrity does not prove identity or scientific attestation.");
+                if (!string.IsNullOrEmpty(LastPortableImportSummary))
+                    GUILayout.Label(LastPortableImportSummary);
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();

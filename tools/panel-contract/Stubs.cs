@@ -166,6 +166,16 @@ namespace PharmaLabVR.Session
         public int PortablePreviewCalls { get; private set; }
         public bool CanPreviewLocalPortableArchive => true;
         public bool CanChooseLocalPortableArchive => true;
+        public bool PortableRestorePermitted { get; set; } = true;
+        public bool CanRestoreLocalPortableSession => PortableRestorePermitted;
+        public string LastPortableImportSummary => "Offline restored student study; not attested.";
+        public int PortableRestoreCalls { get; private set; }
+        public bool RestoreSelectedLocalPortableSession()
+        {
+            if (!PortableRestorePermitted) return false;
+            PortableRestoreCalls++;
+            return true;
+        }
         public string SelectedArchiveFileName => "submitted.plvpack";
         public int PortableChooseCalls { get; private set; }
         public bool ChooseNextLocalArchive()

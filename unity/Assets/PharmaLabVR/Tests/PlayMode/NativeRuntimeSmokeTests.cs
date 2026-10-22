@@ -24,6 +24,115 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // A student imports a real offline study pack into a new isolated
+        // local save/Notebook. The old Native session is replaced only after
+        // the archive, model and both durable files have been admitted.
+        [UnityTest]
+        public IEnumerator M3_StudentRestoresPortableNativeExperimentAndLocalNotesWithoutOverwritingOldRun()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string originalNotes = null;
+            string packed = null;
+            string installed = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "portable-student-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, name);
+                originalNotes = Path.Combine(Application.persistentDataPath,
+                    "sessions", name + ".plv-notes");
+                Assert.That(actions.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.RecordResearchPrediction,
+                    "below-7"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                var source = driver.Session;
+                var branch = source.BranchId;
+                var atEvent = driver.CurrentLabView.EventSequence;
+                var originalNotesBytes = File.ReadAllBytes(originalNotes);
+                Assert.That(actions.Request(PanelAction.Pause), Is.True);
+                Assert.That(actions.Request(PanelAction.ExportPortable), Is.True,
+                    sessions.LastError);
+                packed = sessions.LastPortableArchivePath;
+                Assert.That(File.Exists(packed), Is.True);
+                Assert.That(sessions.CanChooseLocalPortableArchive, Is.True);
+                var expectedName = Path.GetFileName(packed);
+                for (var i = 0; i < 64 &&
+                     sessions.SelectedArchiveFileName != expectedName; i++)
+                    Assert.That(actions.Request(PanelAction.ChoosePortableArchive),
+                        Is.True, sessions.LastError);
+                Assert.That(sessions.SelectedArchiveFileName, Is.EqualTo(expectedName));
+                Assert.That(sessions.CanRestoreLocalPortableSession, Is.True);
+                // A corrupted package cannot replace the existing Native
+                // session or alter the current branch's durable journal.
+                var savedPackBytes = File.ReadAllBytes(packed);
+                File.AppendAllText(packed, "tampered");
+                Assert.That(actions.Request(PanelAction.RestorePortable), Is.False);
+                Assert.That(driver.Session, Is.SameAs(source));
+                Assert.That(source.IsOpen, Is.True);
+                Assert.That(File.ReadAllBytes(originalNotes),
+                    Is.EqualTo(originalNotesBytes));
+                File.WriteAllBytes(packed, savedPackBytes);
+                Assert.That(actions.Request(PanelAction.RestorePortable),
+                    Is.True, sessions.LastError);
+                installed = sessions.LastDurableSavePath;
+                Assert.That(source.IsOpen, Is.False);
+                Assert.That(driver.Session, Is.Not.SameAs(source));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(atEvent));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(File.Exists(installed), Is.True);
+                Assert.That(installed, Is.Not.EqualTo(Path.Combine(
+                    Application.persistentDataPath, "sessions", name + ".plv.json")));
+                Assert.That(File.ReadAllBytes(originalNotes),
+                    Is.EqualTo(originalNotesBytes),
+                    "Portable student restore overwrote existing learner annotations.");
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1),
+                    "Restored Notebook must contain only the exported Native branch/event evidence.");
+                Assert.That(sessions.ResearchPredictionSummary, Does.Contain("below 7"));
+                Assert.That(sessions.LastPortableImportSummary,
+                    Does.Contain("not identity").IgnoreCase);
+                Assert.That(sessions.RecordedReview, Is.Null);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(packed))
+                    foreach (var name in new[] { packed, packed + ".bak", packed + ".tmp" })
+                        if (File.Exists(name)) File.Delete(name);
+                if (!string.IsNullOrWhiteSpace(originalNotes))
+                    foreach (var name in new[] { originalNotes, originalNotes + ".bak",
+                        originalNotes + ".lock" })
+                        if (File.Exists(name)) File.Delete(name);
+                if (!string.IsNullOrWhiteSpace(installed))
+                    foreach (var name in new[] { installed, installed + ".bak",
+                        installed.Replace(".plv.json", ".plv-notes"),
+                        installed.Replace(".plv.json", ".plv-notes.bak") })
+                        if (File.Exists(name)) File.Delete(name);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Native-backed laboratory geometry plus stock->tip->receiver material.
         // Actual keyboard and tracked-controller presses remain final Player tests.
         [UnityTest]

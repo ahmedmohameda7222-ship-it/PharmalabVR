@@ -186,6 +186,44 @@ namespace PharmaLabVR.Session
                     throw new InvalidDataException("Portable notes do not match the Native branch/revision.");
         }
 
+        // Transactional student restore: stage only a checksum-validated,
+        // branch-scoped local journal in a *new* session namespace. This
+        // must never merge into or replace another student's Notebook.
+        public static void InstallPortableSnapshot(string path, string snapshot,
+            string branchId, string maxEventSequence)
+        {
+            ValidatePath(path);
+            ValidatePortableSnapshot(snapshot, branchId, maxEventSequence);
+            var fullPath = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrEmpty(directory))
+                throw new InvalidDataException("Portable Notebook has no parent directory.");
+            Directory.CreateDirectory(directory);
+            if (File.Exists(fullPath) || File.Exists(fullPath + ".bak"))
+                throw new IOException("Portable restore cannot overwrite an existing Notebook.");
+            var bytes = StrictUtf8.GetBytes(snapshot);
+            var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                // Atomic, no-overwrite publish; the importer chooses a fresh
+                // namespace and swaps its Native session only after success.
+                File.Move(temporary, fullPath);
+            }
+            catch
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
         // Used by read-only teaching review of a .plvpack. Parse the
         // checksum-verified journal in memory; never recreate/write a local
         // Notebook file or accept a different Native branch/future event.

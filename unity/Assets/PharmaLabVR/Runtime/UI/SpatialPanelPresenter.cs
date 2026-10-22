@@ -26,6 +26,7 @@ namespace PharmaLabVR.UI
         private bool placedWithTrackedHead;
         private int settingsPage;
         private int instrumentPage;
+        private bool portableRecoveryPage;
         private int researchStockIndex;
         private int researchConcentrationIndex = 2;
         private static readonly string[] ResearchStockIds =
@@ -153,6 +154,17 @@ namespace PharmaLabVR.UI
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddButton("Park tool", -306f, PanelAction.ParkTool);
             AddButton("Load saved session", -306f, PanelAction.Load);
+            AddInstrumentButton("Portable study restore", -194f,
+                () => portableRecoveryPage = true);
+            AddInstrumentButton("Choose study package", 30f,
+                () => panels?.Request(PanelAction.ChoosePortableArchive));
+            AddInstrumentButton("Restore study package", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.RestorePortable) == true)
+                    portableRecoveryPage = false;
+            });
+            AddInstrumentButton("Back to pause/hold", -306f,
+                () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
             AddButton("Snap left 30", -26f, PanelAction.SnapLeft);
             AddButton("Snap right 30", -26f, PanelAction.SnapRight);
@@ -438,6 +450,8 @@ namespace PharmaLabVR.UI
             }
             if (state.ScreenId != ScreenId.Settings) settingsPage = 0;
             if (state.ScreenId != ScreenId.Lab) instrumentPage = 0;
+            if (state.ScreenId != ScreenId.Pause && state.ScreenId != ScreenId.Hold)
+                portableRecoveryPage = false;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -514,6 +528,16 @@ namespace PharmaLabVR.UI
             SetButton("Choose local archive", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ChoosePortableArchive") &&
                 panels != null && panels.CanChooseLocalPortableArchive);
+            var portableRestoreAvailable =
+                (state.ScreenId == ScreenId.Pause || state.ScreenId == ScreenId.Hold) &&
+                state.SupportedActions.Contains("RestorePortable");
+            SetButton("Portable study restore", portableRestoreAvailable &&
+                !portableRecoveryPage);
+            buttons["Portable study restore"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Hold ? -138f : -194f);
+            SetButton("Choose study package", false);
+            SetButton("Restore study package", false);
+            SetButton("Back to pause/hold", false);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
                 panels != null && panels.CanCompareSaved);
@@ -597,6 +621,31 @@ namespace PharmaLabVR.UI
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
             }
+            if (portableRestoreAvailable && portableRecoveryPage)
+            {
+                // Dedicated UI page: an XR ray must never click a restore
+                // action through overlapping Save/Continue/tool buttons.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                SetButton("Choose study package",
+                    state.SupportedActions.Contains("ChoosePortableArchive") &&
+                    panels != null && panels.CanChooseLocalPortableArchive);
+                SetButton("Restore study package",
+                    state.SupportedActions.Contains("RestorePortable") &&
+                    panels != null && panels.CanRestoreLocalPortableSession);
+                SetButton("Back to pause/hold", true);
+                detail.text = "OFFLINE STUDENT RESTORE · NOT ATTESTED / NOT GRADED\n" +
+                    "Place a .plvpack in the local sessions folder. Choose a package, " +
+                    "then restore it to a new isolated session. The Native model, " +
+                    "branch, event and Notebook integrity must all validate.\n" +
+                    "Selected: " + (panels?.SelectedArchiveFileName ?? "none") +
+                    "\nNative SessionLoad Hold requires an explicit new neutral grip.";
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            if (state.ScreenId == ScreenId.Hold &&
+                !string.IsNullOrEmpty(panels?.LastPortableImportSummary))
+                detail.text += "\n" + panels.LastPortableImportSummary;
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
             else
             {

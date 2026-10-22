@@ -1780,10 +1780,25 @@ internal static class Program
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
             Check(panels.Request(PanelAction.Measure, "receiver"), "Measure action refused");
             Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
-            Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0,
-                "Live Desktop Measure unexpectedly permitted a Native session replacement");
+            Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0 &&
+                  !panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 0,
+                "Live Desktop Measure unexpectedly permitted any Native session replacement");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            Check(router.Current.SupportedActions.Contains("RestorePortable") &&
+                  router.Current.SupportedActions.Contains("ChoosePortableArchive") &&
+                  panels.Request(PanelAction.ChoosePortableArchive),
+                "Offline student package selection missing from Pause.");
+            session.PortableRestorePermitted = false;
+            Check(!panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 0,
+                "Unavailable or invalid offline package falsely imported a session.");
+            session.PortableRestorePermitted = true;
+            Check(panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 1 &&
+                  driver.IsNativePaused,
+                "Native-backed offline restore did not route from Pause without unpausing.");
             Check(router.Current.SupportedActions.Contains("ExportPortable"),
                 "Native Pause does not expose portable Export.");
             Check(panels.Request(PanelAction.ExportPortable),
@@ -1829,6 +1844,9 @@ internal static class Program
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused,
                 "Settings Back unpaused the operating authority");
             Check(panels.Request(PanelAction.Review), "Paused Review refused");
+            Check(!panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 1,
+                "Read-only recorded Review unexpectedly admitted live package import.");
             Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
             Check(router.Current.SupportedActions.Contains("CompareSaved"),
                 "Review cannot explicitly compare with a recorded saved checkpoint.");
