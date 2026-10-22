@@ -146,6 +146,63 @@ namespace PharmaLabVR.Protocols
                 vessel.CommittedVolumeM3 == 0d);
         }
 
+        // Guided, ungraded progress. State comes only from the current Native
+        // snapshot plus branch-matched durable local student annotations.
+        public string EvidenceChecklist(string liveBranchId, LabViewModel native,
+            IReadOnlyList<NotebookEntry> notes)
+        {
+            const string disclaimer = "No certified grade or endpoint inferred.";
+            if (string.IsNullOrWhiteSpace(liveBranchId) || liveBranchId != BranchId)
+                return "Research checklist unavailable for a different Native branch. " + disclaimer;
+            if (native?.Vessels == null || string.IsNullOrWhiteSpace(native.EventSequence))
+                return "Research checklist awaits a Native snapshot. " + disclaimer;
+            var sourceAvailable = native.Vessels.Any(v => v.Id == "source" &&
+                IsRepresented(v.CommittedVolumeM3, v.CapacityM3) &&
+                v.CommittedVolumeM3 > 0d && v.MaterialRevision != "0");
+            var receiverExists = native.Vessels.Any(v => v.Id == "receiver" &&
+                IsRepresented(v.CommittedVolumeM3, v.CapacityM3));
+            var receiver = receiverExists ?
+                native.Vessels.First(v => v.Id == "receiver") : default;
+            var transferred = receiverExists && receiver.CommittedVolumeM3 > 0d;
+            var nativePH = transferred && native.Observations != null &&
+                native.Observations.Any(o => o.VesselId == "receiver" &&
+                    o.ObservableId == "pH" && o.Support == "Supported" &&
+                    o.Freshness == "Current" && o.ComputationState == "Ready" &&
+                    o.ValueAvailable && double.IsFinite(o.Value) &&
+                    o.AsOfMaterialRevision == receiver.MaterialRevision &&
+                    !string.IsNullOrWhiteSpace(o.DatabaseIdentity));
+            var notesForBranch = notes ?? Array.Empty<NotebookEntry>();
+            var predicted = RecoverSavedPrediction(
+                notesForBranch, Definition.id, BranchId) != null;
+            var recorded = nativePH && NativeMeasurementNote.WasRecorded(
+                notesForBranch, BranchId, native.EventSequence, "receiver",
+                receiver.MaterialRevision);
+            var reflected = recorded && HasRecordedExplanation(
+                notesForBranch, Definition.id, BranchId, native.EventSequence);
+            var checklist =
+                (sourceAvailable ? "Observed: prepared Native stock" :
+                    "Pending: prepare Native stock") +
+                "\n" + (predicted ? "Recorded: student hypothesis" :
+                    "Pending: student hypothesis") +
+                "\n" + (transferred ? "Observed: Native receiver transfer" :
+                    "Pending: Native receiver transfer") +
+                "\n" + (nativePH ? "Observed: supported current Native pH" :
+                    "Pending: supported current Native pH") +
+                "\n" + (recorded ? "Recorded: Native pH" :
+                    "Pending: recorded Native pH") +
+                "\n" + (reflected ? "Recorded: learner reflection" :
+                    "Pending: learner reflection");
+            if (Definition.id == "mixed-acid-titration-research")
+            {
+                var reserveReady = native.Vessels.Any(v => v.Id == "reserve-stock" &&
+                    IsRepresented(v.CommittedVolumeM3, v.CapacityM3) &&
+                    v.CommittedVolumeM3 > 0d && v.MaterialRevision != "0");
+                checklist += "\n" + (reserveReady ? "Observed: prepared reserve stock" :
+                    "Pending: prepare reserve stock");
+            }
+            return checklist + "\n" + disclaimer;
+        }
+
         public string Summary(string liveNativeBranchId, LabViewModel native,
             bool paused, bool held)
         {

@@ -318,6 +318,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(explainedNotes.Count, Is.EqualTo(3));
                 Assert.That(explainedNotes[2].Text, Does.Contain("Student explanation for"));
                 Assert.That(explainedNotes[2].Text, Does.Contain("not Native scientific evidence"));
+                Assert.That(sessions.ResearchLessonSummary, Does.Contain("Recorded: Native pH"));
+                Assert.That(sessions.ResearchLessonSummary, Does.Contain("Recorded: learner reflection"));
+                Assert.That(sessions.ResearchLessonSummary, Does.Contain("No certified grade"));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Save"));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Review"));
                 Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);

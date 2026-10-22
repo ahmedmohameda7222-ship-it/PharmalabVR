@@ -199,3 +199,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## P23 offline Desktop and XR imported-note paging (22 October 2026)
 
 - **P23.02/P23.04 Partial source:** Desktop recorded Review now presents the currently selected imported student annotation with explicit Next student note navigation, matching the already implemented XR annotated evidence page. The Unity PlayMode source exercises a real predicted student hypothesis plus a new notebook explanation note, exports the actual portable archive, opens it read-only as a teaching preview, pages both notes, and confirms Native session/event immutability. Unity runtime tests remain NOT_RUN; no scientific attestation or formal acceptance promotion.
+
+## M3 guided research evidence checklist — 22 October 2026
+
+- **P12.01/P12.02 Partial:** Desktop and XR lesson guidance now surfaces an explicit evidence checklist of stock preparation, student hypothesis, Native material transfer, current supported Native pH, durable pH note and learner reflection; mixed-acid adds reserve stock. Every item is recomputed from matching Native branch material/observation metadata and the branch-scoped local Notebook. Pending items are never presented as complete; a changed Native branch disables progress. No grade, endpoint or institutional attestation is inferred.
+- **Tests:** RED headless test `0d0acfdf` validates empty, branch mismatch, partial Native state and durable complete evidence. Unity PlayMode source checks the end-to-end Research lesson now exposes recorded pH/reflection milestones. Unity NOT_RUN, official acceptance unchanged.

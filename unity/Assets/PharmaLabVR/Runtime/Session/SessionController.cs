@@ -419,7 +419,10 @@ namespace PharmaLabVR.Session
         public string ResearchLessonSummary => selectedResearchLesson == null ?
             "Free laboratory · no lesson selected. Choose a Research lesson to follow its procedure." :
             selectedResearchLesson.Summary(driver?.CurrentNativeBranchId,
-                driver?.CurrentLabView, driver?.IsNativePaused == true, driver?.IsTimeHeld == true);
+                driver?.CurrentLabView, driver?.IsNativePaused == true, driver?.IsTimeHeld == true) +
+            "\n" + selectedResearchLesson.EvidenceChecklist(
+                driver?.CurrentNativeBranchId, driver?.CurrentLabView,
+                ReadNotebookEntries());
         public string ResearchLessonSteps => selectedResearchLesson == null ?
             string.Empty : selectedResearchLesson.Instructions;
         public bool HasResearchLesson => selectedResearchLesson != null;
