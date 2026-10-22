@@ -475,6 +475,10 @@ namespace PharmaLabVR.Session
         private int selectedConcentrationIndex = 2;
         private Vector2 hudScrollPosition;
         private string notebookDraft = string.Empty;
+        public string ResearchConceptSummary =>
+            ResearchConceptReadout.Describe(
+                driver?.CurrentLabView,
+                router?.Current?.SelectedEntityId ?? "receiver");
         private string instructorArchiveDraft = string.Empty;
         private ScreenRouter router;
         private LabPanelController panels;
@@ -877,6 +881,18 @@ namespace PharmaLabVR.Session
                 if (!string.IsNullOrEmpty(LastPortableArchivePath))
                     GUILayout.Label("Portable archive written: " + LastPortableArchivePath);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
+                GUILayout.EndScrollView();
+                GUILayout.EndArea();
+                return;
+            }
+            if (screen == ScreenId.Learn)
+            {
+                GUILayout.Label("Native-backed research concept inspection");
+                GUILayout.Label(ResearchConceptSummary);
+                if (GUILayout.Button("Return to laboratory", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Lab);
+                if (GUILayout.Button("Save session", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.Save);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;

@@ -479,14 +479,15 @@ namespace PharmaLabVR.UI
                         new[] { "Save", "Load", "Review", "Settings" }),
                 ScreenId.Lab when driver != null && driver.SourceNeedsPreparation =>
                     new[] { "PrepareResearchStock", "PrepareReserveStock", "PrepareRinseWater",
-                        "SelectResearchLesson", "RecordResearchPrediction", "Settings" },
+                        "SelectResearchLesson", "RecordResearchPrediction", "Learn", "Settings" },
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction" } :
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" } :
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction" },
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" },
+                ScreenId.Learn => new[] { "Lab", "Inspect", "Measure", "Save" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, NextInstructorAnnotation }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -119,6 +119,11 @@ namespace PharmaLabVR.UI
                     return sessions.RecordResearchExplanation(entityId);
                 case PanelAction.BottleRinse:
                     return sessions.TryBottleWaterRinse();
+                case PanelAction.Learn:
+                    if (string.IsNullOrEmpty(entityId)) return false;
+                    router.Show(ScreenId.Learn, entityId);
+                    return router.Current.ScreenId == ScreenId.Learn &&
+                        router.Current.SelectedEntityId == entityId;
                 case PanelAction.Inspect:
                 case PanelAction.Measure:
                     if (string.IsNullOrEmpty(entityId) || !driver.SelectMeasurementVessel(entityId)) return false;

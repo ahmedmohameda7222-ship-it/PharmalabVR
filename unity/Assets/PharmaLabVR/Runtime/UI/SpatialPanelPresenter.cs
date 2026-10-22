@@ -226,6 +226,8 @@ namespace PharmaLabVR.UI
                 () => panels?.Request(PanelAction.RecordResearchPrediction, "below-7"));
             AddInstrumentButton("Predict pH at least 7", -26f,
                 () => panels?.Request(PanelAction.RecordResearchPrediction, "at-least-7"));
+            AddInstrumentButton("Inspect Native concepts", -138f,
+                () => panels?.Request(PanelAction.Learn, "receiver"));
             AddInstrumentButton("Back to instruments", -250f, () => instrumentPage = 1);
 
             var eventObject = new GameObject("SpatialEventSystem", typeof(EventSystem), typeof(XRUIInputModule));
@@ -442,6 +444,8 @@ namespace PharmaLabVR.UI
                 ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
+                ScreenId.Learn => ResearchConceptReadout.Describe(
+                    driver.CurrentLabView, state.SelectedEntityId),
                 ScreenId.Notebook => panels?.NotebookSummary ?? "Research notebook unavailable.",
                 ScreenId.Compare => panels?.ComparisonSummary ?? "Recorded comparison unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(

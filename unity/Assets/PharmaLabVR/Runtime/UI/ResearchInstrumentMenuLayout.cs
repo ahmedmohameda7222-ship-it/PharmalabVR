@@ -27,7 +27,7 @@ namespace PharmaLabVR.UI
             "Switch pipette to reserve", "Refill bottle 0.01 ml",
             "Prime burette 0.05 ml", "Strong acid lesson", "Mixed acid lesson",
             "Predict pH below 7", "Predict pH at least 7",
-            "Back to instruments", "Exit tools"
+            "Inspect Native concepts", "Back to instruments", "Exit tools"
         };
 
         // Panels: 1 operations; 2 stock preparation; 3 prediction;
@@ -66,6 +66,7 @@ namespace PharmaLabVR.UI
                     Add("Predict pH below 7", 0, canPredict);
                     Add("Predict pH at least 7", 1, canPredict);
                     Add("Open notebook", 2, notebookAvailable);
+                    Add("Inspect Native concepts", 3);
                     Add("Back to instruments", 5);
                     Add("Exit tools", 6);
                     break;

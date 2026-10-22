@@ -209,3 +209,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P07.02/P12.01 Partial:** The full evidence checklist remains in Desktop Lab; XR spatial Lab and prediction pages now use the bounded next-pending-step summary computed from the same Native material and branch-scoped local Notebook evidence. Displays counts of documented steps, explicitly `not graded`, rather than a long scroll-overlapping procedure. Also shortens instrument instructions to a readable direct-grip/Native delivery hint. No Native execution semantics or verification statuses changed.
 - **Headless RED:** `505e168` tests finite concise guidance on new/recorded states; Unity Editor/PlayMode/XR NOT_RUN.
+
+## P12 Native-backed concept inspection — 22 October 2026
+
+- **P12.03 Partial (source):** Shared Desktop/XR Learn view exposes actual Native research-additive volume, bounded capacity, material revision, event sequence and fully supported Current IPhreeqc pH (model/database identity). Stale/unsupported/missing observation, unrepresented vessel or invalid volume displays unavailable instead of inventing a plot, endpoint, calculated pH or score. Guided XR lesson page offers a dedicated non-overlapping 'Inspect Native concepts' action; Desktop uses the same routed ScreenId.Learn. Headless test-first RED commit 91e44ea checks source provenance and refuses stale/missing pH; GREEN panel contract and production code follow. Unity Player/XR NOT_RUN; acceptance ledger unchanged.
