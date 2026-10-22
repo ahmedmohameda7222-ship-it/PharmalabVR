@@ -9,6 +9,7 @@ namespace PharmaLabVR.Input
         [SerializeField, Min(0.001f)] private float captureRadiusMetres = 0.08f;
         [SerializeField] private float apertureHeightMetres;
         [SerializeField, Min(0.001f)] private float maxFallMetres = 0.15f;
+        public string InventoryId => inventoryId;
         private readonly ReceiverMotionTracker trackedMotion = new ReceiverMotionTracker();
         // Registered only while active, so two overlapping receivers cannot
         // silently double-credit the same physical parcel or win by order.

@@ -35,6 +35,7 @@ namespace PharmaLabVR.Input
         public bool HasHeldTool => heldTool != null;
         public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
         public string LastPhysicalDeliveryFeedback { get; private set; }
+        public string LastPhysicalInspectionFeedback { get; private set; }
 
         private void Awake() => RefreshRegisteredToolId();
 
@@ -349,9 +350,39 @@ namespace PharmaLabVR.Input
             if (!Physics.Raycast(ray, out var hit, 3f, Physics.DefaultRaycastLayers,
                     QueryTriggerInteraction.Ignore)) return;
             var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
-            if (grabbable == null) return;
+            if (grabbable == null)
+            {
+                // Clicking the receiver opens its real Native observation.
+                // This cannot move material, perform a solver command or fake pH.
+                var receiver = hit.collider.GetComponentInParent<LabCaptureTarget>();
+                if (receiver != null) TryInspectReceiver(receiver);
+                return;
+            }
+            LastPhysicalInspectionFeedback = null;
             BeginHold(grabbable.transform);
             if (IsHoldingNativeTool) heldToolId = grabbable.ToolId;
+        }
+
+        // Shared Desktop click -> scene aperture identity -> Native vessel
+        // selection -> existing Measure panel. The driver owns observation data.
+        public bool TryInspectReceiver(LabCaptureTarget physicallySelected)
+        {
+            if (!inputEnabled || awaitingFocusContinue || heldTool != null ||
+                coreDriver == null || coreDriver.Session == null ||
+                coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
+                coreDriver.SourceNeedsPreparation || physicallySelected == null ||
+                physicallySelected != captureTarget || !captureTarget.isActiveAndEnabled)
+            {
+                LastPhysicalInspectionFeedback =
+                    "Receiver inspection unavailable until Native stock is prepared and the lab is active.";
+                return false;
+            }
+            var panel = coreDriver.transform.root.GetComponentInChildren<LabPanelController>(true);
+            var accepted = panel != null &&
+                panel.Request(PanelAction.Measure, physicallySelected.InventoryId);
+            LastPhysicalInspectionFeedback = accepted ? null :
+                "Native measurement selection was refused. Check the active lab and receiver.";
+            return accepted;
         }
 
         private bool TryPlaceHeldTool()

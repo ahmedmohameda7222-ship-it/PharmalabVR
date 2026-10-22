@@ -24,6 +24,56 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Authored for the final local Unity campaign, NOT_RUN here.
+        // Direct physical receiver selection enters the same shared Native
+        // measurement panel as Desktop/XR UI; no fabricated pH is asserted.
+        [UnityTest]
+        public IEnumerator M2_DesktopReceiverClickSelectsNativeMeasurementOnlyWhenLabIsActive()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var adapter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var target = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(target.InventoryId, Is.EqualTo("receiver"));
+                Assert.That(target.GetComponent<Collider>(), Is.Not.Null,
+                    "Receiver needs a physical collider for mouse selection.");
+                var before = driver.CurrentLabView.EventSequence;
+                Assert.That(adapter.TryInspectReceiver(target), Is.False,
+                    "Initial Native stock-setup Pause cannot admit a measurement click.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(before),
+                    "A refused click must not mutate Native event history.");
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Prepare supported Native stock before inspecting.");
+                Assert.That(adapter.TryInspectReceiver(target), Is.True,
+                    adapter.LastPhysicalInspectionFeedback);
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("receiver"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Measure));
+                Assert.That(driver.Measurement, Is.Not.Null);
+                Assert.That(adapter.TryInspectReceiver(null), Is.False,
+                    "A click without the real configured receiver cannot select science.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Verify actual authored outlet geometry and committed Native transfer
         // together. Headless policy tests cannot establish this Unity scene path.
         [UnityTest]

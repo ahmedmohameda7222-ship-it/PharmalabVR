@@ -954,7 +954,7 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
                     "Held pipette/bottle: left-drag moves; G requests a measured Native delivery only over receiver. " +
-                    "Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
+                    "Click receiver = inspect current Native pH; wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
                 GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");
@@ -1046,6 +1046,10 @@ namespace PharmaLabVR.Session
                 panels?.Request(PanelAction.Notebook);
             if (!string.IsNullOrEmpty(LastInstrumentReceipt))
                 GUILayout.Label(LastInstrumentReceipt);
+            var desktopInspection = driver?.transform.root
+                .GetComponentInChildren<DesktopInputAdapter>(true)?.LastPhysicalInspectionFeedback;
+            if (driver?.CurrentMode == "Desktop" && !string.IsNullOrEmpty(desktopInspection))
+                GUILayout.Label("Receiver inspection: " + desktopInspection);
             var desktopDelivery = driver?.transform.root
                 .GetComponentInChildren<DesktopInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
             if (driver?.CurrentMode == "Desktop" &&
