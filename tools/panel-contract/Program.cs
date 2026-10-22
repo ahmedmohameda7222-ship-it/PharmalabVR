@@ -535,6 +535,32 @@ internal static class Program
             "Invalid physical pose must fail closed before any Rigidbody release");
         // P10.01 held-tool mouse plane drag has priority over left-drag valve;
         // both routes share exclusive ownership and obey HUD focus.
+        // Physical delivery must require a deliberate gesture over exactly
+        // one receiver. It never substitutes tool pose for a Native receipt.
+        Check(ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.BottlePour &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", true, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteDispense,
+            "Actual bottle and pipette over the receiver must request their Native transfer actions.");
+        Check(ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", true, true, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", true, true, true, false)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-tool", true, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", false, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
+
         // M2: holding a real visual-only pipette/stock bottle must never
         // turn pointer motion into a Native burette valve command. They can
         // still be moved on the workbench with an ordinary left drag.
