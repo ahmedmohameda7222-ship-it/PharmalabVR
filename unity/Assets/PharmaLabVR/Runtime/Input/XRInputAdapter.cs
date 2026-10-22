@@ -84,11 +84,18 @@ namespace PharmaLabVR.Input
             // An immersion gesture is exclusive to exactly one represented
             // Native inventory; coincident bottles cannot double-authorize.
             var source = primary != reserve;
+            var inlet = registeredTool != null ?
+                registeredTool.GetComponent<ResearchBuretteInletTarget>() : null;
+            var mount = registeredTool != null ?
+                registeredTool.GetComponent<ToolMount>() : null;
+            var prime = id == "research-stock-bottle-visual" && inlet != null &&
+                mount != null && mount.IsMounted &&
+                inlet.AdmitsBottle(physicalTool, true, coreDriver?.Session);
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
                 !coreDriver.IsTimeHeld;
             return ResearchAuxiliaryDelivery.Resolve(id, true, true,
-                receiver, source, ready);
+                receiver, source, prime, ready);
         }
         private ActionBasedController deliveryPressOwner;
 
@@ -197,7 +204,7 @@ namespace PharmaLabVR.Input
                     if (requested == ResearchAuxiliaryDeliveryIntent.None)
                     {
                         LastPhysicalDeliveryFeedback =
-                            "Immerse pipette tip in prepared stock, or align outlet over the stationary receiver.";
+                            "Immerse pipette in selected Native stock, align outlet over receiver, or pour stock into burette inlet.";
                         continue;
                     }
                     if (deliveryPress.PendingToolId != null &&
@@ -291,11 +298,16 @@ namespace PharmaLabVR.Input
                     "Delivery refused. Maintain immersion or receiver alignment from press through Native step.";
                 return;
             }
-            var accepted = deliveryPanel.Request(
-                intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
-                    PanelAction.BottlePour : intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
-                    PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
             var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
+            var accepted = intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
+                session != null && session.TryPhysicalFillBuretteFromBottle(
+                    grip.transform, registeredTool != null ?
+                        registeredTool.GetComponent<ResearchBuretteInletTarget>() : null) :
+                deliveryPanel.Request(
+                    intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
+                        PanelAction.BottlePour :
+                    intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
+                        PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
                 (session?.LastError ?? "Native operation refused.");
@@ -310,6 +322,18 @@ namespace PharmaLabVR.Input
             return grip != null && grip.enabled && trigger != null &&
                 trigger.enabled && grip.ReadValue<float>() <= 0.1f &&
                 trigger.ReadValue<float>() <= 0.1f;
+        }
+
+        public bool IsSourceBottleDirectlyGripped(Transform physicalBottle)
+        {
+            if (physicalBottle == null || researchBottleGrab == null ||
+                researchBottleGrab.transform != physicalBottle ||
+                !researchBottleGrab.isSelected ||
+                researchBottleGrab.firstInteractorSelecting is not XRDirectInteractor)
+                return false;
+            var owner = OwnerForInteractor(
+                researchBottleGrab.firstInteractorSelecting.transform);
+            return Tracked(owner);
         }
 
         private ActionBasedController OwnerForInteractor(Transform selection)

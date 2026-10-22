@@ -124,6 +124,24 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_GeneratedBuretteUpperInletTracksRealGlassBodyMesh()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            var inlet = prefab.GetComponent<ResearchBuretteInletTarget>();
+            var marker = prefab.transform.Find("InletEntry");
+            var body = prefab.transform.Find("InspectableGlassBody");
+            Assert.That(inlet, Is.Not.Null, "The Native burette needs a distinct physical intake.");
+            Assert.That(marker, Is.Not.Null);
+            Assert.That(body, Is.Not.Null);
+            var upper = body.localPosition.y +
+                body.GetComponent<MeshFilter>().sharedMesh.bounds.max.y * body.localScale.y;
+            Assert.That(marker.localPosition.y, Is.EqualTo(upper).Within(1e-5f));
+            Assert.That(prefab.GetComponent<ValveActuator>(), Is.Not.Null);
+        }
+
+        [Test]
         public void P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState()
         {
             var root = new GameObject("dock-return-body");

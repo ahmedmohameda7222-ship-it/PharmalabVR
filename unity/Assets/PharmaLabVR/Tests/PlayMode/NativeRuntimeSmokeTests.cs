@@ -83,6 +83,74 @@ namespace PharmaLabVR.Tests.PlayMode
 
     public sealed class NativeRuntimeSmokeTests
     {
+        [UnityTest]
+        public IEnumerator M2_PhysicalSourceBottlePrimesUpperBuretteViaNativeMaterialOnly()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var adapter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var inlet = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchBuretteInletTarget>(true)).Single();
+                var bottle = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<BottlePourActuator>(true)).Single().transform;
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, sessions.LastError);
+                var beginHold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(beginHold, Is.Not.Null);
+                beginHold.Invoke(adapter, new object[] { bottle });
+                var before = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "burette").CommittedVolumeM3;
+                var stockBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3;
+                var nativeEvent = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.False, "A parked but unaligned bottle cannot prime the Native burette.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeEvent));
+                bottle.rotation = Quaternion.Euler(180f, 0f, 0f);
+                var outlet = bottle.Find("OutletExit");
+                var marker = inlet.transform.Find("InletEntry");
+                Assert.That(outlet, Is.Not.Null);
+                Assert.That(marker, Is.Not.Null);
+                bottle.position += marker.position + inlet.transform.up * .075f -
+                    outlet.position;
+                Assert.That(inlet.AdmitsBottle(bottle, true, driver.Session), Is.True,
+                    "Native-closed burette and real aligned upper inlet must admit the bottle.");
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "burette").CommittedVolumeM3,
+                    Is.EqualTo(before + 5e-8).Within(1e-11),
+                    "Only Native may update the burette volume.");
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3,
+                    Is.EqualTo(stockBefore - 5e-8).Within(1e-11),
+                    "Physical prime must debit real Native stock.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(nativeEvent));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // A student imports a real offline study pack into a new isolated
         // local save/Notebook. The old Native session is replaced only after
         // the archive, model and both durable files have been admitted.

@@ -43,4 +43,26 @@ namespace PharmaLabVR.Input
 
         private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
     }
+    // A geometric inlet admission only. The Native transfer command, not
+    // this sensor, owns all source/burette material and revision updates.
+    public static class ResearchBuretteInletAdmission
+    {
+        public static bool MayPrime(double buretteUprightDot,
+            double pouringOutletDownDot, double outletHeightAboveMouth,
+            double lateralDistanceSquared, double mouthRadius,
+            bool buretteParked, bool valveClosed)
+        {
+            return Finite(buretteUprightDot) && Finite(pouringOutletDownDot) &&
+                Finite(outletHeightAboveMouth) && Finite(lateralDistanceSquared) &&
+                Finite(mouthRadius) && buretteParked && valveClosed &&
+                buretteUprightDot >= 0.95 && pouringOutletDownDot >= 0.85 &&
+                mouthRadius > 0 && lateralDistanceSquared >= 0 &&
+                lateralDistanceSquared <= mouthRadius * mouthRadius &&
+                outletHeightAboveMouth >= 0.005 && outletHeightAboveMouth <= 0.15;
+        }
+
+        private static bool Finite(double value) =>
+            !double.IsNaN(value) && !double.IsInfinity(value);
+    }
+
 }

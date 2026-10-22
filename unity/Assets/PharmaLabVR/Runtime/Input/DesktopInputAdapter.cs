@@ -84,14 +84,20 @@ namespace PharmaLabVR.Input
             // An immersion gesture is exclusive to exactly one represented
             // Native inventory; coincident bottles cannot double-authorize.
             var source = primary != reserve;
+            var inlet = registeredTool != null ?
+                registeredTool.GetComponent<ResearchBuretteInletTarget>() : null;
+            var prime = physicalId == "research-stock-bottle-visual" &&
+                inlet != null && inlet.AdmitsBottle(physicalTool,
+                    !IsHoldingNativeTool, coreDriver?.Session);
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
                 !coreDriver.IsNativePaused;
             return ResearchAuxiliaryDelivery.Resolve(physicalId, true, true,
-                receiver, source, ready);
+                receiver, source, prime, ready);
         }
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
+        public Transform CurrentHeldPhysicalTool => heldTool;
         public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
         public string LastPhysicalDeliveryFeedback { get; private set; }
         public string LastPhysicalInspectionFeedback { get; private set; }
@@ -166,7 +172,7 @@ namespace PharmaLabVR.Input
                 var candidate = ResolveHeldResearchIntent(heldTool, heldId);
                 if (candidate == ResearchAuxiliaryDeliveryIntent.None)
                     LastPhysicalDeliveryFeedback =
-                        "Immerse the pipette tip in prepared stock liquid, or align an outlet over the stationary receiver.";
+                        "Immerse pipette in its selected Native stock, aim the bottle at receiver, or pour stock into the burette inlet.";
                 else
                 {
                     pendingDeliveryIntent = candidate;
@@ -410,10 +416,15 @@ namespace PharmaLabVR.Input
             }
             var actions = coreDriver.transform.root.GetComponentInChildren<LabPanelController>(true);
             var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
-            var accepted = actions != null && actions.Request(
-                intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
-                    PanelAction.BottlePour : intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
-                    PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
+            var accepted = intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
+                session != null && session.TryPhysicalFillBuretteFromBottle(
+                    heldTool, registeredTool != null ?
+                        registeredTool.GetComponent<ResearchBuretteInletTarget>() : null) :
+                actions != null && actions.Request(
+                    intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
+                        PanelAction.BottlePour :
+                    intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
+                        PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native command accepted.") :
                 (session?.LastError ?? "Native research transfer refused.");

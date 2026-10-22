@@ -609,7 +609,8 @@ namespace PharmaLabVR.UI
                     "and press trigger to aspirate Native 0.05 ml, then align the tip over receiver " +
                     "and trigger to dispense after the retained-tip volume is satisfied. " +
                     "After switching to prepared reserve, immerse in the separately labeled reserve bottle. " +
-                    "The Native selected source, real liquid level, and tracked grip must agree.";
+                    "The Native selected source, real liquid level, and tracked grip must agree. " +
+                    "To prime a docked burette, hold the source bottle inverted over the upper inlet, then press trigger.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))

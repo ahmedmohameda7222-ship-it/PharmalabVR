@@ -139,6 +139,15 @@ namespace PharmaLabVR.Editor
             body.name = "InspectableGlassBody";
             body.transform.SetParent(root.transform, false);
             body.transform.localScale = new Vector3(0.018f, 0.25f, 0.018f);
+            // The upper rim is derived from this actual saved mesh; bottle
+            // pouring must reach it rather than the unrelated receiver mouth.
+            var inletEntry = new GameObject("InletEntry").transform;
+            inletEntry.SetParent(root.transform, false);
+            inletEntry.localPosition = body.transform.localPosition +
+                Vector3.up * (body.GetComponent<MeshFilter>().sharedMesh.bounds.max.y *
+                              body.transform.localScale.y);
+            root.AddComponent<PharmaLabVR.Input.ResearchBuretteInletTarget>()
+                .Configure(inletEntry);
             var liquid = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             liquid.name = "CommittedLiquid";
             liquid.transform.SetParent(root.transform, false);

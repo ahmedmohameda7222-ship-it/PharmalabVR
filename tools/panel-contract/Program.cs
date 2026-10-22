@@ -1133,6 +1133,45 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
+        // The source bottle can physically prime the real burette only at
+        // its separate upright receiving mouth, never at the receiver or
+        // via a held/undocked burette, dry stock, or an open valve.
+        Check(ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, true, true),
+            "An upright docked burette with bottle outlet over its neck must admit measured prime.");
+        Check(!ResearchBuretteInletAdmission.MayPrime(
+            0, 1, .075, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 0, .075, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, -.005, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .16, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0005, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, false, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, true, false),
+            "Wrong bottle orientation, distance, aperture, bench ownership or valve status must refuse prime.");
+        Check(ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                false, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.BurettePrime &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                true, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                false, false, true, false) ==
+                ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", true, true,
+                false, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.None,
+            "Physical priming needs exclusive source-bottle and burette-inlet authority.");
+
         // M2: physical aspiration must reach the Native-rendered liquid
         // surface, not just a lip; disallowed geometry cannot generate an intent.
         Check(ResearchSourceImmersionAdmission.MayAspirate(
