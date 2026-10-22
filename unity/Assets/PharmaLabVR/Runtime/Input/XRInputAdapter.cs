@@ -4,6 +4,8 @@ using UnityEngine.XR.Interaction.Toolkit.Interactables;
 using UnityEngine.XR.Interaction.Toolkit.Interactors;
 using PharmaLabVR.Core;
 using PharmaLabVR.Tools;
+using PharmaLabVR.UI;
+using PharmaLabVR.Session;
 
 namespace PharmaLabVR.Input
 {
@@ -19,6 +21,12 @@ namespace PharmaLabVR.Input
         [SerializeField] private LabCaptureTarget captureTarget;
         [SerializeField] private CoreDriver coreDriver;
         [SerializeField] private ToolPresenter instrumentPresenter;
+        [SerializeField] private XRGrabInteractable researchPipetteGrab;
+        [SerializeField] private XRGrabInteractable researchBottleGrab;
+        [SerializeField] private LabPanelController deliveryPanel;
+        public bool HasAuxiliaryDeliveryBindings =>
+            researchPipetteGrab != null && researchBottleGrab != null && deliveryPanel != null;
+        public string LastPhysicalDeliveryFeedback { get; private set; }
         [SerializeField] private string toolId = "research-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
@@ -47,6 +55,17 @@ namespace PharmaLabVR.Input
             geometryProfileHash = profileHash;
         }
 
+        public void ConfigureAuxiliaryDelivery(XRGrabInteractable pipette,
+            XRGrabInteractable bottle, LabPanelController panel)
+        {
+            if (pipette == null || bottle == null || panel == null)
+                throw new System.ArgumentNullException(nameof(pipette),
+                    "Physical XR delivery needs both authored grips and the shared Native command panel.");
+            researchPipetteGrab = pipette;
+            researchBottleGrab = bottle;
+            deliveryPanel = panel;
+        }
+
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
             if (!inputEnabled || labFrame == null || leftController == null ||
@@ -72,6 +91,7 @@ namespace PharmaLabVR.Input
             // because hand/head tracking or ownership is not valid.
             if (!trackingValid || (selected && !Tracked(owner))) actuator = 0f;
             instrumentPresenter?.PresentActuatorInput(actuator);
+            TryPhysicalAuxiliaryDelivery(trackingValid && !blocked);
             return new[] {
                 LabGeometryAdapter.BuildSample(
                     toolId, ++sequence, nowNs, labFrame, registeredTool, actuator, geometryProfileHash,
@@ -79,6 +99,50 @@ namespace PharmaLabVR.Input
                     captureTarget != null ?
                         LabCaptureTarget.EstimateExclusive(registeredTool, captureTarget) : null)
             };
+        }
+
+        private void TryPhysicalAuxiliaryDelivery(bool trackingAndNativeReady)
+        {
+            if (coreDriver == null || captureTarget == null || deliveryPanel == null ||
+                !trackingAndNativeReady || coreDriver.SourceNeedsPreparation)
+                return;
+            foreach (var item in new[] {
+                (grip: researchPipetteGrab, id: "research-pipette-visual"),
+                (grip: researchBottleGrab, id: "research-stock-bottle-visual")
+            })
+            {
+                if (item.grip == null || !item.grip.isSelected ||
+                    item.grip.firstInteractorSelecting is not XRDirectInteractor)
+                    continue;
+                var selectedTransform = item.grip.firstInteractorSelecting.transform;
+                var controller = leftController != null &&
+                    selectedTransform.IsChildOf(leftController) ? leftActionController :
+                    rightController != null && selectedTransform.IsChildOf(rightController) ?
+                        rightActionController : null;
+                if (!Tracked(controller)) continue;
+                var ray = controller.GetComponentInChildren<XRRayInteractor>(true);
+                if (ray != null && ray.IsOverUIGameObject()) continue;
+                var trigger = controller.activateAction.action;
+                if (trigger == null || !trigger.enabled || !trigger.WasPressedThisFrame())
+                    continue;
+                var capture = LabCaptureTarget.EstimateExclusive(item.grip.transform, captureTarget);
+                var intent = ResearchAuxiliaryDelivery.Resolve(item.id, true, true,
+                    capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
+                    Mathf.Approximately(capture[0].fraction, 1f), true);
+                if (intent == ResearchAuxiliaryDeliveryIntent.None)
+                {
+                    LastPhysicalDeliveryFeedback =
+                        "Align the direct-gripped instrument outlet over the stationary receiver.";
+                    continue;
+                }
+                var accepted = deliveryPanel.Request(
+                    intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
+                        PanelAction.BottlePour : PanelAction.PipetteDispense);
+                var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
+                LastPhysicalDeliveryFeedback = accepted ?
+                    (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
+                    (session?.LastError ?? "Native operation refused.");
+            }
         }
 
         private static float Actuator(ActionBasedController controller, bool directBodyGrip)

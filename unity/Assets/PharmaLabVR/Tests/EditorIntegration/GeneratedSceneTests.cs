@@ -59,6 +59,20 @@ namespace PharmaLabVR.Tests.EditorIntegration
         }
 
         [Test]
+        public void M2_PhysicalAuxiliaryDeliveryUsesConfiguredSharedNativePanel()
+        {
+            var xr = FindInActiveScene("XRPlayerRig").GetComponent<XRInputAdapter>();
+            Assert.That(xr, Is.Not.Null);
+            Assert.That(xr.HasAuxiliaryDeliveryBindings, Is.True,
+                "XR direct grip and trigger need both actual apparatus and the shared Native panel.");
+            var pipette = FindInActiveScene("ResearchPipette");
+            var bottle = FindInActiveScene("ResearchStockBottle");
+            Assert.That(pipette.transform.Find("OutletExit"), Is.Not.Null);
+            Assert.That(bottle.transform.Find("OutletExit"), Is.Not.Null);
+            Assert.That(FindInActiveScene("ReceiverVessel").GetComponent<LabCaptureTarget>(), Is.Not.Null);
+        }
+
+        [Test]
         public void M2_AuxiliaryInstrumentsAreRealDesktopAndXRGrasps()
         {
             var manager = FindInActiveScene("XRInteractionManager").GetComponent<XRInteractionManager>();

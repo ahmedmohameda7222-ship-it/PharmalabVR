@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using PharmaLabVR.Core;
 using PharmaLabVR.Session;
 using PharmaLabVR.Tools;
+using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Input
 {
@@ -29,6 +30,7 @@ namespace PharmaLabVR.Input
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
         public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
+        public string LastPhysicalDeliveryFeedback { get; private set; }
 
         private void Awake() => RefreshRegisteredToolId();
 
@@ -98,6 +100,7 @@ namespace PharmaLabVR.Input
                 return System.Array.Empty<LabInputSample>();
             }
             HandlePickOrPlace();
+            HandlePhysicalDeliveryRequest();
             var pointerOverUi = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
             var shiftHeld = Keyboard.current != null &&
@@ -190,6 +193,42 @@ namespace PharmaLabVR.Input
             heldTool.position = positionOnPlane + initialDragOffset;
         }
 
+        // G is an intentional, geometry-admitted research delivery, not
+        // passive proximity or an invented fluid simulation.
+        private void HandlePhysicalDeliveryRequest()
+        {
+            if (Keyboard.current == null || !Keyboard.current.gKey.wasPressedThisFrame ||
+                heldTool == null || heldTool == registeredTool)
+                return;
+            if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                (Mouse.current != null && SessionController.PointerOverDesktopHud(
+                    Mouse.current.position.ReadValue())))
+                return;
+            var physicalId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
+            var capture = captureTarget != null ?
+                LabCaptureTarget.EstimateExclusive(heldTool, captureTarget) :
+                System.Array.Empty<LabCaptureEstimate>();
+            var ready = coreDriver != null && !coreDriver.SourceNeedsPreparation &&
+                !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused;
+            var intent = ResearchAuxiliaryDelivery.Resolve(physicalId, true, true,
+                capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
+                Mathf.Approximately(capture[0].fraction, 1f), ready);
+            if (intent == ResearchAuxiliaryDeliveryIntent.None)
+            {
+                LastPhysicalDeliveryFeedback =
+                    "Delivery not admitted. Align a held pipette/bottle outlet over the stationary receiver; Native must be active.";
+                return;
+            }
+            var actions = coreDriver.transform.root.GetComponentInChildren<LabPanelController>(true);
+            var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
+            var accepted = actions != null && actions.Request(
+                intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
+                    PanelAction.BottlePour : PanelAction.PipetteDispense);
+            LastPhysicalDeliveryFeedback = accepted ?
+                (session?.LastInstrumentReceipt ?? "Native command accepted.") :
+                (session?.LastError ?? "Native research transfer refused.");
+        }
+
         private void HandlePickOrPlace()
         {
             if (!inputEnabled || Keyboard.current == null || !Keyboard.current.fKey.wasPressedThisFrame) return;
@@ -244,12 +283,14 @@ namespace PharmaLabVR.Input
                 heldBody.isKinematic = heldToolOriginalKinematic;
             heldTool = null;
             pointerDragActive = false;
+            LastPhysicalDeliveryFeedback = null;
             return true;
         }
 
         private void BeginHold(Transform tool)
         {
             heldTool = tool;
+            LastPhysicalDeliveryFeedback = null;
             pointerDragActive = false;
             if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body))
             {

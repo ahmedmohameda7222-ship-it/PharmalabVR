@@ -674,7 +674,7 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
                 GUILayout.Label("Desktop: F selects/places burette, pipette or bottle on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
-                    "Held pipette/bottle: left-drag moves the visual tool; metered transfer uses Native UI. " +
+                    "Held pipette/bottle: left-drag moves; G requests a measured Native delivery only over receiver. " +
                     "Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
@@ -767,6 +767,11 @@ namespace PharmaLabVR.Session
                 panels?.Request(PanelAction.Notebook);
             if (!string.IsNullOrEmpty(LastInstrumentReceipt))
                 GUILayout.Label(LastInstrumentReceipt);
+            var desktopDelivery = driver?.transform.root
+                .GetComponentInChildren<DesktopInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
+            if (driver?.CurrentMode == "Desktop" &&
+                !string.IsNullOrEmpty(desktopDelivery))
+                GUILayout.Label("Physical delivery: " + desktopDelivery);
             if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
             GUILayout.EndScrollView();
             GUILayout.EndArea();

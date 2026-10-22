@@ -313,6 +313,12 @@ namespace PharmaLabVR.Editor
                 throw new InvalidOperationException("The two Research lesson definitions must ship with Lab.");
             sessionController.ConfigureResearchLessons(strongAcidLesson, mixedAcidLesson);
             sessionController.transform.SetParent(lab.transform);
+            var pipetteGrip = lab.transform.Find("ResearchPipette")?.GetComponent<
+                UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            var bottleGrip = lab.transform.Find("ResearchStockBottle")?.GetComponent<
+                UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            xrInput.ConfigureAuxiliaryDelivery(pipetteGrip, bottleGrip,
+                sessionController.GetComponent<LabPanelController>());
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }
