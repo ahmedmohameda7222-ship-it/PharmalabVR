@@ -1256,7 +1256,10 @@ namespace PharmaLabVR.Session
                 if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
                 return "Research notebook · " + entries.Count + " event-linked notes\n" +
                     "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
-                    preview + "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
+                    preview + "\n" +
+                    ResearchNotebookPHHistory.Summarize(entries,
+                        driver?.Session?.BranchId, "receiver", 3) +
+                    "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
             }
         }
 

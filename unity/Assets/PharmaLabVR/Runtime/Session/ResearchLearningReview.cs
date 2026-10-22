@@ -116,6 +116,13 @@ namespace PharmaLabVR.Session
                     .Append(entry.VesselId).Append(" · ").Append(excerpt);
             }
             if (start > 0) text.Append("\nOpen Notebook for earlier notes.");
+            if (!compact)
+            {
+                var history = ResearchNotebookPHHistory.Summarize(
+                    matching, reviewBranchId, "receiver", 4);
+                if (!history.StartsWith("No recorded Native pH", StringComparison.Ordinal))
+                    text.Append("\n").Append(history);
+            }
             return text.ToString();
         }
     }

@@ -186,3 +186,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## XR panel hit-target hardening (22 October 2026)
 
 - **P07.02/P12.02 Partial (source):** All informational and button-label Text components in the world-space SpatialPanelPresenter are now excluded from GraphicRaycaster targeting; only the authored Button Image remains interactive. This prevents variable-length model provenance, saved learner text and instructor descriptions from stealing XR ray clicks from real commands. PlayMode source test M2_XRScientificTextMustNotStealRayClicksFromInstrumentButtons asserts it for every generated panel Text/Button. Runtime Unity/XR verification still NOT_RUN.
+
+## M3 Native-origin pH event history — 22 October 2026
+
+- **P11.02/P12.03 Partial:** Notebook XR summary and Desktop recorded Review show only chronological, branch-matched receiver pH notes with original Native event numbers and unrounded values. Nonfinite/malformed observations and learner-authored notes create no points. Explicitly labeled local annotations, NOT a certified titration curve or attested performance record. Headless RED source at `2ead6eb`; Unity NOT_RUN; formal release acceptance unchanged.
