@@ -66,6 +66,31 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_GeneratedStockBottleExposesSourceImmersionToBothPhysicalInputRoutes()
+        {
+            var bottle = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            Assert.That(bottle, Is.Not.Null);
+            Assert.That(bottle.GetComponent<ResearchStockAspirateTarget>(), Is.Not.Null);
+            Assert.That(bottle.transform.Find("ParkedResearchCap"), Is.Not.Null);
+            Assert.That(bottle.transform.Find("ClosedResearchCap"), Is.Null,
+                "A closed bottle cap must not cover the immersion opening.");
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasStockAspirateTarget, Is.True);
+                Assert.That(xr.HasStockAspirateTarget, Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState()
         {
             var root = new GameObject("dock-return-body");

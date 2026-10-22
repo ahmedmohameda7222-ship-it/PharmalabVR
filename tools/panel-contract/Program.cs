@@ -1112,6 +1112,41 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
+        // M2: physical aspiration must reach the Native-rendered liquid
+        // surface, not just a lip; disallowed geometry cannot generate an intent.
+        Check(ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0001, .025, 0),
+            "Stationary upright prepared stock must admit an immersed tip.");
+        Check(!ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .150, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .191, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0008, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 0, .171, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0001, .025, .04) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, double.NaN, .192, .0001, .025, 0),
+            "Dry, bottomed-out, off-center, inverted, moving and unknown-liquid tips must fail.");
+        Check(ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteAspirate &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, true, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteDispense &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-stock-bottle-visual", true, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, false, true, false)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Physical pipette station must be exclusive; paused or bottle aspiration disallowed.");
+
         // M2: holding a real visual-only pipette/stock bottle must never
         // turn pointer motion into a Native burette valve command. They can
         // still be moved on the workbench with an ordinary left drag.

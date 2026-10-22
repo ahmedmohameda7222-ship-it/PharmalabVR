@@ -324,6 +324,13 @@ namespace PharmaLabVR.Editor
                 UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
             xrInput.ConfigureAuxiliaryDelivery(pipetteGrip, bottleGrip,
                 sessionController.GetComponent<LabPanelController>());
+            var aspirationTarget = bottleGrip != null ?
+                bottleGrip.GetComponent<ResearchStockAspirateTarget>() : null;
+            if (aspirationTarget == null)
+                throw new InvalidOperationException(
+                    "Generated stock bottle lacks a physical immersion target.");
+            desktopInput.ConfigureStockAspirateTarget(aspirationTarget);
+            xrInput.ConfigureStockAspirateTarget(aspirationTarget);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }

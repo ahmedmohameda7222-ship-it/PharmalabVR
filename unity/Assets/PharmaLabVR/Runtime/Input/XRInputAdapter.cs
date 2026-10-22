@@ -32,11 +32,40 @@ namespace PharmaLabVR.Input
         private ulong sequence;
         private bool inputEnabled;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
+        [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
+        private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
+        public void ConfigureStockAspirateTarget(ResearchStockAspirateTarget target) =>
+            stockAspirateTarget = target != null ? target :
+                throw new System.ArgumentNullException(nameof(target));
+        private ResearchStockAspirateTarget StockAspirateTarget =>
+            stockAspirateTarget != null ? stockAspirateTarget :
+                coreDriver != null ? coreDriver.transform.root
+                    .GetComponentInChildren<ResearchStockAspirateTarget>(true) : null;
+        public bool HasStockAspirateTarget => StockAspirateTarget != null;
+
+        private ResearchAuxiliaryDeliveryIntent ResolveHeldResearchIntent(
+            Transform physicalTool, string id)
+        {
+            var capture = captureTarget != null ?
+                LabCaptureTarget.EstimateExclusive(physicalTool, captureTarget) :
+                System.Array.Empty<LabCaptureEstimate>();
+            var receiver = capture.Length == 1 &&
+                capture[0].destinationInventoryId == "receiver" &&
+                Mathf.Approximately(capture[0].fraction, 1f);
+            var source = id == "research-pipette-visual" &&
+                StockAspirateTarget != null && StockAspirateTarget.IsImmersed(physicalTool);
+            var ready = coreDriver != null && coreDriver.Session != null &&
+                !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
+                !coreDriver.IsTimeHeld;
+            return ResearchAuxiliaryDelivery.Resolve(id, true, true,
+                receiver, source, ready);
+        }
         private ActionBasedController deliveryPressOwner;
 
         private void ClearDeliveryPress()
         {
             deliveryPress.Clear();
+            pendingDeliveryIntent = ResearchAuxiliaryDeliveryIntent.None;
             deliveryPressOwner = null;
         }
 
@@ -108,23 +137,18 @@ namespace PharmaLabVR.Input
                 {
                     // Admission at the *press* moment prevents a later
                     // receiver alignment from retroactively authorizing it.
-                    var capture = captureTarget != null ?
-                        LabCaptureTarget.EstimateExclusive(item.grip.transform, captureTarget) :
-                        System.Array.Empty<LabCaptureEstimate>();
-                    var aligned = capture.Length == 1 &&
-                        capture[0].destinationInventoryId == "receiver" &&
-                        Mathf.Approximately(capture[0].fraction, 1f);
-                    if (ResearchAuxiliaryDelivery.Resolve(item.id, true, true, aligned, true) ==
-                        ResearchAuxiliaryDeliveryIntent.None)
+                    var requested = ResolveHeldResearchIntent(item.grip.transform, item.id);
+                    if (requested == ResearchAuxiliaryDeliveryIntent.None)
                     {
                         LastPhysicalDeliveryFeedback =
-                            "Align the direct-gripped instrument outlet over the stationary receiver.";
+                            "Immerse pipette tip in prepared stock, or align outlet over the stationary receiver.";
                         continue;
                     }
                     if (deliveryPress.PendingToolId != null &&
                         !ReferenceEquals(deliveryPressOwner, owner))
                         ClearDeliveryPress();
                     deliveryPressOwner = owner;
+                    pendingDeliveryIntent = requested;
                     deliveryPress.Capture(item.id, (ulong)Time.frameCount, true);
                 }
             }
@@ -197,23 +221,23 @@ namespace PharmaLabVR.Input
                 ClearDeliveryPress();
                 return;
             }
-            // The queued input is consumed by this point. The second capture
-            // check remains mandatory because tools/receivers may have moved
-            // after the triggering frame.
+            // Press- and Native-step checks must agree on the *same*
+            // source/receiver intent, or movement in the buffer refuses it.
             deliveryPressOwner = null;
-            var capture = LabCaptureTarget.EstimateExclusive(grip.transform, captureTarget);
-            var intent = ResearchAuxiliaryDelivery.Resolve(pendingId, true, true,
-                capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
-                Mathf.Approximately(capture[0].fraction, 1f), true);
-            if (intent == ResearchAuxiliaryDeliveryIntent.None)
+            var admittedAtPress = pendingDeliveryIntent;
+            pendingDeliveryIntent = ResearchAuxiliaryDeliveryIntent.None;
+            var intent = ResolveHeldResearchIntent(grip.transform, pendingId);
+            if (intent == ResearchAuxiliaryDeliveryIntent.None ||
+                intent != admittedAtPress)
             {
                 LastPhysicalDeliveryFeedback =
-                    "Align the direct-gripped instrument outlet over the stationary receiver.";
+                    "Delivery refused. Maintain immersion or receiver alignment from press through Native step.";
                 return;
             }
             var accepted = deliveryPanel.Request(
                 intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
-                    PanelAction.BottlePour : PanelAction.PipetteDispense);
+                    PanelAction.BottlePour : intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
+                    PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
             var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native operation accepted.") :

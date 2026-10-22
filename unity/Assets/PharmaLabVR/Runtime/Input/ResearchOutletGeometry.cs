@@ -18,4 +18,29 @@ namespace PharmaLabVR.Input
             return centerLocalY + meshMinLocalY * meshScaleY;
         }
     }
+
+    // Native-rendered liquid level is read by the scene target; this admission
+    // only checks geometric immersion and stationary upright stock access.
+    public static class ResearchSourceImmersionAdmission
+    {
+        public static bool MayAspirate(double bottleUprightDot, double pipetteDownDot,
+            double tipDepthMetres, double surfaceDepthMetres, double bottomDepthMetres,
+            double lateralSquaredMetres, double mouthRadiusMetres, double bottleSpeedMetresPerSecond)
+        {
+            return Finite(bottleUprightDot) && Finite(pipetteDownDot) &&
+                Finite(tipDepthMetres) && Finite(surfaceDepthMetres) &&
+                Finite(bottomDepthMetres) && Finite(lateralSquaredMetres) &&
+                Finite(mouthRadiusMetres) && Finite(bottleSpeedMetresPerSecond) &&
+                bottleUprightDot >= 0.9 && pipetteDownDot >= 0.85 &&
+                mouthRadiusMetres > 0 && lateralSquaredMetres >= 0 &&
+                lateralSquaredMetres <= mouthRadiusMetres * mouthRadiusMetres &&
+                surfaceDepthMetres > 0 && bottomDepthMetres > surfaceDepthMetres &&
+                tipDepthMetres >= surfaceDepthMetres + 0.002 &&
+                tipDepthMetres <= bottomDepthMetres - 0.004 &&
+                bottleSpeedMetresPerSecond >= 0 &&
+                bottleSpeedMetresPerSecond <= CaptureAdmission.MaximumReceiverSpeedMetresPerSecond;
+        }
+
+        private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
+    }
 }

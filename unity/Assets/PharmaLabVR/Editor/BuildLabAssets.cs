@@ -265,12 +265,14 @@ namespace PharmaLabVR.Editor
                 bottleOutlet.localPosition = bottleNeck.transform.localPosition +
                     Vector3.up * (bottleNeck.GetComponent<MeshFilter>().sharedMesh.bounds.max.y *
                                   bottleNeck.transform.localScale.y);
-                // Upright closed-cap stock bottle is NOT a downward outlet.
-                // Measured pour is explicit Native command; tilt dynamics
-                // and cap opening are unvalidated and not inferred here.
+                // The stock-bottle outlet points upward when upright. A
+                // prepared source can be accessed through its open mouth:
+                // the parked cap is visible beside the neck, never blocking
+                // the pipette immersion path.
                 bottleOutlet.localRotation = Quaternion.Euler(180f, 0f, 0f);
-                Part(root.transform, "ClosedResearchCap", PrimitiveType.Cylinder,
-                    new Vector3(0f, 0.214f, 0f), new Vector3(0.042f, 0.012f, 0.042f), ink);
+                Part(root.transform, "ParkedResearchCap", PrimitiveType.Cylinder,
+                    new Vector3(0.105f, 0.015f, 0f),
+                    new Vector3(0.042f, 0.012f, 0.042f), ink);
                 var label = new GameObject("100mL_Research_NotCalibrated");
                 label.transform.SetParent(root.transform, false);
                 label.transform.localPosition = new Vector3(-0.052f, 0.09f, -0.076f);
@@ -286,6 +288,7 @@ namespace PharmaLabVR.Editor
                 root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
                     liquid.transform, "source", false, 1e-4, 0.12f, 0.013f);
                 root.AddComponent<BottlePourActuator>();
+                root.AddComponent<PharmaLabVR.Input.ResearchStockAspirateTarget>();
                 var bottleBody = root.AddComponent<Rigidbody>();
                 bottleBody.isKinematic = true;
                 bottleBody.useGravity = false;

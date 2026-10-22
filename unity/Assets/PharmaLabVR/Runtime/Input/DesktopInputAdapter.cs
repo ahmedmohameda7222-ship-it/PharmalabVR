@@ -31,6 +31,40 @@ namespace PharmaLabVR.Input
         private bool heldToolOriginalKinematic;
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
+        [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
+        private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
+        public void ConfigureStockAspirateTarget(ResearchStockAspirateTarget target) =>
+            stockAspirateTarget = target != null ? target :
+                throw new System.ArgumentNullException(nameof(target));
+        private ResearchStockAspirateTarget StockAspirateTarget =>
+            stockAspirateTarget != null ? stockAspirateTarget :
+                coreDriver != null ? coreDriver.transform.root
+                    .GetComponentInChildren<ResearchStockAspirateTarget>(true) : null;
+        public bool HasStockAspirateTarget => StockAspirateTarget != null;
+
+        private void ClearDeliveryPress()
+        {
+            deliveryPress.Clear();
+            pendingDeliveryIntent = ResearchAuxiliaryDeliveryIntent.None;
+        }
+
+        private ResearchAuxiliaryDeliveryIntent ResolveHeldResearchIntent(
+            Transform physicalTool, string physicalId)
+        {
+            var capture = captureTarget != null ?
+                LabCaptureTarget.EstimateExclusive(physicalTool, captureTarget) :
+                System.Array.Empty<LabCaptureEstimate>();
+            var receiver = capture.Length == 1 &&
+                capture[0].destinationInventoryId == "receiver" &&
+                Mathf.Approximately(capture[0].fraction, 1f);
+            var source = physicalId == "research-pipette-visual" &&
+                StockAspirateTarget != null && StockAspirateTarget.IsImmersed(physicalTool);
+            var ready = coreDriver != null && coreDriver.Session != null &&
+                !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
+                !coreDriver.IsNativePaused;
+            return ResearchAuxiliaryDelivery.Resolve(physicalId, true, true,
+                receiver, source, ready);
+        }
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
         public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
@@ -45,13 +79,13 @@ namespace PharmaLabVR.Input
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld || Keyboard.current == null)
             {
                 pickPress.Clear();
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             if (Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 pickPress.Clear();
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 actuator = 0f;
                 instrumentPresenter?.PresentActuatorInput(0f);
                 coreDriver.transform.root.GetComponentInChildren<SessionController>(true)
@@ -68,7 +102,7 @@ namespace PharmaLabVR.Input
                 // Crossing into UI invalidates a pending world gesture; it
                 // must not fire later when the pointer leaves the panel.
                 pickPress.Clear();
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             var frame = (ulong)Time.frameCount;
@@ -84,19 +118,15 @@ namespace PharmaLabVR.Input
                 heldTool != null && heldTool != registeredTool)
             {
                 var heldId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
-                var capture = captureTarget != null ?
-                    LabCaptureTarget.EstimateExclusive(heldTool, captureTarget) :
-                    System.Array.Empty<LabCaptureEstimate>();
-                var aligned = capture.Length == 1 &&
-                    capture[0].destinationInventoryId == "receiver" &&
-                    Mathf.Approximately(capture[0].fraction, 1f);
-                var candidate = ResearchAuxiliaryDelivery.Resolve(
-                    heldId, true, true, aligned, true);
+                var candidate = ResolveHeldResearchIntent(heldTool, heldId);
                 if (candidate == ResearchAuxiliaryDeliveryIntent.None)
                     LastPhysicalDeliveryFeedback =
-                        "Align the held bottle/pipette outlet over the stationary receiver before pressing G.";
+                        "Immerse the pipette tip in prepared stock liquid, or align an outlet over the stationary receiver.";
                 else
+                {
+                    pendingDeliveryIntent = candidate;
                     deliveryPress.Capture(heldId, frame, true);
+                }
             }
         }
 
@@ -104,7 +134,7 @@ namespace PharmaLabVR.Input
         {
             pointerSelectionActive = false;
             pickPress.Clear();
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             actuator = 0f;
             instrumentPresenter?.PresentActuatorInput(0f);
         }
@@ -133,7 +163,7 @@ namespace PharmaLabVR.Input
                 pointerDragActive = false;
                 pointerSelectionActive = false;
                 pickPress.Clear();
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 Debug.LogWarning("InputHold: focus was lost; explicit Continue is required.");
             }
         }
@@ -169,7 +199,7 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
                 pickPress.Clear();
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return System.Array.Empty<LabInputSample>();
             }
             HandlePickOrPlace();
@@ -214,7 +244,7 @@ namespace PharmaLabVR.Input
             pointerDragActive = false;
             pointerSelectionActive = false;
             pickPress.Clear();
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             awaitingFocusContinue = false;
             inputEnabled = gameObject.activeInHierarchy;
         }
@@ -227,7 +257,7 @@ namespace PharmaLabVR.Input
         {
             inputEnabled = value && !awaitingFocusContinue;
             pickPress.Clear();
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             if (!value)
             {
                 actuator = 0f;
@@ -278,38 +308,35 @@ namespace PharmaLabVR.Input
         {
             if (heldTool == null || heldTool == registeredTool)
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(
                     Mouse.current.position.ReadValue())))
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             var physicalId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
             if (!deliveryPress.TryConsume((ulong)Time.frameCount, physicalId, true))
                 return;
-            var capture = captureTarget != null ?
-                LabCaptureTarget.EstimateExclusive(heldTool, captureTarget) :
-                System.Array.Empty<LabCaptureEstimate>();
-            var ready = coreDriver != null && !coreDriver.SourceNeedsPreparation &&
-                !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused;
-            var intent = ResearchAuxiliaryDelivery.Resolve(physicalId, true, true,
-                capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
-                Mathf.Approximately(capture[0].fraction, 1f), ready);
-            if (intent == ResearchAuxiliaryDeliveryIntent.None)
+            var admittedAtPress = pendingDeliveryIntent;
+            pendingDeliveryIntent = ResearchAuxiliaryDeliveryIntent.None;
+            var intent = ResolveHeldResearchIntent(heldTool, physicalId);
+            if (intent == ResearchAuxiliaryDeliveryIntent.None ||
+                intent != admittedAtPress)
             {
                 LastPhysicalDeliveryFeedback =
-                    "Delivery not admitted. Align a held pipette/bottle outlet over the stationary receiver; Native must be active.";
+                    "Delivery refused. Keep the pipette immersed in stock or the outlet aligned over the receiver from G press through the Native step.";
                 return;
             }
             var actions = coreDriver.transform.root.GetComponentInChildren<LabPanelController>(true);
             var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
             var accepted = actions != null && actions.Request(
                 intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
-                    PanelAction.BottlePour : PanelAction.PipetteDispense);
+                    PanelAction.BottlePour : intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
+                    PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native command accepted.") :
                 (session?.LastError ?? "Native research transfer refused.");
@@ -419,7 +446,7 @@ namespace PharmaLabVR.Input
                 heldBody.isKinematic = heldToolOriginalKinematic;
             heldTool = null;
             pointerDragActive = false;
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             LastPhysicalDeliveryFeedback = null;
             return true;
         }
@@ -427,7 +454,7 @@ namespace PharmaLabVR.Input
         private void BeginHold(Transform tool)
         {
             heldTool = tool;
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             LastPhysicalDeliveryFeedback = null;
             pointerDragActive = false;
             if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body))

@@ -24,6 +24,64 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Native-backed laboratory geometry plus stock->tip->receiver material.
+        // Actual keyboard and tracked-controller presses remain final Player tests.
+        [UnityTest]
+        public IEnumerator M2_ImmersedPipetteUsesNativeStockAndDeliversToRealReceiver()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var source = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).Single();
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<PipetteActuator>(true)).Single().transform;
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(source.IsImmersed(pipette), Is.False,
+                    "A parked pipette is not inside source liquid.");
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Prepare real Native stock first.");
+                var fill = source.transform.Find("NativeBottleLiquid");
+                var tip = pipette.Find("OutletExit");
+                var surface = fill.TransformPoint(new Vector3(
+                    0f, fill.GetComponent<MeshFilter>().sharedMesh.bounds.max.y, 0f));
+                pipette.rotation = source.transform.rotation;
+                pipette.position += surface - tip.position - source.transform.up * 0.006f;
+                Assert.That(source.IsImmersed(pipette), Is.True,
+                    "Pipette tip must physically reach Native-rendered stock liquid.");
+                for (var i = 0; i < 3; i++)
+                    Assert.That(panels.Request(PanelAction.PipetteAspirate), Is.True,
+                        "Three 0.05 mL Native aspirates are needed for the retained-tip budget.");
+                Assert.That(panels.PipetteTipVolumeM3, Is.EqualTo(1.5e-7).Within(1e-10));
+                var outlet = pipette.Find("OutletExit");
+                var aperture = receiver.transform.position + receiver.transform.up * 0.04f;
+                pipette.position += aperture + receiver.transform.up * 0.06f - outlet.position;
+                Assert.That(source.IsImmersed(pipette), Is.False);
+                Assert.That(receiver.Estimate(pipette, Vector3.zero).Length, Is.EqualTo(1));
+                Assert.That(panels.Request(PanelAction.PipetteDispense), Is.True,
+                    "An aligned, sufficiently filled Native pipette must deliver real liquid.");
+                Assert.That(panels.PipetteTipVolumeM3, Is.EqualTo(1e-7).Within(1e-10));
+                Assert.That(driver.CurrentLabView.Vessels.Single(v => v.Id == "receiver")
+                    .CommittedVolumeM3, Is.GreaterThan(0.0));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Authored for the final local Unity campaign, NOT_RUN here.
         // Direct physical receiver selection enters the same shared Native
         // measurement panel as Desktop/XR UI; no fabricated pH is asserted.
