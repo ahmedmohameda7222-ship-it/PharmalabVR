@@ -441,6 +441,23 @@ internal static class Program
               choice.Any(item => item.Name == "Predict pH at least 7"),
             "Lesson selection must lead to both pre-transfer prediction options.");
 
+        // Offline teaching preview is a read-only REVIEW action. It is
+        // neither a Native command nor permission to grade or upload.
+        var teachingRouter = new ScreenRouter();
+        teachingRouter.Configure(new CoreDriver());
+        teachingRouter.Show(ScreenId.Review);
+        var teachingSessions = new SessionController();
+        var teachingPanels = new LabPanelController();
+        teachingPanels.Configure(teachingRouter, new CoreDriver(), teachingSessions);
+        Check(teachingRouter.Current.SupportedActions.Contains("PreviewPortableArchive") &&
+              teachingPanels.Request(PanelAction.PreviewPortableArchive, "submitted.plvpack") &&
+              teachingSessions.PortablePreviewCalls == 1,
+            "Recorded Review does not route to the offline teaching preview.");
+        teachingRouter.Show(ScreenId.Lab);
+        Check(!teachingPanels.Request(PanelAction.PreviewPortableArchive, "submitted.plvpack") &&
+              teachingSessions.PortablePreviewCalls == 1,
+            "Live Lab controls admitted a portable teaching preview action.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
