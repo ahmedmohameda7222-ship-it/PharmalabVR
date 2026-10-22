@@ -190,3 +190,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## M3 Native-origin pH event history — 22 October 2026
 
 - **P11.02/P12.03 Partial:** Notebook XR summary and Desktop recorded Review show only chronological, branch-matched receiver pH notes with original Native event numbers and unrounded values. Nonfinite/malformed observations and learner-authored notes create no points. Explicitly labeled local annotations, NOT a certified titration curve or attested performance record. Headless RED source at `2ead6eb`; Unity NOT_RUN; formal release acceptance unchanged.
+
+## M3 Notebook atomic multi-writer safety (22 October 2026)
+
+- **P11.02/P12.02 Partial (source):** A process-exclusive persistent lock now spans each offline student Notebook's validation, read, append and atomic replace, preventing two learners/tools from silently replacing one another's event-linked annotations. Unique create-new staging no longer truncates a stale predictable .tmp crash artifact; checksums, source branch/event validation and the prior backup policy remain unchanged. The headless .NET contract exercises blocked writers, unchanged journal on refusal, fresh append after unlock and preservation of stale crash-stage files.
+- **Evidence boundary:** Test-first RED commit 2185327 precedes the production change. This is local durable Notebook integrity, not a Native scientific update, teacher attestation or release acceptance. Unity Editor/PlayMode/Player/XR remain NOT_RUN; formal acceptance statuses unchanged.

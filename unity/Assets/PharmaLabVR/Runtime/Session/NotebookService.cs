@@ -48,10 +48,33 @@ namespace PharmaLabVR.Session
             ValidateId(vesselId, nameof(vesselId));
             ValidateText(text);
             var fullPath = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrEmpty(directory))
+                throw new ArgumentException("Notebook has no parent directory.", nameof(path));
+            Directory.CreateDirectory(directory);
+            // Lock the entire read/check/write transaction: two independent
+            // NotebookService instances cannot race and overwrite student notes.
+            // A persistent lock filename avoids the delete/recreate inode race.
+            try
+            {
+                using (var lease = new FileStream(fullPath + ".lock",
+                    FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+                    return AppendUnderLease(fullPath, branchId, eventSequence, vesselId, text);
+            }
+            catch (IOException error)
+            {
+                throw new InvalidDataException(
+                    "Research notebook is busy or its storage is unavailable; no note committed.", error);
+            }
+        }
+
+        private static NotebookEntry AppendUnderLease(string fullPath, string branchId,
+            string eventSequence, string vesselId, string text)
+        {
             if (!File.Exists(fullPath) && File.Exists(fullPath + ".bak"))
                 throw new InvalidDataException("Recover the confirmed notebook backup before editing.");
-            // Only the primary is writable; corrupt current bytes must never be
-            // silently replaced with a backup and new annotations.
+            // Only the primary is writable. Damaged current bytes must never
+            // silently be replaced by a backup and a fresh annotation.
             var entries = ReadStrict(fullPath);
             if (entries.Count >= MaximumNotes)
                 throw new InvalidDataException("Research notebook record limit reached.");
@@ -61,15 +84,14 @@ namespace PharmaLabVR.Session
             var bytes = StrictUtf8.GetBytes(Serialize(entries));
             if (bytes.Length > MaximumFileBytes)
                 throw new InvalidDataException("Research notebook exceeds its file limit.");
-            var directory = Path.GetDirectoryName(fullPath);
-            if (string.IsNullOrEmpty(directory))
-                throw new ArgumentException("Notebook has no parent directory.", nameof(path));
-            Directory.CreateDirectory(directory);
-            var temporary = fullPath + ".tmp";
+            // Unique create-new staging prevents a stale <journal>.tmp from
+            // being truncated after a crash, and never shares temp state with
+            // other offline apps or sessions.
+            var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
             try
             {
-                using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write,
-                    FileShare.None, 4096, FileOptions.WriteThrough))
+                using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
                 {
                     stream.Write(bytes, 0, bytes.Length);
                     stream.Flush(true);
