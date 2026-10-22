@@ -71,8 +71,22 @@ namespace PharmaLabVR.Input
                 pickPress.Capture("desktop-pick-or-place", frame, true);
             if (Keyboard.current.gKey.wasPressedThisFrame &&
                 heldTool != null && heldTool != registeredTool)
-                deliveryPress.Capture(
-                    heldTool.GetComponent<DesktopGrabbable>()?.ToolId, frame, true);
+            {
+                var heldId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
+                var capture = captureTarget != null ?
+                    LabCaptureTarget.EstimateExclusive(heldTool, captureTarget) :
+                    System.Array.Empty<LabCaptureEstimate>();
+                var aligned = capture.Length == 1 &&
+                    capture[0].destinationInventoryId == "receiver" &&
+                    Mathf.Approximately(capture[0].fraction, 1f);
+                var candidate = ResearchAuxiliaryDelivery.Resolve(
+                    heldId, true, true, aligned, true);
+                if (candidate == ResearchAuxiliaryDeliveryIntent.None)
+                    LastPhysicalDeliveryFeedback =
+                        "Align the held bottle/pipette outlet over the stationary receiver before pressing G.";
+                else
+                    deliveryPress.Capture(heldId, frame, true);
+            }
         }
 
         private void OnDisable()

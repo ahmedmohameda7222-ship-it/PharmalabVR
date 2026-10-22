@@ -32,6 +32,13 @@ namespace PharmaLabVR.Input
         private ulong sequence;
         private bool inputEnabled;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
+        private ActionBasedController deliveryPressOwner;
+
+        private void ClearDeliveryPress()
+        {
+            deliveryPress.Clear();
+            deliveryPressOwner = null;
+        }
 
         public void Configure(
             Transform frame,
@@ -73,7 +80,7 @@ namespace PharmaLabVR.Input
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
                 coreDriver.SourceNeedsPreparation)
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
@@ -82,7 +89,7 @@ namespace PharmaLabVR.Input
             if (!XRTrackingAdmission.HasFreshTracking(headTracked,
                     Tracked(leftActionController), Tracked(rightActionController)))
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             foreach (var item in new[] {
@@ -98,11 +105,32 @@ namespace PharmaLabVR.Input
                 if (ray != null && ray.IsOverUIGameObject()) continue;
                 var trigger = owner.activateAction.action;
                 if (trigger != null && trigger.enabled && trigger.WasPressedThisFrame())
+                {
+                    // Admission at the *press* moment prevents a later
+                    // receiver alignment from retroactively authorizing it.
+                    var capture = captureTarget != null ?
+                        LabCaptureTarget.EstimateExclusive(item.grip.transform, captureTarget) :
+                        System.Array.Empty<LabCaptureEstimate>();
+                    var aligned = capture.Length == 1 &&
+                        capture[0].destinationInventoryId == "receiver" &&
+                        Mathf.Approximately(capture[0].fraction, 1f);
+                    if (ResearchAuxiliaryDelivery.Resolve(item.id, true, true, aligned, true) ==
+                        ResearchAuxiliaryDeliveryIntent.None)
+                    {
+                        LastPhysicalDeliveryFeedback =
+                            "Align the direct-gripped instrument outlet over the stationary receiver.";
+                        continue;
+                    }
+                    if (deliveryPress.PendingToolId != null &&
+                        !ReferenceEquals(deliveryPressOwner, owner))
+                        ClearDeliveryPress();
+                    deliveryPressOwner = owner;
                     deliveryPress.Capture(item.id, (ulong)Time.frameCount, true);
+                }
             }
         }
 
-        private void OnDisable() => deliveryPress.Clear();
+        private void OnDisable() => ClearDeliveryPress();
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
@@ -110,7 +138,7 @@ namespace PharmaLabVR.Input
                 rightController == null || registeredTool == null)
             {
                 instrumentPresenter?.PresentActuatorInput(0f);
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return System.Array.Empty<LabInputSample>();
             }
             var selected = grabInteractable != null && grabInteractable.isSelected;
@@ -145,7 +173,7 @@ namespace PharmaLabVR.Input
             if (coreDriver == null || captureTarget == null || deliveryPanel == null ||
                 !trackingAndNativeReady || coreDriver.SourceNeedsPreparation)
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             var pendingId = deliveryPress.PendingToolId;
@@ -155,18 +183,24 @@ namespace PharmaLabVR.Input
             if (grip == null || !grip.isSelected ||
                 grip.firstInteractorSelecting is not XRDirectInteractor)
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
             var controller = OwnerForInteractor(grip.firstInteractorSelecting.transform);
             var ray = controller != null ?
                 controller.GetComponentInChildren<XRRayInteractor>(true) : null;
-            if (!Tracked(controller) || (ray != null && ray.IsOverUIGameObject()) ||
+            if (!Tracked(controller) ||
+                !ReferenceEquals(controller, deliveryPressOwner) ||
+                (ray != null && ray.IsOverUIGameObject()) ||
                 !deliveryPress.TryConsume((ulong)Time.frameCount, pendingId, true))
             {
-                deliveryPress.Clear();
+                ClearDeliveryPress();
                 return;
             }
+            // The queued input is consumed by this point. The second capture
+            // check remains mandatory because tools/receivers may have moved
+            // after the triggering frame.
+            deliveryPressOwner = null;
             var capture = LabCaptureTarget.EstimateExclusive(grip.transform, captureTarget);
             var intent = ResearchAuxiliaryDelivery.Resolve(pendingId, true, true,
                 capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
@@ -231,7 +265,7 @@ namespace PharmaLabVR.Input
         public void ResetBaselines()
         {
             instrumentPresenter?.PresentActuatorInput(0f);
-            deliveryPress.Clear();
+            ClearDeliveryPress();
         }
         public void AdvanceSequence(string id, ulong watermark)
         {
@@ -240,7 +274,7 @@ namespace PharmaLabVR.Input
         public void SetEnabled(bool value)
         {
             inputEnabled = value;
-            deliveryPress.Clear();
+            ClearDeliveryPress();
             if (!value) instrumentPresenter?.PresentActuatorInput(0f);
         }
     }

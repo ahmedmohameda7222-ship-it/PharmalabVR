@@ -125,3 +125,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## M2 XR visible delivery status — 22 October 2026
 
 - **P07.02/P08.02 Partial:** The shared XR Lab panel now refreshes the physical receiver-alignment/Native-refusal message during LateUpdate, not only after panel navigation. The last acknowledged Native result remains in the existing instrument receipt view. An authored Unity PlayMode test checks that a geometry refusal is visible on the active Lab panel without changing scientific inventory. Unity execution remains NOT_RUN.
+
+## Physical press-time admission and ownership — 22 October 2026
+
+- **M2/P07.01/P07.02 Partial:** Desktop G and XR direct-trigger intents now check unique receiver capture when first pressed, then recheck geometry at the later Native step. A press outside the receiving aperture cannot be retroactively admitted by moving the tool into place during the buffer window. Each XR intent is also bound to the specific tracked controller that originally pressed; a handoff/regrip cancels it. No Native material command can be issued without the existing guarded shared panel receipt.
+- **Testing boundary:** Headless ResearchAuxiliaryDelivery/ResearchPressBuffer tests validate the policy and replay cancellation. Unity scene/Player/XR timing is source-authored but remains NOT_RUN until the owner-authorized local Codex campaign.
