@@ -1147,6 +1147,18 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "Physical pipette station must be exclusive; paused or bottle aspiration disallowed.");
 
+        Check(ResearchPhysicalSourceBinding.Matches(
+                "source", "source", null, false) &&
+              ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "source", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "reserve-stock", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "reserve-stock", "source", null, false) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "", true),
+            "Physical immersion must not siphon a different Native reserve source.");
+
         // M2: holding a real visual-only pipette/stock bottle must never
         // turn pointer motion into a Native burette valve command. They can
         // still be moved on the workbench with an ordinary left drag.

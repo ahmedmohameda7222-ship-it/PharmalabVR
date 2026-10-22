@@ -123,6 +123,8 @@ namespace PharmaLabVR.Tools
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string toolId = "research-pipette";
         [SerializeField] private string sourceId = "source";
+        public string NativeToolId => toolId;
+        public string ConfiguredSourceInventoryId => sourceId;
         [SerializeField] private string receiverId = "receiver";
         [SerializeField] private string sinkId = "spill";
         [SerializeField] private string waterId = "rinse-water";

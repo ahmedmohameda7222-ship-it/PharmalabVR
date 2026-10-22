@@ -64,6 +64,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 pipette.position += surface - tip.position - source.transform.up * 0.006f;
                 Assert.That(source.IsImmersed(pipette), Is.True,
                     "Pipette tip must physically reach Native-rendered stock liquid.");
+                Assert.That(source.NativeSourceMatches(driver.Session,
+                    pipette.GetComponent<PipetteActuator>()), Is.True,
+                    "First placed pipette must initially draw from represented source stock.");
                 for (var i = 0; i < 3; i++)
                     Assert.That(panels.Request(PanelAction.PipetteAspirate), Is.True,
                         "Three 0.05 mL Native aspirates are needed for the retained-tip budget.");

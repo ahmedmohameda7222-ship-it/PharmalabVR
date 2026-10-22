@@ -4,6 +4,20 @@ namespace PharmaLabVR.Input
     // come from the existing SessionController/IPhreeqc authority.
     public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate }
 
+    // The visible bottle must represent the actual selected Native source.
+    // A pipette switched to an unrepresented reserve cannot draw from the
+    // original stock bottle merely because its tip is geometrically immersed.
+    public static class ResearchPhysicalSourceBinding
+    {
+        public static bool Matches(string configuredSourceId, string visibleBottleId,
+            string nativeSourceId, bool nativeToolExists) =>
+            !string.IsNullOrWhiteSpace(configuredSourceId) &&
+            !string.IsNullOrWhiteSpace(visibleBottleId) &&
+            string.Equals(configuredSourceId, visibleBottleId, System.StringComparison.Ordinal) &&
+            (!nativeToolExists || string.Equals(nativeSourceId, visibleBottleId,
+                System.StringComparison.Ordinal));
+    }
+
     public static class ResearchAuxiliaryDelivery
     {
         public static ResearchAuxiliaryDeliveryIntent Resolve(

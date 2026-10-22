@@ -58,7 +58,10 @@ namespace PharmaLabVR.Input
                 capture[0].destinationInventoryId == "receiver" &&
                 Mathf.Approximately(capture[0].fraction, 1f);
             var source = physicalId == "research-pipette-visual" &&
-                StockAspirateTarget != null && StockAspirateTarget.IsImmersed(physicalTool);
+                StockAspirateTarget != null &&
+                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session,
+                    physicalTool != null ? physicalTool.GetComponent<PipetteActuator>() : null) &&
+                StockAspirateTarget.IsImmersed(physicalTool);
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
                 !coreDriver.IsNativePaused;

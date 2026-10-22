@@ -1,3 +1,5 @@
+using System;
+using PharmaLabVR.Core;
 using PharmaLabVR.Tools;
 using UnityEngine;
 
@@ -11,6 +13,41 @@ namespace PharmaLabVR.Input
         private ReceiverMotionTracker bottleMotion = new ReceiverMotionTracker();
 
         public string NativeInventoryId => "source";
+
+        // Native may retarget this pipette to reserve-stock. This physical
+        // source bottle represents ONLY the "source" vessel. Source selection
+        // is read fresh at both gesture edges, not cached across commands.
+        public bool NativeSourceMatches(CoreSession session, PipetteActuator pipette)
+        {
+            if (session == null || !session.IsOpen || pipette == null)
+                return false;
+            try
+            {
+                var current = JsonUtility.FromJson<ToolBindings>(session.ReadSnapshot());
+                if (current?.tools == null) return false;
+                foreach (var tool in current.tools)
+                    if (tool != null && tool.id == pipette.NativeToolId)
+                        return ResearchPhysicalSourceBinding.Matches(
+                            pipette.ConfiguredSourceInventoryId, NativeInventoryId,
+                            tool.sourceInventoryId, true);
+                // Before its first Native PlaceTool command the authored
+                // pipette still declares a source, but no reserve switch exists.
+                return ResearchPhysicalSourceBinding.Matches(
+                    pipette.ConfiguredSourceInventoryId, NativeInventoryId, null, false);
+            }
+            catch (Exception)
+            {
+                // Missing/malformed scientific authority is never a physical permit.
+                return false;
+            }
+        }
+
+        [Serializable] private sealed class ToolBindings { public ToolBinding[] tools; }
+        [Serializable] private sealed class ToolBinding
+        {
+            public string id;
+            public string sourceInventoryId;
+        }
 
         private void OnEnable() => bottleMotion = new ReceiverMotionTracker();
 

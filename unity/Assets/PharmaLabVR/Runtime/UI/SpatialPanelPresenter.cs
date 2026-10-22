@@ -572,8 +572,10 @@ namespace PharmaLabVR.UI
                     (panels?.ResearchLessonCompact ?? "Free Research laboratory") + "\n" +
                     "Native pipette tip " +
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
-                    " ml. Direct-grip and align the outlet over the receiver; " +
-                    "trigger requests a Native-delivered aliquot.";
+                    " ml. Direct-grip the pipette: immerse its tip in prepared source stock " +
+                    "and press trigger to aspirate Native 0.05 ml, then align the tip over receiver " +
+                    "and trigger to dispense after the retained-tip volume is satisfied. " +
+                    "A switched reserve source has no physical stock target yet.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))
