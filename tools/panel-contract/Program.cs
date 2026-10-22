@@ -366,6 +366,26 @@ internal static class Program
                     "student-branch", "11");
             } catch (System.IO.InvalidDataException) { damagedDenied = true; }
             Check(damagedDenied, "Instructor imported a corrupted portable notebook header.");
+            // Reopening Measure without a new Native event must not append
+            // the same receiver pH evidence again. New events and unrelated
+            // branches remain independently recordable.
+            researchNotes.Append(learningPath, "idempotent-branch", "7", "receiver",
+                nativeNote);
+            var onceRecorded = researchNotes.Read(learningPath, "idempotent-branch");
+            Check(NativeMeasurementNote.WasRecorded(onceRecorded,
+                    "idempotent-branch", "7", "receiver", "3") &&
+                  !NativeMeasurementNote.WasRecorded(onceRecorded,
+                    "other-branch", "7", "receiver", "3") &&
+                  !NativeMeasurementNote.WasRecorded(onceRecorded,
+                    "idempotent-branch", "8", "receiver", "3") &&
+                  !NativeMeasurementNote.WasRecorded(onceRecorded,
+                    "idempotent-branch", "7", "receiver", "4") &&
+                  !NativeMeasurementNote.WasRecorded(onceRecorded,
+                    "idempotent-branch", "7", "source", "3"),
+                "Previously recorded Native pH must block only its matching branch/event/vessel/revision.");
+            Check(!NativeMeasurementNote.WasRecorded(notes, "student-branch", "7",
+                    "receiver", "3"),
+                "A student-authored prediction is not a genuine previously recorded Native observation.");
             var result = ResearchLearningReview.Render(notes, "student-branch", false);
             Check(result.Contains("2 student annotations") &&
                   result.Contains("Student hypothesis") && result.Contains("Native pH 6.20") &&
