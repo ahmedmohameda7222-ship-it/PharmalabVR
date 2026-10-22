@@ -61,6 +61,46 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator M2_XRLongResearchReadoutsStayWithinScrollableViewport()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var presenter = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true))
+                    .Single();
+                var scroller = presenter.GetComponentInChildren<ScrollRect>(true);
+                Assert.That(scroller, Is.Not.Null,
+                    "XR scientific and instructor detail must be scrollable.");
+                Assert.That(scroller.horizontal, Is.False);
+                Assert.That(scroller.vertical, Is.True);
+                Assert.That(scroller.viewport, Is.Not.Null);
+                Assert.That(scroller.viewport.GetComponent<RectMask2D>(), Is.Not.Null,
+                    "Long explanation text must be clipped above the working ray targets.");
+                Assert.That(scroller.content, Is.Not.Null);
+                var message = scroller.content.GetComponent<Text>();
+                Assert.That(message, Is.Not.Null);
+                Assert.That(message.name, Is.EqualTo("Panel detail"));
+                Assert.That(message.raycastTarget, Is.False);
+                Assert.That(message.GetComponent<ContentSizeFitter>().verticalFit,
+                    Is.EqualTo(ContentSizeFitter.FitMode.PreferredSize));
+                var viewportRect = scroller.GetComponent<RectTransform>();
+                Assert.That(viewportRect.anchoredPosition.y - viewportRect.sizeDelta.y / 2f,
+                    Is.GreaterThan(53f),
+                    "Readout scroller must end above the first instrument hit rectangle.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator M2_XRScientificTextMustNotStealRayClicksFromInstrumentButtons()
         {
 #if UNITY_EDITOR
