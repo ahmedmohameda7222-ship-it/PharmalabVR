@@ -55,3 +55,4 @@ namespace PharmaLabVR.Input
             return IsArmed;
         }
     }
+}
