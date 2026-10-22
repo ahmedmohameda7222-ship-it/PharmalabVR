@@ -489,6 +489,24 @@ internal static class Program
               teachingSessions.PortablePreviewCalls == 1,
             "Live Lab controls admitted a portable teaching preview action.");
 
+        // P23: imported local study packs must be selectable from XR without
+        // exposing parent directories or unrelated files.
+        var packFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "pharmalabvr-safe-study-packs");
+        var choices = OfflineArchivePicker.Names(packFolder, new[] {
+            System.IO.Path.Combine(packFolder, "B.plvpack"),
+            System.IO.Path.Combine(packFolder, "A.plvpack"),
+            System.IO.Path.Combine(packFolder, "A.plvpack"),
+            System.IO.Path.Combine(packFolder, ".hidden.plvpack"),
+            System.IO.Path.Combine(packFolder, "unrelated.txt"),
+            System.IO.Path.Combine(packFolder, "..", "foreign.plvpack")
+        });
+        Check(choices.Count == 2 && choices[0] == "A.plvpack" && choices[1] == "B.plvpack",
+            "Offline teaching picker did not restrict itself to distinct canonical session filenames.");
+        Check(OfflineArchivePicker.NextName(choices, "A.plvpack") == "B.plvpack" &&
+              OfflineArchivePicker.NextName(choices, "B.plvpack") == "A.plvpack" &&
+              OfflineArchivePicker.NextName(choices, "missing.plvpack") == "A.plvpack",
+            "XR selection does not cycle deterministically through bounded safe teaching archives.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
