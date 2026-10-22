@@ -24,6 +24,9 @@ namespace PharmaLabVR.Session
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
             LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
+        public string InstructorPortableCompactSummary =>
+            LastInstructorPortableReview?.CompactSummary ??
+            "No offline instructor preview selected.";
         private string selectedArchiveFileName;
         public string SelectedArchiveFileName => selectedArchiveFileName;
         private IReadOnlyList<string> AvailableLocalArchiveNames()
@@ -56,10 +59,15 @@ namespace PharmaLabVR.Session
             get
             {
                 if (router?.Current?.ScreenId != ScreenId.Review) return false;
-                return !string.IsNullOrEmpty(selectedArchiveFileName) &&
-                       AvailableLocalArchiveNames().Contains(selectedArchiveFileName) ||
-                       !string.IsNullOrWhiteSpace(LastPortableArchivePath) &&
-                       File.Exists(LastPortableArchivePath);
+                try
+                {
+                    return (!string.IsNullOrEmpty(selectedArchiveFileName) &&
+                        AvailableLocalArchiveNames().Contains(selectedArchiveFileName)) ||
+                        (!string.IsNullOrWhiteSpace(LastPortableArchivePath) &&
+                        File.Exists(LastPortableArchivePath));
+                }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
             }
         }
         public bool ChooseNextLocalArchive()

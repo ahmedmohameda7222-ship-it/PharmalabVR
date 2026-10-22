@@ -39,6 +39,10 @@ namespace PharmaLabVR.Tests.EditMode
                 Assert.That(preview.Summary, Does.Contain("raw 6.2"));
                 Assert.That(preview.Summary, Does.Contain("display 6.20"));
                 Assert.That(preview.Summary, Does.Contain("NOT ATTESTED OR GRADED"));
+                Assert.That(preview.CompactSummary, Does.Contain("NOT ATTESTED"));
+                Assert.That(preview.CompactSummary, Does.Contain("Recorded receiver pH 6.20"));
+                Assert.That(preview.CompactSummary.Length, Is.LessThan(300),
+                    "XR recorded preview must stay inside its bounded detail area.");
                 Assert.That(preview.Summary, Does.Contain("Student explanation"));
                 Assert.That(preview.Summary, Does.Contain("checksum").IgnoreCase);
                 Assert.That(preview.Summary, Does.Not.Contain("certified score"));

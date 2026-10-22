@@ -573,8 +573,8 @@ namespace PharmaLabVR.UI
                 (panels?.SelectedArchiveFileName != null ?
                     "\nSelected local .plvpack: " + panels.SelectedArchiveFileName : "") +
                 (panels != null &&
-                 panels.InstructorPortableSummary != "No offline instructor preview selected." ?
-                    "\n" + panels.InstructorPortableSummary : "") +
+                 panels.InstructorPortableCompactSummary != "No offline instructor preview selected." ?
+                    "\n" + panels.InstructorPortableCompactSummary : "") +
                 (panels?.HasLearnerCsvExport == true ?
                     "\nStudent annotation CSV saved separately." : "");
         }

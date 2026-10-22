@@ -41,6 +41,29 @@ namespace PharmaLabVR.Session
             return new InstructorPortableReview(source, recorded, notes);
         }
 
+        // Compact XR readout with evidence counts and at most one Native pH.
+        // Deliberately omit arbitrary student text from the constrained panel.
+        public string CompactSummary
+        {
+            get
+            {
+                var text = new StringBuilder("OFFLINE · NOT ATTESTED / NOT GRADED");
+                text.Append("\nNative receipts ").Append(NativeReceipts.Count)
+                    .Append(" · observations ").Append(NativeObservations.Count)
+                    .Append(" · student notes ").Append(StudentAnnotations.Count);
+                foreach (var observation in NativeObservations)
+                {
+                    if (observation.DisplayValue == "--") continue;
+                    text.Append("\nRecorded ").Append(observation.vesselId)
+                        .Append(" pH ").Append(observation.DisplayValue)
+                        .Append(" (").Append(observation.support).Append("/")
+                        .Append(observation.freshness).Append(")");
+                    break;
+                }
+                return text.ToString();
+            }
+        }
+
         public string Summary
         {
             get

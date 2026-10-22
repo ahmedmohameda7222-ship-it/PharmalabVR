@@ -32,6 +32,9 @@ namespace PharmaLabVR.UI
         public string SelectedArchiveFileName => sessions?.SelectedArchiveFileName;
         public string InstructorPortableSummary => sessions?.InstructorPortableSummary ??
             "No offline instructor preview selected.";
+        public string InstructorPortableCompactSummary =>
+            sessions?.InstructorPortableCompactSummary ??
+            "No offline instructor preview selected.";
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;
