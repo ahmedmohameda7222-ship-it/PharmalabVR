@@ -331,6 +331,16 @@ internal static class Program
         Check(unrecorded.Contains("Pending: recorded Native pH") &&
               unrecorded.Contains("Pending: learner reflection"),
             "Current Native pH without a saved Notebook observation was presented as recorded work.");
+        var conciseNext = predictionJourney.CompactEvidenceStatus(
+            "predict-branch", new LabViewModel(), Array.Empty<NotebookEntry>());
+        Check(conciseNext.Contains("Next: prepare Native stock") && conciseNext.Length < 180,
+            "XR guided status must fit the panel and identify the actual next pending action.");
+        var conciseRecorded = predictionJourney.CompactEvidenceStatus(
+            "predict-branch", predictiveView, new[] { hypothesis, measured, explained });
+        Check(conciseRecorded.Contains("Study steps documented") &&
+              conciseRecorded.Contains("not graded") && conciseRecorded.Length < 180,
+            "Recorded learner progress should be compact, factual and never a grade.");
+
         Check(ResearchLessonJourney.IsSupportedPrediction("below-7") &&
               ResearchLessonJourney.IsSupportedPrediction("at-least-7") &&
               !ResearchLessonJourney.IsSupportedPrediction("made-up-endpoint"),
