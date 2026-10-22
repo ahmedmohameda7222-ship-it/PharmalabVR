@@ -640,14 +640,14 @@ internal static class Program
                 "This is a learner prediction, not a Native result or certified endpoint.");
             var recorded = reopenedNotebook.Read(reopenedPath, "local-branch-a");
             Check(ResearchLessonJourney.RecoverSavedPrediction(
-                    recorded, "strong-acid-titration-research", "local-branch-a") == "below-7",
+                    recorded, "strong-acid-titration-research", "local-branch-a", "7") == "below-7",
                 "Lesson reselection did not recover its previously durable learner prediction.");
             Check(ResearchLessonJourney.RecoverSavedPrediction(
-                    recorded, "mixed-acid-titration-research", "local-branch-a") == null &&
+                    recorded, "mixed-acid-titration-research", "local-branch-a", "7") == null &&
                   ResearchLessonJourney.RecoverSavedPrediction(
-                    recorded, "strong-acid-titration-research", "local-branch-b") == null &&
+                    recorded, "strong-acid-titration-research", "local-branch-b", "7") == null &&
                   ResearchLessonJourney.RecoverSavedPrediction(
-                    Array.Empty<NotebookEntry>(), "strong-acid-titration-research", "local-branch-a") == null,
+                    Array.Empty<NotebookEntry>(), "strong-acid-titration-research", "local-branch-a", "7") == null,
                 "A different lesson, branch or empty notebook inherited a false prediction.");
         }
         finally

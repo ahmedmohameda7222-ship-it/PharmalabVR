@@ -105,10 +105,13 @@ namespace PharmaLabVR.Protocols
         // lesson survives a scene/controller rebuild. Annotation only; never
         // infer chemistry or import hypotheses across independent branches.
         public static string RecoverSavedPrediction(IReadOnlyList<NotebookEntry> entries,
-            string lessonId, string nativeBranchId)
+            string lessonId, string nativeBranchId, string currentNativeEventSequence)
         {
             if (entries == null || string.IsNullOrWhiteSpace(lessonId) ||
-                string.IsNullOrWhiteSpace(nativeBranchId))
+                string.IsNullOrWhiteSpace(nativeBranchId) ||
+                !ulong.TryParse(currentNativeEventSequence, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out var currentEvent) ||
+                currentEvent.ToString(CultureInfo.InvariantCulture) != currentNativeEventSequence)
                 return null;
             var prefix = "Student hypothesis for " + lessonId +
                 ": receiver pH predicted ";
@@ -116,8 +119,14 @@ namespace PharmaLabVR.Protocols
                 ". This is a learner prediction, not a Native result or certified endpoint.";
             foreach (var entry in entries)
             {
+                // Restoring event N on the *same* branch must not use a
+                // prediction from event N+1 or from a malformed annotation.
                 if (entry == null || entry.BranchId != nativeBranchId ||
                     entry.VesselId != "receiver" || entry.Text == null ||
+                    !ulong.TryParse(entry.EventSequence, NumberStyles.None,
+                        CultureInfo.InvariantCulture, out var authoredEvent) ||
+                    authoredEvent > currentEvent ||
+                    authoredEvent.ToString(CultureInfo.InvariantCulture) != entry.EventSequence ||
                     !entry.Text.StartsWith(prefix, StringComparison.Ordinal) ||
                     !entry.Text.EndsWith(suffix, StringComparison.Ordinal))
                     continue;
@@ -173,7 +182,7 @@ namespace PharmaLabVR.Protocols
                     !string.IsNullOrWhiteSpace(o.DatabaseIdentity));
             var notesForBranch = notes ?? Array.Empty<NotebookEntry>();
             var predicted = RecoverSavedPrediction(
-                notesForBranch, Definition.id, BranchId) != null;
+                notesForBranch, Definition.id, BranchId, native.EventSequence) != null;
             var recorded = nativePH && NativeMeasurementNote.WasRecorded(
                 notesForBranch, BranchId, native.EventSequence, "receiver",
                 receiver.MaterialRevision);

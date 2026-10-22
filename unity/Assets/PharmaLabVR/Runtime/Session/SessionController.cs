@@ -454,7 +454,8 @@ namespace PharmaLabVR.Session
                     definition, driver.CurrentNativeBranchId);
                 var recoveredPrediction = ResearchLessonJourney.RecoverSavedPrediction(
                     notebook.Read(NotebookFilePath(), driver.Session.BranchId),
-                    lesson.Definition.id, driver.Session.BranchId);
+                    lesson.Definition.id, driver.Session.BranchId,
+                    driver.CurrentLabView?.EventSequence);
                 // Rebuild memory only after durable journal recovery succeeds.
                 selectedResearchLesson = lesson;
                 selectedResearchPrediction = recoveredPrediction;
