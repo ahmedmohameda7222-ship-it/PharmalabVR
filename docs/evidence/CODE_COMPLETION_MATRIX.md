@@ -168,3 +168,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P23.02/P23.04 Partial (source):** Recorded Review can enumerate a bounded set of direct local .plvpack files from the app's sessions directory and cycle the chosen archive by an XR button. Only allowlisted filenames from the actual directory may be previewed; symlink/reparse-point files are rejected before reading. A second press explicitly opens the selected, checksum-checked Native/student archive, never changing running Native materials or academic authority. Desktop can also choose among packs or type a safe filename.
 - **Tests:** Headless RED commit 2f9aa84 fails on absent OfflineArchivePicker, GREEN pure picker validates canonical, bounded filenames and deterministic cycling. Shared panel routing and Unity PlayMode student-export → instructor-preview source are extended. Actual Unity/Player/XR execution NOT_RUN; formal acceptance unchanged.
+
+## Unity-source precision integration regression (22 October 2026)
+
+- **P12.02/P23.02 Partial:** Authored EditMode NativeObservationPrecisionTests verifies Unity JsonUtility retains raw 6.999/7.001 despite both displaying 7.00, rejects an incoherent display and an unavailable raw observation. Extended InstructorPortableReviewTests checks read-only preview reveals actual raw pH alongside display. Test fixtures are labeled as DTO fixtures, not Native scientific results. Unity Editor/PlayMode/Player/XR tests are NOT_RUN; formal statuses unchanged.

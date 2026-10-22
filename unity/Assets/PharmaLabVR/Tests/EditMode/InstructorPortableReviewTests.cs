@@ -36,6 +36,8 @@ namespace PharmaLabVR.Tests.EditMode
                 Assert.That(preview.StudentAnnotations.Count, Is.EqualTo(1));
                 Assert.That(preview.NativeObservations.Count, Is.EqualTo(1));
                 Assert.That(preview.NativeObservations[0].DisplayValue, Is.EqualTo("6.20"));
+                Assert.That(preview.Summary, Does.Contain("raw 6.2"));
+                Assert.That(preview.Summary, Does.Contain("display 6.20"));
                 Assert.That(preview.Summary, Does.Contain("NOT ATTESTED OR GRADED"));
                 Assert.That(preview.Summary, Does.Contain("Student explanation"));
                 Assert.That(preview.Summary, Does.Contain("checksum").IgnoreCase);
