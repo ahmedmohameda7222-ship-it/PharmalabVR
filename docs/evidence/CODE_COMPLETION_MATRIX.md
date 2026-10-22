@@ -182,3 +182,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P23.02/P23.04 Partial (source):** Offline instructor-preview XR panel now shows one actual branch-scoped student note, its source Native event and ordinal, with a Next imported note action at the existing Notebook row (without overlapping ray targets). Live Notebook remains available whenever a multi-note imported preview is not active. Branch and event-bound checksums are validated on import, and the panel labels these as unverified student annotations. Imported preview/selection and annotation cursor clear after Native restoration to prevent stale cross-session context.
 - **Headless CI:** RenderPage method tested with actual durable NotebookService test entries, checks exact source note, bounded excerpts/index and cross-branch isolation. Shared Notebook/Preview screen route is also covered. Unity Player/XR tests remain NOT_RUN, official acceptance unchanged.
+
+## XR panel hit-target hardening (22 October 2026)
+
+- **P07.02/P12.02 Partial (source):** All informational and button-label Text components in the world-space SpatialPanelPresenter are now excluded from GraphicRaycaster targeting; only the authored Button Image remains interactive. This prevents variable-length model provenance, saved learner text and instructor descriptions from stealing XR ray clicks from real commands. PlayMode source test M2_XRScientificTextMustNotStealRayClicksFromInstrumentButtons asserts it for every generated panel Text/Button. Runtime Unity/XR verification still NOT_RUN.

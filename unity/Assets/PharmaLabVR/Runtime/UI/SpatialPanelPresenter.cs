@@ -256,6 +256,9 @@ namespace PharmaLabVR.UI
             label.alignment = TextAnchor.UpperLeft;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
             label.verticalOverflow = VerticalWrapMode.Overflow;
+            // Scientific/readout text can overflow visually, but never
+            // intercept a ray aimed at any of the working scene controls.
+            label.raycastTarget = false;
             return label;
         }
 
@@ -275,6 +278,9 @@ namespace PharmaLabVR.UI
             label.color = Color.white;
             label.alignment = TextAnchor.MiddleCenter;
             label.text = name;
+            // Button Image is the interaction target, never a transparent
+            // child Text element that can steal or mask a tracked-device ray.
+            label.raycastTarget = false;
             buttons.Add(name, button);
         }
 
