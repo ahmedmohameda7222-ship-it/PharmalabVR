@@ -72,6 +72,25 @@ namespace PharmaLabVR.Session
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
+        public static string RenderPage(IReadOnlyList<NotebookEntry> notes,
+            string reviewBranchId, int requestedIndex)
+        {
+            if (string.IsNullOrWhiteSpace(reviewBranchId))
+                return "No matching Native student branch.";
+            var matching = (notes ?? Array.Empty<NotebookEntry>())
+                .Where(note => note != null && note.BranchId == reviewBranchId &&
+                    !string.IsNullOrWhiteSpace(note.Text)).ToArray();
+            if (matching.Length == 0) return "No student annotations for this recorded branch.";
+            var index = Math.Max(0, Math.Min(requestedIndex, matching.Length - 1));
+            var entry = matching[index];
+            var statement = entry.Text.Replace('\r', ' ').Replace('\n', ' ').Trim();
+            if (statement.Length > 80)
+                statement = statement.Substring(0, 77) + "...";
+            return "Student note " + (index + 1) + "/" + matching.Length +
+                " · event " + entry.EventSequence + " · " + entry.VesselId +
+                "\n" + statement + " (not independently verified)";
+        }
+
         public static string Render(IReadOnlyList<NotebookEntry> notes, string reviewBranchId,
             bool compact)
         {

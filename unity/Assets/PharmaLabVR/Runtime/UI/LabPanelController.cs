@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, NextInstructorAnnotation }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -35,6 +35,8 @@ namespace PharmaLabVR.UI
         public string InstructorPortableCompactSummary =>
             sessions?.InstructorPortableCompactSummary ??
             "No offline instructor preview selected.";
+        public bool CanNextInstructorAnnotation =>
+            sessions?.CanNextInstructorAnnotation == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;
@@ -156,6 +158,8 @@ namespace PharmaLabVR.UI
                     return sessions.PreviewLocalPortableArchive(entityId);
                 case PanelAction.ChoosePortableArchive:
                     return sessions.ChooseNextLocalArchive();
+                case PanelAction.NextInstructorAnnotation:
+                    return sessions.NextInstructorAnnotation();
                 case PanelAction.CompareSaved:
                     if (!sessions.OpenSavedComparison()) return false;
                     router.Show(ScreenId.Compare);

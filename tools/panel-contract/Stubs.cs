@@ -175,6 +175,13 @@ namespace PharmaLabVR.Session
         }
         public string InstructorPortableSummary => "Offline student pack; not attested.";
         public string InstructorPortableCompactSummary => "OFFLINE · NOT ATTESTED.";
+        public bool CanNextInstructorAnnotation => true;
+        public int NextImportedNoteCalls { get; private set; }
+        public bool NextInstructorAnnotation()
+        {
+            NextImportedNoteCalls++;
+            return true;
+        }
         public bool PreviewLocalPortableArchive(string fileName)
         {
             if (string.IsNullOrWhiteSpace(fileName)) return false;

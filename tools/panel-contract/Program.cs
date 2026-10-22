@@ -542,6 +542,9 @@ internal static class Program
         teachingPanels.Configure(teachingRouter, new CoreDriver(), teachingSessions);
         Check(teachingRouter.Current.SupportedActions.Contains("PreviewPortableArchive") &&
               teachingRouter.Current.SupportedActions.Contains("ChoosePortableArchive") &&
+              teachingRouter.Current.SupportedActions.Contains("NextInstructorAnnotation") &&
+              teachingPanels.Request(PanelAction.NextInstructorAnnotation) &&
+              teachingSessions.NextImportedNoteCalls == 1 &&
               teachingPanels.Request(PanelAction.ChoosePortableArchive) &&
               teachingSessions.PortableChooseCalls == 1 &&
               teachingPanels.Request(PanelAction.PreviewPortableArchive, "submitted.plvpack") &&
@@ -551,7 +554,9 @@ internal static class Program
         Check(!teachingPanels.Request(PanelAction.PreviewPortableArchive, "submitted.plvpack") &&
               !teachingPanels.Request(PanelAction.ChoosePortableArchive) &&
               teachingSessions.PortablePreviewCalls == 1 &&
-              teachingSessions.PortableChooseCalls == 1,
+              teachingSessions.PortableChooseCalls == 1 &&
+              !teachingPanels.Request(PanelAction.NextInstructorAnnotation) &&
+              teachingSessions.NextImportedNoteCalls == 1,
             "Live Lab controls admitted a portable teaching preview action.");
 
         // P23: imported local study packs must be selectable from XR without

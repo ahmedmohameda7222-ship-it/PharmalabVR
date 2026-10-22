@@ -24,9 +24,28 @@ namespace PharmaLabVR.Session
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
             LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
+        private int instructorAnnotationIndex;
+        public bool CanNextInstructorAnnotation =>
+            router?.Current?.ScreenId == ScreenId.Review &&
+            LastInstructorPortableReview?.StudentAnnotations.Count > 1;
+        public bool NextInstructorAnnotation()
+        {
+            if (!CanNextInstructorAnnotation) return false;
+            instructorAnnotationIndex =
+                (instructorAnnotationIndex + 1) %
+                LastInstructorPortableReview.StudentAnnotations.Count;
+            router.Show(ScreenId.Review);
+            return true;
+        }
         public string InstructorPortableCompactSummary =>
-            LastInstructorPortableReview?.CompactSummary ??
-            "No offline instructor preview selected.";
+            LastInstructorPortableReview == null ?
+                "No offline instructor preview selected." :
+                LastInstructorPortableReview.CompactSummary +
+                (LastInstructorPortableReview.StudentAnnotations.Count == 0 ?
+                    string.Empty : "\n" + ResearchLearningReview.RenderPage(
+                        LastInstructorPortableReview.StudentAnnotations,
+                        LastInstructorPortableReview.NativeBranchId,
+                        instructorAnnotationIndex));
         private string selectedArchiveFileName;
         public string SelectedArchiveFileName => selectedArchiveFileName;
         private IReadOnlyList<string> AvailableLocalArchiveNames()
@@ -82,6 +101,7 @@ namespace PharmaLabVR.Session
                 selectedArchiveFileName =
                     OfflineArchivePicker.NextName(names, selectedArchiveFileName);
                 LastInstructorPortableReview = null;
+                instructorAnnotationIndex = 0;
                 LastError = null;
                 router.Show(ScreenId.Review);
                 return true;
@@ -112,6 +132,7 @@ namespace PharmaLabVR.Session
                 // No Native import, network request, or grading transition.
                 var preview = InstructorPortableReview.Open(localPath);
                 LastInstructorPortableReview = preview;
+                instructorAnnotationIndex = 0;
                 LastError = null;
                 router.Show(ScreenId.Review);
                 return true;
@@ -119,6 +140,7 @@ namespace PharmaLabVR.Session
             catch (Exception error)
             {
                 LastInstructorPortableReview = null;
+                instructorAnnotationIndex = 0;
                 LastError = "Offline teaching preview unavailable: " + error.Message;
                 if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return false;
@@ -520,6 +542,9 @@ namespace PharmaLabVR.Session
             // Imported/restarted Native branches cannot inherit lesson progress.
             selectedResearchLesson = null;
             selectedResearchPrediction = null;
+            LastInstructorPortableReview = null;
+            instructorAnnotationIndex = 0;
+            selectedArchiveFileName = null;
             InvalidateLearningReview();
             ReconcileNativeReviewAuthority();
         }

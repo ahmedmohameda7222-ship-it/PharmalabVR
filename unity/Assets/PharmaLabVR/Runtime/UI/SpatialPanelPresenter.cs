@@ -103,6 +103,7 @@ namespace PharmaLabVR.UI
                 "model-limitations");
             AddButton("Open review", -138f, PanelAction.Review);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
+            AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
             AddButton("Preview portable archive", 30f, PanelAction.PreviewPortableArchive);
@@ -442,8 +443,12 @@ namespace PharmaLabVR.UI
             buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f :
                     state.ScreenId == ScreenId.Notebook ? -82f : 30f);
+            var importedStudentNotes = state.ScreenId == ScreenId.Review &&
+                panels != null && panels.CanNextInstructorAnnotation;
             SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
-                state.SupportedActions.Contains("Notebook"));
+                state.SupportedActions.Contains("Notebook") && !importedStudentNotes);
+            SetButton("Next imported note", importedStudentNotes &&
+                state.SupportedActions.Contains("NextInstructorAnnotation"));
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
