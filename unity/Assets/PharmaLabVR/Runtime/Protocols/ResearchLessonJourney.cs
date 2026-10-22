@@ -175,11 +175,14 @@ namespace PharmaLabVR.Protocols
             var transferred = receiverExists && receiver.CommittedVolumeM3 > 0d;
             var nativePH = transferred && native.Observations != null &&
                 native.Observations.Any(o => o.VesselId == "receiver" &&
-                    o.ObservableId == "pH" && o.Support == "Supported" &&
-                    o.Freshness == "Current" && o.ComputationState == "Ready" &&
-                    o.ValueAvailable && double.IsFinite(o.Value) &&
+                    o.ObservableId == "pH" &&
+                    ScientificReadoutPolicy.Resolve(o.Support, o.ComputationState,
+                        o.Freshness, o.Value, o.ValueAvailable) ==
+                        MeasurementAvailability.Current &&
                     o.AsOfMaterialRevision == receiver.MaterialRevision &&
-                    !string.IsNullOrWhiteSpace(o.DatabaseIdentity));
+                    !string.IsNullOrWhiteSpace(o.ModelId) &&
+                    !string.IsNullOrWhiteSpace(o.DatabaseIdentity) &&
+                    !string.IsNullOrWhiteSpace(o.Maturity));
             var notesForBranch = notes ?? Array.Empty<NotebookEntry>();
             var predicted = RecoverSavedPrediction(
                 notesForBranch, Definition.id, BranchId, native.EventSequence) != null;
@@ -266,15 +269,23 @@ namespace PharmaLabVR.Protocols
             }
             if (receiver.CommittedVolumeM3 <= 0d)
                 return title + "Native stock present; deliver an aliquot into the receiver using accepted commands.";
-            if (native.Observations == null ||
-                !native.Observations.Any(item => item.VesselId == "receiver" &&
-                    item.ObservableId == "pH" && item.Support == "Supported" &&
-                    item.Freshness == "Current"))
+            // The lesson narrative must use the same Native availability
+            // gate as the actual readout and Notebook. Supported/Current labels
+            // alone are insufficient while IPhreeqc is Pending or the material
+            // revision has changed.
+            var current = native.Observations?.Where(item =>
+                item.VesselId == "receiver" && item.ObservableId == "pH" &&
+                ScientificReadoutPolicy.Resolve(item.Support, item.ComputationState,
+                    item.Freshness, item.Value, item.ValueAvailable) ==
+                    MeasurementAvailability.Current &&
+                item.AsOfMaterialRevision == receiver.MaterialRevision &&
+                !string.IsNullOrWhiteSpace(item.ModelId) &&
+                !string.IsNullOrWhiteSpace(item.DatabaseIdentity) &&
+                !string.IsNullOrWhiteSpace(item.Maturity)).ToArray();
+            if (current == null || current.Length == 0)
                 return title + "Material in receiver (Native rev " + receiver.MaterialRevision +
                     "). Inspect pH; await a supported Current observation, then Save/Review.";
-            var ph = native.Observations.First(item => item.VesselId == "receiver" &&
-                item.ObservableId == "pH" && item.Support == "Supported" &&
-                item.Freshness == "Current");
+            var ph = current[0];
             return title + "Receiver has material (Native rev " + receiver.MaterialRevision +
                 "). Native pH reports Supported/Current, maturity " + ph.Maturity +
                 ". Record it in Notebook, Save, then open recorded Review. No endpoint inferred.";

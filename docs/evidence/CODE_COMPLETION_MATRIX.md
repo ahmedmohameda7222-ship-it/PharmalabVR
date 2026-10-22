@@ -218,3 +218,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P11.02/P12.02 Partial source:** The first durable prediction is recovered only when its Notebook event is no later than the current canonical Native event sequence, in addition to the existing branch, receiver, lesson and text identity checks. Both on-screen EvidenceChecklist and SessionController lesson reselection now use the same ceiling. After restoring an earlier Native checkpoint, a future-event annotation cannot be used to claim a completed prediction or suppress a new one. Other branch/lesson safeguards remain unchanged.
 - **Verification:** Headless RED `21ee8e2` failed compilation on the missing event-bounded overload, and tests now exercise future event 9 vs current event 7 and the exact visibility boundary. Unity Editor/PlayMode/Player/XR remains NOT_RUN; original formal acceptance statuses unchanged.
+
+## M3 research lesson narrative pH admission alignment — 22 October 2026
+
+- **P12.01/P12.02 Partial:** Guided Summary and the full evidence checklist now require the same Native scientific readout classification as the pH UI (supported, Ready, Current, finite, available) plus exact receiver material revision and complete model/database/maturity identities. Pending/failed/unavailable or superseded measurements no longer appear as a confirmed research observation merely because metadata retains Supported/Current flags.
+- **TDD:** RED headless commit `b44a2b2` failed with a pending-solver false positive. Corrected code uses ScientificReadoutPolicy; Unity EditMode/PlayMode/Player/XR remains NOT_RUN and formal acceptance fields remain unchanged.
