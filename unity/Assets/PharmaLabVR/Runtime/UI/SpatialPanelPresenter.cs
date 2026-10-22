@@ -485,7 +485,8 @@ namespace PharmaLabVR.UI
                     instrumentPage, driver.SourceNeedsPreparation, mayTransfer,
                     driver.ReserveStockPrepared, panels != null && panels.CanFillBurette,
                     panels != null && panels.CanRecordResearchPrediction,
-                    panels != null && panels.CanPipetteDispense, driver.RinseWaterPrepared);
+                    panels != null && panels.CanPipetteDispense, driver.RinseWaterPrepared,
+                    state.SupportedActions.Contains("Notebook"));
                 foreach (var name in ResearchInstrumentMenuLayout.AllNames)
                     SetButton(name, false);
                 foreach (var item in visible)

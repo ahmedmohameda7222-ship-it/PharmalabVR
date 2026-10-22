@@ -34,7 +34,8 @@ namespace PharmaLabVR.UI
         // 4 reserve stock and lesson selection. One ray-hit target per row.
         public static IReadOnlyList<ResearchMenuItem> Visible(int page,
             bool needsPreparation, bool canTransfer, bool reservePrepared,
-            bool canFillBurette, bool canPredict, bool canDispense, bool hasRinseWater)
+            bool canFillBurette, bool canPredict, bool canDispense, bool hasRinseWater,
+            bool notebookAvailable = false)
         {
             var items = new List<ResearchMenuItem>(7);
             void Add(string name, int row, bool show = true)
@@ -64,6 +65,7 @@ namespace PharmaLabVR.UI
                 case 3:
                     Add("Predict pH below 7", 0, canPredict);
                     Add("Predict pH at least 7", 1, canPredict);
+                    Add("Open notebook", 2, notebookAvailable);
                     Add("Back to instruments", 5);
                     Add("Exit tools", 6);
                     break;

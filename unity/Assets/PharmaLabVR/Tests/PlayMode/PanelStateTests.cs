@@ -99,6 +99,16 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(buttons["Predict pH below 7"].gameObject.activeSelf, Is.True);
                 Assert.That(buttons["Predict pH at least 7"].gameObject.activeSelf, Is.True);
                 Assert.That(buttons["More tools and lessons"].gameObject.activeSelf, Is.False);
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var actions = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Native first-use stock preparation is required for notebook access.");
+                Assert.That(buttons["Open notebook"].gameObject.activeSelf, Is.True,
+                    "Ready student lesson panel must expose the real Notebook.");
+                buttons["Open notebook"].onClick.Invoke();
+                var router = roots.SelectMany(root => root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(driver.Session, Is.Not.Null);
             }
             finally { SceneManager.UnloadSceneAsync(scene); }
         }

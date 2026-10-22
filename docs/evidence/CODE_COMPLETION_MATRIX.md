@@ -144,3 +144,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P11.02/P12.02 Partial:** The Notebook now offers Desktop and XR students three explicit, ungraded reflection choices (composition hypothesis, method uncertainty, model limitations). Recording requires the real current Supported Native receiver pH, its matching saved measurement annotation, current Native branch/event revision, and a selected Research lesson. Only one explanation per event and lesson is accepted and saved as a local notebook annotation, never a model result or university grade.
 - **Tests:** Test-first headless RED commit f668956 failed on absent BuildRecordedExplanation. The integrated headless contract validates provenance/rejection and the shared PanelAction routing; Unity PlayMode source extends the full first experiment Save/Review journey with a recorded explanation. All Unity runtime test runs remain NOT_RUN; formal acceptance ledger unchanged.
+
+## Student XR Notebook entry from guided lesson — 22 October 2026
+
+- **P11.02/P12.02 Partial:** Guided prediction page 3 now presents the actual 'Open notebook' action at a free ray target whenever the Native Lab makes Notebook available. Initial paused stock preparation does not misrepresent Notebook readiness. A PlayMode source test follows lesson/prediction page → accepted stock preparation → Notebook navigation; NOT_RUN in Unity until local verification. Headless RED commit d14ce2b established missing menu capability and GREEN source carries the bounded route; no formal acceptance promotion.
