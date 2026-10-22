@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using PharmaLabVR.Core;
 using PharmaLabVR.Lab;
+using PharmaLabVR.Input;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
