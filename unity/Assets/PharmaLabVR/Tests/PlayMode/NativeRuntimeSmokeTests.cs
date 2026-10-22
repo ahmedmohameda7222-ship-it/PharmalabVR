@@ -22,6 +22,77 @@ using UnityEditor.SceneManagement;
 
 namespace PharmaLabVR.Tests.PlayMode
 {
+    public sealed class NativeRuntimeSmokeTests
+    {
+        // Simulates actual authored XR UI button events against the live
+        // Native-backed student Notebook; tracked-ray hardware still requires
+        // the final local Player campaign.
+        [UnityTest]
+        public IEnumerator M3_XRStudentQuickReflectionAddsOnlyChosenBranchLinkedNotebookText()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string noteFile = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panel = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "xr-student-notes-" + System.Guid.NewGuid().ToString("N");
+                session.Configure(driver, name);
+                noteFile = Path.Combine(Application.persistentDataPath,
+                    "sessions", name + ".plv-notes");
+                Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.Notebook), Is.True, session.LastError);
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Quick notes"].gameObject.activeSelf, Is.True);
+                var nativeRevision = driver.CurrentLabView.EventSequence;
+                buttons["Quick notes"].onClick.Invoke();
+                Assert.That(buttons["Note: request another pH"].gameObject.activeSelf,
+                    Is.True, "XR reflection must be on its own non-overlapping page.");
+                buttons["Note: request another pH"].onClick.Invoke();
+                Assert.That(session.ReadNotebookEntries().Count, Is.EqualTo(1));
+                var record = session.ReadNotebookEntries().Single();
+                Assert.That(record.Text, Is.EqualTo(
+                    "Student selected reflection: I want another Native pH measurement before reaching a conclusion."));
+                Assert.That(record.BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(record.EventSequence, Is.EqualTo(nativeRevision));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision),
+                    "XR Notebook selection cannot invent an authoritative Native science event.");
+                Assert.That(buttons["Quick notes"].gameObject.activeSelf, Is.True,
+                    "After writing, the XR page must return to the normal Notebook.");
+                Assert.That(File.Exists(noteFile), Is.True);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(noteFile))
+                    foreach (var candidate in new[] { noteFile, noteFile + ".bak",
+                        noteFile + ".lock" })
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Actual reserve-stock solvent comes from Native inventory. Both
         // physically distinct bottle apertures must match the currently
         // registered Native pipette source, never arbitrary proximity.
@@ -109,8 +180,6 @@ namespace PharmaLabVR.Tests.PlayMode
             finally { SceneManager.UnloadSceneAsync(scene); }
         }
 
-    public sealed class NativeRuntimeSmokeTests
-    {
         [UnityTest]
         public IEnumerator M2_PhysicalSourceBottlePrimesUpperBuretteViaNativeMaterialOnly()
         {

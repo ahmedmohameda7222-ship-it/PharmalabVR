@@ -1153,6 +1153,27 @@ internal static class Program
             true, true, true, false, double.NaN),
             "XR receiver inspection must fail closed on Hold, tracking, held tool, UI or distance.");
 
+        // Source-level safeguard for the Unity compile gate. The original
+        // generated reserve-stock smoke test briefly escaped its test class;
+        // keep the fixture nested and XR quick-note controls panel-routed.
+        var unitySmokeSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs");
+        var unityClassAt = unitySmokeSource.IndexOf(
+            "public sealed class NativeRuntimeSmokeTests", StringComparison.Ordinal);
+        var firstUnityTestAt = unitySmokeSource.IndexOf(
+            "[UnityTest]", StringComparison.Ordinal);
+        Check(unityClassAt >= 0 && firstUnityTestAt > unityClassAt &&
+              unitySmokeSource.IndexOf("public sealed class NativeRuntimeSmokeTests",
+                  unityClassAt + 1, StringComparison.Ordinal) < 0,
+            "Authored Unity smoke tests escaped or duplicated their NUnit class.");
+        var xrNotebookSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrNotebookSource.Contains("Quick notes", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("notebookReflectionPage", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains(
+                  "panels?.Request(PanelAction.AddNotebookNote,", StringComparison.Ordinal),
+            "XR learner quick-note page lost real local Notebook action routing.");
+
         // CI cannot build Unity player scripts without the Unity SDK; fail
         // source-level CI when a UI edit accidentally discards production
         // physical priming wiring or redirects Pause/Hold chooser to Review.
@@ -1883,6 +1904,13 @@ internal static class Program
                 "Notebook note was not sent to the session-owned note store.");
             Check(session.NotebookAppendCalls == 1 && session.SaveCalls == 0,
                 "Notebook note was replayed or implicitly saved Native chemistry.");
+            Check(panels.Request(PanelAction.AddNotebookNote,
+                    "Student selected reflection: I want another Native pH measurement before reaching a conclusion.") &&
+                  session.NotebookAppendCalls == 2 &&
+                  session.SaveCalls == 0 &&
+                  driver.CurrentLabView.EventSequence == "7",
+                "XR student-selectable reflection failed to route through the same real branch-linked Notebook.");
+
             Check(router.Current.SupportedActions.Contains("ExportPortable"),
                 "Notebook has no explicit portable Native+notes export action.");
             Check(panels.Request(PanelAction.ExportPortable),

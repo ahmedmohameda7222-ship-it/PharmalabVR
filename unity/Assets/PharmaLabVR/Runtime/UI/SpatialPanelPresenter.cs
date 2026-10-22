@@ -27,6 +27,7 @@ namespace PharmaLabVR.UI
         private int settingsPage;
         private int instrumentPage;
         private bool portableRecoveryPage;
+        private bool notebookReflectionPage;
         private int researchStockIndex;
         private int researchConcentrationIndex = 2;
         private static readonly string[] ResearchStockIds =
@@ -139,6 +140,27 @@ namespace PharmaLabVR.UI
                 "model-limitations");
             AddButton("Open review", -138f, PanelAction.Review);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
+            AddInstrumentButton("Quick notes", -82f, () => notebookReflectionPage = true);
+            AddInstrumentButton("Note: request another pH", 30f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I want another Native pH measurement before reaching a conclusion.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Note: compare hypothesis", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I will compare the recorded Native pH with my original hypothesis.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Note: method uncertainty", -82f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I need to review real command receipts and method uncertainty.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Back to notebook", -306f,
+                () => notebookReflectionPage = false);
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
@@ -453,6 +475,8 @@ namespace PharmaLabVR.UI
             if (state.ScreenId != ScreenId.Lab) instrumentPage = 0;
             if (state.ScreenId != ScreenId.Pause && state.ScreenId != ScreenId.Hold)
                 portableRecoveryPage = false;
+            if (state.ScreenId != ScreenId.Notebook)
+                notebookReflectionPage = false;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -510,9 +534,29 @@ namespace PharmaLabVR.UI
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : -306f);
             SetButton("Open review", state.SupportedActions.Contains("Review") &&
                 !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
-            buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f :
+            // Notebook uses a genuinely split row, not two raycast hit
+            // rectangles covering each other.
+            var notebookSplitReview = state.ScreenId == ScreenId.Notebook &&
+                state.SupportedActions.Contains("AddNotebookNote");
+            var reviewRect = buttons["Open review"].GetComponent<RectTransform>();
+            reviewRect.sizeDelta = new Vector2(notebookSplitReview ? 176f : 368f, 46f);
+            reviewRect.anchoredPosition =
+                new Vector2(notebookSplitReview ? 94f : 0f,
+                    state.ScreenId == ScreenId.Lab ? -138f :
                     state.ScreenId == ScreenId.Notebook ? -82f : 30f);
+            buttons["Open review"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(notebookSplitReview ? 164f : 368f, 35f);
+            var quickRect = buttons["Quick notes"].GetComponent<RectTransform>();
+            quickRect.sizeDelta = new Vector2(176f, 46f);
+            quickRect.anchoredPosition = new Vector2(-94f, -82f);
+            buttons["Quick notes"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
+            SetButton("Quick notes", notebookSplitReview && !notebookReflectionPage);
+            SetButton("Note: request another pH", false);
+            SetButton("Note: compare hypothesis", false);
+            SetButton("Note: method uncertainty", false);
+            SetButton("Back to notebook", false);
             var importedStudentNotes = state.ScreenId == ScreenId.Review &&
                 panels != null && panels.CanNextInstructorAnnotation;
             SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
@@ -623,6 +667,26 @@ namespace PharmaLabVR.UI
                     SetButton(name, false);
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
+            }
+            if (state.ScreenId == ScreenId.Notebook && notebookReflectionPage)
+            {
+                // A separate XR Notebook page ensures deliberate ray hits:
+                // notes are the learner's explicit choices, not inferred
+                // scientific observations, outcomes, or grades.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                var canWrite = state.SupportedActions.Contains("AddNotebookNote");
+                SetButton("Note: request another pH", canWrite);
+                SetButton("Note: compare hypothesis", canWrite);
+                SetButton("Note: method uncertainty", canWrite);
+                SetButton("Back to notebook", true);
+                detail.text = "STUDENT QUICK NOTES · NOT GRADED\n" +
+                    "Choose a reflection to write exactly the labeled statement " +
+                    "into your local, Native-event-linked Notebook. " +
+                    "These are your choices, NOT Native measurements.\n" +
+                    (panels?.NotebookSummary ?? "No local notebook available.");
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
             }
             if (portableRestoreAvailable && portableRecoveryPage)
             {
