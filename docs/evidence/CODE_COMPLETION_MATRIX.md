@@ -228,3 +228,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P07.02/P12.01 Partial:** The compact XR Research lesson status now prioritizes Native Hold (tracking/neutral recovery) and genuine Native Pause (controlled Continue) over the next chemistry task. The special first-run preparation pause remains allowed to guide stock setup rather than hiding setup behind a misleading recovery requirement. This is a presentation-only instruction, not a synthetic Continue or command.
 - **Tests:** RED headless `57342d2` failed on missing state-aware CompactEvidenceStatus overload, followed by the production logic and wiring. Unity Editor/Player/XR execution remains NOT_RUN and formal acceptance remains unchanged.
+
+## M3 checkpoint-bounded local Notebook display and learner export — 22 October 2026
+
+- **P11.02/P12.02/P23.03 Partial source:** NotebookService now supports a checksum-validated, read-only branch-and-maximum-Native-event projection. Active Notebook displays entries no later than the current Native event; saved recorded Review and its separate learner-annotation CSV use the *recorded checkpoint's* event sequence, not the possibly later live session. A legacy saved review without event metadata cannot silently attach unbounded student notes. The Native scientific CSV remains unchanged.
+- **Test-first:** RED `1392288` asserts event-7 view excludes event-11 note, preserves eligible branch records, and rejects noncanonical ceilings; the Unity EditMode source checks preserved exported checkpoint event metadata. Unity Editor/PlayMode/Player/XR verification is still NOT_RUN; no formal task acceptance promotion.

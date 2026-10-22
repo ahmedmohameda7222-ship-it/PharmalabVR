@@ -137,6 +137,22 @@ namespace PharmaLabVR.Session
             return result.AsReadOnly();
         }
 
+        // A local Native checkpoint at event N may only expose journal entries
+        // at or before N, even when a later local run reused the branch ID.
+        // The original checksummed journal remains immutable during this read.
+        public IReadOnlyList<NotebookEntry> Read(string path, string branchId,
+            string maxEventSequence)
+        {
+            ValidateRevision(maxEventSequence);
+            var ceiling = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var current = Read(path, branchId);
+            var visible = new List<NotebookEntry>();
+            foreach (var entry in current)
+                if (ulong.Parse(entry.EventSequence, CultureInfo.InvariantCulture) <= ceiling)
+                    visible.Add(entry);
+            return visible.AsReadOnly();
+        }
+
         // Export only source-validated, branch-matching event annotations. Never
         // silently package a corrupted primary or an unconfirmed backup as current.
         public string ExportBranch(string path, string branchId, string maxEventSequence)

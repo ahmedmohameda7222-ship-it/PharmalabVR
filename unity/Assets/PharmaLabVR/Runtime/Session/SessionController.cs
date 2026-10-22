@@ -350,7 +350,8 @@ namespace PharmaLabVR.Session
                 {
                     try
                     {
-                        var notes = notebook.Read(NotebookFilePath(), recorded.BranchId);
+                        var notes = notebook.Read(NotebookFilePath(), recorded.BranchId,
+                            recorded.EventSequence);
                         cachedLearningReviewFull =
                             ResearchLearningReview.Render(notes, recorded.BranchId, false);
                         cachedLearningReviewCompact =
@@ -1272,7 +1273,8 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("No open Native session.");
                 // Reading a healthy notebook must not erase an earlier failed
                 // note-commit error before Desktop/XR has rendered it.
-                return notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                return notebook.Read(NotebookFilePath(), driver.Session.BranchId,
+                    driver.CurrentLabView?.EventSequence);
             }
             catch (Exception exception)
             {
@@ -1340,9 +1342,11 @@ namespace PharmaLabVR.Session
                 // Preserve the scientific CSV schema; a separate file contains
                 // local learner annotations only for the same Native branch.
                 if (driver?.Session != null && driver.Session.IsOpen &&
-                    driver.Session.BranchId == review.BranchId)
+                    driver.Session.BranchId == review.BranchId &&
+                    !string.IsNullOrWhiteSpace(review.EventSequence))
                 {
-                    var localNotes = notebook.Read(notesPath, review.BranchId);
+                    var localNotes = notebook.Read(notesPath, review.BranchId,
+                        review.EventSequence);
                     var learnerTarget = Path.Combine(Path.GetDirectoryName(notesPath),
                         saveName + ".plv-student-annotations.csv");
                     ResearchLearningReview.WriteCsv(learnerTarget, localNotes, review.BranchId);

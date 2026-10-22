@@ -30,6 +30,9 @@ namespace PharmaLabVR.Tests.EditMode
                 var snapshot = notebook.ExportBranch(journal, branch, "7");
                 var pack = Path.Combine(folder, "submitted.plvpack");
                 PortableSessionArchive.Write(pack, native, snapshot, branch, "7");
+                var boundedReview = RecordedSessionReview.FromJson(native);
+                Assert.That(boundedReview.EventSequence, Is.EqualTo("7"),
+                    "Saved Native Review needs its event ceiling for bounded learner evidence.");
                 var preview = InstructorPortableReview.Open(pack);
                 Assert.That(preview.NativeBranchId, Is.EqualTo(branch));
                 Assert.That(preview.NativeEventSequence, Is.EqualTo("7"));

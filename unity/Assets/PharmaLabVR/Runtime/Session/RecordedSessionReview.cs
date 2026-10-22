@@ -11,14 +11,19 @@ namespace PharmaLabVR.Session
     {
         public string BranchId { get; }
         public string ModelIdentity { get; }
+        // Absent in some old offline fixtures; such views cannot authorize
+        // journal evidence with an unknown Native event ceiling.
+        public string EventSequence { get; }
         public RecordedObservation[] Observations { get; }
         public IReadOnlyList<RecordedCommandReceipt> CommandReceipts { get; }
 
         private RecordedSessionReview(string branchId, string modelIdentity,
-            RecordedObservation[] observations, IReadOnlyList<RecordedCommandReceipt> receipts)
+            string eventSequence, RecordedObservation[] observations,
+            IReadOnlyList<RecordedCommandReceipt> receipts)
         {
             BranchId = branchId;
             ModelIdentity = modelIdentity;
+            EventSequence = eventSequence;
             Observations = observations;
             CommandReceipts = receipts;
         }
@@ -95,14 +100,15 @@ namespace PharmaLabVR.Session
                 ulong.Parse(left.CommandSequence, CultureInfo.InvariantCulture)
                     .CompareTo(ulong.Parse(right.CommandSequence, CultureInfo.InvariantCulture)));
             return new RecordedSessionReview(saved.branchId,
-                saved.scientificPackage.identity ?? string.Empty, saved.observations,
-                new ReadOnlyCollection<RecordedCommandReceipt>(receipts));
+                saved.scientificPackage.identity ?? string.Empty, saved.eventSequence,
+                saved.observations, new ReadOnlyCollection<RecordedCommandReceipt>(receipts));
         }
 
         [Serializable] private sealed class RecordedEnvelope
         {
             public int schemaVersion;
             public string branchId;
+            public string eventSequence;
             public ScientificPackageRecord scientificPackage;
             public RecordedObservation[] observations;
             public ReceiptEnvelope[] commandReceipts;
