@@ -719,6 +719,9 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Hold)
             {
                 GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
+                if (HasResearchLesson)
+                    GUILayout.Label("Saved learner lesson recovered from local Notebook. " +
+                        ResearchPredictionSummary + " Native Hold remains active until Continue.");
                 if (!driver.NativeRecoveryReady)
                     GUILayout.Label(driver.HoldReason == "Compute" ?
                         "Waiting for the scientific result; saving and review remain available." :

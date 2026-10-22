@@ -296,6 +296,10 @@ namespace PharmaLabVR.Core
             if (outcome == null || !outcome.accepted) return false;
             IsTimeHeld = true;
             accumulator = 0.0;
+            // A Native checkpoint is a replacement observation authority.
+            // A previously selected receiver cannot stay selected while the
+            // UI resets to the saved source and asks for fresh inspection.
+            SelectedMeasurementVesselId = "source";
             HoldChanged?.Invoke(true);
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
@@ -327,6 +331,7 @@ namespace PharmaLabVR.Core
                 replacement.ConfigureAutomaticCheckpoint(checkpointPath);
             var previous = Session;
             Session = replacement;
+            SelectedMeasurementVesselId = "source";
             AutomaticCheckpointPath = checkpointPath;
             accumulator = 0.0;
             establishFrameClock = true;

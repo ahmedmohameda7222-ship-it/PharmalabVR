@@ -441,7 +441,12 @@ namespace PharmaLabVR.UI
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
-                ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
+                ScreenId.Hold => state.HoldReason +
+                    " hold. Close the valve and restore a neutral tracked input." +
+                    (panels != null && panels.HasResearchLesson ?
+                        "\nSaved Research lesson and hypothesis recovered from local Notebook; " +
+                        "Native Continue is still required.\n" + panels.ResearchPredictionSummary :
+                        string.Empty),
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
                 ScreenId.Learn => ResearchConceptReadout.Describe(

@@ -371,6 +371,27 @@ internal static class Program
               ResearchLessonJourney.RecoverSavedPrediction(
                 new[] { hypothesis }, predictiveDefinition.id, "predict-branch", "5") == "below-7",
             "Predictions must become visible at their exact authored Native event.");
+        // On SessionLoad, only one authenticated, branch-matched, event-
+        // bounded lesson hypothesis can automatically restore guidance.
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, futureHypothesis }, "predict-branch", "7") ==
+                "strong-acid-titration-research",
+            "Saved Research lesson was not recovered from its original durable hypothesis.");
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { futureHypothesis }, "predict-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis }, "other-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis }, "predict-branch", "4") == null,
+            "A future, foreign or not-yet-recorded prediction must not restore a lesson.");
+        var conflictingLesson = new NotebookEntry("predict-branch", "6", "receiver",
+            "Student hypothesis for mixed-acid-titration-research: receiver pH predicted at least 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, conflictingLesson }, "predict-branch", "7") == null,
+            "Two conflicting student lessons cannot be silently auto-selected.");
+
         var futureChecklist = predictionJourney.EvidenceChecklist(
             "predict-branch", predictiveView, new[] { futureHypothesis });
         Check(futureChecklist.Contains("Pending: student hypothesis") &&

@@ -1397,6 +1397,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
                 var original = driver.Session;
                 var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(driver.SelectMeasurementVessel("receiver"), Is.True);
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("receiver"));
                 imported = CoreSession.ImportSession(original.ExportSession(), driver.ScientificDatabasePath);
                 driver.ReplaceSession(imported);
                 imported = null;
@@ -1406,6 +1408,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 Assert.That(driver.NativeRecoveryReady, Is.False);
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("source"),
+                    "Restored source screen must not retain the previous receiver's pH selection.");
                 Assert.That(driver.IsNativePaused, Is.True);
             }
             finally

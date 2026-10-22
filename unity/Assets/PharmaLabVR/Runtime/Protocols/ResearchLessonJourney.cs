@@ -138,6 +138,24 @@ namespace PharmaLabVR.Protocols
             return null;
         }
 
+        // After Native SessionLoad/CheckpointRestart, reconstruct only a
+        // uniquely identified local lesson with a durable, branch-scoped
+        // hypothesis at or before the restored Native event. Two different
+        // lesson hypotheses are ambiguous: ask the student to select explicitly.
+        // This never credits future notes or changes Native material.
+        public static string RecoverSavedLessonId(IReadOnlyList<NotebookEntry> entries,
+            string nativeBranchId, string currentNativeEventSequence)
+        {
+            const string strongId = "strong-acid-titration-research";
+            const string mixedId = "mixed-acid-titration-research";
+            var strong = RecoverSavedPrediction(entries, strongId,
+                nativeBranchId, currentNativeEventSequence);
+            var mixed = RecoverSavedPrediction(entries, mixedId,
+                nativeBranchId, currentNativeEventSequence);
+            if ((strong != null) == (mixed != null)) return null;
+            return strong != null ? strongId : mixedId;
+        }
+
         public static bool IsSupportedPrediction(string choice) =>
             choice == "below-7" || choice == "at-least-7";
 

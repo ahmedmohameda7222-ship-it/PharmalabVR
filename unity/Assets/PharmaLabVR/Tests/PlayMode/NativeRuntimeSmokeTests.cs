@@ -440,6 +440,51 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
                 Assert.That(sessions.RecordedReview, Is.Not.Null,
                     "Saved notebook observation must be reachable from recorded review.");
+
+                // Full offline learner checkpoint recovery: a *later* note on
+                // the same branch must be excluded when the saved Native event
+                // is loaded again. The authored lesson/prediction should return
+                // without inventing a fresh hypothesis or redoing chemistry.
+                var savedEvent = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(savedEvent));
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Later student note beyond the restored checkpoint."), Is.True,
+                    sessions.LastError);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(4));
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(savedEvent));
+                Assert.That(sessions.HasResearchLesson, Is.True,
+                    "Native restoration must recover the selected durable student lesson.");
+                Assert.That(sessions.ResearchPredictionSummary, Does.Contain("below 7"),
+                    "Restored lesson must use the original student hypothesis.");
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(3),
+                    "Future-event annotations cannot be credited after a saved checkpoint load.");
+                Assert.That(sessions.ResearchLessonSummary, Does.Not.Contain(
+                    "Later student note beyond the restored checkpoint."));
+                Assert.That(sessions.RecordedReview, Is.Null,
+                    "SessionLoad must not leak a prior recorded review.");
+                for (var i = 0; i < 200 && !driver.NativeRecoveryReady; i++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(driver.NativeRecoveryReady, Is.True,
+                    "Native SessionLoad must publish fresh neutral recovery before Continue.");
+                Assert.That(panels.Request(PanelAction.Continue), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(sessions.HasResearchLesson, Is.True,
+                    "A recovered Research lesson must survive the explicit Hold release.");
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(3));
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                Assert.That(sessions.LearningReviewSummary,
+                    Does.Not.Contain("Later student note beyond the restored checkpoint"));
             }
             finally
             {
