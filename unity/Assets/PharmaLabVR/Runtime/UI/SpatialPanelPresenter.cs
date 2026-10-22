@@ -266,8 +266,9 @@ namespace PharmaLabVR.UI
         {
             if (detail == null || router?.Current?.ScreenId != ScreenId.Lab ||
                 driver == null) return;
-            var current = driver.transform.root
-                .GetComponentInChildren<XRInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
+            var physical = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+            var current = !string.IsNullOrEmpty(physical?.LastPhysicalInspectionFeedback) ?
+                physical.LastPhysicalInspectionFeedback : physical?.LastPhysicalDeliveryFeedback;
             if (string.Equals(lastPhysicalFeedback, current, StringComparison.Ordinal)) return;
             lastPhysicalFeedback = current;
             detail.text = string.IsNullOrEmpty(current) ? baselineDetail :
@@ -478,7 +479,7 @@ namespace PharmaLabVR.UI
                     state.ObservationValidity, state.ObservationFreshness,
                     state.Maturity, state.ModelIdentity),
                 _ => state.Setup.CaptionsEnabled ?
-                    "Select a vessel to inspect. Research model · " + state.SaveState :
+                    "Empty tracked hand: touch receiver and press trigger to inspect its current Native pH. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
             if (state.ScreenId == ScreenId.Lab)

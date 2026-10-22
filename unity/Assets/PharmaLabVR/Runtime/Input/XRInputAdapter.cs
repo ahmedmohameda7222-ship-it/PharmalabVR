@@ -28,6 +28,7 @@ namespace PharmaLabVR.Input
         public bool HasAuxiliaryDeliveryBindings =>
             researchPipetteGrab != null && researchBottleGrab != null && deliveryPanel != null;
         public string LastPhysicalDeliveryFeedback { get; private set; }
+        public string LastPhysicalInspectionFeedback { get; private set; }
         [SerializeField] private string toolId = "research-tool";
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
@@ -215,6 +216,52 @@ namespace PharmaLabVR.Input
                     deliveryPress.Capture(item.id, (ulong)Time.frameCount, true);
                 }
             }
+            TryInspectReceiverByTouch();
+        }
+
+        // Touch an actual receiver collider with an empty tracked hand and
+        // squeeze its trigger. Read only through shared Native panel routing.
+        // No liquid, synthetic observation or button activation is fabricated.
+        private void TryInspectReceiverByTouch()
+        {
+            if (captureTarget == null || !captureTarget.isActiveAndEnabled ||
+                deliveryPanel == null || coreDriver?.Session == null) return;
+            var noInstrumentsHeld =
+                (grabInteractable == null || !grabInteractable.isSelected) &&
+                (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
+                (researchBottleGrab == null || !researchBottleGrab.isSelected) &&
+                (reserveStockGrip == null || !reserveStockGrip.isSelected);
+            if (!noInstrumentsHeld) return;
+            foreach (var hand in new[] { leftActionController, rightActionController })
+            {
+                if (!Tracked(hand)) continue;
+                var trigger = hand.activateAction.action;
+                if (trigger == null || !trigger.enabled || !trigger.WasPressedThisFrame())
+                    continue;
+                var ray = hand.GetComponentInChildren<XRRayInteractor>(true);
+                var overUi = ray != null && ray.IsOverUIGameObject();
+                var distance = float.PositiveInfinity;
+                foreach (var collider in captureTarget.GetComponentsInChildren<Collider>(true))
+                {
+                    if (collider == null || !collider.enabled ||
+                        !collider.gameObject.activeInHierarchy) continue;
+                    distance = Mathf.Min(distance, Vector3.Distance(
+                        hand.transform.position,
+                        collider.ClosestPoint(hand.transform.position)));
+                }
+                var ready = inputEnabled && restorationGestureGate.IsArmed &&
+                    !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
+                    !coreDriver.IsNativePaused;
+                if (!ResearchXRReceiverInspectionAdmission.MayInspect(
+                        ready, true, noInstrumentsHeld, overUi, distance))
+                    continue;
+                var accepted = deliveryPanel.Request(PanelAction.Measure,
+                    captureTarget.InventoryId);
+                LastPhysicalInspectionFeedback = accepted ?
+                    "Native receiver selected for current supported pH observation." :
+                    "Native receiver observation unavailable on this screen or science state.";
+                break; // both hands pressing is one selection gesture
+            }
         }
 
         private void OnDisable() => ClearDeliveryPress();
@@ -386,6 +433,7 @@ namespace PharmaLabVR.Input
             ClearDeliveryPress();
             instrumentPresenter?.PresentActuatorInput(0f);
             LastPhysicalDeliveryFeedback = null;
+            LastPhysicalInspectionFeedback = null;
             restorationGestureGate.RequireFreshNeutralInput();
         }
 

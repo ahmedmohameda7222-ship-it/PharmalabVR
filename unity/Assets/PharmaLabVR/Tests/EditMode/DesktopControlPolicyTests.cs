@@ -95,6 +95,25 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_XRPhysicalReceiverTouchRequiresFreshTrackedEmptyHandAndNoUi()
+        {
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, true, true, false, 0.02), Is.True);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, false, true, false, 0.02), Is.False);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                false, true, true, false, 0.02), Is.False);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, true, false, false, 0.02), Is.False);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, true, true, true, 0.02), Is.False);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, true, true, false, double.NaN), Is.False);
+            Assert.That(ResearchXRReceiverInspectionAdmission.MayInspect(
+                true, true, true, false, 0.2), Is.False);
+        }
+
+        [Test]
         public void P10_01_WheelCannotMoveHeldInstrumentAndCameraTogether()
         {
             Assert.That(DesktopWheelRouting.Resolve(true, false, 120d),

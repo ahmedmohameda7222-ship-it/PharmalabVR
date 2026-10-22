@@ -1133,6 +1133,26 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
+        // XR empty-hand fingertip/trigger can select a real receiver for its
+        // existing Native pH panel, but cannot read when a tool/GUI owns
+        // the trigger, tracking is stale, or the receiver is out of touch.
+        Check(ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, .02),
+            "Fresh tracked XR fingertip touching receiver must admit Native inspection.");
+        Check(!ResearchXRReceiverInspectionAdmission.MayInspect(
+            false, true, true, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, false, true, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, false, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, true, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, .20) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, double.NaN),
+            "XR receiver inspection must fail closed on Hold, tracking, held tool, UI or distance.");
+
         // The source bottle can physically prime the real burette only at
         // its separate upright receiving mouth, never at the receiver or
         // via a held/undocked burette, dry stock, or an open valve.
