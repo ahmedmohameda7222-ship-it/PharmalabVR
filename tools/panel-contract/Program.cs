@@ -477,6 +477,31 @@ internal static class Program
                 researchNotes.Read(learningPath, "formula-branch"), "formula-branch");
             Check(safeCsv.Contains("\"'=HYPERLINK") && !safeCsv.Contains("student-branch"),
                 "Untrusted student annotation was exported as a spreadsheet formula.");
+            // Two local Notebook writers must never silently replace one
+            // another's saved learner evidence, and a stale predictable
+            // .tmp file from a crash must not be truncated by a new append.
+            var oldJournal = System.IO.File.ReadAllText(learningPath);
+            var writerConflictRefused = false;
+            using (var externalLease = new System.IO.FileStream(
+                learningPath + ".lock", System.IO.FileMode.OpenOrCreate,
+                System.IO.FileAccess.ReadWrite, System.IO.FileShare.None))
+            {
+                try {
+                    researchNotes.Append(learningPath, "student-branch", "12", "receiver",
+                        "This write must be rejected while another process holds the journal lease.");
+                }
+                catch (System.IO.InvalidDataException) { writerConflictRefused = true; }
+            }
+            Check(writerConflictRefused &&
+                  System.IO.File.ReadAllText(learningPath) == oldJournal,
+                "A competing Notebook writer replaced another writer's durable journal.");
+            var staleStage = learningPath + ".tmp";
+            System.IO.File.WriteAllText(staleStage, "PREVIOUS-CRASH-ARTIFACT");
+            researchNotes.Append(learningPath, "staging-branch", "19", "receiver",
+                "Actual new student annotation committed via a fresh stage.");
+            Check(System.IO.File.ReadAllText(staleStage) == "PREVIOUS-CRASH-ARTIFACT" &&
+                  researchNotes.Read(learningPath, "staging-branch").Count == 1,
+                "New Notebook append clobbered a crash artifact or lost the committed annotation.");
         }
         finally
         {
