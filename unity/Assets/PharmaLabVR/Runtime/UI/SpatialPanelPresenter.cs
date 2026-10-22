@@ -34,6 +34,7 @@ namespace PharmaLabVR.UI
         };
         private Text title;
         private Text detail;
+        private ScrollRect detailScroller;
         private string baselineDetail = string.Empty;
         private string lastPhysicalFeedback = null;
         private Image background;
@@ -90,7 +91,41 @@ namespace PharmaLabVR.UI
             background = panelRoot.AddComponent<Image>();
             background.color = new Color(0.91f, 0.94f, 0.94f, 0.97f);
             title = CreateText("Panel title", 214f, 42f, 26, FontStyle.Bold);
-            detail = CreateText("Panel detail", 126f, 112f, 20, FontStyle.Normal);
+            // A bounded, scrollable area keeps Native scientific provenance
+            // and long student/teaching notes above every working XR button.
+            var scrollWindow = new GameObject("Detail scroller",
+                typeof(RectTransform), typeof(Image), typeof(ScrollRect));
+            scrollWindow.transform.SetParent(panelRoot.transform, false);
+            var scrollBounds = scrollWindow.GetComponent<RectTransform>();
+            scrollBounds.sizeDelta = new Vector2(368f, 112f);
+            scrollBounds.anchoredPosition = new Vector2(0f, 126f);
+            var scrollHit = scrollWindow.GetComponent<Image>();
+            scrollHit.color = new Color(1f, 1f, 1f, 0.01f);
+            scrollHit.raycastTarget = true;
+            var viewport = new GameObject("Detail viewport",
+                typeof(RectTransform), typeof(RectMask2D));
+            viewport.transform.SetParent(scrollWindow.transform, false);
+            var viewportRect = viewport.GetComponent<RectTransform>();
+            viewportRect.anchorMin = Vector2.zero;
+            viewportRect.anchorMax = Vector2.one;
+            viewportRect.sizeDelta = Vector2.zero;
+            viewportRect.anchoredPosition = Vector2.zero;
+            detail = CreateText("Panel detail", 0f, 112f, 20, FontStyle.Normal);
+            detail.transform.SetParent(viewport.transform, false);
+            detail.rectTransform.anchorMin = new Vector2(0f, 1f);
+            detail.rectTransform.anchorMax = Vector2.one;
+            detail.rectTransform.pivot = new Vector2(0.5f, 1f);
+            detail.rectTransform.sizeDelta = new Vector2(0f, 112f);
+            detail.rectTransform.anchoredPosition = Vector2.zero;
+            var fitter = detail.gameObject.AddComponent<ContentSizeFitter>();
+            fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            detailScroller = scrollWindow.GetComponent<ScrollRect>();
+            detailScroller.viewport = viewportRect;
+            detailScroller.content = detail.rectTransform;
+            detailScroller.horizontal = false;
+            detailScroller.vertical = true;
+            detailScroller.movementType = ScrollRect.MovementType.Clamped;
+            detailScroller.scrollSensitivity = 22f;
             AddButton("Inspect receiver", 30f, PanelAction.Inspect, "receiver");
             AddButton("Inspect source", -26f, PanelAction.Inspect, "source");
             AddButton("Measure", -82f, PanelAction.Measure, "receiver");
@@ -223,6 +258,7 @@ namespace PharmaLabVR.UI
             lastPhysicalFeedback = current;
             detail.text = string.IsNullOrEmpty(current) ? baselineDetail :
                 "Physical delivery: " + current + "\n" + baselineDetail;
+            if (detailScroller != null) detailScroller.verticalNormalizedPosition = 1f;
         }
 
         private void UpdatePlacement()
@@ -558,6 +594,11 @@ namespace PharmaLabVR.UI
             baselineDetail = detail.text;
             lastPhysicalFeedback = null; // re-evaluate even when router updates mid-gesture
             RefreshPhysicalDeliveryFeedback();
+            if (detailScroller != null)
+            {
+                detailScroller.StopMovement();
+                detailScroller.verticalNormalizedPosition = 1f;
+            }
         }
 
         private void SetButton(string name, bool visible)
