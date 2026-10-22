@@ -33,6 +33,10 @@ namespace PharmaLabVR.Lab
                 double.IsInfinity(vessel.CommittedVolumeM3) ||
                 observation.Support != "Supported" ||
                 observation.Freshness != "Current" ||
+                observation.ComputationState != "Ready" ||
+                !observation.ValueAvailable ||
+                double.IsNaN(observation.Value) ||
+                double.IsInfinity(observation.Value) ||
                 string.IsNullOrWhiteSpace(vessel.MaterialRevision) ||
                 observation.AsOfMaterialRevision != vessel.MaterialRevision ||
                 string.IsNullOrWhiteSpace(observation.ModelId) ||
@@ -40,7 +44,15 @@ namespace PharmaLabVR.Lab
                 string.IsNullOrWhiteSpace(observation.Maturity))
                 throw new InvalidOperationException(
                     "Native pH model, freshness, material revision or provenance is not current.");
+            // Prevent a stale UI label and a newer Native observation from
+            // silently being joined as one learner evidence event. The same
+            // fixed 2-decimal projection is used by CoreDriver.Measurement.
+            var nativeDisplay = observation.Value.ToString("0.00", CultureInfo.InvariantCulture);
+            if (!string.Equals(nativeDisplay, displayedValue, StringComparison.Ordinal))
+                throw new InvalidOperationException(
+                    "Displayed pH is inconsistent with the latest raw Native observation.");
             return "Native pH " + ph.ToString("0.00", CultureInfo.InvariantCulture) +
+                " · raw Native pH " + observation.Value.ToString("R", CultureInfo.InvariantCulture) +
                 " · vessel " + vesselId +
                 " · material revision " + vessel.MaterialRevision +
                 " · event " + view.EventSequence +

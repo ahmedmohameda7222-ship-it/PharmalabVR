@@ -37,10 +37,16 @@ namespace PharmaLabVR.Lab
             public string Freshness { get; }
             public string Maturity { get; }
             public string AsOfMaterialRevision { get; }
+            // The original unrounded Native IPhreeqc observation, never a
+            // value reverse-engineered from the two-decimal display label.
+            public double Value { get; }
+            public bool ValueAvailable { get; }
+            public string ComputationState { get; }
 
             public ObservationView(string vesselId, string observableId, string modelId,
                 string databaseIdentity, string support, string freshness, string maturity,
-                string asOfMaterialRevision = null)
+                string asOfMaterialRevision = null, double value = 0d,
+                bool valueAvailable = false, string computationState = null)
             {
                 VesselId = vesselId;
                 ObservableId = observableId;
@@ -50,6 +56,9 @@ namespace PharmaLabVR.Lab
                 Freshness = freshness;
                 Maturity = maturity;
                 AsOfMaterialRevision = asOfMaterialRevision;
+                Value = value;
+                ValueAvailable = valueAvailable;
+                ComputationState = computationState;
             }
         }
 
@@ -84,7 +93,8 @@ namespace PharmaLabVR.Lab
                 observations[index] = new ObservationView(observation.vesselId, observation.observableId,
                     observation.modelId, observation.databaseIdentity, observation.support,
                     observation.freshness, observation.maturity,
-                    observation.asOfMaterialRevision);
+                    observation.asOfMaterialRevision, observation.value,
+                    observation.valueAvailable, observation.computationState);
             }
             return new LabViewModel(source.eventSequence, new ReadOnlyCollection<VesselView>(vessels),
                 new ReadOnlyCollection<ObservationView>(observations));
@@ -120,6 +130,9 @@ namespace PharmaLabVR.Lab
             public string freshness;
             public string maturity;
             public string asOfMaterialRevision;
+            public double value;
+            public bool valueAvailable;
+            public string computationState;
         }
     }
 }

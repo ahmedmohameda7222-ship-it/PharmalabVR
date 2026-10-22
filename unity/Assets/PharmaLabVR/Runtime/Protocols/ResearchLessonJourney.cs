@@ -39,14 +39,18 @@ namespace PharmaLabVR.Protocols
             if (!IsSupportedPrediction(choice) || vesselId != "receiver")
                 throw new InvalidOperationException("A receiver pH hypothesis is required.");
             NativeMeasurementNote.Build(native, vesselId, availability, displayedNativePH);
-            var ph = double.Parse(displayedNativePH, NumberStyles.Float,
-                CultureInfo.InvariantCulture);
-            var belowSeven = ph < 7d;
+            // Two Native values on opposite sides of seven can BOTH render
+            // as 7.00. The learning criterion must use the unrounded value
+            // from the exact revision-matched Native observation, not UI text.
+            var raw = native.Observations.First(item => item.VesselId == vesselId &&
+                item.ObservableId == "pH").Value;
+            var belowSeven = raw < 7d;
             var predictedBelow = choice == "below-7";
             return "Student prediction criterion: receiver pH " +
                 (predictedBelow ? "below 7" : "at least 7") +
-                ". Observed current Native pH " + ph.ToString("0.00", CultureInfo.InvariantCulture) +
-                " is " + (belowSeven ? "below 7" : "at least 7") +
+                ". Observed current Native pH " + raw.ToString("R", CultureInfo.InvariantCulture) +
+                " (display " + displayedNativePH + ") is " +
+                (belowSeven ? "below 7" : "at least 7") +
                 "; criterion " + (predictedBelow == belowSeven ? "matched" : "not matched") +
                 ". Research reflection only; not a grade or endpoint.";
         }

@@ -148,3 +148,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## Student XR Notebook entry from guided lesson — 22 October 2026
 
 - **P11.02/P12.02 Partial:** Guided prediction page 3 now presents the actual 'Open notebook' action at a free ray target whenever the Native Lab makes Notebook available. Initial paused stock preparation does not misrepresent Notebook readiness. A PlayMode source test follows lesson/prediction page → accepted stock preparation → Notebook navigation; NOT_RUN in Unity until local verification. Headless RED commit d14ce2b established missing menu capability and GREEN source carries the bounded route; no formal acceptance promotion.
+
+## Scientific correctness: unrounded Native pH in learner reflection (22 October 2026)
+
+- **P12.02 Partial:** Prediction threshold comparisons no longer classify the 2-decimal UI label as science. The LabViewModel observation DTO now retains the exact Native `value`, `valueAvailable` and `computationState` alongside the existing model, database, freshness, vessel and material revision. The Notebook observation gate refuses missing/unready/nonfinite Native values and stale UI display text. It records the raw value alongside the rounded presentation. A learner's below/at-least-7 comparison uses the unrounded Native value, with no Unity-side chemistry computation or grade.
+- **Test-first:** RED `a3c714a` was verified failing on missing Native raw observation fields. Production headless tests now check 6.999 vs 7.001 both displayed 7.00, mismatched UI text rejection and unavailable-value refusal. Unity integration remains NOT_RUN; formal VerifiedLocal/Open statuses remain unchanged.

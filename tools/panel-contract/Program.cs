@@ -138,6 +138,9 @@ internal static class Program
         noteView.Observations[0].Freshness = "Current";
         noteView.Observations[0].AsOfMaterialRevision = "3";
         noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        noteView.Observations[0].Value = 7.13;
+        noteView.Observations[0].ValueAvailable = true;
+        noteView.Observations[0].ComputationState = "Ready";
         var nativeNote = NativeMeasurementNote.Build(noteView, "receiver",
             MeasurementAvailability.Current, "7.13");
         var predictionMatch = ResearchLessonJourney.CompareRecordedPrediction(

@@ -56,6 +56,9 @@ namespace PharmaLabVR.Lab
         public string Maturity { get; set; }
         public string DatabaseIdentity { get; set; }
         public string AsOfMaterialRevision { get; set; }
+        public double Value { get; set; }
+        public bool ValueAvailable { get; set; }
+        public string ComputationState { get; set; }
     }
     public sealed class LabViewModel
     {
