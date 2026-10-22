@@ -148,6 +148,24 @@ namespace PharmaLabVR.Session
                     throw new InvalidDataException("Portable notes do not match the Native branch/revision.");
         }
 
+        // Used by read-only teaching review of a .plvpack. Parse the
+        // checksum-verified journal in memory; never recreate/write a local
+        // Notebook file or accept a different Native branch/future event.
+        public static IReadOnlyList<NotebookEntry> ReadPortableBranch(
+            string snapshot, string branchId, string maxEventSequence)
+        {
+            ValidateId(branchId, nameof(branchId));
+            ValidateRevision(maxEventSequence);
+            var limit = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var parsed = ParseStrict(snapshot);
+            foreach (var entry in parsed)
+                if (entry.BranchId != branchId ||
+                    ulong.Parse(entry.EventSequence, CultureInfo.InvariantCulture) > limit)
+                    throw new InvalidDataException(
+                        "Portable student annotation is outside its Native branch or event.");
+            return parsed.AsReadOnly();
+        }
+
         private static List<NotebookEntry> ReadStrict(string path)
         {
             if (!File.Exists(path)) return new List<NotebookEntry>();
