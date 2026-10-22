@@ -301,6 +301,26 @@ internal static class Program
               !predictionPanels.Request(PanelAction.RecordResearchPrediction, "below-7"),
             "Shared first-run Desktop/XR prediction did not durably request a single annotation.");
 
+        // Instructor review must expose Native precision only if the
+        // recorded observation itself is Supported/Current and agrees with
+        // the visible 2-decimal projection. No derived student grades.
+        var recordedBelow = InstructorObservationLabel.Render(
+            "receiver", "7.00", 6.999, true, "3");
+        var recordedAbove = InstructorObservationLabel.Render(
+            "receiver", "7.00", 7.001, true, "3");
+        Check(recordedBelow.Contains("raw 6.999") &&
+              recordedAbove.Contains("raw 7.001") &&
+              recordedBelow.Contains("display 7.00") &&
+              !recordedBelow.Contains("grade"),
+            "Instructor preview discarded Native precision near the pH-7 learner criterion.");
+        Check(!InstructorObservationLabel.Render(
+                "receiver", "--", 6.999, false, "3").Contains("6.999") &&
+              !InstructorObservationLabel.Render(
+                "receiver", "7.00", double.NaN, true, "3").Contains("NaN") &&
+              !InstructorObservationLabel.Render(
+                "receiver", "6.80", 6.999, true, "3").Contains("6.999"),
+            "Offline teaching preview exposed absent, nonfinite or inconsistent raw Native science.");
+
         // M3 learner review RED: a saved Native session's review must show
         // this branch's durable prediction and observation annotations,
         // including after a lesson controller is reconstructed.
