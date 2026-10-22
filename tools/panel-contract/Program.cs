@@ -355,6 +355,27 @@ internal static class Program
             "Student explanation for strong-acid-titration-research at Native event 7 · model-limitations: " +
             "Selected by learner; not Native scientific evidence.",
             DateTime.UtcNow.ToString("O"));
+        // A restored Native checkpoint must never inherit a student
+        // prediction written later on the same branch. Durable notebook
+        // annotations remain tied to their original Native event sequence.
+        var futureHypothesis = new NotebookEntry("predict-branch", "9", "receiver",
+            "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { futureHypothesis }, predictiveDefinition.id,
+                "predict-branch", predictiveView.EventSequence) == null,
+            "Restored event 7 inherited a prediction recorded in future event 9.");
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis }, predictiveDefinition.id, "predict-branch", "4") == null &&
+              ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis }, predictiveDefinition.id, "predict-branch", "5") == "below-7",
+            "Predictions must become visible at their exact authored Native event.");
+        var futureChecklist = predictionJourney.EvidenceChecklist(
+            "predict-branch", predictiveView, new[] { futureHypothesis });
+        Check(futureChecklist.Contains("Pending: student hypothesis") &&
+              !futureChecklist.Contains("Recorded: student hypothesis"),
+            "Research checklist credited work from a future Native event.");
         var steps = predictionJourney.EvidenceChecklist("predict-branch",
             predictiveView, new[] { hypothesis, progressMeasurement, progressExplanation });
         Check(steps.Contains("Recorded: student hypothesis") &&
