@@ -203,6 +203,28 @@ namespace PharmaLabVR.Protocols
             return checklist + "\n" + disclaimer;
         }
 
+        // XR receives a single factual next step, never the full desktop
+        // checklist overlapping its physical input targets.
+        public string CompactEvidenceStatus(string liveBranchId, LabViewModel native,
+            IReadOnlyList<NotebookEntry> notes)
+        {
+            if (liveBranchId != BranchId || native?.Vessels == null)
+                return "Research evidence unavailable for this Native branch (not graded).";
+            var lines = EvidenceChecklist(liveBranchId, native, notes)
+                .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var total = lines.Count(line => line.StartsWith("Pending: ", StringComparison.Ordinal) ||
+                line.StartsWith("Recorded: ", StringComparison.Ordinal) ||
+                line.StartsWith("Observed: ", StringComparison.Ordinal));
+            var completed = lines.Count(line => line.StartsWith("Recorded: ", StringComparison.Ordinal) ||
+                line.StartsWith("Observed: ", StringComparison.Ordinal));
+            var pending = lines.FirstOrDefault(line =>
+                line.StartsWith("Pending: ", StringComparison.Ordinal));
+            var next = pending == null ? "Save and open recorded Review" :
+                pending.Substring("Pending: ".Length);
+            return "Study steps documented " + completed + "/" + total +
+                " (not graded). Next: " + next + ".";
+        }
+
         public string Summary(string liveNativeBranchId, LabViewModel native,
             bool paused, bool held)
         {

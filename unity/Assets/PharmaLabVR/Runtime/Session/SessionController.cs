@@ -423,6 +423,11 @@ namespace PharmaLabVR.Session
             "\n" + selectedResearchLesson.EvidenceChecklist(
                 driver?.CurrentNativeBranchId, driver?.CurrentLabView,
                 ReadNotebookEntries());
+        public string ResearchLessonCompact => selectedResearchLesson == null ?
+            "Choose a Research lesson (not graded)." :
+            selectedResearchLesson.CompactEvidenceStatus(
+                driver?.CurrentNativeBranchId, driver?.CurrentLabView,
+                ReadNotebookEntries());
         public string ResearchLessonSteps => selectedResearchLesson == null ?
             string.Empty : selectedResearchLesson.Instructions;
         public bool HasResearchLesson => selectedResearchLesson != null;

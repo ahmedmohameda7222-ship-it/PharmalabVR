@@ -561,17 +561,15 @@ namespace PharmaLabVR.UI
                         concentration.ToString("0.00") + " mol/L";
                 }
                 detail.text = predictionPage ?
-                    (panels?.ResearchLessonSummary ?? "Research lesson unavailable.") + "\n" +
+                    (panels?.ResearchLessonCompact ?? "Research lesson unavailable.") + "\n" +
                     (panels?.ResearchPredictionSummary ?? "Select a prediction.") :
                     driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
-                    (panels?.ResearchLessonSummary ?? "Free Research laboratory") + "\n" +
-                    "Measured Research tools. Pipette staged Native tip: " +
+                    (panels?.ResearchLessonCompact ?? "Free Research laboratory") + "\n" +
+                    "Native pipette tip " +
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
-                    " ml; 0.10 ml remains as research hold-up. " +
-                    "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml. " +
-                    "Physical research delivery: direct-grip bottle/pipette, align outlet over the " +
-                    "stationary receiver, then press trigger. Native acceptance is required.";
+                    " ml. Direct-grip and align the outlet over the receiver; " +
+                    "trigger requests a Native-delivered aliquot.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))

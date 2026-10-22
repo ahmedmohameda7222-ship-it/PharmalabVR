@@ -204,3 +204,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P12.01/P12.02 Partial:** Desktop and XR lesson guidance now surfaces an explicit evidence checklist of stock preparation, student hypothesis, Native material transfer, current supported Native pH, durable pH note and learner reflection; mixed-acid adds reserve stock. Every item is recomputed from matching Native branch material/observation metadata and the branch-scoped local Notebook. Pending items are never presented as complete; a changed Native branch disables progress. No grade, endpoint or institutional attestation is inferred.
 - **Tests:** RED headless test `0d0acfdf` validates empty, branch mismatch, partial Native state and durable complete evidence. Unity PlayMode source checks the end-to-end Research lesson now exposes recorded pH/reflection milestones. Unity NOT_RUN, official acceptance unchanged.
+
+## M3 compact XR guided study evidence — 22 October 2026
+
+- **P07.02/P12.01 Partial:** The full evidence checklist remains in Desktop Lab; XR spatial Lab and prediction pages now use the bounded next-pending-step summary computed from the same Native material and branch-scoped local Notebook evidence. Displays counts of documented steps, explicitly `not graded`, rather than a long scroll-overlapping procedure. Also shortens instrument instructions to a readable direct-grip/Native delivery hint. No Native execution semantics or verification statuses changed.
+- **Headless RED:** `505e168` tests finite concise guidance on new/recorded states; Unity Editor/PlayMode/XR NOT_RUN.

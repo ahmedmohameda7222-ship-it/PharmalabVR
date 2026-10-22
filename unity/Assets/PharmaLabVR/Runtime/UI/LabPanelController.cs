@@ -39,6 +39,8 @@ namespace PharmaLabVR.UI
             sessions?.CanNextInstructorAnnotation == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
+        public string ResearchLessonCompact => sessions?.ResearchLessonCompact ??
+            "Research evidence unavailable.";
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;
         public bool CanRecordCurrentNativePH => sessions?.CanRecordCurrentNativePH == true;
         public bool CanRecordResearchPrediction => sessions?.CanRecordResearchPrediction == true;
