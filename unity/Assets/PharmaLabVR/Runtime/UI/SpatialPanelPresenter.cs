@@ -497,7 +497,13 @@ namespace PharmaLabVR.UI
                     "Measured Research tools. Pipette staged Native tip: " +
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
                     " ml; 0.10 ml remains as research hold-up. " +
-                    "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml.";
+                    "To dispense 0.05 ml, aspirate repeatedly until the tip reaches 0.15 ml. " +
+                    "Physical research delivery: direct-grip bottle/pipette, align outlet over the " +
+                    "stationary receiver, then press trigger. Native acceptance is required.";
+                var physicalFeedback = driver.transform.root
+                    .GetComponentInChildren<XRInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
+                if (!string.IsNullOrEmpty(physicalFeedback))
+                    detail.text += "\nPhysical delivery: " + physicalFeedback;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))

@@ -24,6 +24,63 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Verify actual authored outlet geometry and committed Native transfer
+        // together. Headless policy tests cannot establish this Unity scene path.
+        [UnityTest]
+        public IEnumerator M2_ReceiverAlignedStockBottleHasActualNativeDeliveryPath()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var bottle = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(item => item.name == "ResearchStockBottle");
+                var receiver = roots.SelectMany(root => root.GetComponentsInChildren<Transform>(true))
+                    .Single(item => item.name == "ReceiverVessel");
+                var target = receiver.GetComponent<LabCaptureTarget>();
+                var outlet = bottle.Find("OutletExit");
+                Assert.That(outlet, Is.Not.Null);
+                Assert.That(target, Is.Not.Null);
+                Assert.That(target.Estimate(bottle, Vector3.zero), Is.Empty,
+                    "Bottle initially parked away from receiver must have no capture.");
+                bottle.rotation = Quaternion.Euler(180f, 0f, 0f);
+                var aperture = receiver.position + receiver.up * 0.04f;
+                bottle.position += aperture + receiver.up * 0.06f - outlet.position;
+                var capture = target.Estimate(bottle, Vector3.zero);
+                Assert.That(capture.Length, Is.EqualTo(1),
+                    "Inverted, positioned physical bottle must intersect the authored receiver aperture.");
+                Assert.That(capture[0].destinationInventoryId, Is.EqualTo("receiver"));
+                Assert.That(capture[0].fraction, Is.EqualTo(1f));
+                Assert.That(ResearchAuxiliaryDelivery.Resolve(
+                    bottle.GetComponent<DesktopGrabbable>().ToolId, true, true,
+                    capture.Length == 1, true),
+                    Is.EqualTo(ResearchAuxiliaryDeliveryIntent.BottlePour));
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Native source preparation is required.");
+                var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                var start = before.vessels.Single(item => item.id == "receiver")
+                    .inventory.researchAdditiveVolumeM3;
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True,
+                    "Physical intent must use same shared Native command as UI.");
+                var after = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
+                Assert.That(after.vessels.Single(item => item.id == "receiver")
+                    .inventory.researchAdditiveVolumeM3,
+                    Is.EqualTo(start + 1e-8).Within(1e-10));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Source test only. Real Editor/Player execution remains the final
         // local Codex verification gate; no simulated pH or note fixture.
         [UnityTest]
