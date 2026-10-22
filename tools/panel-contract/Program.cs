@@ -415,6 +415,24 @@ internal static class Program
             "predict-branch", new LabViewModel(), Array.Empty<NotebookEntry>());
         Check(conciseNext.Contains("Next: prepare Native stock") && conciseNext.Length < 180,
             "XR guided status must fit the panel and identify the actual next pending action.");
+        // XR must prioritize safety recovery over a chemistry "Next" prompt.
+        // A genuine Native Pause is not first-run stock preparation; a Hold
+        // always wins and cannot imply a permitted student transfer.
+        var heldGuidance = predictionJourney.CompactEvidenceStatus(
+            "predict-branch", predictiveView, Array.Empty<NotebookEntry>(),
+            paused: false, held: true);
+        var pausedGuidance = predictionJourney.CompactEvidenceStatus(
+            "predict-branch", predictiveView, Array.Empty<NotebookEntry>(),
+            paused: true, held: false);
+        Check(heldGuidance.StartsWith("Hold:", StringComparison.Ordinal) &&
+              !heldGuidance.Contains("Next:") && heldGuidance.Length < 180 &&
+              pausedGuidance.StartsWith("Pause:", StringComparison.Ordinal) &&
+              !pausedGuidance.Contains("Next:") && pausedGuidance.Length < 180,
+            "XR lesson guide suggested chemistry commands during Native Hold/Pause.");
+        Check(predictionJourney.CompactEvidenceStatus(
+                "predict-branch", predictiveView, Array.Empty<NotebookEntry>(),
+                paused: true, held: true).StartsWith("Hold:", StringComparison.Ordinal),
+            "Native Hold must take priority over normal Pause guidance.");
         var conciseRecorded = predictionJourney.CompactEvidenceStatus(
             "predict-branch", predictiveView, new[] { hypothesis, progressMeasurement, progressExplanation });
         Check(conciseRecorded.Contains("Study steps documented") &&
