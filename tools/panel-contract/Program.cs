@@ -153,6 +153,34 @@ internal static class Program
               nativeNote.Contains("event 7") && nativeNote.Contains("sha256:research-db") &&
               nativeNote.Contains("IPhreeqc-research"),
             "Recorded pH note must preserve actual Native event, material and model identity.");
+        // P12 student explanation is a deliberate bounded reflection on
+        // previously supported Native data, never manufactured chemistry.
+        var explained = ResearchLessonJourney.BuildRecordedExplanation(
+            "strong-acid-titration-research", "model-limitations",
+            noteView, "receiver", MeasurementAvailability.Current, "7.13");
+        Check(explained.Contains("Student explanation for strong-acid-titration-research") &&
+              explained.Contains("event 7") &&
+              explained.Contains("model") &&
+              explained.Contains("not Native scientific evidence"),
+            "Learner explanation must retain the actual measured Native event and remain ungraded.");
+        var unsupportedExplanationDenied = false;
+        try {
+            ResearchLessonJourney.BuildRecordedExplanation(
+                "strong-acid-titration-research", "made-up-scoring",
+                noteView, "receiver", MeasurementAvailability.Current, "7.13");
+        }
+        catch (InvalidOperationException) { unsupportedExplanationDenied = true; }
+        Check(unsupportedExplanationDenied,
+            "Arbitrary or grade-like explanations were admitted.");
+        var invalidMeasurementExplanationDenied = false;
+        try {
+            ResearchLessonJourney.BuildRecordedExplanation(
+                "strong-acid-titration-research", "method-uncertainty",
+                noteView, "receiver", MeasurementAvailability.Stale, "7.13");
+        }
+        catch (InvalidOperationException) { invalidMeasurementExplanationDenied = true; }
+        Check(invalidMeasurementExplanationDenied,
+            "A stale unsupported observation yielded a student explanation.");
         var staleDenied = false;
         noteView.Observations[0].AsOfMaterialRevision = "2";
         try { NativeMeasurementNote.Build(noteView, "receiver", MeasurementAvailability.Current, "7.13"); }
