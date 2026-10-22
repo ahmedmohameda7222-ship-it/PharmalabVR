@@ -57,11 +57,12 @@ namespace PharmaLabVR.Session
                     .Append("; learner annotations ").Append(StudentAnnotations.Count);
                 foreach (var observation in NativeObservations)
                 {
-                    text.Append("\nNative ").Append(observation.vesselId)
-                        .Append(" pH ").Append(observation.DisplayValue)
+                    var display = observation.DisplayValue;
+                    text.Append("\n").Append(InstructorObservationLabel.Render(
+                        observation.vesselId, display, observation.value,
+                        display != "--", observation.asOfMaterialRevision))
                         .Append(" · ").Append(observation.support)
-                        .Append('/').Append(observation.freshness)
-                        .Append(" · rev ").Append(observation.asOfMaterialRevision);
+                        .Append('/').Append(observation.freshness);
                 }
                 text.Append("\n").Append(
                     ResearchLearningReview.Render(StudentAnnotations, NativeBranchId, true));

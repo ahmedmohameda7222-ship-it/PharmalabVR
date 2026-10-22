@@ -158,3 +158,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P23.02/P23.04 Partial (source):** Recorded Desktop Review can inspect a local student .plvpack through an allowlisted filename in the application's sessions directory. XR can inspect the currently exported pack. PortableSessionArchive/NotebookService validate the complete Native branch, event sequence and annotation checksums; imported data never enters the running Native session. The preview explicitly labels all evidence offline, ungraded and NOT ATTESTED; it cannot grant enrollment or server authorization.
 - **Tests:** The strict portable-reader RED compile failure at 2e38a42 was followed by the f927f47 core parser. The separate PreviewPortableArchive routing RED test at 75814a9 is addressed in this source batch. Unity EditMode has an actual archive preview/tamper test source, still NOT_RUN pending local Codex. No production Supabase change or formal acceptance promotion.
+
+## Instructor offline Native pH precision — 22 October 2026
+
+- **P23.02/P12.02 Partial:** Read-only instructor preview shows raw Native pH alongside its 2-decimal display only for available, Supported/Current/Ready finite numbers that agree with the shown display. It distinguishes raw 6.999 and 7.001 even when both display 7.00, without generating grades or inferred chemistry. Unavailable and inconsistent values are not shown as scientific results.
+- **Test-first:** RED `47d16fd` introduced cross-boundary precision and unavailable-value checks; production pure label renderer is compiled through headless panel-contract. Unity instructor scene verification remains NOT_RUN; formal acceptance ledger unchanged.
