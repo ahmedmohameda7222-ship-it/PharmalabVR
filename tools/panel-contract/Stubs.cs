@@ -246,6 +246,9 @@ namespace PharmaLabVR.Session
             CanRecordResearchPrediction = false;
             return true;
         }
+        public string ResearchLessonCompact => HasResearchLesson ?
+            "Study steps documented from Native evidence (not graded)." :
+            "Choose a Research lesson (not graded).";
         public string ResearchLessonSummary => HasResearchLesson ?
             "Research lesson selected · Native-driven observations." : "Free laboratory.";
         public bool SelectResearchLesson(string id)
