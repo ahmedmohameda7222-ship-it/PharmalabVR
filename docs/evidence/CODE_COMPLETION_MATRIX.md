@@ -116,3 +116,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## XR kinematic apparatus grip alignment — 22 October 2026
 
 - **P07.02/P08.02 Partial:** Generated-stock/pipette Rigidbody instances rest kinematically and now explicitly use XRI Kinematic movement type when selected, rather than relying on a default velocity-driven grab mode. The generated-scene Editor test asserts grip movement configuration. Actual XR held motion remains NOT_RUN; this is source/binding readiness only.
+
+## M2 frame-accurate gesture capture (22 October 2026)
+
+- **P07.01/P07.02 Partial:** Desktop pick/place F, Native Pause Esc and physical G are now captured in Unity Update (every rendered frame) rather than exclusively at the lower-frequency Native simulation tick. Direct-grip XR trigger presses are also captured every frame. A bounded one-shot ResearchPressBuffer bridges events to the next Native sample; no duplicate receipt and no pending request after focus loss, Pause/Hold, mode reset, owner change or timeout.
+- **Headless evidence:** RED contract commit 05d30b6 failed compilation on missing press buffer; current source includes production buffer and behavioral cancellation/replay tests. Native C++ scientific code is unchanged; Unity Editor/PlayMode/Player/XR still NOT_RUN and formal acceptance ledger unchanged.

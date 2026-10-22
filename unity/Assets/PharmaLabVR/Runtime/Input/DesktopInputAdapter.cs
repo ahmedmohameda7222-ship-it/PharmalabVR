@@ -27,12 +27,54 @@ namespace PharmaLabVR.Input
         private bool pointerDragActive;
         private Vector3 initialDragOffset;
         private bool heldToolOriginalKinematic;
+        private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
+        private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         public bool AwaitingFocusContinue => awaitingFocusContinue;
         public bool HasHeldTool => heldTool != null;
         public bool IsHoldingNativeTool => heldTool != null && heldTool == registeredTool;
         public string LastPhysicalDeliveryFeedback { get; private set; }
 
         private void Awake() => RefreshRegisteredToolId();
+
+        private void Update()
+        {
+            if (!inputEnabled || awaitingFocusContinue || coreDriver == null ||
+                coreDriver.IsNativePaused || coreDriver.IsTimeHeld || Keyboard.current == null)
+            {
+                pickPress.Clear();
+                deliveryPress.Clear();
+                return;
+            }
+            if (Keyboard.current.escapeKey.wasPressedThisFrame)
+            {
+                pickPress.Clear();
+                deliveryPress.Clear();
+                actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
+                coreDriver.transform.root.GetComponentInChildren<SessionController>(true)
+                    ?.RequestDesktopPause();
+                return;
+            }
+            var uiCapture = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
+                (Mouse.current != null &&
+                 SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
+            if (uiCapture) return;
+            var frame = (ulong)Time.frameCount;
+            if (Keyboard.current.fKey.wasPressedThisFrame)
+                pickPress.Capture("desktop-pick-or-place", frame, true);
+            if (Keyboard.current.gKey.wasPressedThisFrame &&
+                heldTool != null && heldTool != registeredTool)
+                deliveryPress.Capture(
+                    heldTool.GetComponent<DesktopGrabbable>()?.ToolId, frame, true);
+        }
+
+        private void OnDisable()
+        {
+            pickPress.Clear();
+            deliveryPress.Clear();
+            actuator = 0f;
+            instrumentPresenter?.PresentActuatorInput(0f);
+        }
 
         public void Configure(Transform frame, Camera camera, Transform anchor, Transform tool, LabCaptureTarget target, string profileHash, CoreDriver driver = null)
         {
@@ -56,6 +98,8 @@ namespace PharmaLabVR.Input
                 actuator = 0f;
                 instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
+                pickPress.Clear();
+                deliveryPress.Clear();
                 Debug.LogWarning("InputHold: focus was lost; explicit Continue is required.");
             }
         }
@@ -83,20 +127,15 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return System.Array.Empty<LabInputSample>();
             }
-            if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
-            {
-                // Esc always wins over F/pick and world manipulation this frame.
-                actuator = 0f;
-                instrumentPresenter?.PresentActuatorInput(0f);
-                coreDriver?.transform.root.GetComponentInChildren<SessionController>(true)
-                    ?.RequestDesktopPause();
-                return System.Array.Empty<LabInputSample>();
-            }
+            // Esc is handled in Update, independently of the Native tick.
+            // Sampling must never be the only listener for single-frame input.
             if (coreDriver != null && (coreDriver.IsNativePaused || coreDriver.IsTimeHeld))
             {
                 actuator = 0f;
                 instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
+                pickPress.Clear();
+                deliveryPress.Clear();
                 return System.Array.Empty<LabInputSample>();
             }
             HandlePickOrPlace();
@@ -139,6 +178,8 @@ namespace PharmaLabVR.Input
             actuator = 0f;
             instrumentPresenter?.PresentActuatorInput(0f);
             pointerDragActive = false;
+            pickPress.Clear();
+            deliveryPress.Clear();
             awaitingFocusContinue = false;
             inputEnabled = gameObject.activeInHierarchy;
         }
@@ -150,6 +191,8 @@ namespace PharmaLabVR.Input
         public void SetEnabled(bool value)
         {
             inputEnabled = value && !awaitingFocusContinue;
+            pickPress.Clear();
+            deliveryPress.Clear();
             if (!value)
             {
                 actuator = 0f;
@@ -197,14 +240,18 @@ namespace PharmaLabVR.Input
         // passive proximity or an invented fluid simulation.
         private void HandlePhysicalDeliveryRequest()
         {
-            if (Keyboard.current == null || !Keyboard.current.gKey.wasPressedThisFrame ||
-                heldTool == null || heldTool == registeredTool)
+            if (heldTool == null || heldTool == registeredTool)
+            {
+                deliveryPress.Clear();
                 return;
+            }
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(
                     Mouse.current.position.ReadValue())))
                 return;
             var physicalId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
+            if (!deliveryPress.TryConsume((ulong)Time.frameCount, physicalId, true))
+                return;
             var capture = captureTarget != null ?
                 LabCaptureTarget.EstimateExclusive(heldTool, captureTarget) :
                 System.Array.Empty<LabCaptureEstimate>();
@@ -231,7 +278,9 @@ namespace PharmaLabVR.Input
 
         private void HandlePickOrPlace()
         {
-            if (!inputEnabled || Keyboard.current == null || !Keyboard.current.fKey.wasPressedThisFrame) return;
+            if (!inputEnabled ||
+                !pickPress.TryConsume((ulong)Time.frameCount, "desktop-pick-or-place", true))
+                return;
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()))) return;
             actuator = 0f;
@@ -283,6 +332,7 @@ namespace PharmaLabVR.Input
                 heldBody.isKinematic = heldToolOriginalKinematic;
             heldTool = null;
             pointerDragActive = false;
+            deliveryPress.Clear();
             LastPhysicalDeliveryFeedback = null;
             return true;
         }
@@ -290,6 +340,7 @@ namespace PharmaLabVR.Input
         private void BeginHold(Transform tool)
         {
             heldTool = tool;
+            deliveryPress.Clear();
             LastPhysicalDeliveryFeedback = null;
             pointerDragActive = false;
             if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body))

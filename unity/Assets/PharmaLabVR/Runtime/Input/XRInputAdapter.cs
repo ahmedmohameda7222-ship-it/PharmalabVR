@@ -31,6 +31,7 @@ namespace PharmaLabVR.Input
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
         private bool inputEnabled;
+        private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
 
         public void Configure(
             Transform frame,
@@ -66,12 +67,50 @@ namespace PharmaLabVR.Input
             deliveryPanel = panel;
         }
 
+        private void Update()
+        {
+            if (!inputEnabled || coreDriver == null ||
+                coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
+                coreDriver.SourceNeedsPreparation)
+            {
+                deliveryPress.Clear();
+                return;
+            }
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.Head);
+            var headTracked = head.isValid &&
+                head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked, out var tracked) && tracked;
+            if (!XRTrackingAdmission.HasFreshTracking(headTracked,
+                    Tracked(leftActionController), Tracked(rightActionController)))
+            {
+                deliveryPress.Clear();
+                return;
+            }
+            foreach (var item in new[] {
+                (grip: researchPipetteGrab, id: "research-pipette-visual"),
+                (grip: researchBottleGrab, id: "research-stock-bottle-visual")
+            })
+            {
+                if (item.grip == null || !item.grip.isSelected ||
+                    item.grip.firstInteractorSelecting is not XRDirectInteractor) continue;
+                var owner = OwnerForInteractor(item.grip.firstInteractorSelecting.transform);
+                if (!Tracked(owner)) continue;
+                var ray = owner.GetComponentInChildren<XRRayInteractor>(true);
+                if (ray != null && ray.IsOverUIGameObject()) continue;
+                var trigger = owner.activateAction.action;
+                if (trigger != null && trigger.enabled && trigger.WasPressedThisFrame())
+                    deliveryPress.Capture(item.id, (ulong)Time.frameCount, true);
+            }
+        }
+
+        private void OnDisable() => deliveryPress.Clear();
+
         public LabInputSample[] SampleInputs(ulong nowNs)
         {
             if (!inputEnabled || labFrame == null || leftController == null ||
                 rightController == null || registeredTool == null)
             {
                 instrumentPresenter?.PresentActuatorInput(0f);
+                deliveryPress.Clear();
                 return System.Array.Empty<LabInputSample>();
             }
             var selected = grabInteractable != null && grabInteractable.isSelected;
@@ -105,44 +144,56 @@ namespace PharmaLabVR.Input
         {
             if (coreDriver == null || captureTarget == null || deliveryPanel == null ||
                 !trackingAndNativeReady || coreDriver.SourceNeedsPreparation)
-                return;
-            foreach (var item in new[] {
-                (grip: researchPipetteGrab, id: "research-pipette-visual"),
-                (grip: researchBottleGrab, id: "research-stock-bottle-visual")
-            })
             {
-                if (item.grip == null || !item.grip.isSelected ||
-                    item.grip.firstInteractorSelecting is not XRDirectInteractor)
-                    continue;
-                var selectedTransform = item.grip.firstInteractorSelecting.transform;
-                var controller = leftController != null &&
-                    selectedTransform.IsChildOf(leftController) ? leftActionController :
-                    rightController != null && selectedTransform.IsChildOf(rightController) ?
-                        rightActionController : null;
-                if (!Tracked(controller)) continue;
-                var ray = controller.GetComponentInChildren<XRRayInteractor>(true);
-                if (ray != null && ray.IsOverUIGameObject()) continue;
-                var trigger = controller.activateAction.action;
-                if (trigger == null || !trigger.enabled || !trigger.WasPressedThisFrame())
-                    continue;
-                var capture = LabCaptureTarget.EstimateExclusive(item.grip.transform, captureTarget);
-                var intent = ResearchAuxiliaryDelivery.Resolve(item.id, true, true,
+                deliveryPress.Clear();
+                return;
+            }
+            var pendingId = deliveryPress.PendingToolId;
+            if (pendingId == null) return;
+            var grip = pendingId == "research-pipette-visual" ? researchPipetteGrab :
+                pendingId == "research-stock-bottle-visual" ? researchBottleGrab : null;
+            if (grip == null || !grip.isSelected ||
+                grip.firstInteractorSelecting is not XRDirectInteractor)
+            {
+                deliveryPress.Clear();
+                return;
+            }
+            var controller = OwnerForInteractor(grip.firstInteractorSelecting.transform);
+            var ray = controller != null ?
+                controller.GetComponentInChildren<XRRayInteractor>(true) : null;
+            if (!Tracked(controller) || (ray != null && ray.IsOverUIGameObject()) ||
+                !deliveryPress.TryConsume((ulong)Time.frameCount, pendingId, true))
+            {
+                deliveryPress.Clear();
+                return;
+            }
+            var capture = LabCaptureTarget.EstimateExclusive(grip.transform, captureTarget);
+            var intent = ResearchAuxiliaryDelivery.Resolve(pendingId, true, true,
                     capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
                     Mathf.Approximately(capture[0].fraction, 1f), true);
                 if (intent == ResearchAuxiliaryDeliveryIntent.None)
                 {
                     LastPhysicalDeliveryFeedback =
                         "Align the direct-gripped instrument outlet over the stationary receiver.";
-                    continue;
-                }
-                var accepted = deliveryPanel.Request(
+                    return;
+            }
+            var accepted = deliveryPanel.Request(
                     intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
                         PanelAction.BottlePour : PanelAction.PipetteDispense);
                 var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
-                LastPhysicalDeliveryFeedback = accepted ?
-                    (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
-                    (session?.LastError ?? "Native operation refused.");
-            }
+            LastPhysicalDeliveryFeedback = accepted ?
+                (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
+                (session?.LastError ?? "Native operation refused.");
+        }
+
+        private ActionBasedController OwnerForInteractor(Transform selection)
+        {
+            if (selection == null) return null;
+            if (leftController != null && selection.IsChildOf(leftController))
+                return leftActionController;
+            if (rightController != null && selection.IsChildOf(rightController))
+                return rightActionController;
+            return null;
         }
 
         private static float Actuator(ActionBasedController controller, bool directBodyGrip)
@@ -177,7 +228,11 @@ namespace PharmaLabVR.Input
             return action != null && action.enabled && action.ReadValue<float>() > 0.5f;
         }
 
-        public void ResetBaselines() => instrumentPresenter?.PresentActuatorInput(0f);
+        public void ResetBaselines()
+        {
+            instrumentPresenter?.PresentActuatorInput(0f);
+            deliveryPress.Clear();
+        }
         public void AdvanceSequence(string id, ulong watermark)
         {
             if (id == toolId && sequence < watermark) sequence = watermark;
@@ -185,6 +240,7 @@ namespace PharmaLabVR.Input
         public void SetEnabled(bool value)
         {
             inputEnabled = value;
+            deliveryPress.Clear();
             if (!value) instrumentPresenter?.PresentActuatorInput(0f);
         }
     }

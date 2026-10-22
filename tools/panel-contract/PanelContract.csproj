@@ -22,6 +22,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPlacementAdmission.cs" Link="DesktopPlacementAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPointerRouting.cs" Link="DesktopPointerRouting.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchAuxiliaryDelivery.cs" Link="ResearchAuxiliaryDelivery.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchPressBuffer.cs" Link="ResearchPressBuffer.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchOutletGeometry.cs" Link="ResearchOutletGeometry.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureAdmission.cs" Link="CaptureAdmission.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureTargetSelection.cs" Link="CaptureTargetSelection.cs" />
