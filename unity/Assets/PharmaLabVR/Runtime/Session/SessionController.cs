@@ -779,7 +779,16 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Preview local student package", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.PreviewPortableArchive, instructorArchiveDraft);
                 if (LastInstructorPortableReview != null)
+                {
                     GUILayout.Label(InstructorPortableSummary);
+                    GUILayout.Label(ResearchLearningReview.RenderPage(
+                        LastInstructorPortableReview.StudentAnnotations,
+                        LastInstructorPortableReview.NativeBranchId,
+                        instructorAnnotationIndex));
+                    if (CanNextInstructorAnnotation &&
+                        GUILayout.Button("Next imported student note", GUILayout.Height(38f)))
+                        panels?.Request(PanelAction.NextInstructorAnnotation);
+                }
                 if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;

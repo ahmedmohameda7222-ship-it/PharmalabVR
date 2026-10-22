@@ -162,6 +162,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
                     Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.Notebook), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "I would repeat the experiment to check the research observation."),
+                    Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.ExportPortable), Is.True, sessions.LastError);
                 var portable = sessions.LastPortableArchivePath;
                 Assert.That(File.Exists(portable), Is.True);
@@ -178,8 +181,18 @@ namespace PharmaLabVR.Tests.PlayMode
                 var teaching = sessions.LastInstructorPortableReview;
                 Assert.That(teaching, Is.Not.Null);
                 Assert.That(teaching.NativeBranchId, Is.EqualTo(session.BranchId));
-                Assert.That(teaching.StudentAnnotations.Count, Is.EqualTo(1));
+                Assert.That(teaching.StudentAnnotations.Count, Is.EqualTo(2));
                 Assert.That(teaching.Summary, Does.Contain("NOT ATTESTED OR GRADED"));
+                Assert.That(sessions.InstructorPortableCompactSummary,
+                    Does.Contain("Student hypothesis"));
+                Assert.That(panels.Request(PanelAction.NextInstructorAnnotation),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.InstructorPortableCompactSummary,
+                    Does.Contain("repeat the experiment"));
+                Assert.That(panels.Request(PanelAction.NextInstructorAnnotation),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.InstructorPortableCompactSummary,
+                    Does.Contain("Student hypothesis"));
                 Assert.That(teaching.Summary, Does.Contain("Student hypothesis"));
                 Assert.That(driver.Session, Is.SameAs(session));
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
