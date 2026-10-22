@@ -286,6 +286,35 @@ internal static class Program
             researchNotes.Append(learningPath, "different-tenant-branch", "14", "source",
                 "Private unrelated student annotation.");
             var notes = researchNotes.Read(learningPath, "student-branch");
+            // A portable learner archive is untrusted offline evidence, not
+            // a server attestation. Teaching preview must independently parse
+            // the exact checksummed journal, reject other branch or future
+            // event records, and never silently recover corrupt snapshots.
+            var portableNotes = researchNotes.ExportBranch(
+                learningPath, "student-branch", "11");
+            var parsedNotes = NotebookService.ReadPortableBranch(
+                portableNotes, "student-branch", "11");
+            Check(parsedNotes.Count == 2 &&
+                  parsedNotes.All(entry => entry.BranchId == "student-branch"),
+                "Instructor offline preview did not preserve the exported student event journal.");
+            var crossBranchDenied = false;
+            try {
+                NotebookService.ReadPortableBranch(
+                    portableNotes, "different-tenant-branch", "11");
+            } catch (System.IO.InvalidDataException) { crossBranchDenied = true; }
+            Check(crossBranchDenied, "Portable student notes crossed the recorded Native branch boundary.");
+            var futureEventDenied = false;
+            try {
+                NotebookService.ReadPortableBranch(portableNotes, "student-branch", "7");
+            } catch (System.IO.InvalidDataException) { futureEventDenied = true; }
+            Check(futureEventDenied, "Instructor imported student notes after the purported Native snapshot.");
+            var damagedDenied = false;
+            try {
+                NotebookService.ReadPortableBranch(
+                    portableNotes.Replace("PLV-NOTEBOOK-V1", "PLV-NOTEBOOK-V2"),
+                    "student-branch", "11");
+            } catch (System.IO.InvalidDataException) { damagedDenied = true; }
+            Check(damagedDenied, "Instructor imported a corrupted portable notebook header.");
             var result = ResearchLearningReview.Render(notes, "student-branch", false);
             Check(result.Contains("2 student annotations") &&
                   result.Contains("Student hypothesis") && result.Contains("Native pH 6.20") &&
