@@ -312,14 +312,14 @@ internal static class Program
             "Student hypothesis for strong-acid-titration-research: receiver pH predicted below 7. " +
             "This is a learner prediction, not a Native result or certified endpoint.",
             DateTime.UtcNow.ToString("O"));
-        var measured = new NotebookEntry("predict-branch", "7", "receiver", nativeNote,
+        var progressMeasurement = new NotebookEntry("predict-branch", "7", "receiver", nativeNote,
             DateTime.UtcNow.ToString("O"));
-        var explained = new NotebookEntry("predict-branch", "7", "receiver",
+        var progressExplanation = new NotebookEntry("predict-branch", "7", "receiver",
             "Student explanation for strong-acid-titration-research at Native event 7 · model-limitations: " +
             "Selected by learner; not Native scientific evidence.",
             DateTime.UtcNow.ToString("O"));
         var steps = predictionJourney.EvidenceChecklist("predict-branch",
-            predictiveView, new[] { hypothesis, measured, explained });
+            predictiveView, new[] { hypothesis, progressMeasurement, progressExplanation });
         Check(steps.Contains("Recorded: student hypothesis") &&
               steps.Contains("Observed: Native receiver transfer") &&
               steps.Contains("Recorded: Native pH") &&
@@ -336,7 +336,7 @@ internal static class Program
         Check(conciseNext.Contains("Next: prepare Native stock") && conciseNext.Length < 180,
             "XR guided status must fit the panel and identify the actual next pending action.");
         var conciseRecorded = predictionJourney.CompactEvidenceStatus(
-            "predict-branch", predictiveView, new[] { hypothesis, measured, explained });
+            "predict-branch", predictiveView, new[] { hypothesis, progressMeasurement, progressExplanation });
         Check(conciseRecorded.Contains("Study steps documented") &&
               conciseRecorded.Contains("not graded") && conciseRecorded.Length < 180,
             "Recorded learner progress should be compact, factual and never a grade.");
