@@ -74,16 +74,22 @@ namespace PharmaLabVR.Input
                 Mathf.Approximately(capture[0].fraction, 1f);
             var pipette = physicalTool != null ?
                 physicalTool.GetComponent<PipetteActuator>() : null;
-            var primary = id == "research-pipette-visual" &&
+            var primaryImmersed = id == "research-pipette-visual" &&
                 StockAspirateTarget != null &&
-                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
                 StockAspirateTarget.IsImmersed(physicalTool);
-            var reserve = id == "research-pipette-visual" &&
+            var reserveImmersed = id == "research-pipette-visual" &&
                 reserveStockAspirateTarget != null &&
-                reserveStockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
                 reserveStockAspirateTarget.IsImmersed(physicalTool);
-            // An immersion gesture is exclusive to exactly one represented
-            // Native inventory; coincident bottles cannot double-authorize.
+            var primary = primaryImmersed &&
+                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette);
+            var reserve = reserveImmersed &&
+                reserveStockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette);
+            // No concurrent source+receiver request; no ambiguous double
+            // stock immersion even when only one matches Native tool state.
+            if (id == "research-pipette-visual" &&
+                (primaryImmersed || reserveImmersed) &&
+                (receiver || primaryImmersed == reserveImmersed))
+                return ResearchAuxiliaryDeliveryIntent.None;
             var source = primary != reserve;
             var inlet = registeredTool != null ?
                 registeredTool.GetComponent<ResearchBuretteInletTarget>() : null;
@@ -95,6 +101,10 @@ namespace PharmaLabVR.Input
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
                 !coreDriver.IsTimeHeld;
+            var select = ResearchPhysicalSourceSelection.Resolve(
+                id, true, true, receiver,
+                primaryImmersed, reserveImmersed, primary, reserve, ready);
+            if (select != ResearchAuxiliaryDeliveryIntent.None) return select;
             return ResearchAuxiliaryDelivery.Resolve(id, true, true,
                 receiver, source, prime, ready);
         }
@@ -205,7 +215,7 @@ namespace PharmaLabVR.Input
                     if (requested == ResearchAuxiliaryDeliveryIntent.None)
                     {
                         LastPhysicalDeliveryFeedback =
-                            "Immerse pipette in selected Native stock, align outlet over receiver, or pour stock into burette inlet.";
+                            "Immerse pipette in prepared stock: first trigger selects a new Native source; next trigger aspirates. Receiver and burette actions stay separate.";
                         continue;
                     }
                     if (deliveryPress.PendingToolId != null &&
@@ -346,10 +356,18 @@ namespace PharmaLabVR.Input
                 return;
             }
             var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
-            var accepted = intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
-                session != null && session.TryPhysicalFillBuretteFromBottle(
-                    grip.transform, registeredTool != null ?
-                        registeredTool.GetComponent<ResearchBuretteInletTarget>() : null) :
+            var selectedStock =
+                intent == ResearchAuxiliaryDeliveryIntent.PipetteSelectPrimary ?
+                    StockAspirateTarget :
+                intent == ResearchAuxiliaryDeliveryIntent.PipetteSelectReserve ?
+                    reserveStockAspirateTarget : null;
+            var accepted = selectedStock != null ?
+                session != null && session.TryPhysicalSelectPipetteSource(
+                    grip.transform, selectedStock) :
+                intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
+                    session != null && session.TryPhysicalFillBuretteFromBottle(
+                        grip.transform, registeredTool != null ?
+                            registeredTool.GetComponent<ResearchBuretteInletTarget>() : null) :
                 deliveryPanel.Request(
                     intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
                         PanelAction.BottlePour :
@@ -369,6 +387,18 @@ namespace PharmaLabVR.Input
             return grip != null && grip.enabled && trigger != null &&
                 trigger.enabled && grip.ReadValue<float>() <= 0.1f &&
                 trigger.ReadValue<float>() <= 0.1f;
+        }
+
+        public bool IsPipetteDirectlyGripped(Transform physicalPipette)
+        {
+            if (physicalPipette == null || researchPipetteGrab == null ||
+                researchPipetteGrab.transform != physicalPipette ||
+                !researchPipetteGrab.isSelected ||
+                researchPipetteGrab.firstInteractorSelecting is not XRDirectInteractor)
+                return false;
+            var owner = OwnerForInteractor(
+                researchPipetteGrab.firstInteractorSelecting.transform);
+            return Tracked(owner);
         }
 
         public bool IsSourceBottleDirectlyGripped(Transform physicalBottle)

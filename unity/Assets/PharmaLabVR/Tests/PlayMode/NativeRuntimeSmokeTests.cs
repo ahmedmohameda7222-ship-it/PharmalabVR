@@ -44,6 +44,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     root.GetComponentsInChildren<CoreDriver>(true)).Single();
                 var actions = roots.SelectMany(root =>
                     root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
                 var pipette = roots.SelectMany(root =>
                     root.GetComponentsInChildren<PipetteActuator>(true)).Single();
                 var targets = roots.SelectMany(root =>
@@ -57,14 +59,25 @@ namespace PharmaLabVR.Tests.PlayMode
                     "acetic-acid", 0.05), Is.True);
                 Assert.That(actions.Request(PanelAction.PrepareResearchStock,
                     "hcl", 0.05), Is.True);
-                Assert.That(actions.Request(PanelAction.PipetteSwitchReserve),
-                    Is.True, actions.LastError);
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var hold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(hold, Is.Not.Null);
+                hold.Invoke(desktop, new object[] { pipette.transform });
                 var before = driver.CurrentLabView.Vessels.Single(v =>
                     v.Id == "reserve-stock").CommittedVolumeM3;
                 Assert.That(before, Is.GreaterThan(0d));
-                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.False,
-                    "Source bottle must not authorize a Native reserve aspiration.");
-                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.False);
+                var beforeTip = actions.PipetteTipVolumeM3;
+                var beforeSwitchRevision = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.False, "Unimmersed pipette cannot pick a new Native source.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(beforeSwitchRevision),
+                    "Rejected physical source-selection cannot create a Native event.");
+
                 var liquid = reserve.transform.Find("NativeBottleLiquid");
                 var tip = pipette.transform.Find("OutletExit");
                 var surface = liquid.TransformPoint(new Vector3(0f,
@@ -73,6 +86,21 @@ namespace PharmaLabVR.Tests.PlayMode
                 pipette.transform.position +=
                     surface - tip.position - reserve.transform.up * .006f;
                 Assert.That(reserve.IsImmersed(pipette.transform), Is.True);
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(beforeSwitchRevision),
+                    "The new physical source must be selected by a real Native command.");
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.False,
+                    "After switching, physical source bottle cannot authorize reserve aspiration.");
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3,
+                    Is.EqualTo(before).Within(1e-11),
+                    "Switching stock must not silently aspirate any liquid.");
+                Assert.That(actions.PipetteTipVolumeM3, Is.EqualTo(beforeTip).Within(1e-12));
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.False, "Re-pressing against the already selected stock cannot switch again.");
                 Assert.That(actions.Request(PanelAction.PipetteAspirate),
                     Is.True, actions.LastError);
                 Assert.That(driver.CurrentLabView.Vessels.Single(v =>

@@ -1260,6 +1260,44 @@ internal static class Program
                 "source", "source", null, false),
             "A switched Native pipette must draw only from its real represented reserve vessel.");
 
+        // Deliberate pipette contact with the *other* prepared stock first
+        // requests a Native source switch. This must never aspirate any
+        // material during the same trigger gesture.
+        Check(ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteSelectReserve &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            true, false, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteSelectPrimary &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Physical mismatched-source touch must switch only once; matched stock aspirates separately.");
+        Check(ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, true,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            true, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, false, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, false, false)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-stock-bottle-visual", true, true, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Two stocks, receiver overlap, absent grip/press or Native Hold must deny switching.");
+
         // Restored Native authority must disown held physical gestures until
         // real controls are neutral and the previous grip has been released.
         var restoredGate = new ResearchRestorationGestureGate();

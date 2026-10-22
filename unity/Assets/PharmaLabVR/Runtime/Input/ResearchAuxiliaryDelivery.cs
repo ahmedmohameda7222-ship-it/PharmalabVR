@@ -2,7 +2,7 @@ namespace PharmaLabVR.Input
 {
     // Grants only a *request* for a Native command. Actual transfer and receipt
     // come from the existing SessionController/IPhreeqc authority.
-    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime }
+    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve }
 
     // The visible bottle must represent the actual selected Native source.
     // Only the Native tool's currently assigned source (not the prefab default)
@@ -15,6 +15,29 @@ namespace PharmaLabVR.Input
             !string.IsNullOrWhiteSpace(visibleBottleId) &&
             string.Equals(nativeToolExists ? nativeSourceId : configuredSourceId,
                 visibleBottleId, System.StringComparison.Ordinal);
+    }
+
+    // A deliberate press while immersed in a DIFFERENT prepared stock asks
+    // only to change the pipette's Native source. Student must press again to
+    // aspirate, so no unobserved mixing/volume changes can be hidden by UI.
+    public static class ResearchPhysicalSourceSelection
+    {
+        public static ResearchAuxiliaryDeliveryIntent Resolve(
+            string toolId, bool directlyHeld, bool deliberatePress,
+            bool receiverCapture, bool inPrimaryLiquid, bool inReserveLiquid,
+            bool primaryAlreadySelected, bool reserveAlreadySelected,
+            bool nativeReady)
+        {
+            if (toolId != "research-pipette-visual" || !directlyHeld ||
+                !deliberatePress || receiverCapture || !nativeReady ||
+                inPrimaryLiquid == inReserveLiquid)
+                return ResearchAuxiliaryDeliveryIntent.None;
+            if (inPrimaryLiquid && !primaryAlreadySelected)
+                return ResearchAuxiliaryDeliveryIntent.PipetteSelectPrimary;
+            if (inReserveLiquid && !reserveAlreadySelected)
+                return ResearchAuxiliaryDeliveryIntent.PipetteSelectReserve;
+            return ResearchAuxiliaryDeliveryIntent.None;
+        }
     }
 
     public static class ResearchAuxiliaryDelivery

@@ -609,7 +609,7 @@ namespace PharmaLabVR.UI
                     " ml. Direct-grip the pipette: immerse its tip in prepared source stock " +
                     "and press trigger to aspirate Native 0.05 ml, then align the tip over receiver " +
                     "and trigger to dispense after the retained-tip volume is satisfied. " +
-                    "After switching to prepared reserve, immerse in the separately labeled reserve bottle. " +
+                    "Immerse the pipette in the other prepared bottle: first trigger changes its Native source, second trigger aspirates. " +
                     "The Native selected source, real liquid level, and tracked grip must agree. " +
                     "To prime a docked burette, hold the source bottle inverted over the upper inlet, then press trigger.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))

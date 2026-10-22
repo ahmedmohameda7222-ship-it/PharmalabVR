@@ -1182,7 +1182,7 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
                 GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
-                    "Held pipette/bottle: left-drag moves; G aspirates from selected stock, dispenses over receiver, or primes a parked burette through its upper inlet with an inverted source bottle. " +
+                    "Held pipette/bottle: left-drag moves; G inside a different prepared stock switches Native source only; press G again to aspirate. G over receiver dispenses, or over docked burette inlet primes it. " +
                     "Click receiver = inspect current Native pH; wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
