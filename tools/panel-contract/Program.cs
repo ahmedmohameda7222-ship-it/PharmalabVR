@@ -324,6 +324,47 @@ internal static class Program
                 System.IO.Directory.Delete(reopenedFolder, true);
         }
 
+        // M2/M3: all active XR menu buttons need distinct ray-hit rows.
+        // Previously the reserve-stock action overlapped Strong acid lesson,
+        // and concentration overlapped Mixed acid lesson on the same page.
+        foreach (var preparation in new[] { true, false })
+        foreach (var reserveReady in new[] { true, false })
+        foreach (var canPredict in new[] { true, false })
+        foreach (var page in new[] { 1, 2, 3, 4 })
+        {
+            var pageItems = ResearchInstrumentMenuLayout.Visible(
+                page, preparation, !preparation, reserveReady,
+                !preparation, canPredict, !preparation, reserveReady);
+            Check(pageItems.Select(item => item.Row).Distinct().Count() == pageItems.Count,
+                "XR tool/menu hit targets overlap for page " + page);
+            Check(pageItems.All(item => item.Row >= 0 && item.Row <= 6),
+                "XR instrument navigation placed a target outside the bounded panel.");
+        }
+        var firstSetup = ResearchInstrumentMenuLayout.Visible(
+            2, true, false, false, false, false, false, false);
+        Check(firstSetup.Any(item => item.Name == "Choose concentration") &&
+              firstSetup.Any(item => item.Name == "More tools and lessons") &&
+              !firstSetup.Any(item => item.Name == "Strong acid lesson"),
+            "Stock preparation must have its own uncluttered XR page.");
+        var firstExtra = ResearchInstrumentMenuLayout.Visible(
+            4, true, false, false, false, true, false, false);
+        Check(firstExtra.Any(item => item.Name == "Prepare reserve stock") &&
+              firstExtra.Any(item => item.Name == "Strong acid lesson") &&
+              firstExtra.Any(item => item.Name == "Mixed acid lesson"),
+            "Prepared reserve and both lesson choices must be reachable without overlap.");
+        var readyExtra = ResearchInstrumentMenuLayout.Visible(
+            4, false, true, true, true, false, true, true);
+        Check(readyExtra.Any(item => item.Name == "Switch pipette to reserve") &&
+              readyExtra.Any(item => item.Name == "Refill bottle 0.01 ml") &&
+              readyExtra.Any(item => item.Name == "Prime burette 0.05 ml") &&
+              !readyExtra.Any(item => item.Name == "Prepare reserve stock"),
+            "Native-ready reserve/burette operations must not conflict with setup-only actions.");
+        var choice = ResearchInstrumentMenuLayout.Visible(
+            3, false, true, false, false, true, false, false);
+        Check(choice.Any(item => item.Name == "Predict pH below 7") &&
+              choice.Any(item => item.Name == "Predict pH at least 7"),
+            "Lesson selection must lead to both pre-transfer prediction options.");
+
         // M3: genuine authored Research lesson content is delivered to a
         // branch-scoped, non-grading observer of real Native material state.
         var strongJson = System.Text.Json.JsonDocument.Parse(
