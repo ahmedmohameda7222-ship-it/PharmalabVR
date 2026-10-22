@@ -384,6 +384,28 @@ internal static class Program
               steps.Contains("Recorded: learner reflection") &&
               steps.Contains("No certified grade"),
             "Evidence checklist failed to connect real Native events and durable student notes.");
+        // M3 guidance must never claim pH is Supported/Current based on
+        // its display flags alone. Computation readiness, actual Native
+        // numeric presence and receiver material revision still govern.
+        predictiveView.Observations[0].ComputationState = "Pending";
+        Check(!predictionJourney.Summary("predict-branch", predictiveView, false, false)
+                .Contains("Native pH reports Supported/Current"),
+            "A pending solver observation was announced as current research pH.");
+        predictiveView.Observations[0].ComputationState = "Ready";
+        predictiveView.Observations[0].ValueAvailable = false;
+        Check(!predictionJourney.Summary("predict-branch", predictiveView, false, false)
+                .Contains("Native pH reports Supported/Current"),
+            "An unavailable Native numeric value was announced as current pH.");
+        predictiveView.Observations[0].ValueAvailable = true;
+        predictiveView.Observations[0].AsOfMaterialRevision = "2";
+        Check(!predictionJourney.Summary("predict-branch", predictiveView, false, false)
+                .Contains("Native pH reports Supported/Current"),
+            "An observation for an older receiver revision was labeled current.");
+        predictiveView.Observations[0].AsOfMaterialRevision = "3";
+        var verifiedGuidance = predictionJourney.Summary(
+            "predict-branch", predictiveView, false, false);
+        Check(verifiedGuidance.Contains("Native pH reports Supported/Current"),
+            "A complete matching Native observation was not presented as current.");
         var unrecorded = predictionJourney.EvidenceChecklist("predict-branch",
             predictiveView, new[] { hypothesis });
         Check(unrecorded.Contains("Pending: recorded Native pH") &&
