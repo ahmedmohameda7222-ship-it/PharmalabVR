@@ -288,6 +288,10 @@ namespace PharmaLabVR.Session
         private readonly NativeReviewAuthorityCache<RecordedSessionReview,
             RecordedRunComparison> recordedCache = new();
         private CoreDriver subscribedNativeDriver;
+        private CoreDriver observedLessonDriver;
+        private ulong observedLessonEpoch;
+        private ulong? pendingLessonRecoveryEpoch;
+        private string lastLessonRecoveryError;
 
         public RecordedSessionReview RecordedReview
         {
@@ -505,11 +509,19 @@ namespace PharmaLabVR.Session
         public void Configure(CoreDriver coreDriver, string sessionName = null)
         {
             if (!ReferenceEquals(driver, coreDriver))
+            {
                 DetachNativeRestoration();
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                pendingLessonRecoveryEpoch = null;
+                observedLessonDriver = null;
+                InvalidateLearningReview();
+            }
             driver = coreDriver;
             ReconcileNativeReviewAuthority();
             if (isActiveAndEnabled)
                 AttachNativeRestoration();
+            ReconcileLessonAuthority();
             router?.Configure(driver);
             panels?.Configure(router, driver, this);
             spatialPanel?.Configure(router, panels, driver);
@@ -524,6 +536,9 @@ namespace PharmaLabVR.Session
                 selectedArchiveFileName = null;
                 instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                pendingLessonRecoveryEpoch = null;
             }
         }
 
@@ -531,6 +546,7 @@ namespace PharmaLabVR.Session
         {
             ReconcileNativeReviewAuthority();
             AttachNativeRestoration();
+            ReconcileLessonAuthority();
         }
 
         private void OnDisable() => DetachNativeRestoration();
@@ -542,27 +558,95 @@ namespace PharmaLabVR.Session
             DetachNativeRestoration();
             if (driver == null) return;
             driver.NativeSessionRestored += OnNativeSessionRestored;
+            driver.LabViewChanged += OnRestoredLabView;
             subscribedNativeDriver = driver;
         }
 
         private void DetachNativeRestoration()
         {
             if (subscribedNativeDriver != null)
+            {
                 subscribedNativeDriver.NativeSessionRestored -= OnNativeSessionRestored;
+                subscribedNativeDriver.LabViewChanged -= OnRestoredLabView;
+            }
             subscribedNativeDriver = null;
         }
 
         private void OnNativeSessionRestored()
         {
             LastInstrumentReceipt = null;
-            // Imported/restarted Native branches cannot inherit lesson progress.
+            // A restored session must not inherit unsaved in-memory guidance.
+            // Rebuild only after the authoritative replacement Native snapshot.
             selectedResearchLesson = null;
             selectedResearchPrediction = null;
+            observedLessonDriver = driver;
+            observedLessonEpoch = driver != null ? driver.NativeRestorationEpoch : 0UL;
+            pendingLessonRecoveryEpoch = driver != null ?
+                driver.NativeRestorationEpoch : (ulong?)null;
+            lastLessonRecoveryError = null;
             LastInstructorPortableReview = null;
             instructorAnnotationIndex = 0;
             selectedArchiveFileName = null;
             InvalidateLearningReview();
             ReconcileNativeReviewAuthority();
+        }
+
+        private void OnRestoredLabView(LabViewModel _) => ReconcileLessonAuthority();
+
+        private void ReconcileLessonAuthority()
+        {
+            if (driver == null) return;
+            if (!ReferenceEquals(observedLessonDriver, driver))
+            {
+                observedLessonDriver = driver;
+                observedLessonEpoch = driver.NativeRestorationEpoch;
+            }
+            else if (observedLessonEpoch != driver.NativeRestorationEpoch)
+            {
+                // A disabled session panel can miss the restore signal.
+                OnNativeSessionRestored();
+            }
+            if (pendingLessonRecoveryEpoch == null ||
+                pendingLessonRecoveryEpoch.Value != driver.NativeRestorationEpoch ||
+                driver.NativePublishedRestorationEpoch != driver.NativeRestorationEpoch ||
+                driver.CurrentLabView == null)
+                return;
+            pendingLessonRecoveryEpoch = null; // one bounded recovery attempt
+            try
+            {
+                if (driver.Session == null || !driver.Session.IsOpen)
+                    throw new InvalidOperationException("No restored Native session is available.");
+                var branch = driver.Session.BranchId;
+                if (!string.Equals(driver.CurrentNativeBranchId, branch, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Restored Native branch mismatch.");
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var entries = notebook.Read(NotebookFilePath(), branch, eventSequence);
+                var lessonId = ResearchLessonJourney.RecoverSavedLessonId(
+                    entries, branch, eventSequence);
+                if (lessonId == null) return; // no hypothesis or conflicting lessons
+                var asset = lessonId == "strong-acid-titration-research" ?
+                    strongAcidProtocol : mixedAcidProtocol;
+                if (asset == null)
+                    throw new InvalidOperationException("Saved Research lesson asset is unavailable.");
+                var definition = JsonUtility.FromJson<ProtocolDefinition>(asset.text);
+                if (definition == null || definition.id != lessonId)
+                    throw new InvalidOperationException("Saved Research lesson identity mismatch.");
+                var recovered = new ResearchLessonJourney(definition, branch);
+                var prediction = ResearchLessonJourney.RecoverSavedPrediction(
+                    entries, lessonId, branch, eventSequence);
+                if (!ResearchLessonJourney.IsSupportedPrediction(prediction))
+                    throw new InvalidOperationException("Saved student hypothesis is unsupported.");
+                selectedResearchLesson = recovered;
+                selectedResearchPrediction = prediction;
+            }
+            catch (Exception error)
+            {
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                lastLessonRecoveryError =
+                    "Saved Research guidance unavailable: " + error.Message;
+                LastError = lastLessonRecoveryError;
+            }
         }
 
         private void ReconcileNativeReviewAuthority()
@@ -1524,7 +1608,7 @@ namespace PharmaLabVR.Session
                 driver.ReplaceSession(imported);
                 imported = null;
                 RecordedReview = null;
-                LastError = null;
+                LastError = lastLessonRecoveryError;
                 router?.MarkSaved();
                 return true;
             }
@@ -1571,7 +1655,7 @@ namespace PharmaLabVR.Session
             {
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
                 if (!driver.RestartCheckpoint(checkpointId)) throw new InvalidOperationException("Native checkpoint restart was rejected.");
-                LastError = null;
+                LastError = lastLessonRecoveryError;
                 return true;
             }
             catch (Exception exception)
