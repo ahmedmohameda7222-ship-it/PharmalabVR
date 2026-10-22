@@ -567,6 +567,35 @@ internal static class Program
             "Invalid physical pose must fail closed before any Rigidbody release");
         // P10.01 held-tool mouse plane drag has priority over left-drag valve;
         // both routes share exclusive ownership and obey HUD focus.
+        // A momentary input event may occur between Native simulation ticks.
+        // Capture the actual Unity-frame press, then consume exactly once on
+        // the next admissible Native sample, never after interruption.
+        var bufferedPress = new ResearchPressBuffer();
+        Check(!bufferedPress.TryConsume(12, "research-stock-bottle-visual", true),
+            "An unpressed physical instrument issued a Native action.");
+        bufferedPress.Capture("research-stock-bottle-visual", 14, true);
+        Check(bufferedPress.TryConsume(18, "research-stock-bottle-visual", true) &&
+              !bufferedPress.TryConsume(18, "research-stock-bottle-visual", true),
+            "A between-tick press was lost or replayed more than once.");
+        bufferedPress.Capture("research-pipette-visual", 20, true);
+        Check(!bufferedPress.TryConsume(22, "research-stock-bottle-visual", true) &&
+              !bufferedPress.TryConsume(23, "research-pipette-visual", true),
+            "Changed tool ownership replayed a prior press.");
+        bufferedPress.Capture("research-pipette-visual", 30, true);
+        Check(!bufferedPress.TryConsume(31, "research-pipette-visual", false) &&
+              !bufferedPress.TryConsume(32, "research-pipette-visual", true),
+            "Native Hold/Pause left a queued transfer command armed.");
+        bufferedPress.Capture("research-pipette-visual", 40, true);
+        Check(!bufferedPress.TryConsume(60, "research-pipette-visual", true),
+            "An old gesture survived beyond its finite input freshness window.");
+        bufferedPress.Capture("research-stock-bottle-visual", 70, false);
+        Check(!bufferedPress.TryConsume(71, "research-stock-bottle-visual", true),
+            "Unadmitted input was stored for later transfer.");
+        bufferedPress.Capture("research-stock-bottle-visual", 80, true);
+        bufferedPress.Clear();
+        Check(!bufferedPress.TryConsume(81, "research-stock-bottle-visual", true),
+            "Focus loss or mode change failed to clear the pending physical gesture.");
+
         // Physical delivery must require a deliberate gesture over exactly
         // one receiver. It never substitutes tool pose for a Native receipt.
         Check(ResearchAuxiliaryDelivery.Resolve(
