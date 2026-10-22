@@ -266,6 +266,43 @@ internal static class Program
               noteRouter.Current.ScreenId == ScreenId.Review,
             "Notebook-to-durable-save-to-recorded-review journey is not routable.");
 
+        // P12.03 concept inspection must describe existing Native material
+        // and exact supported observation, never a simulated plot/result.
+        noteView.Observations[0].Value = 7.13d;
+        noteView.Observations[0].ValueAvailable = true;
+        noteView.Observations[0].ComputationState = "Ready";
+        var concept = ResearchConceptReadout.Describe(noteView, "receiver");
+        Check(concept.Contains("Native event 7") &&
+              concept.Contains("Native material revision 3") &&
+              concept.Contains("0.010 mL") &&
+              concept.Contains("pH 7.130") &&
+              concept.Contains("sha256:research-db"),
+            "Concept pane failed to display provenance from the real Native snapshot.");
+        noteView.Observations[0].AsOfMaterialRevision = "2";
+        Check(ResearchConceptReadout.Describe(noteView, "receiver")
+                .Contains("pH unavailable") &&
+              !ResearchConceptReadout.Describe(noteView, "receiver")
+                .Contains("pH 7.130"),
+            "Outdated material revision was presented as a supported current pH concept.");
+        noteView.Observations[0].AsOfMaterialRevision = "3";
+        noteView.Observations[0].ValueAvailable = false;
+        Check(ResearchConceptReadout.Describe(noteView, "receiver")
+                .Contains("pH unavailable"),
+            "A missing Native computed value was manufactured by a concept panel.");
+        noteView.Observations[0].ValueAvailable = true;
+        Check(ResearchConceptReadout.Describe(noteView, "not-a-native-vessel")
+                .Contains("unavailable"),
+            "Unknown catalog vessel should not yield a fabricated concept explanation.");
+        var conceptRouter = new ScreenRouter();
+        conceptRouter.Configure(new CoreDriver());
+        var conceptPanel = new LabPanelController();
+        conceptPanel.Configure(conceptRouter, new CoreDriver(), new SessionController());
+        Check(conceptPanel.Request(PanelAction.Learn, "receiver") &&
+              conceptRouter.Current.ScreenId == ScreenId.Learn &&
+              conceptRouter.Current.SupportedActions.Contains("Lab"),
+            "Shared Desktop/XR concept action did not open the real learn view.");
+        conceptPanel.Request(PanelAction.Lab);
+
         // P12.02 student-prediction admission is scoped to the Native branch
         // and an actually empty receiver; hypothesis never mutates material.
         var predictiveView = new LabViewModel();
