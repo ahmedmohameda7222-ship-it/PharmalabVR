@@ -58,13 +58,25 @@ namespace PharmaLabVR.Tests.PlayMode
                     "sessions", name + ".plv-notes");
                 Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
                     Is.True, session.LastError);
-                Assert.That(panel.Request(PanelAction.Notebook), Is.True, session.LastError);
                 var field = typeof(SpatialPanelPresenter).GetField("buttons",
                     System.Reflection.BindingFlags.NonPublic |
                     System.Reflection.BindingFlags.Instance);
                 Assert.That(field, Is.Not.Null);
                 var buttons = (System.Collections.Generic.Dictionary<
                     string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Open notebook"].gameObject.activeSelf, Is.True,
+                    "The normal XR Lab screen must expose its Notebook without lesson-page detour.");
+                var notebookRect = buttons["Open notebook"].GetComponent<RectTransform>();
+                var saveRect = buttons["Save session"].GetComponent<RectTransform>();
+                Assert.That(notebookRect.sizeDelta.x, Is.LessThanOrEqualTo(176f));
+                Assert.That(saveRect.sizeDelta.x, Is.LessThanOrEqualTo(176f));
+                Assert.That(Mathf.Abs(notebookRect.anchoredPosition.x -
+                    saveRect.anchoredPosition.x), Is.GreaterThanOrEqualTo(180f),
+                    "Save and Notebook must be separate XR raycast hit targets.");
+                buttons["Open notebook"].onClick.Invoke();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
                 Assert.That(buttons["Quick notes"].gameObject.activeSelf, Is.True);
                 var nativeRevision = driver.CurrentLabView.EventSequence;
                 buttons["Quick notes"].onClick.Invoke();

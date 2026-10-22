@@ -1171,8 +1171,11 @@ internal static class Program
         Check(xrNotebookSource.Contains("Quick notes", StringComparison.Ordinal) &&
               xrNotebookSource.Contains("notebookReflectionPage", StringComparison.Ordinal) &&
               xrNotebookSource.Contains(
-                  "panels?.Request(PanelAction.AddNotebookNote,", StringComparison.Ordinal),
-            "XR learner quick-note page lost real local Notebook action routing.");
+                  "panels?.Request(PanelAction.AddNotebookNote,", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("directLabNotebook", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("notebookEntryRect.sizeDelta", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("saveRect.sizeDelta", StringComparison.Ordinal),
+            "XR learner direct Lab Notebook/Quick notes navigation lost separate hit targets or routing.");
 
         // CI cannot build Unity player scripts without the Unity SDK; fail
         // source-level CI when a UI edit accidentally discards production

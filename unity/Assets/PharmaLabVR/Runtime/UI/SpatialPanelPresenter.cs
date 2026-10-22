@@ -559,8 +559,23 @@ namespace PharmaLabVR.UI
             SetButton("Back to notebook", false);
             var importedStudentNotes = state.ScreenId == ScreenId.Review &&
                 panels != null && panels.CanNextInstructorAnnotation;
-            SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
-                state.SupportedActions.Contains("Notebook") && !importedStudentNotes);
+            var directLabNotebook = state.ScreenId == ScreenId.Lab &&
+                instrumentPage == 0 && state.SupportedActions.Contains("Notebook");
+            SetButton("Open notebook", directLabNotebook ||
+                (state.ScreenId == ScreenId.Review &&
+                 state.SupportedActions.Contains("Notebook") && !importedStudentNotes));
+            // The primary Lab includes one-touch Notebook navigation even
+            // before any lesson was chosen. Save shares the row as a separate
+            // *half-width* raycast rectangle, never a second overlapping hit.
+            var notebookEntryRect = buttons["Open notebook"].GetComponent<RectTransform>();
+            notebookEntryRect.sizeDelta =
+                new Vector2(directLabNotebook ? 176f : 368f, 46f);
+            notebookEntryRect.anchoredPosition =
+                new Vector2(directLabNotebook ? -94f : 0f,
+                    directLabNotebook ? -250f : -306f);
+            buttons["Open notebook"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(directLabNotebook ? 164f : 368f, 35f);
             SetButton("Next imported note", importedStudentNotes &&
                 state.SupportedActions.Contains("NextInstructorAnnotation"));
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
@@ -590,8 +605,13 @@ namespace PharmaLabVR.UI
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
                 state.ScreenId != ScreenId.Settings && state.ScreenId != ScreenId.Review);
-            buttons["Save session"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Notebook ? -194f : -250f);
+            var saveRect = buttons["Save session"].GetComponent<RectTransform>();
+            saveRect.sizeDelta = new Vector2(directLabNotebook ? 176f : 368f, 46f);
+            saveRect.anchoredPosition = new Vector2(directLabNotebook ? 94f : 0f,
+                state.ScreenId == ScreenId.Notebook ? -194f : -250f);
+            buttons["Save session"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(directLabNotebook ? 164f : 368f, 35f);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
             SetButton("Settings", state.SupportedActions.Contains("Settings") &&
                 (state.ScreenId != ScreenId.Lab ||
