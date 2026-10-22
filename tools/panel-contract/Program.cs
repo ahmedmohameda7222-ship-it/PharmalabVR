@@ -1153,6 +1153,18 @@ internal static class Program
             true, true, true, false, double.NaN),
             "XR receiver inspection must fail closed on Hold, tracking, held tool, UI or distance.");
 
+        // CI cannot build Unity player scripts without the Unity SDK; fail
+        // source-level CI when a UI edit accidentally discards production
+        // physical priming wiring or redirects Pause/Hold chooser to Review.
+        var integrationSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(integrationSource.Contains("public bool TryPhysicalFillBuretteFromBottle(") &&
+              integrationSource.Contains("private bool HasNativeBurettePrimeCapacity") &&
+              integrationSource.Contains("router?.Current?.ScreenId != ScreenId.Lab") &&
+              integrationSource.Contains("private bool TransferNativePrime(") &&
+              integrationSource.Contains("router.Show(router.Current.ScreenId);"),
+            "Unity product route lost physical Native burette prime or offline Pause archive chooser.");
+
         // The source bottle can physically prime the real burette only at
         // its separate upright receiving mouth, never at the receiver or
         // via a held/undocked burette, dry stock, or an open valve.

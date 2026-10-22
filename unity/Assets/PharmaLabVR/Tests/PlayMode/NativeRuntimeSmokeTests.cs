@@ -135,6 +135,11 @@ namespace PharmaLabVR.Tests.PlayMode
                     outlet.position;
                 Assert.That(inlet.AdmitsBottle(bottle, true, driver.Session), Is.True,
                     "Native-closed burette and real aligned upper inlet must admit the bottle.");
+                Assert.That(actions.Request(PanelAction.Review), Is.True);
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.False, "Review cannot move Native liquid even with physically aligned equipment.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeEvent));
+                Assert.That(actions.Request(PanelAction.Lab), Is.True);
                 Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
                     Is.True, sessions.LastError);
                 Assert.That(driver.CurrentLabView.Vessels.Single(v =>
@@ -208,6 +213,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     Assert.That(actions.Request(PanelAction.ChoosePortableArchive),
                         Is.True, sessions.LastError);
                 Assert.That(sessions.SelectedArchiveFileName, Is.EqualTo(expectedName));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "Choosing the local study pack cannot navigate away from the only legal restore screen.");
                 Assert.That(sessions.CanRestoreLocalPortableSession, Is.True);
                 // A corrupted package cannot replace the existing Native
                 // session or alter the current branch's durable journal.

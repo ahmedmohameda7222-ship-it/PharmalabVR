@@ -126,7 +126,10 @@ namespace PharmaLabVR.Session
                 LastInstructorPortableReview = null;
                 instructorAnnotationIndex = 0;
                 LastError = null;
-                router.Show(ScreenId.Review);
+                // Choosing an archive from Native Pause/SessionLoad Hold
+                // must NOT navigate to Review: student RestorePortable is
+                // supported only on the original guarded screen.
+                router.Show(router.Current.ScreenId);
                 return true;
             }
             catch (Exception error)
@@ -1384,7 +1387,7 @@ namespace PharmaLabVR.Session
         // This is a deliberate small prime, NOT an instant 50 mL refill.
         private const double BurettePrimeM3 = 5e-8;
 
-        public bool CanFillBurette
+        private bool HasNativeBurettePrimeCapacity
         {
             get
             {
@@ -1394,10 +1397,17 @@ namespace PharmaLabVR.Session
                 var vessels = driver.CurrentLabView.Vessels;
                 var stock = vessels.FirstOrDefault(item => item.Id == "source");
                 var burette = vessels.FirstOrDefault(item => item.Id == "burette");
-                if (string.IsNullOrEmpty(stock.Id) || string.IsNullOrEmpty(burette.Id) ||
-                    stock.CommittedVolumeM3 + 1e-12 < BurettePrimeM3 ||
-                    burette.CapacityM3 - burette.CommittedVolumeM3 + 1e-12 < BurettePrimeM3)
-                    return false;
+                return !string.IsNullOrEmpty(stock.Id) && !string.IsNullOrEmpty(burette.Id) &&
+                    stock.CommittedVolumeM3 + 1e-12 >= BurettePrimeM3 &&
+                    burette.CapacityM3 - burette.CommittedVolumeM3 + 1e-12 >= BurettePrimeM3;
+            }
+        }
+
+        public bool CanFillBurette
+        {
+            get
+            {
+                if (!HasNativeBurettePrimeCapacity) return false;
                 if (driver.CurrentMode == "VR")
                     return driver.transform.root.GetComponentInChildren<ToolMount>(true)?.IsMounted == true;
                 if (driver.CurrentMode == "Desktop")
@@ -1405,6 +1415,55 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+
+        // Called ONLY by the physical input route when the bottle outlet
+        // has actually stayed at the burette mouth through the Native step.
+        // The Desktop menu's empty-hand admission remains unchanged.
+        public bool TryPhysicalFillBuretteFromBottle(Transform physicalBottle,
+            ResearchBuretteInletTarget inlet)
+        {
+            var realInlet = driver != null ? driver.transform.root
+                .GetComponentInChildren<ResearchBuretteInletTarget>(true) : null;
+            var validBottle = physicalBottle != null &&
+                physicalBottle.GetComponent<BottlePourActuator>() != null &&
+                physicalBottle.GetComponent<ResearchStockAspirateTarget>()?.NativeInventoryId == "source";
+            var parked = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root
+                    .GetComponentInChildren<DesktopInputAdapter>(true);
+                parked = desktop != null && desktop.CurrentHeldPhysicalTool == physicalBottle &&
+                    !desktop.IsHoldingNativeTool && desktop.HasFreshPhysicalGestureSinceRestore;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var mount = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+                var xr = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+                parked = mount != null && mount.IsMounted &&
+                    xr != null && xr.IsSourceBottleDirectlyGripped(physicalBottle) &&
+                    xr.HasFreshGripSinceRestore;
+            }
+            if (router?.Current?.ScreenId != ScreenId.Lab ||
+                !validBottle || !parked || !HasNativeBurettePrimeCapacity ||
+                inlet == null || inlet != realInlet ||
+                !inlet.AdmitsBottle(physicalBottle, parked, driver.Session))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Prime refused: close the Native burette valve, park the burette, " +
+                    "and hold the source bottle's downward outlet inside the upper inlet.";
+                return false;
+            }
+            return TransferNativePrime("Physical burette prime 0.05 ml");
+        }
+
+        private bool TransferNativePrime(string label) => TryResearchCommand(label, () =>
+        {
+            var commands = new LabCommandService(driver.Session);
+            return commands.Submit("TransferFixed",
+                ResearchInstrumentPayloads.RefillFromPreparedStock(
+                    "source", "burette", "spill", BurettePrimeM3),
+                commands.CaptureTouchedRevisions("source", "burette"));
+        });
 
         public bool TryFillBuretteFromBottle()
         {
@@ -1415,14 +1474,7 @@ namespace PharmaLabVR.Session
                 if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return false;
             }
-            return TryResearchCommand("Burette prime 0.05 ml", () =>
-            {
-                var commands = new LabCommandService(driver.Session);
-                return commands.Submit("TransferFixed",
-                    ResearchInstrumentPayloads.RefillFromPreparedStock(
-                        "source", "burette", "spill", BurettePrimeM3),
-                    commands.CaptureTouchedRevisions("source", "burette"));
-            });
+            return TransferNativePrime("Burette prime 0.05 ml");
         }
 
         public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
