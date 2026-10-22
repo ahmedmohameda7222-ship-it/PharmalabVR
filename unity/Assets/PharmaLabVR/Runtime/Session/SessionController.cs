@@ -21,6 +21,45 @@ namespace PharmaLabVR.Session
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
         public string LastLearnerCsvExportPath { get; private set; }
+        public InstructorPortableReview LastInstructorPortableReview { get; private set; }
+        public string InstructorPortableSummary =>
+            LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
+        public bool CanPreviewLocalPortableArchive =>
+            router?.Current?.ScreenId == ScreenId.Review &&
+            !string.IsNullOrWhiteSpace(LastPortableArchivePath) &&
+            File.Exists(LastPortableArchivePath);
+
+        public bool PreviewLocalPortableArchive(string fileName)
+        {
+            try
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review)
+                    throw new InvalidOperationException(
+                        "Offline teaching preview requires recorded Review.");
+                var requested = string.IsNullOrWhiteSpace(fileName) ?
+                    Path.GetFileName(LastPortableArchivePath) : fileName;
+                if (requested == null || requested.Length > 110 ||
+                    !System.Text.RegularExpressions.Regex.IsMatch(requested,
+                        @"\A[A-Za-z0-9_-]{1,96}\.plvpack\z"))
+                    throw new InvalidDataException(
+                        "Choose a safe .plvpack filename in the local sessions folder.");
+                var localPath = Path.Combine(
+                    Application.persistentDataPath, "sessions", requested);
+                // No Native import, network request, or grading transition.
+                var preview = InstructorPortableReview.Open(localPath);
+                LastInstructorPortableReview = preview;
+                LastError = null;
+                router.Show(ScreenId.Review);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastInstructorPortableReview = null;
+                LastError = "Offline teaching preview unavailable: " + error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
         public string LastError { get; private set; }
         // Exact accepted Native command identity, not a predicted material result.
         public string LastInstrumentReceipt { get; private set; }
@@ -328,6 +367,7 @@ namespace PharmaLabVR.Session
         private int selectedConcentrationIndex = 2;
         private Vector2 hudScrollPosition;
         private string notebookDraft = string.Empty;
+        private string instructorArchiveDraft = string.Empty;
         private ScreenRouter router;
         private LabPanelController panels;
         private SpatialPanelPresenter spatialPanel;
@@ -363,6 +403,9 @@ namespace PharmaLabVR.Session
                 // A different saved-file identity cannot reuse an old
                 // baseline comparison, even with the same Native driver.
                 recordedCache.InvalidateComparison();
+                LastInstructorPortableReview = null;
+                LastPortableArchivePath = null;
+                instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
             }
         }
@@ -620,6 +663,15 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.Notebook);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Settings);
+                GUILayout.Label("Offline study pack preview — checksums, NOT signed institutional attestation.");
+                GUILayout.Label("Place imported .plvpack files in: " +
+                    Path.Combine(Application.persistentDataPath, "sessions"));
+                instructorArchiveDraft = GUILayout.TextField(instructorArchiveDraft,
+                    GUILayout.Height(32f));
+                if (GUILayout.Button("Preview local student package", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.PreviewPortableArchive, instructorArchiveDraft);
+                if (LastInstructorPortableReview != null)
+                    GUILayout.Label(InstructorPortableSummary);
                 if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;
@@ -1298,6 +1350,7 @@ namespace PharmaLabVR.Session
         {
             RecordedReview = null;
             CurrentComparison = null;
+            LastInstructorPortableReview = null;
             InvalidateLearningReview();
         }
 

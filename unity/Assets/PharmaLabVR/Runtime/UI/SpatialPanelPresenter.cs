@@ -105,6 +105,7 @@ namespace PharmaLabVR.UI
             AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
+            AddButton("Preview portable archive", 30f, PanelAction.PreviewPortableArchive);
             AddButton("Compare saved", -194f, PanelAction.CompareSaved);
             AddButton("Return to lab", -138f, PanelAction.Lab);
             AddButton("Pause", -194f, PanelAction.Pause);
@@ -446,6 +447,9 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
+            SetButton("Preview portable archive", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("PreviewPortableArchive") &&
+                panels != null && panels.CanPreviewLocalPortableArchive);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
                 panels != null && panels.CanCompareSaved);
@@ -562,6 +566,9 @@ namespace PharmaLabVR.UI
                 (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values)) +
                 "\n" + latest + "\n" +
                 (panels?.LearningReviewCompact ?? "Local student notebook unavailable.") +
+                (panels != null &&
+                 panels.InstructorPortableSummary != "No offline instructor preview selected." ?
+                    "\n" + panels.InstructorPortableSummary : "") +
                 (panels?.HasLearnerCsvExport == true ?
                     "\nStudent annotation CSV saved separately." : "");
         }
