@@ -222,6 +222,11 @@ namespace PharmaLabVR.Editor
                 if (grip == null)
                     throw new InvalidOperationException("Authored Native instrument lacks XR grip.");
                 grip.interactionManager = xrInteractionManager;
+                // The authored stock/pipette bodies are kinematic at rest.
+                // VelocityTracking does not supply the intended held motion
+                // for that configuration; XRI must move them kinematically.
+                grip.movementType = UnityEngine.XR.Interaction.Toolkit.Interactables
+                    .XRBaseInteractable.MovementType.Kinematic;
                 grip.throwOnDetach = false;
                 grip.forceGravityOnDetach = false;
             }

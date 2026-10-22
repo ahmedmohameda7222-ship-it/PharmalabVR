@@ -112,3 +112,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P11.02/P12.02 Partial, source advanced:** Selecting a lesson on the same open Native branch reloads its first durable student pH hypothesis from the local checksummed Notebook; a scene/controller rebuild does not allow silently changing that answer. Different Native branches and lesson IDs do not inherit it. If the Notebook is unavailable/corrupt, selection reports an error rather than manufacturing success.
 - **Evidence:** RED headless contract commit b8f87cb failed on absent RecoverSavedPrediction. GREEN verification pending for production lesson helper, SessionController integration and a Unity PlayMode journey assertion. Unity execution remains NOT_RUN; no acceptance promotion.
+
+## XR kinematic apparatus grip alignment — 22 October 2026
+
+- **P07.02/P08.02 Partial:** Generated-stock/pipette Rigidbody instances rest kinematically and now explicitly use XRI Kinematic movement type when selected, rather than relying on a default velocity-driven grab mode. The generated-scene Editor test asserts grip movement configuration. Actual XR held motion remains NOT_RUN; this is source/binding readiness only.

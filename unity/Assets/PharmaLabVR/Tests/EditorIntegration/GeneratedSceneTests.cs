@@ -91,6 +91,9 @@ namespace PharmaLabVR.Tests.EditorIntegration
                 var xrGrab = instrument.GetComponent<XRGrabInteractable>();
                 Assert.That(xrGrab, Is.Not.Null);
                 Assert.That(xrGrab.interactionManager, Is.SameAs(manager));
+                Assert.That(xrGrab.movementType,
+                    Is.EqualTo(XRBaseInteractable.MovementType.Kinematic),
+                    "Kinematic authored props must follow XR direct grip through kinematic motion.");
                 Assert.That(xrGrab.throwOnDetach, Is.False);
                 Assert.That(instrument.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
             }
