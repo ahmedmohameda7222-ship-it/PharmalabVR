@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -28,6 +28,8 @@ namespace PharmaLabVR.UI
         public string LearningReviewCompact => sessions?.LearningReviewCompact ?? "Student notes unavailable.";
         public bool HasLearnerCsvExport => !string.IsNullOrEmpty(sessions?.LastLearnerCsvExportPath);
         public bool CanPreviewLocalPortableArchive => sessions?.CanPreviewLocalPortableArchive == true;
+        public bool CanChooseLocalPortableArchive => sessions?.CanChooseLocalPortableArchive == true;
+        public string SelectedArchiveFileName => sessions?.SelectedArchiveFileName;
         public string InstructorPortableSummary => sessions?.InstructorPortableSummary ??
             "No offline instructor preview selected.";
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
@@ -149,6 +151,8 @@ namespace PharmaLabVR.UI
                     return sessions.ExportRecordedCsv();
                 case PanelAction.PreviewPortableArchive:
                     return sessions.PreviewLocalPortableArchive(entityId);
+                case PanelAction.ChoosePortableArchive:
+                    return sessions.ChooseNextLocalArchive();
                 case PanelAction.CompareSaved:
                     if (!sessions.OpenSavedComparison()) return false;
                     router.Show(ScreenId.Compare);

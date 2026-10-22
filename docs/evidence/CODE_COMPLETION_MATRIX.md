@@ -163,3 +163,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P23.02/P12.02 Partial:** Read-only instructor preview shows raw Native pH alongside its 2-decimal display only for available, Supported/Current/Ready finite numbers that agree with the shown display. It distinguishes raw 6.999 and 7.001 even when both display 7.00, without generating grades or inferred chemistry. Unavailable and inconsistent values are not shown as scientific results.
 - **Test-first:** RED `47d16fd` introduced cross-boundary precision and unavailable-value checks; production pure label renderer is compiled through headless panel-contract. Unity instructor scene verification remains NOT_RUN; formal acceptance ledger unchanged.
+
+## P23 XR safe archive picker integration — 22 October 2026
+
+- **P23.02/P23.04 Partial (source):** Recorded Review can enumerate a bounded set of direct local .plvpack files from the app's sessions directory and cycle the chosen archive by an XR button. Only allowlisted filenames from the actual directory may be previewed; symlink/reparse-point files are rejected before reading. A second press explicitly opens the selected, checksum-checked Native/student archive, never changing running Native materials or academic authority. Desktop can also choose among packs or type a safe filename.
+- **Tests:** Headless RED commit 2f9aa84 fails on absent OfflineArchivePicker, GREEN pure picker validates canonical, bounded filenames and deterministic cycling. Shared panel routing and Unity PlayMode student-export → instructor-preview source are extended. Actual Unity/Player/XR execution NOT_RUN; formal acceptance unchanged.

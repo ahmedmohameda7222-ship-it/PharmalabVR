@@ -165,6 +165,14 @@ namespace PharmaLabVR.Session
         public int CsvExportCalls { get; private set; }
         public int PortablePreviewCalls { get; private set; }
         public bool CanPreviewLocalPortableArchive => true;
+        public bool CanChooseLocalPortableArchive => true;
+        public string SelectedArchiveFileName => "submitted.plvpack";
+        public int PortableChooseCalls { get; private set; }
+        public bool ChooseNextLocalArchive()
+        {
+            PortableChooseCalls++;
+            return true;
+        }
         public string InstructorPortableSummary => "Offline student pack; not attested.";
         public bool PreviewLocalPortableArchive(string fileName)
         {

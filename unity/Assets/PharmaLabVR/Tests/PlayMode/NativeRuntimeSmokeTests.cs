@@ -169,8 +169,12 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
                 var session = driver.Session;
                 var eventSequence = driver.CurrentLabView.EventSequence;
-                Assert.That(panels.Request(PanelAction.PreviewPortableArchive,
-                    Path.GetFileName(portable)), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.ChoosePortableArchive),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.SelectedArchiveFileName,
+                    Is.EqualTo(Path.GetFileName(portable)));
+                Assert.That(panels.Request(PanelAction.PreviewPortableArchive),
+                    Is.True, sessions.LastError);
                 var teaching = sessions.LastInstructorPortableReview;
                 Assert.That(teaching, Is.Not.Null);
                 Assert.That(teaching.NativeBranchId, Is.EqualTo(session.BranchId));

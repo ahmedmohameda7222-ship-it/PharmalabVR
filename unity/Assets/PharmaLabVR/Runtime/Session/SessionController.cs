@@ -24,10 +24,66 @@ namespace PharmaLabVR.Session
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
             LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
-        public bool CanPreviewLocalPortableArchive =>
-            router?.Current?.ScreenId == ScreenId.Review &&
-            !string.IsNullOrWhiteSpace(LastPortableArchivePath) &&
-            File.Exists(LastPortableArchivePath);
+        private string selectedArchiveFileName;
+        public string SelectedArchiveFileName => selectedArchiveFileName;
+        private IReadOnlyList<string> AvailableLocalArchiveNames()
+        {
+            var root = Path.Combine(Application.persistentDataPath, "sessions");
+            if (!Directory.Exists(root)) return Array.Empty<string>();
+            // Bounded, top-level only; never list outside the app's offline folder.
+            var candidates = Directory.EnumerateFiles(root, "*.plvpack",
+                    SearchOption.TopDirectoryOnly).Take(128).Where(file =>
+            {
+                try { return (File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            });
+            return OfflineArchivePicker.Names(root, candidates);
+        }
+
+        public bool CanChooseLocalPortableArchive
+        {
+            get
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review) return false;
+                try { return AvailableLocalArchiveNames().Count > 0; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+        public bool CanPreviewLocalPortableArchive
+        {
+            get
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review) return false;
+                return !string.IsNullOrEmpty(selectedArchiveFileName) &&
+                       AvailableLocalArchiveNames().Contains(selectedArchiveFileName) ||
+                       !string.IsNullOrWhiteSpace(LastPortableArchivePath) &&
+                       File.Exists(LastPortableArchivePath);
+            }
+        }
+        public bool ChooseNextLocalArchive()
+        {
+            try
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review)
+                    throw new InvalidOperationException("Choose a local archive in recorded Review.");
+                var names = AvailableLocalArchiveNames();
+                if (names.Count == 0)
+                    throw new InvalidDataException("No local .plvpack files are available.");
+                selectedArchiveFileName =
+                    OfflineArchivePicker.NextName(names, selectedArchiveFileName);
+                LastInstructorPortableReview = null;
+                LastError = null;
+                router.Show(ScreenId.Review);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Offline archive selection unavailable: " + error.Message;
+                return false;
+            }
+        }
 
         public bool PreviewLocalPortableArchive(string fileName)
         {
@@ -37,14 +93,14 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException(
                         "Offline teaching preview requires recorded Review.");
                 var requested = string.IsNullOrWhiteSpace(fileName) ?
-                    Path.GetFileName(LastPortableArchivePath) : fileName;
-                if (requested == null || requested.Length > 110 ||
-                    !System.Text.RegularExpressions.Regex.IsMatch(requested,
-                        @"\A[A-Za-z0-9_-]{1,96}\.plvpack\z"))
+                    selectedArchiveFileName ?? Path.GetFileName(LastPortableArchivePath) : fileName;
+                if (!OfflineArchivePicker.ValidName(requested))
                     throw new InvalidDataException(
                         "Choose a safe .plvpack filename in the local sessions folder.");
                 var localPath = Path.Combine(
                     Application.persistentDataPath, "sessions", requested);
+                if ((File.GetAttributes(localPath) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException("An external link cannot be previewed.");
                 // No Native import, network request, or grading transition.
                 var preview = InstructorPortableReview.Open(localPath);
                 LastInstructorPortableReview = preview;
@@ -405,6 +461,7 @@ namespace PharmaLabVR.Session
                 recordedCache.InvalidateComparison();
                 LastInstructorPortableReview = null;
                 LastPortableArchivePath = null;
+                selectedArchiveFileName = null;
                 instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
             }
@@ -666,6 +723,10 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Offline study pack preview — checksums, NOT signed institutional attestation.");
                 GUILayout.Label("Place imported .plvpack files in: " +
                     Path.Combine(Application.persistentDataPath, "sessions"));
+                GUILayout.Label("XR/local selection: " +
+                    (SelectedArchiveFileName ?? "none"));
+                if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChoosePortableArchive);
                 instructorArchiveDraft = GUILayout.TextField(instructorArchiveDraft,
                     GUILayout.Height(32f));
                 if (GUILayout.Button("Preview local student package", GUILayout.Height(44f)))
