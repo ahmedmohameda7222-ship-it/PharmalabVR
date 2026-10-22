@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -32,6 +32,7 @@ namespace PharmaLabVR.UI
         public bool HasResearchLesson => sessions?.HasResearchLesson == true;
         public bool CanRecordCurrentNativePH => sessions?.CanRecordCurrentNativePH == true;
         public bool CanRecordResearchPrediction => sessions?.CanRecordResearchPrediction == true;
+        public bool CanRecordResearchExplanation => sessions?.CanRecordResearchExplanation == true;
         public string ResearchPredictionSummary => sessions?.ResearchPredictionSummary ??
             "Student prediction unavailable.";
 
@@ -102,6 +103,8 @@ namespace PharmaLabVR.UI
                     return sessions.SelectResearchLesson(entityId);
                 case PanelAction.RecordResearchPrediction:
                     return sessions.RecordResearchPrediction(entityId);
+                case PanelAction.RecordResearchExplanation:
+                    return sessions.RecordResearchExplanation(entityId);
                 case PanelAction.BottleRinse:
                     return sessions.TryBottleWaterRinse();
                 case PanelAction.Inspect:

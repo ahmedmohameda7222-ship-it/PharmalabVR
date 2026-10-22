@@ -223,6 +223,11 @@ internal static class Program
               noteSession.NotebookAppendCalls == 1,
             "Rejected measurement attempt appended an unverified note.");
         noteRouter.Show(ScreenId.Notebook);
+        Check(noteRouter.Current.SupportedActions.Contains("RecordResearchExplanation") &&
+              notePanels.Request(PanelAction.RecordResearchExplanation, "model-limitations") &&
+              noteSession.NotebookAppendCalls == 2 &&
+              !notePanels.Request(PanelAction.RecordResearchExplanation, "model-limitations"),
+            "Shared Notebook must commit only one learner-selected explanation for a recorded pH.");
         Check(noteRouter.Current.SupportedActions.Contains("Save") &&
               noteRouter.Current.SupportedActions.Contains("Review") &&
               notePanels.Request(PanelAction.Save) &&

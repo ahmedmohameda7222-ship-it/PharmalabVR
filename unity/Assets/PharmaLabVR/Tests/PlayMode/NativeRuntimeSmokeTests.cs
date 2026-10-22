@@ -202,6 +202,18 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
                     "Notebook navigation cannot duplicate a measurement action.");
                 Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2));
+                Assert.That(sessions.CanRecordResearchExplanation, Is.True,
+                    "Student explanation requires recorded, Current Native pH.");
+                Assert.That(panels.Request(PanelAction.RecordResearchExplanation,
+                    "model-limitations"), Is.True, sessions.LastError);
+                Assert.That(sessions.CanRecordResearchExplanation, Is.False,
+                    "A second explanation for the same Native event must be refused.");
+                Assert.That(panels.Request(PanelAction.RecordResearchExplanation,
+                    "composition-hypothesis"), Is.False);
+                var explainedNotes = sessions.ReadNotebookEntries();
+                Assert.That(explainedNotes.Count, Is.EqualTo(3));
+                Assert.That(explainedNotes[2].Text, Does.Contain("Student explanation for"));
+                Assert.That(explainedNotes[2].Text, Does.Contain("not Native scientific evidence"));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Save"));
                 Assert.That(router.Current.SupportedActions, Does.Contain("Review"));
                 Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);

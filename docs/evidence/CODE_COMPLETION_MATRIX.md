@@ -139,3 +139,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## XR first-run Settings collision fix — 22 October 2026
 
 - **P06.02/P07.02 Partial:** The first Native-paused stock preparation Lab legitimately offers Settings, but the world panel no longer renders its -82pt global Settings ray target on top of the instrument-pages science buttons. Exit instruments restores Settings on the normal Lab page. New Unity PlayMode test follows Research instruments → Stock setup → More tools and lessons → Strong acid lesson → predictions and verifies visible ray target rows are unique. Headless RED at 8046cec found missing ShowGlobalSettings; GREEN production change applies it. Editor/Player/XR execution NOT_RUN, formal statuses unchanged.
+
+## M3 student-selected explanation after Native observation (22 October 2026)
+
+- **P11.02/P12.02 Partial:** The Notebook now offers Desktop and XR students three explicit, ungraded reflection choices (composition hypothesis, method uncertainty, model limitations). Recording requires the real current Supported Native receiver pH, its matching saved measurement annotation, current Native branch/event revision, and a selected Research lesson. Only one explanation per event and lesson is accepted and saved as a local notebook annotation, never a model result or university grade.
+- **Tests:** Test-first headless RED commit f668956 failed on absent BuildRecordedExplanation. The integrated headless contract validates provenance/rejection and the shared PanelAction routing; Unity PlayMode source extends the full first experiment Save/Review journey with a recorded explanation. All Unity runtime test runs remain NOT_RUN; formal acceptance ledger unchanged.

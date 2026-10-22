@@ -51,6 +51,52 @@ namespace PharmaLabVR.Protocols
                 ". Research reflection only; not a grade or endpoint.";
         }
 
+        // A learner selects one of three *prompts* after saving a current
+        // Native receiver measurement. The selected statement is not a
+        // scientific computation, model conclusion, or academic grade.
+        public static bool IsSupportedExplanation(string choice) =>
+            choice == "composition-hypothesis" ||
+            choice == "method-uncertainty" ||
+            choice == "model-limitations";
+
+        public static string BuildRecordedExplanation(string lessonId, string choice,
+            LabViewModel native, string vesselId,
+            MeasurementAvailability availability, string displayedNativePH)
+        {
+            if (string.IsNullOrWhiteSpace(lessonId) ||
+                !IsSupportedExplanation(choice) || vesselId != "receiver")
+                throw new InvalidOperationException("Choose an authored learner explanation for a research lesson.");
+            var verified = NativeMeasurementNote.Build(
+                native, vesselId, availability, displayedNativePH);
+            var statement = choice switch
+            {
+                "composition-hypothesis" =>
+                    "I hypothesize that prepared stock composition affects the observed pH; a controlled repeat could test this.",
+                "method-uncertainty" =>
+                    "I would inspect retained pipette volume and accepted transfer receipts before attributing differences to chemistry.",
+                _ =>
+                    "I would check model support, observation freshness and database identity before interpreting this pH."
+            };
+            return "Student explanation for " + lessonId +
+                " at Native event " + native.EventSequence + " · " + choice +
+                ": " + statement + " Selected by learner; not Native scientific evidence." +
+                " Observation reference: " + verified;
+        }
+
+        public static bool HasRecordedExplanation(IReadOnlyList<NotebookEntry> entries,
+            string lessonId, string branchId, string eventSequence)
+        {
+            if (entries == null || string.IsNullOrWhiteSpace(lessonId) ||
+                string.IsNullOrWhiteSpace(branchId) || string.IsNullOrWhiteSpace(eventSequence))
+                return false;
+            var prefix = "Student explanation for " + lessonId +
+                " at Native event " + eventSequence + " · ";
+            return entries.Any(entry => entry != null &&
+                entry.BranchId == branchId && entry.EventSequence == eventSequence &&
+                entry.VesselId == "receiver" && entry.Text != null &&
+                entry.Text.StartsWith(prefix, StringComparison.Ordinal));
+        }
+
         // The first durable hypothesis for the same local Native branch and
         // lesson survives a scene/controller rebuild. Annotation only; never
         // infer chemistry or import hypotheses across independent branches.

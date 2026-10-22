@@ -142,6 +142,16 @@ namespace PharmaLabVR.Session
         public int ReviewOpens { get; private set; }
         public int NotebookAppendCalls { get; private set; }
         public bool CanRecordCurrentNativePH { get; set; } = true;
+        public bool CanRecordResearchExplanation { get; set; } = true;
+        public bool RecordResearchExplanation(string choice)
+        {
+            if (!CanRecordResearchExplanation ||
+                !PharmaLabVR.Protocols.ResearchLessonJourney.IsSupportedExplanation(choice))
+                return false;
+            NotebookAppendCalls++;
+            CanRecordResearchExplanation = false;
+            return true;
+        }
         public bool RecordCurrentNativeMeasurement()
         {
             if (!CanRecordCurrentNativePH) return false;

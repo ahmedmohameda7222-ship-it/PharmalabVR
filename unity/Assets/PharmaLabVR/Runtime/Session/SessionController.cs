@@ -80,6 +80,72 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+        public bool CanRecordResearchExplanation
+        {
+            get
+            {
+                if (driver?.Session == null || !driver.Session.IsOpen ||
+                    selectedResearchLesson == null ||
+                    selectedResearchLesson.BranchId != driver.Session.BranchId ||
+                    driver.IsNativePaused || driver.IsTimeHeld ||
+                    router?.Current?.ScreenId != ScreenId.Notebook ||
+                    driver.SelectedMeasurementVesselId != "receiver" ||
+                    driver.CurrentLabView == null ||
+                    router.Current.NativeRevision != driver.CurrentLabView.EventSequence)
+                    return false;
+                try
+                {
+                    NativeMeasurementNote.Build(driver.CurrentLabView, "receiver",
+                        driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
+                        driver.Measurement?.DisplayValue);
+                    var recorded = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    return recorded.Any(item => item.BranchId == driver.Session.BranchId &&
+                        item.VesselId == "receiver" &&
+                        item.EventSequence == driver.CurrentLabView.EventSequence &&
+                        item.Text.StartsWith("Native pH ", StringComparison.Ordinal)) &&
+                        !ResearchLessonJourney.HasRecordedExplanation(recorded,
+                            selectedResearchLesson.Definition.id,
+                            driver.Session.BranchId, driver.CurrentLabView.EventSequence);
+                }
+                catch (Exception error) when (error is InvalidOperationException ||
+                                              error is IOException ||
+                                              error is UnauthorizedAccessException ||
+                                              error is ArgumentException)
+                {
+                    return false;
+                }
+            }
+        }
+
+        public bool RecordResearchExplanation(string choice)
+        {
+            try
+            {
+                if (!CanRecordResearchExplanation ||
+                    !ResearchLessonJourney.IsSupportedExplanation(choice))
+                    throw new InvalidOperationException(
+                        "A current recorded Native pH is required before choosing one learner explanation.");
+                var view = driver.CurrentLabView;
+                var note = ResearchLessonJourney.BuildRecordedExplanation(
+                    selectedResearchLesson.Definition.id, choice, view, "receiver",
+                    driver.Measurement.Availability, driver.Measurement.DisplayValue);
+                // A second journal read inside CanRecordResearchExplanation prevents
+                // normal UI retries from overwriting the first durable choice.
+                notebook.Append(NotebookFilePath(), driver.Session.BranchId,
+                    view.EventSequence, "receiver", note);
+                InvalidateLearningReview();
+                LastError = null;
+                router.Show(ScreenId.Notebook);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
+
         private readonly NativeReviewAuthorityCache<RecordedSessionReview,
             RecordedRunComparison> recordedCache = new();
         private CoreDriver subscribedNativeDriver;
@@ -610,6 +676,17 @@ namespace PharmaLabVR.Session
                         " · " + note.RecordedAtUtc + "\n" + note.Text);
                 GUILayout.Label("Native event revision: " + router.Current.NativeRevision +
                     ". Notes do not change the scientific state.");
+                if (CanRecordResearchExplanation)
+                {
+                    GUILayout.Label("Choose one research explanation; this is your interpretation, not Native science.");
+                    foreach (var item in new[] {
+                        ("Composition hypothesis", "composition-hypothesis"),
+                        ("Method uncertainty", "method-uncertainty"),
+                        ("Model limitations", "model-limitations")
+                    })
+                        if (GUILayout.Button("Explain: " + item.Item1, GUILayout.Height(32f)))
+                            panels?.Request(PanelAction.RecordResearchExplanation, item.Item2);
+                }
                 notebookDraft = GUILayout.TextArea(notebookDraft, GUILayout.Height(96f));
                 if (GUILayout.Button("Record note for current event", GUILayout.Height(44f)) &&
                     panels?.Request(PanelAction.AddNotebookNote, notebookDraft) == true)
@@ -1019,7 +1096,7 @@ namespace PharmaLabVR.Session
                 if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
                 return "Research notebook · " + entries.Count + " event-linked notes\n" +
                     "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
-                    preview + "\nDesktop: write notes; Desktop/XR: record current Native pH.";
+                    preview + "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
             }
         }
 
