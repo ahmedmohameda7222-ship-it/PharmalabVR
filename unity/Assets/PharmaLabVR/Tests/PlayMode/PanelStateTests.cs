@@ -61,6 +61,49 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator M2_XRResearchInstrumentPagesShowDistinctVisibleActions()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var panel = roots.SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var buttons = panel.GetComponentsInChildren<Button>(true)
+                    .ToDictionary(button => button.name);
+                Assert.That(buttons["Research instruments"].gameObject.activeSelf, Is.True);
+                buttons["Research instruments"].onClick.Invoke();
+                Assert.That(buttons["Stock setup"].gameObject.activeSelf, Is.True);
+                buttons["Stock setup"].onClick.Invoke();
+                Assert.That(buttons["More tools and lessons"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["Choose concentration"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["Settings"].gameObject.activeSelf, Is.False,
+                    "Initial stock setup settings should not overlap a science control.");
+                buttons["More tools and lessons"].onClick.Invoke();
+                Assert.That(buttons["Prepare reserve stock"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["Strong acid lesson"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["Mixed acid lesson"].gameObject.activeSelf, Is.True);
+                var shown = buttons.Values.Where(button => button.gameObject.activeSelf).ToArray();
+                var rows = shown.Select(button =>
+                    button.GetComponent<RectTransform>().anchoredPosition.y).ToArray();
+                Assert.That(rows.Distinct().Count(), Is.EqualTo(rows.Length),
+                    "All visible XR controls need separate ray hit targets.");
+                buttons["Strong acid lesson"].onClick.Invoke();
+                Assert.That(buttons["Predict pH below 7"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["Predict pH at least 7"].gameObject.activeSelf, Is.True);
+                Assert.That(buttons["More tools and lessons"].gameObject.activeSelf, Is.False);
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator M1_FirstNativeSetupLetsStudentChooseLessonAndPrepareStock()
         {
 #if UNITY_EDITOR

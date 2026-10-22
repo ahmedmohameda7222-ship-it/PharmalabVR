@@ -340,6 +340,11 @@ internal static class Program
             Check(pageItems.All(item => item.Row >= 0 && item.Row <= 6),
                 "XR instrument navigation placed a target outside the bounded panel.");
         }
+        Check(ResearchInstrumentMenuLayout.ShowGlobalSettings(0) &&
+              !ResearchInstrumentMenuLayout.ShowGlobalSettings(1) &&
+              !ResearchInstrumentMenuLayout.ShowGlobalSettings(2) &&
+              !ResearchInstrumentMenuLayout.ShowGlobalSettings(4),
+            "XR setup Settings must not overlap the instrument navigation row.");
         var firstSetup = ResearchInstrumentMenuLayout.Visible(
             2, true, false, false, false, false, false, false);
         Check(firstSetup.Any(item => item.Name == "Choose concentration") &&
