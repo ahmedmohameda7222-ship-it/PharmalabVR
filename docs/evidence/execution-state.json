@@ -1,0 +1,2350 @@
+{
+  "schemaVersion": 1,
+  "planId": "pharmalabvr-premium-platform-2026-10-10",
+  "baselineHead": "f712fc0f3c308454098919b5b26f107d219e441b",
+  "branch": "feat/foundation-vr-first",
+  "nextTask": "P06.02",
+  "userPriorityWorkstream": "P03 lab authority and geometry; partial implementation only until P07.03 and P03 task dependencies pass",
+  "executionOrder": [
+    "P00.01",
+    "P00.02",
+    "P01.01",
+    "P01.02",
+    "P01.03",
+    "P02.01",
+    "P02.02",
+    "P02.03",
+    "P04.01",
+    "P04.02",
+    "P04.03",
+    "P05.01",
+    "P05.02",
+    "P05.03",
+    "P06.01",
+    "P06.02",
+    "P08.01",
+    "P08.02",
+    "P07.01",
+    "P07.02",
+    "P07.03",
+    "P03.01",
+    "P03.02",
+    "P03.03",
+    "P08.03",
+    "P08.04",
+    "P09.01",
+    "P09.02",
+    "P10.01",
+    "P10.02",
+    "P10.03",
+    "P11.01",
+    "P11.02",
+    "P11.03",
+    "P12.01",
+    "P12.02",
+    "P12.03",
+    "P13.01",
+    "P13.02",
+    "P14.01",
+    "P14.02",
+    "P15.01",
+    "P15.02",
+    "P16.01",
+    "P16.02",
+    "P17.01",
+    "P17.02",
+    "P17.03",
+    "P23.01",
+    "P23.02",
+    "P23.03",
+    "P23.04",
+    "P18.01",
+    "P18.02",
+    "P18.03",
+    "P19.01",
+    "P19.02",
+    "P20.01",
+    "P20.02",
+    "P20.03",
+    "P21.01",
+    "P21.02",
+    "P22.01",
+    "P22.02",
+    "P24.01",
+    "P24.02"
+  ],
+  "phases": [
+    {
+      "id": "P00",
+      "title": "Baseline and durable execution control",
+      "arabicTitle": "تثبيت الأساس ومكان الاستكمال",
+      "baseline": "EnvironmentVerified",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P00.01",
+          "title": "Resume actual checkout",
+          "decision": "Read AGENTS, current HEAD/worktree/PR and package; preserve local work; import this plan once under docs/premium-master without publicly copying private originals.",
+          "acceptance": "Record actual HEAD/toolchain and a justified disposition for every current finding; no reset to the old snapshot.",
+          "files": [
+            "scripts/doctor.ps1",
+            "docs/evidence",
+            "docs/premium-master"
+          ],
+          "dependencies": [],
+          "status": "VerifiedLocal",
+          "codeCommit": null,
+          "evidence": [
+            "docs/evidence/oct10-finding-disposition.md",
+            "docs/evidence/environment.json",
+            "artifacts/handoff-v2/verify-package.py:69/69",
+            "C:/plv-v3-oct10/PharmaLabVR-Implementation-Package-v3-RECOVERED/RECOVERY-REPORT.json"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/oct10-finding-disposition.md",
+            "docs/evidence/environment.json",
+            "artifacts/handoff-v2/verify-package.py:69/69",
+            "C:/plv-v3-oct10/PharmaLabVR-Implementation-Package-v3-RECOVERED/RECOVERY-REPORT.json"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "intake checkout, toolchain, package integrity and all Oct10 finding dispositions",
+          "blocker": null
+        },
+        {
+          "id": "P00.02",
+          "title": "Persistent task ledger",
+          "decision": "Install execution-state JSON schema and NEXT.md with next eligible task; reconcile existing implementations against the original95 cases rather than redoing passed foundations.",
+          "acceptance": "A new turn with only continue resumes from disk and finds first eligible incomplete task; never depends on chat memory.",
+          "files": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md"
+          ],
+          "dependencies": [
+            "P00.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": null,
+          "evidence": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md",
+            "scripts/next-task.py",
+            "python -m unittest scripts/test_next_task.py:1 passed"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/NEXT.md",
+            "scripts/next-task.py",
+            "python -m unittest scripts/test_next_task.py:1 passed"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "durable dependency ledger and continuation selector",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P01",
+      "title": "Native ABI and runtime correctness",
+      "arabicTitle": "صحة المحرك والواجهة الأصلية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P01.01",
+          "title": "Atomic multi-tool tick",
+          "decision": "Reproduce O10-N3, preflight full accepted tick and reserve queue/science/material resources before mutation; reject or admit entire tick.",
+          "acceptance": "Ten accepted tools cannot partially commit at simulationTime0; denied tick preserves all inventories/time/events; admitted tick advances once.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/transport.cpp",
+            "native/tests/test_abi.cpp"
+          ],
+          "dependencies": [
+            "P00.02"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "8f31bc55d29a0a7eb03051eb9d4118d9f994ab87",
+          "evidence": [
+            "native/tests/test_abi.cpp:P01_01 ten tool science denial is an atomic transport tick",
+            "native/tests/test_abi.cpp:P01_01 admitted disjoint tools advance simulation once",
+            "red: before fix 5 transfers/eventSequence 3->8/spill 4.9942511601926056e-8 m3 at simulationTime 0",
+            "green: native Release doctest 62/62 cases, 8947/8947 assertions; CTest 1/1"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "native/tests/test_abi.cpp:P01_01 ten tool science denial is an atomic transport tick",
+            "native/tests/test_abi.cpp:P01_01 admitted disjoint tools advance simulation once",
+            "red: before fix 5 transfers/eventSequence 3->8/spill 4.9942511601926056e-8 m3 at simulationTime 0",
+            "green: native Release doctest 62/62 cases, 8947/8947 assertions; CTest 1/1"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Native Windows Release ABI product session: ten-tool aggregate denial atomicity and two-tool admitted single tick; no Unity Player interaction claim.",
+          "blocker": null
+        },
+        {
+          "id": "P01.02",
+          "title": "Lifecycle, ownership and bounded limits",
+          "decision": "Enforce declared one-live-session, owner mutation thread, ABI lifetime/queue/buffer limits; keep all engine context lifecycle on SolverWorker.",
+          "acceptance": "Real repeated create/import/destroy and one-over-limit tests; no double free, race or silent success; actual engine teardown bounded or honestly blocked.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/solver_worker.cpp",
+            "native/tests/test_abi.cpp",
+            "native/tests/test_solver_lifecycle.cpp"
+          ],
+          "dependencies": [
+            "P01.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "e5c6b69c8cf89a20b8e41bf0b17fb362c385118d",
+          "evidence": [
+            "docs/evidence/p01-02-lifecycle.md",
+            "native/tests/test_abi.cpp:P01_02 one mutable session and 3 real IPhreeqc import cycles",
+            "native/tests/test_solver_worker.cpp:P01_02 callback owner thread and blocked shutdown injection",
+            "Native Release 66/66, 9093/9093; CTest 1/1",
+            "Unity EditMode 22/22, PlayMode 14/14"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p01-02-lifecycle.md",
+            "native/tests/test_abi.cpp:P01_02 one mutable session and 3 real IPhreeqc import cycles",
+            "native/tests/test_solver_worker.cpp:P01_02 callback owner thread and blocked shutdown injection",
+            "Native Release 66/66, 9093/9093; CTest 1/1",
+            "Unity EditMode 22/22, PlayMode 14/14"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Windows Native ABI plus Unity EditMode/PlayMode lifecycle; actual pathological engine cancellation and physical targets remain unverified under P02.03.",
+          "blocker": null
+        },
+        {
+          "id": "P01.03",
+          "title": "Complete boundary recovery",
+          "decision": "Continue rechecks fresh neutral input at the boundary, including command invalidation and readiness expiry; preserve fixed monotone sequence/event polling behavior.",
+          "acceptance": "Expiry or SetActuator/Rinse after readiness cannot permit stale Continue; all hold reasons preserve material.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/tests/test_abi.cpp"
+          ],
+          "dependencies": [
+            "P01.02"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "24638ad35c2ce47fdce9c36d674755638273939d",
+          "evidence": [
+            "docs/evidence/p01-03-recovery.md",
+            "native/tests/test_abi.cpp:P01_03 expiry/SetActuator and held rinse regressions",
+            "Native Release 68/68, 9201/9201; CTest 1/1",
+            "Unity PlayMode 14/14"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p01-03-recovery.md",
+            "native/tests/test_abi.cpp:P01_03 expiry/SetActuator and held rinse regressions",
+            "Native Release 68/68, 9201/9201; CTest 1/1",
+            "Unity PlayMode 14/14"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Native ABI boundary and Unity PlayMode Continue action; physical VR/complete spatial recovery UI separate.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P02",
+      "title": "Materials, preparations and revisions",
+      "arabicTitle": "المواد والتحضير وتوازن الكميات",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P02.01",
+          "title": "Six-stock preparation catalog",
+          "decision": "Use aqueous-six-research-v1 stock data and 0.01/0.05/0.1M supported test points; create real initially empty apparatus; stock selection prepares through commands, never pH assignment.",
+          "acceptance": "Select each stock and verify pools, water, reference volume and preparation identity; no25ml NaCl forced demo as normal Open Lab.",
+          "files": [
+            "science/packages/aqueous-six-research-v1/stocks.json",
+            "native/core/src/material.cpp",
+            "Runtime/Core/CoreDriver.cs"
+          ],
+          "dependencies": [
+            "P01.03"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "c9a58ea8af18b721b825af65c0fd1d578e085d0f",
+          "evidence": [
+            "docs/evidence/p02-01-stocks.md",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P02_01 six stocks x supported concentration matrix through real CoreSession",
+            "Unity PlayMode 15/15, EditMode 22/22; WindowsDesktop Player build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p02-01-stocks.md",
+            "PlayMode P02_01 selected all six supported stocks across 16 cases and verified native pools, water, reference volume and provenance",
+            "WindowsDesktop Player build Success at functional SHA c9a58ea8af18b721b825af65c0fd1d578e085d0f"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Unity PlayMode action through SessionController and real Native/IPhreeqc context plus WindowsDesktop build and Boot screenshot. Rendered stock-selection HUD click, VR and physical science validation remain open in later UI/VR tasks.",
+          "blocker": null
+        },
+        {
+          "id": "P02.02",
+          "title": "Shared command facade",
+          "decision": "UI operations are domain intents through CoreSession.SubmitOrdered; every mutation uses touched revisions and receipts; no UI-side inventory/chemistry copies.",
+          "acceptance": "Identical/rejected/conflicting identities and unrelated-vessel revisions retain original semantics; views update only from committed snapshots/outcomes.",
+          "files": [
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Lab/LabCommandService.cs [new]",
+            "native/core/src/commands.cpp"
+          ],
+          "dependencies": [
+            "P02.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "a62c3fc5d242e23ed94bbf357f4ab4d5799e2dea",
+          "evidence": [
+            "docs/evidence/p02-02-command-facade.md",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P02_02 live Native revision, replay and identity conflict integration",
+            "Unity PlayMode 16/16; WindowsDesktop build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p02-02-command-facade.md",
+            "PlayMode P02_02 accepted unrelated revision, replayed identical identity, rejected conflicting identity and stale touched revision",
+            "WindowsDesktop runtime assembly SHA-256 EFAB81D19B9EDFD4912E7D6C9F1BDF9DA7049E652FDBF092E3824ED162D4E44B"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Native-backed Unity PlayMode command facade and WindowsDesktop compilation; rendered UI control and full material ledger remain open.",
+          "blocker": null
+        },
+        {
+          "id": "P02.03",
+          "title": "Full ledger",
+          "decision": "Account stock/tool body/tip/residual/in-flight/receiver/waste/spill separately; disposal is a sink transfer.",
+          "acceptance": "M02/M05 whole-lab conservation including empty/overflow/rinse states within original tolerances.",
+          "files": [
+            "native/core/src/material.cpp",
+            "native/core/src/abi.cpp",
+            "native/tests/test_material.cpp"
+          ],
+          "dependencies": [
+            "P02.02"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "697a3115ad077ef3d8c61a82dcde64800ebc5f93",
+          "evidence": [
+            "docs/evidence/p02-03-ledger-progress.md",
+            "native/tests/test_abi.cpp:P02_03 rinse contamination and whole-context materialLedger",
+            "Native Release 70/70, 15461/15461; CTest 1/1; Unity PlayMode 17/17 including scene-injected live pour; WindowsDesktop build Success at functional 697a311"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p02-03-ledger-progress.md",
+            "d404b2d staged rinse preserving tip contaminant and residual",
+            "b0e371a whole-context materialLedger includes vessels, sinks, tip, residual and in-flight",
+            "696bd9a Continue readiness expression portable under Linux GCC warnings",
+            "697a311 live source debit, retained tip, in-flight parcel and release-time capture; closed valve lands once; T02 live rinse reconciles chloride/volume",
+            "72c1b49 full receiver plus disposed empty source preserves chloride and volume",
+            "2fd4613 two-tool whole-context pools and Unity Lab scene adapter-to-CoreDriver-to-Native-to-LiquidPresenter flow"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Research burette represented-pool ledger through normal live pour, full receiver overflow, empty disposed source, single drop landing, tip rinse, two tools, import/export and Unity scene action injection. Wider T04/M05 device/tool catalog remains Partial; stable visual drop IDs, distinct profiles, geometry extremes and 10/20/40 ms convergence belong to P03.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P03",
+      "title": "Tools, parcels and capture geometry",
+      "arabicTitle": "الأدوات والقطرات والالتقاط والتلوث",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P03.01",
+          "title": "Burette parcels and final drop",
+          "decision": "Wire retained tip/hanging/in-flight/residual state into real authority; visual drop IDs follow committed parcels; valve close stops new flow only.",
+          "acceptance": "Close during flow then final drop lands or spills once; actual runtime not standalone helper tests; T04/T05/T08.",
+          "files": [
+            "native/core/src/tool_models.cpp",
+            "native/core/src/abi.cpp",
+            "Runtime/Tools/ToolPresenter.cs",
+            "Runtime/Tools/DropPresenter.cs [new]"
+          ],
+          "dependencies": [
+            "P07.03"
+          ],
+          "status": "Open",
+          "codeCommit": "15a067e17ee00995e914442a15f0c8c76c77e83a",
+          "evidence": [
+            "docs/evidence/p03-01-drop-presentation-progress.md",
+            "docs/evidence/p03-01-parcel-import-integrity.md",
+            "docs/evidence/p03-lab-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P03.01 repeated SessionLoad/CheckpointRestart snapshots do not clear landed ID more than once; explicit accepted Native replacement/restart resets once even when still held; headless 136 assertions and mutation RED→GREEN; Unity NOT_RUN",
+            "P03.01 Source TDD SessionLoad/CheckpointRestart restores same valid pre-landing Native parcel ID after earlier landing, without allowing stale snapshots in same session; headless 124 tests, Unity Player/XR NOT_RUN",
+            "P03.01 DropParcelState source-tested through actual class C# headless: committed IDs only, matching landing exactly once, stale snapshot suppressed; DropPresenter connected to Native InFlightLanded receipts; Unity rendering NOT_RUN",
+            "P03.01 C++17 Native ABI test-first import validation rejects anonymous, wrong-branch, wrong-tool and future-sequence pending drop IDs; valid exported parcel imports; no Unity/editor/device tests at new SHA",
+            "Native P03_01 red/green, parcel IDs in product ABI, Unity Lab pending drop state, native 93/93, PlayMode 33/33"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P03.02",
+          "title": "Distinct bottle and pipette",
+          "decision": "Implement separate research profiles/actuators/residuals for bottle,25ml graduated pipette and50ml burette; contamination affects receiving inventory; rinse removes represented residual to waste.",
+          "acceptance": "User fills/transfers/rinses/refills each tool; identical animation or fresh-water-to-waste alone does not pass; T04/M05.",
+          "files": [
+            "science/packages/aqueous-six-research-v1/instruments.json",
+            "native/core/src/tool_models.cpp",
+            "Runtime/Tools/PipetteActuator.cs [new]"
+          ],
+          "dependencies": [
+            "P03.01"
+          ],
+          "status": "Open",
+          "codeCommit": "0628c421ef2da5b56264719ee58f2436dc26cabc",
+          "evidence": [
+            "docs/evidence/p03-02-measured-stock-bottle-progress.md",
+            "docs/evidence/p03-02-metered-pipette-progress.md",
+            "docs/evidence/p03-02-tip-mixing-progress.md",
+            "docs/evidence/p03-02-rinse-source-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P03.02 distinct bottle-100ml-research-v1 Native profile, PlaceTool capacity bound, explicit PourBottle transactional fixed aliquot with source+receiver/tool revisions and held safety; Ubuntu Native test RED/GREEN; complete bottle rinse/Unity/physical calibration NOT_RUN",
+            "P03.02 C ABI source switch between two prepared stock bottles preserves retained chloride in pipette, adds both chloride and sodium to new base receiver, and preserves water/material pools; no Unity Player acceptance",
+            "P03.02 first distinct pipette source: C++ product ABI registered 25mL research profile with explicit AspiratePipette/DispensePipette, science-budget staged material moves and retained-rinse volume; real Native RED/GREEN Windows+Ubuntu; separate bottle/Unity journey NOT_RUN",
+            "Native product ABI P03_02 tip contamination red/green, conserved pool ledger, 94/94 Release cases, Unity PlayMode 33/33; distinct bottle/pipette and user journeys remain Open",
+            "Rinse source C ABI red 8802396 on Ubuntu 95/96 and green c7dc189 on all four native CI jobs, 1/1 CTest and 9/9 tooling per matrix; no current Unity/Player verification for new code",
+            "2026-10-15 Research P03.02 source batch: product Native bottle mixed 2e-8 m3 synthetic film, source-debited measured pours, real contaminated rinses/waste and import-bounded residual (C ABI regression; Native Windows/Ubuntu RED/GREEN at 6e8cee2). Unity source adds ResearchInstrumentPayloads, PipetteActuator, BottlePourActuator, actual Native revisions/receipts via LabCommandService, optional setup-only prepared rinse water, Desktop actions and dedicated XR spatial panel navigation; NUnit PlayMode source authored, real Unity/Player/XR NOT_RUN. Latest functional source 43690cfa57ead8d650f081bf3959650f4e1ec37d. P03.02 remains Open/NotReviewed, P03.01/P07.03 and P06.02 dependencies Open; 66 deferred Unity rows remain NOT_RUN.",
+            "P03.02 tip residual/GUI control correction: 5e-8 m3 aspiration leaves less than Native pipette retainedTipVolumeM3 1e-7 m3, so immediate 5e-8 dispense must be denied without misleading availability. Headless test-first RED 8436348, GREEN 0628c421 with real Native tip readback eligibility and shared panel/Desktop/XR disabled action and research hold-up notice; push CI 38799030228 SUCCESS Windows/Ubuntu Native+headless; Unity NOT_RUN."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P03.03",
+          "title": "Calibrated outlet and placement",
+          "decision": "Use serialized profile outlet and receiver aperture geometry in LabGeometryAdapter for both modes; mount/place/dock invalid paths preserve state.",
+          "acceptance": "Actual asset tip and native profile agree; tilt/outside aperture/overflow/moving target/multiple captures and invalid bench placement tested.",
+          "files": [
+            "Runtime/Input/LabGeometryAdapter.cs",
+            "Runtime/Input/LabCaptureTarget.cs",
+            "native/core/include/plv/geometry_sample.hpp",
+            "native/tests/test_transport.cpp"
+          ],
+          "dependencies": [
+            "P03.02"
+          ],
+          "status": "Open",
+          "codeCommit": "367c904a02bf26e8dea68166bbadb227681daf8b",
+          "evidence": [
+            "docs/evidence/p03-lab-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "Unity P03_03 outlet-offset red/green; scene outlet marker derived from rendered tip; EditMode 23/23 and PlayMode 33/33",
+            "P03.03 source slice: CaptureAdmission static aperture geometry (reject outside radius/height, invalid tilt/direction, fast receiver >0.02m/s), ReceiverMotionTracker frame-cached world transform velocity for kinematic/XR receiver with invalid timestamp fail-closed; actual LabCaptureTarget uses tracker and Rigidbody speed. Native chemistry unchanged. Test-first RED 880ce0b (missing policy) and dc0d889 (missing motion type) confirmed in GitHub headless; GREEN headless success for geometry 09ff2e7 and motion 7669830. BuildLabAssets now generates profile-specific OutletExit anchored to pipette mesh tip/bottle neck, plus authored NUnit EditMode P03_03_ResearchOutletMarkersMatchActualPipetteTipAndBottleNeck. Full geometry, moving-body XR scene and Unity physics NOT_RUN; acceptance Open.",
+            "2026-10-16 P03.03 overlapping-aperture fail-closed source: test-first RED caf1a9dd (GitHub run 38815117025, CS2001 CaptureTargetSelection absent); GREEN feature 2b948d9 adds pure CaptureTargetSelection.ResolveUnique, active same-lab-scene LabCaptureTarget registry, EstimateExclusive for DesktopInputAdapter/XRInputAdapter, authored EditMode P03_03_OverlappingPhysicalReceiversNeverAwardFirstColliderMaterial. Conflicting receiver inventories or two physical targets with identical IDs return no capture; no Unity chemistry or Native material written. Headless+Windows+Ubuntu push run 38815316914 SUCCESS; Unity NOT_RUN. Dock guard RED 159242c (CS2001 ToolMountAdmission missing) and GREEN source 2cac163d adds researched ≤12cm/≤25° orientation check and selection denial before any pose/Rigidbody mutation, EditMode P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState authored NOT_RUN; exact final CI 38815616489 headless SUCCESS, Windows/Ubuntu pending at ledger writing. Acceptance Open: geometry research bounds, cannot prove actual device physical calibration, scene occlusion, multiple capture all combinations without Unity.",
+            "2026-10-16 P03.03 generated Desktop burette asset outlet point missing in authored Lab. ResearchOutletGeometry computes actual cylinder mesh bottom for OutletExit and BuildPipelineEntry now instantiates point at research 50mL burette tip; initial receiver vertically below tip and geometric aperture check. TDD RED bfe34480 CS2001 missing ResearchOutletGeometry; GREEN 367c904a headless and Ubuntu Native SUCCESS in push 38822517798, Windows still in progress at check. Unity EditMode actual generated Lab scene test P03_03_DesktopBuretteOutletMarkerCapturesReceiverAtAuthoredResearchScenePose authored NOT_RUN. Physical calibration, multi-receiver scene, XR/Player test still deferred."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P04",
+      "title": "Scientific models and provenance",
+      "arabicTitle": "الحسابات العلمية ومصدر النتائج",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P04.01",
+          "title": "Checkpoint science generations",
+          "decision": "Reproduce O10-N1; restored state gets branch/dependency generation, observations invalidated and old in-flight completions excluded.",
+          "acceptance": "With real IPhreeqc, restored revision becomes eligible Current for restored state; newer-state pH never relabelled; Pending exits correctly.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/scheduler.cpp",
+            "native/tests/test_science.cpp"
+          ],
+          "dependencies": [
+            "P02.03"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "3271fdfc2277da1b3efb4e97578de1fcecd7ac68",
+          "evidence": [
+            "docs/evidence/p04-01-checkpoint-science.md",
+            "native/tests/test_abi.cpp:P04_01 real IPhreeqc rollback with completed and in-flight newer-state solves",
+            "native/tests/test_scheduler.cpp:P04_01 same-revision prior-generation completion excluded",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P04_01 scene MeasurementView rollback",
+            "Native 72/72 (15559 assertions), CTest 1/1, Unity PlayMode 18/18, WindowsDesktop build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "3271fdf scheduler dependency generation resets observations and budgets on checkpoint restore",
+            "3271fdf native product ABI rejects old worker completions and offers restored-state IPhreeqc requests"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Real minteq IPhreeqc acid/base checkpoint rollback and Unity Lab MeasurementView recomputation. Experimental pH accuracy, model package mismatch and recorded-only review remain separate open scope.",
+          "blocker": null
+        },
+        {
+          "id": "P04.02",
+          "title": "Verified package and contextual observations",
+          "decision": "Hash actual loaded package on cold start/import; preserve recorded-only review for missing/mismatched model; select receiving sample for inspection.",
+          "acceptance": "Receiver pH changes after acid/base delivery; wrong package never silently recomputes Current; source/receiver identities distinct.",
+          "files": [
+            "Runtime/Core/ScientificPackage.cs",
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Core/CoreDriver.cs",
+            "native/solver/src/iphreeqc_adapter.cpp"
+          ],
+          "dependencies": [
+            "P04.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "3322c29470e0bcb56c5da6dbe8a270db5f326834",
+          "evidence": [
+            "docs/evidence/p04-02-package-observations.md",
+            "docs/evidence/artifact-manifest-p04-02.json",
+            "native/tests/test_science.cpp:P04_02 actual-byte SHA rejection after red test",
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs:P04_02 cold/import/recorded-only/receiver scene",
+            "Native 73/73, CTest 1/1, Unity PlayMode 21/21, EditMode 22/22, WindowsDesktop/WindowsVR/AndroidVR build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2668cfd product CoreSession verifies actual pinned bytes on create/import and opens recorded-only review on mismatch",
+            "5cab84d IPhreeqc hashes bounded bytes and loads exactly those bytes; 3322c29 preserves pinned package bytes across Git checkouts"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Research product model and Unity Lab scene: source/receiver observations distinct; receiver Current pH changes after native transfer; wrong package blocks live recomputation and offers saved observations only. No current-code Player click-through, physical VR, Android install, or experimental validation.",
+          "blocker": null
+        },
+        {
+          "id": "P04.03",
+          "title": "Scientific evidence matrix",
+          "decision": "Finish real clean-context/prior-cell equivalence, pool/charge diagnostics, unsupported composition and lifecycle tests; keep independent ideal reference separate.",
+          "acceptance": "S01-S07 evidence distinguishes matching assumptions, Research scope and experimental validation; no universal chemistry claim.",
+          "files": [
+            "native/tests/test_science.cpp",
+            "native/tests/test_solver_lifecycle.cpp",
+            "science/packages/aqueous-six-research-v1/coverage.json"
+          ],
+          "dependencies": [
+            "P04.02"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "ea79eb3aff52bb951c114f6c1b219901be420f17",
+          "evidence": [
+            "docs/evidence/p04-03-scientific-matrix.md",
+            "docs/evidence/artifact-manifest-p04-03.json",
+            "native/tests/test_science.cpp:P04_03 direct same-assumption IPhreeqc, six pools, clean context, assumptions distinction, domain rejection",
+            "native/tests/test_solver_lifecycle.cpp:P04_03 eight real contexts and raw resident memory/latency",
+            "Native 80/80 (15770 assertions), CTest 1/1 plus three repeat passes, ideal fixtures 40, Unity PlayMode 21/21, EditMode 22/22, three Player builds Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "ea79eb3 rejects unsupported 37 C, overflow and above-1-mol/kgw pools before IPhreeqc; Research coverage manifest now describes actual product solver",
+            "ea79eb3 retries documented BUSY at P04.01 test teardown and collects real IPhreeqc lifecycle diagnostics"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Task-scoped Research scientific software evidence matrix S01-S07, with S04 engine-failure replay and S07 actual nonconvergence/hard latency still open. No experimental validation or physical/device journey; AcceptedPlanner not assigned.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P05",
+      "title": "Scheduling, budgets and safe holds",
+      "arabicTitle": "الجدولة والميزانيات والتعافي",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P05.01",
+          "title": "All-transport scientific admission",
+          "decision": "Reproduce O10-N2; one admission path covers live/fixed/rinse/disposal using actual gross ingress/egress and complete proposed tick; implement explicit Precision/Bulk modes.",
+          "acceptance": "Precision100ms/0.05ml and Bulk200ms/0.5ml both respected precommit; fixed10ml cannot bypass; no net-zero circulation exemption.",
+          "files": [
+            "native/core/src/abi.cpp",
+            "native/core/src/scheduler.cpp",
+            "native/tests/test_scheduler.cpp"
+          ],
+          "dependencies": [
+            "P04.03"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "be2864faa29ce02bb4497ffcfe5560a530e9ca48",
+          "evidence": [
+            "docs/evidence/p05-01-transport-admission.md",
+            "docs/evidence/artifact-manifest-p05-01.json",
+            "native/tests/test_abi.cpp:P05_01 real pinned-IPhreeqc product ABI fixed10ml, mode, rinse/disposal and gross circulation cases",
+            "native/tests/test_scheduler.cpp:P05_01 exact Precision/Bulk age and volume boundaries",
+            "Native 85/85 and 15803/15803 assertions; CTest 1/1; Unity PlayMode 21/21, EditMode 22/22; WindowsDesktop Player build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "be2864f stages discrete transport and runs shared precommit admission before material/event commit",
+            "be2864f exposes persisted scienceBudgetMode Precision/Bulk through Native and Unity; 5106901 strengthens fixed10ml test after Current observation"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Task-scoped Research software: Native ABI fixed/live/rinse/disposal precommit admission, explicit Precision and Bulk profiles, gross opposite-transfer denial, Unity Lab scene tests. No actual Player flow, device, calibration or experimental acceptance.",
+          "blocker": null
+        },
+        {
+          "id": "P05.02",
+          "title": "Fair bounded worker",
+          "decision": "One in-flight and one pending replaceable equilibrium request per vessel, fairness and observations scoped to actual dependency; no idle stale-by-wall-time.",
+          "acceptance": "O01-O07 continuous multi-vessel scene tests with real science plus controlled delay tests; preserve all committed events.",
+          "files": [
+            "native/core/src/scheduler.cpp",
+            "native/core/src/solver_worker.cpp",
+            "native/tests/test_scheduler.cpp"
+          ],
+          "dependencies": [
+            "P05.01"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "57006a4dc83f49c7216268018b68d0be6e73f83a",
+          "evidence": [
+            "docs/evidence/p05-02-fair-worker.md",
+            "docs/evidence/artifact-manifest-p05-02.json",
+            "P05_02 controlled-delay replacement/stale-request red then green; actual IPhreeqc three-vessel ABI and Unity live Lab scene",
+            "Native 88/88, CTest 1/1, Unity PlayMode 21/21, EditMode 22/22, WindowsDesktop build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "57006a4 worker replaces newer pending equilibrium request in place without losing peer order or exceeding capacity",
+            "57006a4 scheduler rejects regressive pending requests before changing authoritative observation state",
+            "Native ABI keeps unrelated Current observation and committed event history while changed vessels reach Current revision 2",
+            "0ac90ef corrects restored dependency generation priority after CI exposed a P04.01 rollback failure on c14b2e8"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Task-scoped Research equilibrium fairness, pending replacement and monotone requests with actual multi-vessel IPhreeqc and Unity live Lab scene. O06 Failed/Stale UI, kinetic/multiphase model, controlled maximum-flow and full Player/device journeys remain Partial or unsupported.",
+          "blocker": null
+        },
+        {
+          "id": "P05.03",
+          "title": "Stall and holds",
+          "decision": "2s wall diagnostic, no fake Continue on blocked engine, no detached used context/unbounded replacement workers; head/UI/save stay responsive.",
+          "acceptance": "Blocked injection tests orchestration; real engine convergence/shutdown evidence separately; H01-H05.",
+          "files": [
+            "native/core/src/solver_worker.cpp",
+            "Runtime/UI/HoldPanel.cs",
+            "Tests/PlayMode/HoldJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P05.02"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "0ac90ef19bc8aaf7b545e075717508ac67dcac68",
+          "evidence": [
+            "docs/evidence/p05-03-stall-holds.md",
+            "docs/evidence/artifact-manifest-p05-03.json",
+            "P05_03 blocked worker stop accounting red then green, two-second controlled delay and Unity Lab Compute hold save",
+            "Native 92/92, CTest 1/1, Unity PlayMode 23/23, EditMode 22/22, WindowsDesktop build Success"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "0ac90ef product snapshot exposes solverWallStalled and plv_step enters Compute hold after two-second worker stall",
+            "0ac90ef HoldPanel and Desktop HUD gate Continue on Native recoveryReady; Unity Lab saves with unchanged material/event under Compute hold",
+            "0ac90ef worker stop discards pending accounting but retains blocked active context; no detached replacement"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Task-scoped Research hold/worker software only. Controlled blocked callback is not actual IPhreeqc nonconvergence/cancellation; H03 physical alignment, full standalone Player hold journey and long target workload remain Partial or EvidenceMissing.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P06",
+      "title": "Unity authority integration",
+      "arabicTitle": "ربط Unity بالمحرك",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P06.01",
+          "title": "Scene lifecycle and view models",
+          "decision": "One active gameplay adapter and session; domain views consume snapshots/events; unload/dispose cleanly; actual package/plugin failure prevents live lab.",
+          "acceptance": "U01/U02 real scenes/player error path; no placeholder result, orphan session or duplicate subscriptions.",
+          "files": [
+            "Runtime/Core/CoreDriver.cs",
+            "Runtime/Core/CoreSession.cs",
+            "Runtime/Lab/LabViewModel.cs [new]",
+            "Scenes/Boot.unity",
+            "Scenes/Lab.unity"
+          ],
+          "dependencies": [
+            "P05.03"
+          ],
+          "status": "VerifiedLocal",
+          "codeCommit": "7abf0af2d763dfd74d98a37379a858e390aa8a37",
+          "evidence": [
+            "docs/evidence/p06-01-scene-lifecycle.md",
+            "docs/evidence/artifact-manifest-p06-01.json",
+            "Unity PlayMode 26/26; EditMode 22/22; Native CTest 1/1",
+            "WindowsDesktop, WindowsVR and AndroidVR fresh Player builds Success",
+            "Actual WindowsDesktop Player missing-minteq Boot-to-Lab error screenshot and log"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p06-01-scene-lifecycle.md",
+            "docs/evidence/artifact-manifest-p06-01.json",
+            "Unity PlayMode 26/26; EditMode 22/22; Native CTest 1/1",
+            "WindowsDesktop, WindowsVR and AndroidVR fresh Player builds Success",
+            "Actual WindowsDesktop Player missing-minteq Boot-to-Lab error screenshot and log"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "One live Unity Lab adapter/session and immutable native-backed view after reactivation; actual Windows Player missing scientific package fails closed with visible error. Full normal Player student journey, separate plugin absence and device testing remain open in the 95 catalog.",
+          "blocker": null
+        },
+        {
+          "id": "P06.02",
+          "title": "Shared panel state machine",
+          "decision": "Implement ScreenId/PanelState and immutable view models defined in03-UI-UX; one coordinator routes input and native hold/locale/save state to both presentation roots.",
+          "acceptance": "Boot/Setup/Lab/Inspect/Measure/Pause/Hold/Review state transitions action-driven; no duplicated chemistry or private IMGUI flow.",
+          "files": [
+            "Runtime/UI/LabPanelController.cs [new]",
+            "Runtime/UI/ScreenRouter.cs [new]",
+            "Runtime/Session/SessionController.cs",
+            "Tests/PlayMode/PanelStateTests.cs [new]"
+          ],
+          "dependencies": [
+            "P06.01"
+          ],
+          "status": "Open",
+          "codeCommit": "ab7e9355bf9b2e6da2519f1a71087885d4699d7d",
+          "evidence": [
+            "docs/evidence/p06-02-progress.md",
+            "docs/evidence/artifact-manifest-p06-02.json",
+            "docs/evidence/p06-02-boot-xr-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-boot-xr.json",
+            "Native CTest 1/1; Unity PlayMode 31/31; EditMode 22/22",
+            "WindowsDesktop, WindowsVR and AndroidVR builds Success at 614097b",
+            "docs/evidence/p06-02-spatial-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-spatial.json",
+            "Unity PlayMode 32/32, including camera pixel and readable orientation; EditMode/build evidence in spatial manifest",
+            "docs/evidence/p06-02-review-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-review.json",
+            "Unity PlayMode 33/33; EditMode 22/22; Native CTest 1/1; three fresh builds Success at 8bba490",
+            "docs/evidence/p06-02-setup-navigation-progress.md",
+            "docs/evidence/development-progress-2026-10-15.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "docs/evidence/p06-02-progress.md",
+            "docs/evidence/artifact-manifest-p06-02.json",
+            "docs/evidence/p06-02-boot-xr-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-boot-xr.json",
+            "docs/evidence/p06-02-spatial-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-spatial.json",
+            "docs/evidence/p06-02-review-progress.md",
+            "docs/evidence/artifact-manifest-p06-02-review.json",
+            "docs/evidence/p06-02-setup-navigation-progress.md",
+            "P06.02 paged VR Setup/Settings UI source: Unity test authored, XR tracked-ray/Player not executed",
+            "2026-10-15 P06.02 XR stock-concentration source slice: original XR panel hardcoded 0.1mol/L while Desktop supported 0.01/0.05/0.10 matrix; regression headless RED e4c694af missing ResearchConcentrationSelection, production GREEN b9563914 adds supported-index selector and water=0, passes concentration in shared LabPanelController.Request Optional<double> for PrepareResearchStock/PrepareReserveStock; C# panel stub tests actual forwarded 0.05mol/L and reserved-water=0, external Native remains authoritative. Unity real-Native PlayMode P06_02_XrSharedPanelSelectionPreparesExactNativeMolarityAndWaterReserve authored bca5bc84 NOT_RUN. Green headless at b956391 in push 38800663203; Windows/Ubuntu native CI pending at ledger write. Full P06.02 Open/NotReviewed.",
+            "2026-10-16 P06.02 transient Native Hold/Settings state routing safety: headless RED 9818e55 runtime assertion 'Resolved Native Hold was resurrected by Settings Back', intermediate attempt 05f85ee exposed test's unsupported Lab→Settings path; valid Pause→Settings interrupted by native Hold RED c7e199 runtime assertion 'lost underlying Native Pause'. Final ScreenRouter 467477a captures beforeInterruptedSettings on hold entry and resolves destination based on actual Native held/paused state without Save/Continue/Pause side effects; headless GREEN push 38816878655. Native Windows/Ubuntu pending at documentation authoring; PlayMode/Editor XR NOT_RUN.",
+            "2026-10-16 Desktop saved-session load: headless RED d0c3ebe (run 38829295610, assertion 'Desktop Pause has no explicit saved-session Load action'), GREEN 182b7b6 (push 38829380659 and PR 38829386957, 3/3 jobs each SUCCESS). Native session-load admission now permits Desktop from Pause/Hold without a VR dock, preserves the VR dock prerequisite and no implicit Save/receipt/revision; old unguarded Desktop live Lab GUI ContinueFrom shortcut removed at 186c9ae; actual Unity PlayMode P06_02_DesktopPauseLoadSavedSessionIsExplicitAndNativeBacked source authored, NOT_RUN. P06.02 remains Open/NotReviewed.",
+            "2026-10-16 P06.02 + P11.01 Pause/Hold saved-session backup admission: source RED 551a2cb (missing SaveService.HasSaveCandidate in headless actual service) push 38832226727; GREEN c7b0b05 allows a confirmed .bak alone to advertise Load and delegates real validation/import to SaveService.Load. Shared Desktop/VR Pause/Hold safety remains, Desktop unguarded Lab load absent. Unity PlayMode existing Desktop Load test extended to missing primary/valid backup; NOT_RUN. GitHub push 38832333024 and PR 38832338221 all three jobs SUCCESS. P06.02 remains Open.",
+            "2026-10-20 P06.02 Native authority replacement: RED 98d9ec6, Native PR 39399647502 headless rejected stale Settings/inspection/Saved state; GREEN 2e316f2 source resets old Native binding, old events detached, same-branch/same-sequence resets, new Native Pause/Hold honored. Unity fake-null destroyed CoreDriver fix d7bc30d, authored PlayMode MonoBehaviour source b11d626, Unity NOT_RUN.",
+            "2026-10-20 P06.02 direct Live Lab bypass admission: RED 8ef2678 Native PR 39400373586 headless failed 'Direct router Show(Lab) displayed live tools without Native Continue'; GREEN 2f7271e disallows direct Lab while Native paused and sends Settings Back to Pause on late pause, real Unity scene PlayMode test authored 01c55b7 NOT_RUN. Updated mutation expected earlier fail-closed Review guard at 24f7e6; PR Native 39401131571 panel-routing SUCCESS (301 source-linked assertions + six mutation RED/restore GREEN), Windows/Ubuntu jobs pending when recorded.",
+            "2026-10-20 P06.02 asynchronous Native Pause snapshot routing: test-first initial  bf2f87d compiled failed due preexisting interruptedRouter local; corrected RED 8fbea9a headless PR 39402118903 failed expected 'Native Pause update left an apparently live Lab screen' (exit 134). GREEN 828ef12 source reconciles Lab->Native Hold/Pause before publishing PanelState on LabViewChanged, and after Hold release; real Native PlayMode source extended 305c52c, NOT_RUN. Source-linked exact-SHA Native/isolated CI pending at evidence writing.",
+            "2026-10-21 same-CoreDriver NativeSessionRestored presentation consistency: RED 1a28c5b Native PR 39544692436 panel-routing failed 'NativeSessionRestored reused a stale Settings, Save, or selected vessel' exit 134; GREEN e765e3a subscribes and detaches the real CoreDriver.NativeSessionRestored signal, resets selected vessel/history/saved markers to Unsaved, immediately displays Hold before imported snapshot, no implicit scientific Continue. Exact GREEN PR 39544907113 C# 313 assertions and 6 mutation RED/restore GREEN, Native Ubuntu/Windows SUCCESS; disposable Supabase PR 39544907092 SUCCESS. Real CoreSession import Unity PlayMode source 6d28a75 authored, NOT_RUN. Task remains Open.",
+            "2026-10-21 P06.02 disabled Unity panel Native restore epoch: RED 09aaf888 headless PR 39545814205 expected 'Reenabled router missed Native restoration while inactive'; GREEN c3ef4c4 adds local CoreDriver.NativeRestorationEpoch on accepted RestartCheckpoint/ReplaceSession and ScreenRouter observed epoch/Refresh reconciliation. Native PR 39545974966 panel 317 source-linked assertions and six mutation RED/restore GREEN PASS; Native Windows/Ubuntu and disposable Supabase conclusions to be checked at exact source SHA. Unity enabled/disabled Lab scene PlayMode test authored 6a516dc, NOT_RUN.",
+            "2026-10-21 P06.02 recorded-only Review/Compare invalidation: RED 317ffad Native PR 39565119916 notebook-contract C# CS2001 missing production NativeReviewAuthorityCache source, GREEN bc15136 adds the source-linked authority+NativeRestorationEpoch cache and wires SessionController.Configure/OnEnable/OnDisable/OnDestroy/NativeSessionRestored with lazy getter checks. Exact functional Native PR 39565346752 panel 317 P06.02 + 39 Notebook assertions and 6 mutation RED/restore GREEN; disposable Supabase PR 39565346758 SUCCESS; Windows/Ubuntu CI must be inspected independently. Real Native Unity checkpoint+disabled controller PlayMode tests authored 25453ae, NOT_RUN.",
+            "2026-10-21 P06.02 recorded comparison baseline change: RED 1842083 Native PR 39566117712 source-linked notebook contract failed missing InvalidateComparison C# method; GREEN ebdab87 invalidates only Comparison on confirmed successful Save or changed saveName context in SessionController, preserving current Native RecordedReview and no epoch change. Node/Unity production SaveService logic not modified; headless notebook CI at functional SHA observed test step success, matrix conclusions separately verified. Unity Native PlayMode baseline replacement source 1674b7e authored, NOT_RUN.",
+            "2026-10-21 P06.02 recovery-ready stale at NativeSessionRestored-before-PublishSnapshot: RED 523d8a9 Native PR 39566771264 failed 'Unpublished replacement Native snapshot inherited an old Continue action'; GREEN b2333b6 introduces conservative pending snapshot gate in ScreenRouter, clears only on actual LabViewChanged after replacement snapshot; Native PR 39567163158 P06.02 321 assertions, Notebook 41, all six mutation RED/restore GREEN passed, full Windows/Ubuntu/postgres CI separately checked. Unity real Native pre-publish event test source a2e76ac, NOT_RUN.",
+            "2026-10-21 P06.02 reactivated panel Native publication epoch: RED 77da259 native PR 39568183125 failed intended inactive-panel published recovery assertion; GREEN 72a895a adds process-local CoreDriver.NativePublishedRestorationEpoch committed only after authoritative snapshot read, and router uses it on reactivation/Configure to distinguish pending from published. Secondary RED 9d67fc6 PR 39568772571 caught panel that received restore event then went inactive during publication; GREEN ab7e935 reconciles awaiting flag during Refresh after published epoch matches. Native PR 39568908145 panel 326 assertions + 41 Notebook + six mutation RED/restore GREEN PASS; disposable Supabase PR 39568908175 SUCCESS; Windows/Ubuntu full exact SHA pending at evidence writing. Unity PlayMode source acee04e and a1c092f authored, NOT_RUN."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Partial: native-backed routing and recorded Review; new Boot/Settings posture/hand/bench-view/text/caption/motion/contrast/audio preference state and presentation wiring, paused-Review native Continue guard, Back from Settings and dynamic Desktop HUD bounds. 39 headless C# routing assertions and an intentionally mutated Review-return RED/GREEN at 37440f1 verify source logic against test adapters only. New Unity PlayMode tests authored but never executed at this SHA; no Unity compile/render, Desktop Player or injected tracked-ray action proof. Full VR Settings parity, real UI input journeys, scene references, physical geometry/reach, English-only UI completeness and P06.02 acceptance remain open.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P07",
+      "title": "Operational VR and two-hand interaction",
+      "arabicTitle": "تشغيل VR كامل وتفاعل اليدين",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P07.01",
+          "title": "Spatial Boot/setup/runtime gating",
+          "decision": "Use world-space uGUI/TMP XRI3.3.2 UI, tracked raycaster/EventSystem and explicit mode XR initialization; Android enters VR setup; PC runtime failure returns safely.",
+          "acceptance": "Coldstart with controllers can choose/start/setup lab; no-headset PC availability honest; UI press works without mouse.",
+          "files": [
+            "Runtime/UI/BootMenu.cs",
+            "Runtime/Input/ModeCoordinator.cs",
+            "Runtime/Input/XRSettingsController.cs [new]",
+            "Editor/BuildPipelineEntry.cs"
+          ],
+          "dependencies": [
+            "P08.02"
+          ],
+          "status": "Open",
+          "codeCommit": "8c1b55de9c10b0ae9fd744fed8fb58b6d691d61a",
+          "evidence": [
+            "docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P07.01 real OpenXR Boot admission, Android VR default Setup, world-space Canvas + controller rays, XRUIInputModule; generated scene and tracked trigger NOT_RUN in Unity",
+            "P06.02 new Boot/VR runtime audio listener exclusivity; headless shared-panel contract verifies no implicit Save/Review paused resume, no Unity Player run at this SHA"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P07.02",
+          "title": "Body, valve and receiver ownership",
+          "decision": "Separate direct grip body and captured stopcock actuation, mounted body lock, independent receiver hand and UI trigger consumption; no initial liquid-tool throw.",
+          "acceptance": "X01/X02/X05 actual input actions through scene, two hands, UI click while near valve, mount/release; not manual method calls alone.",
+          "files": [
+            "Runtime/Input/XRInputAdapter.cs",
+            "Runtime/Tools/ValveActuator.cs",
+            "Runtime/Tools/ToolMount.cs [new]",
+            "Prefabs",
+            "Tests/PlayMode/XRInteractionTests.cs [new]"
+          ],
+          "dependencies": [
+            "P07.01"
+          ],
+          "status": "Open",
+          "codeCommit": "a93e40b57eb6181e3177da7e5d48148387f61f7f",
+          "evidence": [
+            "docs/evidence/p07-dock-and-tracking-progress.md",
+            "docs/evidence/p07-boot-spatial-and-input-ownership-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P07.02 native-safe visual XR tool dock and single-shot shared ReleaseTool action; direct XR simulation and mounting geometry remain NOT_RUN",
+            "P07.02 independent XR receiver grab, no throw, direct tracked grip plus non-UI trigger valve gate; mounting, dual-hand XR action and scene verification still pending",
+            "P07.02 authored real XRGrabInteractable and parked kinematic Rigidbody on separate research pipette and bottle prefab generation (a93e40b), with enabled child collider, distinct tool type and no simulated burette valve; authored NUnit P07_02_ResearchToolPrefabsAllowPhysicalGripWithoutBecomingBuretteValves. Native/XR grab ownership and real headset interactions remain NOT_RUN/Open."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P07.03",
+          "title": "Comfort and recovery",
+          "decision": "Seated/standing left/right/bench positioning height0.65-1.05m, reach tray, snap turn30deg if needed; explicit parked tool/dock/regrab after hold/recenter/load.",
+          "acceptance": "X03/X04/H02/H03 simulated XR full journey; calibrated instruments never resized; production excludes simulator.",
+          "files": [
+            "Runtime/UI/SetupPanel.cs [new]",
+            "Runtime/Input/RecoveryAlignment.cs [new]",
+            "Tests/PlayMode/XRJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P07.02"
+          ],
+          "status": "Open",
+          "codeCommit": "2cac163d5826dcaaab0679c565da3b259f67a1c0",
+          "evidence": [
+            "docs/evidence/p07-03-import-and-park-progress.md",
+            "docs/evidence/p07-03-recenter-progress.md",
+            "docs/evidence/p07-dock-and-tracking-progress.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P07.03 Native-backed user-driven Load on VR Pause/Hold requires saved file and docked tool, followed by SessionLoad Native hold; headless RED/GREEN, Unity Save/Load test NOT_RUN",
+            "P07.03 post-load mode isolation and docked-tool admission, physical 0.12m park gate and shared VR ParkTool action; Unity tests NOT_RUN",
+            "P07.03 recenter and 30 degree snap turn require VR Native Pause/Hold, tracked head and docked tool; Unity render/geometry/Player NOT_RUN",
+            "P07.03 XRTrackingAdmission requires head and both XR controllers tracked for native input recovery; headset/XR simulator, recenter and comfort remain NOT_RUN",
+            "2026-10-16 P07.03 source-only dock alignment increment 2cac163d: ToolMount.TryMount now refuses selected/gripped tools, >12cm or >25° angular mismatch and non-finite pose calculations via pure ToolMountAdmission before mutating isKinematic, mount transform or XRGrab interactability; initial configured dock pose unchanged. Headless RED 159242c and GREEN C# checks; Unity EditMode test for actual ToolMount authored NOT_RUN. Complete two-hand Park/Release/Load/Recovery scene/device still Open."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P08",
+      "title": "Premium laboratory and spatial UI",
+      "arabicTitle": "المعمل Premium والواجهات المكانية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P08.01",
+          "title": "Persistent premium lab shell",
+          "decision": "Author floor/walls/ceiling/task lights/cabinets/bench from03/04 design decisions, serialized prefabs/materials/profiles; replace NativeLabVisuals runtime decoration with inspectable assets.",
+          "acceptance": "Real rendered bench at720p/1080p and simulated VR eye; no brown void, cubes-only room, apparatus occlusion or baked concept background.",
+          "files": [
+            "Editor/BuildLabAssets.cs [new]",
+            "Runtime/Tools/InstrumentMeshBuilder.cs [new]",
+            "Prefabs/Environment",
+            "Scenes/Lab.unity"
+          ],
+          "dependencies": [
+            "P06.02"
+          ],
+          "status": "Open",
+          "codeCommit": "98dfdd8c62190f7a72fd39c6ab7135c13f37949c",
+          "evidence": [
+            "docs/evidence/development-progress-2026-10-15.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P08.01 editor generator for reusable room/bench prefabs, materials and task lights; generated scene render not executed"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.02",
+          "title": "Readable scientific apparatus",
+          "decision": "Analytic profile meshes for stand/clamp/burette/tip/stopcock/pipette/flask;0-50ml numbered downward and correct meniscus, separate measuring vs capacity.",
+          "acceptance": "V01/V02/V05 model-driven levels, full/half/empty/tilted asset probes plus rendered close-ups; clear stocks clear; no numeric reading cheats.",
+          "files": [
+            "Prefabs/Tools",
+            "Prefabs/Vessels",
+            "Runtime/Tools/LiquidPresenter.cs",
+            "Runtime/Tools/MeniscusPresenter.cs [new]",
+            "Materials",
+            "Shaders"
+          ],
+          "dependencies": [
+            "P08.01"
+          ],
+          "status": "Open",
+          "codeCommit": "a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07",
+          "evidence": [
+            "docs/evidence/development-progress-2026-10-15.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P08.02 burette 0–50 ml scale, volume-derived meniscus and serialized mesh/ink tests authored; broader apparatus and Unity render pending; follow-up SetProfile binds live Native capacity at a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07"
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.03",
+          "title": "Shared premium UI system and first-bay screens",
+          "decision": "Build shared tokens, SDF/type/icon/button/card/segmented/list/dialog/status/detail primitives and all screens in03; world-space VR + responsive Desktop.",
+          "acceptance": "Home/Setup/Lab/Prepare/Inspect/Measure/Pause/Hold/Settings are operational for the first bay. Other screen components have truthful unavailable states and remain functionally open under P11/P12/P17/P23; no placeholder counts as their completion.",
+          "files": [
+            "Runtime/UI",
+            "Prefabs/UI",
+            "Content/Localization",
+            "Tests/PlayMode/PanelStateTests.cs [new]"
+          ],
+          "dependencies": [
+            "P03.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P08.04",
+          "title": "Visible operating lab milestone",
+          "decision": "Record actual action-driven simulated XR plus Desktop Boot→Setup→stock/prep→mount/place→open/close→receiver measurement→hold/recovery→Save/Load.",
+          "acceptance": "M1 evidence with recording/screenshots + event/material reconciliation. Direct SubmitOrdered tests cannot substitute for interaction. Physical V03 remains separate.",
+          "files": [
+            "Tests/PlayMode/OperationalLabJourneyTests.cs [new]",
+            "artifacts/screenshots",
+            "docs/evidence/milestones/M1.json"
+          ],
+          "dependencies": [
+            "P08.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P09",
+      "title": "Indicators, mixing and support states",
+      "arabicTitle": "المؤشرات والخلط وحدود النموذج",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P09.01",
+          "title": "Truthful observables",
+          "decision": "Implement separate pH/color/mixing providers and validity/freshness/maturity; optical/mixing capabilities stay Unsupported/Approximate until independently sourced.",
+          "acceptance": "I01-I03 validpH does not authorize certified color/mixing; no last-added-color override or swirl-as-science.",
+          "files": [
+            "native/solver/src/indicator_model.cpp",
+            "native/solver/src/mixing_model.cpp",
+            "Runtime/Science/ScientificObservationPresenter.cs [new]"
+          ],
+          "dependencies": [
+            "P08.04"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P09.02",
+          "title": "Student-facing model boundaries",
+          "decision": "Contextual capability card explains unsupported phenomenon and supported next actions; errors/compute holds different from unavailable models.",
+          "acceptance": "J03 panel-state evidence for Failed/Pending/Stale/Unsupported; no auto-correct overshoot, fabricated endpoint or system fault penalty.",
+          "files": [
+            "Runtime/UI/InspectPanel.cs [new]",
+            "Runtime/UI/HoldPanel.cs",
+            "Content/Localization"
+          ],
+          "dependencies": [
+            "P09.01"
+          ],
+          "status": "Open",
+          "codeCommit": "44bda21d803fdef087ed8f4a0958d78b63751836",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 bounded source P09.02: headless RED 9f1bddb2 compile failure (ScientificReadoutPolicy missing) in CI push 38830901208; functional 8b3206f adds pure real production ScientificReadoutPolicy.Resolve and Describe; CoreDriver rejects nonfinite Current Ready pH as Failed, XR Inspect/Measure shows explicit Supported/Failed/Pending/Stale/Unsupported and masks non-current numeric readout. Headless compilation links actual MeasurementView, test harness compiler CS0649 warning suppression isolated to headless project at 6424148. Headless panel-routing SUCCESS at push 38831095562; complete Windows/Ubuntu Native + Unity Editor/Player/XR status separate; new Unity PlayMode assertions authored NOT_RUN.",
+            "2026-10-16 Native-to-Unity absent pH numeric contract RED a73a486: Ubuntu Native CTest fail 102/103 (two missing valueAvailable assertions), headless compiler no Resolve overload, push run 38831808106. GREEN b987713 adds Native observation valueAvailable true only with represented finite numeric; Unity CoreDriver requires this flag before Current, recorded-only Review requires it before DisplayValue; Native snapshot Current positive test and real Unity EditMode regression source authored. Windows/Ubuntu/headless push run 38831951505 and PR 38831956251 SUCCESS. No Unity Editor/Player/XR executed at these commits, P09.02 Open.",
+            "2026-10-16 stale recorded pH regression RED 2f97d1e at Native-linked headless notebook contract push 38862918814 'Recorded-only Review showed stale Native pH as a current number'. GREEN 44bda21 gates RecordedSessionReview.DisplayValue on Supported + Ready + Current + valueAvailable + finite; CI push 38863039090 and PR 38863044223 3/3 jobs SUCCESS. Unity EditMode regression source authored, NOT_RUN. Partial scientific presentation truth; P09.02 Open."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Partial P09.02 Native scientific observation truth: explicit finite-value presence emitted by real Native ABI and required by Unity current pH/recorded Review; no missing pH projected as 0.00 by JsonUtility. Earlier freshness/support status gating remains. Full state UX, model support and actual Unity UI/Player tests Open.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P10",
+      "title": "Desktop, Arabic and learning journeys",
+      "arabicTitle": "Desktop والعربية وتجربة التعلم",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P10.01",
+          "title": "Exact Desktop interaction and Esc",
+          "decision": "Implement mouse select/drag plane, held wheel height/empty wheel zoom, Q/E tool tilt, right-drag camera, exclusive valve control and valid Place; Esc is real Pause.",
+          "acceptance": "D01-D06 camera/UI focus changes preserve lab-world pose/material; injectedEsc and realPlayer control journey; no stuck disabled adapter.",
+          "files": [
+            "Runtime/Input/DesktopInputAdapter.cs",
+            "Runtime/Input/DesktopCameraController.cs",
+            "Runtime/UI/DesktopToolbar.cs [new]",
+            "Tests/PlayMode/DesktopJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P09.02"
+          ],
+          "status": "Open",
+          "codeCommit": "92766b0255b0e5d5bd611a0f7f9340f2ded04654",
+          "evidence": [
+            "docs/evidence/development-progress-2026-10-15.md"
+          ],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "P10.01 Desktop Escape input maps to shared Native Pause action; injected InputSystem Unity test authored, unexecuted",
+            "2026-10-16 source increment P10.01 (functional 92766b0) test-first RED 311c315 DesktopWheelRouting missing; GREEN 48af76b9 headless+Native push/PR SUCCESS. Real Desktop wheel is exclusive to held-tool height (±0.02m/notch) vs empty-handed Camera FOV zoom (35°..85°), GUI focus blocks both, Q/E tilts held tool rather than moving camera, Esc wins over F pick and Native Pause/Hold blocks manipulation. RED 82cde77 missing DesktopPlacementAdmission; GREEN 7f04888 real Physics.RaycastAll nearest non-self collider, only bench surface within 0.2m/upright research bounds, no arbitrary dropped Rigidbody in air or over receiver (push 38821797287 SUCCESS). RED ccde742 missing DesktopPointerRouting; GREEN 1a8f72b actual shift-left world plane drag with cursor offset preserving first pose, exclusive held-valve left-drag and release=closed (push 38822097420 SUCCESS). Generated Desktop Camera now explicitly binds existing DesktopInputAdapter AFTER parenting and scene-authored initial 30° pitch; first right-drag retains pitch. In-game controls hint lists exact gestures. Unity EditMode DesktopControlPolicyTests and real authored scene test P10_01_GeneratedDesktopCameraSharesPhysicalToolOwnershipWithInputAdapter NOT_RUN. Source does not meet D01-D06 Unity/Player/physical evidence and P09.02 dependency not accepted."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P10.02",
+          "title": "Orientation/accessibility/settings",
+          "decision": "Optional short water practice then mount/scale/pause, Skip/replay, exact control help/remap/toggle hold, captions/status icons, text scale and audio settings.",
+          "acceptance": "J01/J02/J04 action-driven setup/replay/seated/left-handed; options change actual runtime behavior and persist.",
+          "files": [
+            "Runtime/UI/OrientationFlow.cs [new]",
+            "Runtime/UI/SettingsPanel.cs [new]",
+            "Runtime/UI/AccessibleStatus.cs [new]"
+          ],
+          "dependencies": [
+            "P10.01"
+          ],
+          "status": "Open",
+          "codeCommit": "4fc012d0218dbb9418258fa0b79b3e5f2cda5e69",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 P10.02 ergonomic preferences local persistence + live audio gain code-first slice: RED dddaa5f1 (missing SetupPreferencesCodec; push 38823240529 expected CS2001), GREEN 0d283d9 (push 38823403731 SUCCESS Windows/Ubuntu Native + .NET headless). Validated versioned culture-invariant strict codec for posture/hand/bench height/text scale/captions/reduced motion/high contrast/audio volume, rejects NaN/injected fields/unknown schema; Unity BootMenu now calls SetupPreferencesPersistence.Initialize backed by PlayerPrefs and Settings changes from same immutable SetupPreferencesSelection write local preferences only, no chemistry/save. RED c271307f (missing AudioPreferenceRouting; push 38823565693 expected CS2001), GREEN 4fc012d production AudioPreferencesOutput attached to Boot and LabRoot applies AudioListener.volume live from immutable choices, headless + Unity NUnit source authored. Final functional 4fc012d push 38823690022 and PR 38823695265 headless succeeded, Native jobs pending at ledger update; Unity Editor/PlayMode/Player/XR NOT_RUN, actual PlayerPrefs relaunch/audio mixer validation outstanding. Full P10.02 orientation/water practice/replay/control-remap and accessibility/locale acceptance still OPEN."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P10.03",
+          "title": "Arabic and English production",
+          "decision": "Pinned licensed Arabic-capable font/SDF plus tested shaping/bidi; use supplied copy starter, fill every real UI key; isolate formulas/units LTR.",
+          "acceptance": "J05 real Arabic/mixedNaOH0.1mol/L and negatives/decimals, RTLlayout, truncation/textscale/locale switch preserving session; no string reversal.",
+          "files": [
+            "Runtime/UI/LocalizationService.cs",
+            "Runtime/UI/LocalizedLabel.cs",
+            "Assets/ThirdParty/RTLTMPro",
+            "Content/Localization",
+            "Tests/PlayMode/LocalizationTests.cs [new]"
+          ],
+          "dependencies": [
+            "P10.02"
+          ],
+          "status": "Open",
+          "codeCommit": "24ac6ca8b835b41ff52dfa4ac7673511f931f555",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 DIRECT USER PRODUCT OVERRIDE: English-only PharmaLabVR application, no Arabic language choices/assets/fonts/RTL shaping or runtime locale persistence; previous P10.03 Arabic/English acceptance superseded. At code SHA 18c06baa restored all product/UI files to previously green P10.02 tree 7edf9b95, then removed RTLTMPro runtime+editor package, NotoSansArabic font/license, ar.json, LocalizedLabel/RTL-only code and RTLTMPro asmdef reference. Kept only Content/Localization/en.json and strictly en-only validated LocalizationService with atomic parsing; headless .NET tests reject second language and malformed English JSON. Unity/Player/XR English-only screenshot and no-broken-serialized-reference verification remain NOT_RUN. P10.03 remains Open/NotReviewed, no planner acceptance.",
+            "2026-10-16 source follow-on 24ac6ca8: English-only LocalizationService rejects all Arabic-script codepoint blocks (including Unicode escaped input) atomically. Production headless Program regression validates invalid en-table script rejection and preserves prior good English copy, in addition to en-only locale and removed Arabic/RTL assets checks. Unity Editor/Player/XR NOT_RUN."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P11",
+      "title": "Durable sessions, notebook and Review",
+      "arabicTitle": "الجلسات الدائمة والملاحظات والمراجعة",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P11.01",
+          "title": "Durable journal/index/checkpoints",
+          "decision": "Ordered checksummed journal, atomic flush checkpoints earlier dirty30simulation/30wall sec; disk identity history +<=4096 working receipts; truthful save completion.",
+          "acceptance": "R01-R05 interruptedwrite/truncation/fullstorage/pauseddirtyflush/importmismatch/rejectedidentity survive actual disk fault tests.",
+          "files": [
+            "native/core/src/journal.cpp [new or complete]",
+            "native/core/src/identity_index.cpp",
+            "native/core/src/checkpoint.cpp",
+            "Runtime/Session/SaveService.cs"
+          ],
+          "dependencies": [
+            "P10.03"
+          ],
+          "status": "Open",
+          "codeCommit": "9786c072d069587859ec1a40004769ea57de1011",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 P11.01 bounded filesystem slice: actual production SaveService now rejects empty/>16 MiB serialized UTF-8 exports before creating/replacing disk files, aligning Save with existing LoadOne limit. CI headless RED 1f41c2c push 38829873920 ('Oversized save was reported successful'), corrective source GREEN 8b22c59 panel-routing SUCCESS (push 38829945711); full Windows/Ubuntu/native push+PR conclusions pending at note. Headless disk tests cover backup recovery, unsafe filename, oversize preservation and no leftover temp. This is not Native journal/checkpoint/disk-full/Unity acceptance.",
+            "2026-10-16 atomic-replacement disk fault: headless RED 184b980 push 38830618144 'Failed atomic replacement left an uncommitted journal temporary file' from actual SaveService; functional fix cdf0410 catches failed write/flush/replace and removes uncommitted .tmp without masking original IOException, protecting prior confirmed checkpoint. Headless green push 38830692265 panel-routing SUCCESS, full matrix separately pending at ledger write. This is not tested power-loss/Native journal or a completed P11.01.",
+            "2026-10-16 recovered backup-only SaveService: RED 551a2cb headless CI push 38832226727, missing candidate method; GREEN c7b0b05 SaveService.HasSaveCandidate and SessionController Pause/Hold/GUI admission while actual Native import checks remain delegated to existing Load. Headless Native Windows/Ubuntu push 38832333024, PR 38832338221 SUCCESS. Real Unity PlayMode source authored but NOT_RUN; disk-journal/checkpoint R01–R05 still Open.",
+            "2026-10-16 strict Native saved-byte admission: RED 41dd54d push 38865238229 actual SaveService headless failure 'Invalid UTF-8 Native save was accepted rather than recovered from backup'. GREEN ebfef7f SaveService.LoadOne reads using strict UTF8Encoding(false,true), triggering original recoverable read/confirmed backup rather than replacement-decoding corrupted identity. Tests source corrected backup-only fixture at c2151f2; headless green push 38865601352; full Native matrix/Unity NOT_RUN at ledger write. P11.01 still Open: Native durable disk journal/checkpoint/faults.",
+            "2026-10-16 Native on-disk journal source RED d0c6574 compile missing DurableJournal in Ubuntu Native push CI 38867200142. GREEN c3ca7e3 implements bounded single-writer durable WAL, CRC-checked ordered records, fsync/_commit, restart reads, torn-tail prefix repair and complete-record corruption refusal. Push 38867581980 all 3 jobs SUCCESS, PR 38867587035 separate status. Native source and tests only, not integrated into live ABI command/receipt checkpoint lifecycle.",
+            "2026-10-16 Native persisted receipt identity variant RED 666f8a5 Ubuntu native compiler no ReceiptIdentityIndex(cacheLimit,path), CI 38867980821. GREEN ced83f5 validates canonical branch/sequence/64-hex payload hash, scans bounded disk WAL on accept, survives process reconstruction even after cache eviction, limits disk-mode working cache to <=4096, fails closed on CRC corruption and repairs unconfirmed torn tail via DurableJournal; Ubuntu Native and headless in push 38868273059 SUCCESS, Windows pending at ledger write, PR 38868280086 pending. No actual ABI creation/submission integration, Native checkpoint generation, dirty30s/30wall policy, storage fault simulation or Unity run; P11.01 Open.",
+            "2026-10-16 Native R04 dirty checkpoint policy RED 9051937: Ubuntu Native Build failed 'DirtyCheckpointPolicy was not declared' in push 38868695259. GREEN a6e0096 adds Native pure DirtyCheckpointPolicy with monotonic wall-nanosecond and simulation-seconds first-dirty threshold and earlier-of-30s admission, pause and backward time discontinuity forcing needFlush, explicit acknowledgeFlush only for successful checkpoint. CI Native/headless push 38868969993, PR 38868977342 underway at entry. Pure policy NOT wired to actual checkpoint disk writes or ABI time boundaries; cannot claim journal checkpoint completion.",
+            "2026-10-16 P11.01 failed-flush acknowledgement boundary: RED cd58454 Native compile rejects policy.acknowledgeFlush(bool) in push 38869493757 Ubuntu Build (no matching function) while headless passes. GREEN 314f264 policy acknowledges only checkpointDurablyWritten=true and preserves dirty deadline + due retry on false, Native push CI 38869832555 and PR 38869840059 pending at this record. Pure policy still NOT wired to actual checkpoint writer, so actual disk-full or interrupted write behavior cannot be claimed.",
+            "2026-10-17 P11.01 real explicit Native ABI checkpoint increment. RED acada39: actual Ubuntu Native Build CI 38968452632 failed missing plv_checkpoint and DurableCheckpointStore; GREEN ef05640 Native two-slot versioned SHA256 checkpoint store, inactive-slot fsync/_commit then rename and POSIX directory fsync, checked previous-generation recovery, complete corruption rejection, explicit plv_checkpoint captures real exportJson including commandReceipts without chemistry mutation. Push CI 38968858274 and PR 38968863788 all 3 Windows/Ubuntu/headless jobs SUCCESS. Windows metadata power-loss durability NOT proven; single Native writer only.",
+            "2026-10-17 Native ABI recovery RED 45acc10: Ubuntu Native Build CI 38969257942 failed absent plv_import_checkpoint; GREEN a2e7bea checksummed read of latest valid generation followed by existing plv_import scientific package/receipt/strict schema admission into a separate context; fallback to prior intact recorded slot and failure with no handle on two damaged slots. CI 38969553032/38969559413 pending final status at evidence entry. Unity C# NativeMethods.Checkpoint + CoreSession.WriteNativeCheckpoint and real EditMode test source authored b70341c8, Unity NOT_RUN (CI 38969805288/38969810800 native/headless pending). Actual filesystem staging failure regression a110c5e intentionally creates a directory at inactive .tmp slot, demands failure and preservation of confirmed generation, CI 38969940961/38969946317 pending. No automatic 30s dirty checkpoint writer, end-to-end crash/replay, actual disk-full/power-loss or Unity device proof; P11.01 Open.",
+            "2026-10-17 critical P11.01 checkpoint import scientific package/admission safety: RED 76f2446 actual Ubuntu Native Test push 38970462532: a checksum-valid Native checkpoint declaring nonexistent minteq path returned PLV_OK and a live handle (0 == 3 failure, handle nonzero); RED 59435f6 native test disallows replacing a live Native context (push 38970623246 two test cases failed). GREEN b81b5f0 adds plv_import_checkpoint explicit pinned minteq SHA256 byte verification before invoking lazily initialized Native plv_import, checks no active Native context and returns PLV_BUSY instead of retiring it. Positive genuine pinned-database Native ABI test source 442252b. CI for b81b5f0 (38970862880/38970869168) and 442252b (38970987306/38970992443) pending at evidence writing. No Unity Editor/Player, Android/device or power-loss tests; P11.01 Open/NotReviewed.",
+            "2026-10-17 actual opt-in Native autosave integration: RED bc6b869 CI push 38979615044 Ubuntu Native Test failed missing checkpoint at 30s; GREEN 211597a uses configured absolute checkpointPath, first-dirty wall/sim policy, before-paused-step flush, post-tick checkpoint, failed staged write retention and owner-thread retry. Push 38979944474 and PR 38979948907 SUCCESS all three jobs. Unity CoreSession optional config and EditMode test source 8a5189b (CI push 38980387046 and PR 38980392611 SUCCESS, Unity NOT_RUN). RED 55253f5 missing plv_configure_checkpoint in CI push 38980569790; GREEN 0003452 enables imported-session Native writer, push 38980720307 and PR 38980723546 SUCCESS. Unity CoreDriver startup and session swap attachment authored 169f14c, CI 38980812332 and 38980816373 SUCCESS; actual Unity NOT_RUN. Cross-branch checkpoint overwrite RED 012120f push 38980975749 (foreign branch accepted), GREEN guard c7b5670/2ed69b1 compares Native branch and science path/identity across writes, initial config and attachment; Ubuntu+headless green 38981126890/38981132066, Windows pending at evidence checkpoint. Ruling: post-tick checkpoint failure may return error after committed simulation tick; harden ambiguity and add real Native fault regression before P11.01 acceptance. Full WAL-ABI command receipt atomicity and Unity device testing not complete.",
+            "2026-10-17 R01/R04 Native post-tick checkpoint commit truth: RED 54544b6 real Native Ubuntu CI push 38989173479 failed 4 assertions, plv_step returned 7 after simulation committed instead of PLV_OK and snapshot missed Storage Hold. GREEN 38b09e9 returns PLV_OK only for the already-committed tick, enters explicit Storage Hold with recoveryReady=false and neutralizes inputs, while failed pre-tick retry continues returning PLV_INTERNAL_ERROR without advancing simulation. Ubuntu native/headless push 38989373304 SUCCESS; Windows and PR pending at evidence entry. Real Unity EditMode source b87ed9a authored but Unity NOT_RUN. Additional Native test ad4f571 checks Continue fails during unresolved storage error, recoveryReady only after good flush, explicit Continue before progression; exact CI pending. Real power-loss and WAL command receipt atomicity remain Open.",
+            "2026-10-17 Native checkpoint receipt-replay/headless regression 4f95a51: tests restored Native checkpoint terminal command receipt idempotency, altered same-sequence identity rejection and next new sequence accepted after import; GitHub push 38991805609 / PR 38991808200 in progress at checkpoint.",
+            "2026-10-17 Unity CoreSession exposes independent ImportNativeCheckpoint with Native plv_import_checkpoint (checksum-backed), then secondary managed pinned-scientific-package verification and imported branch/next-sequence admission; candidate new handle disposed on validation errors, no active CoreDriver replacement. Implemented 3c63e1a, EditMode regression source 9786c07 authored NOT_RUN. Native and headless CI push 38991917553 / PR 38991920939 pending, full Unity Editor/Player/XR NOT_RUN."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Partial Native automatic two-slot verified checkpoint and Storage Hold source from prior SHAs plus 2026-10-17 Native checkpoint receipt idempotency regression and Unity CoreSession isolated pinned-science checkpoint import wrapper. Missing actual Unity test execution, material command WAL atomicity, final disk power-loss proof, full P11 acceptance.",
+          "blocker": null
+        },
+        {
+          "id": "P11.02",
+          "title": "Review and branches",
+          "decision": "Real Review event list with vessel/time/branch/revision/model/assistance; recorded vs recompute distinct, checkpoint fork preserves original; lab notebook notes reference events.",
+          "acceptance": "R06-R08 record/load/fork/review navigation; missing model offers recorded-only review; no empty scene or silent migration.",
+          "files": [
+            "Runtime/Session/ReviewController.cs [new]",
+            "Runtime/Session/NotebookService.cs [new]",
+            "Scenes/Review.unity",
+            "Tests/PlayMode/SessionJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P11.01"
+          ],
+          "status": "Open",
+          "codeCommit": "ebfef7fdbe9b7a1fa78d51444da1317530ecf341",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 bounded P11.02 code-first: RED test-only 88d8931 links production NotebookService path and fails headless when absent (push 38832765547); GREEN 8c5c3d2 adds UTF-8 max-1MiB checksummed line store for 512 notes, atomic replacement with prior confirmed backup, fail-closed corruption/unsafe edit, English-only note validation, branch/vessel/Native eventSequence/time provenance. HEADLESS .NET notebook tests and Native Windows/Ubuntu push 38832952576 + PR 38832957789 SUCCESS. Further routing RED 6471d31 headless compile missing Notebook actions; 1cd320b integrates actual CoreSession.BranchId, SessionController add/read, Desktop note entry, XR read-only note summary via Review, shared PanelAction/ScreenRouter, Unity PlayMode P11_02_DesktopNotebookRecordsNativeEventWithoutMaterialRevision source NOT_RUN. 6850255/f6b18f fix error preservation and actual decoded Arabic-script negative test. Headless panel-routing green at 1cd320b push 38833340015; final Windows/Ubuntu at f6b18f pending at evidence authoring. Local note file is NOT bundled into portable session export, no actual XR typed note entry, no event-list Review/notebook branch-fork UX or Unity/Player evidence; P11.02 Open.",
+            "2026-10-16 real Native recorded-only Review command receipt increment: TDD RED 2aa54ec headless absent CommandReceipts, functional 52f6b28 parses validated Native commandReceipts with branch/sequence/accepted/code and sorts canonical sequences without inventing times or chemistry; 5b3f615 corrects structured negative fixture. Headless+Native push 38837189584 and PR 38837193147 all jobs SUCCESS. Desktop Review lists last 8, XR displays latest command; real Unity EditMode P11_02_RecordedReviewHasOnlyValidatedNativeCommandReceipts authored NOT_RUN. Full material event timeline/Review navigation and branching remain Open.",
+            "2026-10-16 recorded-only Native backup: RED c6b67ee missing RecordedSessionReview.OpenRecoverable, GREEN a2389f6 forwards scientific package mismatch to verified primary-or-confirmed-backup recorded-only path; headless and Native push 38864964234 / PR 38864969515 3/3 SUCCESS. Recorded byte corruption RED 41dd54d, GREEN ebfef7f strict UTF8 recorded Review with InvalidDataException and no replacement chars; initial candidate had a headless fixture-ordering mistake, corrected at c2151f2 headless green push 38865601352 (native Windows/Ubuntu pending at ledger write). Unity EditMode P11_02_RecordedOnlyBackupReviewOpensWithoutScientificRecompute authored at 4356a72 NOT_RUN. No native transaction import or final Review flow acceptance."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Partial P11.02: session-bound recorded research note creation from real current Native branch/event revision; local checksummed note store with backup and provenance; Desktop write UI, XR Review read-only summary, headless tests. Missing portable Save/Load note bundling, structured event Review/fork, XR text entry, actual Unity and Player evidence. Open/NotReviewed.",
+          "blocker": null
+        },
+        {
+          "id": "P11.03",
+          "title": "Export and comparison foundation",
+          "decision": "Versioned CSV/JSON session/results/units/provenance and selected-run side-by-side compare; no export of transient current labels without actual dependencies.",
+          "acceptance": "Round-trip export schema and compare two known runs, missing/stale observables visibly unavailable; no hidden fabrication.",
+          "files": [
+            "Runtime/Session/SessionExportService.cs [new]",
+            "Runtime/UI/ComparisonPanel.cs [new]",
+            "Tests/EditMode/ExportTests.cs [new]"
+          ],
+          "dependencies": [
+            "P11.02"
+          ],
+          "status": "Open",
+          "codeCommit": "8e7941405abcaf2e87140bc7649cc8247127f93f",
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [
+            "2026-10-16 bounded P11.03 export-only .plvpack: source RED 283c764 CI 38835618652 absent production archive class; codec eecfc7f/b4fdfca native+notebook validated SHA256 framed archive roundtrip and corruption/foreign-branch/future-event rejection, push 38835970031 and PR 38835975327 all 3 jobs SUCCESS. UI route RED 97777da CI 38836029552 no ExportPortable enum; production 2516188 Desktop Pause/Notebook and XR Notebook export via shared controller; XR Unity test source 5dcca1e, NOT_RUN. Full Native CI current-source pending; no archive import, CSV, two-run compare or actual Unity evidence; P11.03 Open.",
+            "2026-10-16 truthful CSV source: RED test 90eb99b missing production SessionExportService; GREEN 8b2b306 versioned single CSV for Native observation status/model/database/material revision and real accepted/rejected command receipts, numerics only Supported+Current+Ready+valueAvailable+finite, atomically persisted. Push 38837554257, PR 38837559911 all jobs SUCCESS. Panel ExportCsv RED 049cae7 absent enum; functional c65f21d Desktop+XR Review explicit export, source XR PlayMode test 2a62105 NOT_RUN. Sign fidelity RED 2ad97766 headless error 'A finite scientific CSV value lost its numeric sign during escaping', functional GREEN 861c5f1 leaves invariant signed numeric pH intact while shielding untrusted text. Latest push 38837994278 headless SUCCESS, full Windows/Ubuntu Native and PR conclusions pending at evidence write. Full P11.03 Open: no archive import, separate selected-run Compare, Unity and device evidence.",
+            "2026-10-16 bounded recorded saved-run comparison: RED headless 478b73f source missing RecordedRunComparison (push 38863229291). GREEN eae473c pure record-side comparison with strict real pH Supported/Ready/Current/finite availability and matching database + model provenance before delta; absolute unavailability and scientific-package mismatch suppress delta; Native Windows/Ubuntu + headless push 38863465109, PR 38863471270 3/3 SUCCESS. UI routing RED dc23cba fails absent CompareSaved action at 38863540678; GREEN cd6676f SessionController compare recorded current Review against confirmed saved Native .plv.json with .bak fallback (no chemistry replay), shared Desktop/XR Compare screen, headless panel routing SUCCESS 38863790282, full native pending at ledger write. Unity PlayMode/Editor test source 587ec4e authored NOT_RUN. Arbitrary run selection, archive restore, complete comparison UI and Unity verification Open.",
+            "2026-10-16 saved comparison fallback hardening: RED d9c71f0 missing CompareSaved production-linked disk function; GREEN 8e7941 adds RecordedRunComparison.CompareSaved to validate actual primary or .bak via RecordedSessionReview (push 38864655626 all three headless/native SUCCESS, PR overall pending at ledger write), no synthetic baseline. Refactored saved-vs-current Compare route to share same path. Unity two-run PlayMode/EditMode authored at 587ec4e and Native Windows/Ubuntu + headless push/PR 38863949071/38863955795 3/3 SUCCESS. Arbitrary run selection, portable import, complete UI/evidence remain Open."
+          ],
+          "externalEvidence": [],
+          "acceptanceScope": "Partial code-first: portable .plvpack export-only, Native recorded CSV and saved-baseline vs current-Review side-by-side pH comparison with finite Current status and matching scientific model/database/package required before signed delta. No arbitrary run selection or portable import, complete Compare/branch UX, actual Unity/Player/XR verification. P11.03 Open.",
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P12",
+      "title": "Guided research lessons and deep understanding",
+      "arabicTitle": "التجارب التعليمية والفهم العميق",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P12.01",
+          "title": "Two genuine research lessons",
+          "decision": "Wire strong-acid and mixed-acid content to native semantic events; no outcome writes, no magic first endpoint==HCl; free lab independent.",
+          "acceptance": "Q01-Q04 real procedure select→perform→review; no forced color-dependent certified completion.",
+          "files": [
+            "Runtime/Protocols/ProtocolDefinition.cs",
+            "Runtime/Protocols/ProtocolRunner.cs [new]",
+            "Content/Protocols"
+          ],
+          "dependencies": [
+            "P11.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P12.02",
+          "title": "Predict, observe, explain, compare",
+          "decision": "Before experiment store student hypothesis; prompt observation after relevant event, explain model-supported mechanism with source and assumptions; hint tiers record assistance.",
+          "acceptance": "Prediction never changes chemistry; stale data cannot justify explanation; explanations for dilution/buffer/conservation tested against fixture and current snapshot.",
+          "files": [
+            "Runtime/Learning/LearningSession.cs [new]",
+            "Runtime/Learning/ExplanationProvider.cs [new]",
+            "Content/Learning",
+            "Tests/PlayMode/ResearchLessonTests.cs [new]"
+          ],
+          "dependencies": [
+            "P12.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P12.03",
+          "title": "Concept inspection",
+          "decision": "On-demand species/conservation/curve/cumulative-vs-reading views for learning/research; hide numerical reading answers in measurement-skill mode; label theoretical/counterfactual curves.",
+          "acceptance": "Same actual experiment drives notebook and plots; no curve generated from scripted endpoint; teaching overlays optional and recorded.",
+          "files": [
+            "Runtime/Learning/ConceptViewModel.cs [new]",
+            "Runtime/UI/ConceptPanel.cs [new]",
+            "Tests/EditMode/LearningEvidenceTests.cs [new]"
+          ],
+          "dependencies": [
+            "P12.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P13",
+      "title": "Reproducible builds and CI",
+      "arabicTitle": "البناء المتكرر والتحقق الآلي",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P13.01",
+          "title": "Three exact-commit builds",
+          "decision": "Build WindowsDesktop/WindowsVR/AndroidARM64IL2CPP with native/database/package identity; development simulator excluded; cleancheckout path licensed correctly.",
+          "acceptance": "B01-B04 verify packagedbytes and launch availablePlayer; record buildSHA vs finaldocsSHA; required unavailableCI notfakePassed.",
+          "files": [
+            "scripts/build-native.ps1",
+            "scripts/build-unity.ps1",
+            "scripts/test-unity.ps1",
+            ".github/workflows",
+            "Editor/BuildPipelineEntry.cs"
+          ],
+          "dependencies": [
+            "P12.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P13.02",
+          "title": "Licensed artifact manifest",
+          "decision": "Manifest source/model/fonts/notices/asset ownership/build/test hashes and versions; generated concept not a marketed screenshot.",
+          "acceptance": "Rebuild reproducible availabletargets; catalog/data licenses preserved; no sources-private docs/credentials/Library/playerbins committed.",
+          "files": [
+            "scripts/package-artifacts.ps1",
+            "docs/evidence/artifact-manifest.json",
+            "THIRD_PARTY_NOTICES"
+          ],
+          "dependencies": [
+            "P13.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P14",
+      "title": "Performance and device evidence",
+      "arabicTitle": "الأداء وإثبات التشغيل على الأجهزة",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P14.01",
+          "title": "Complete telemetry/workloads",
+          "decision": "Record frameCPU/GPU,solverlatency/age/grossbudget,queues/holds/native+managedmemory/storage;1/4/10vessel controlled traces at acceptedscience/renderprofiles.",
+          "acceptance": "K01/K04 actual workload admission, no ring overwrite hiding earlier faults, no calibratedflow change toboostFPS.",
+          "files": [
+            "Runtime/Diagnostics/PerformanceRecorder.cs",
+            "Runtime/Core/PlayerPerformanceRecorder.cs",
+            "Content/Traces",
+            "scripts/analyze-performance.py"
+          ],
+          "dependencies": [
+            "P13.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P14.02",
+          "title": "Long measured runs",
+          "decision": "5minwarmup then three30min measured runs on available publication target; provisionalDesktop60FPS and headset>=72Hz preferred90 only if viable.",
+          "acceptance": "K02/K03 actualp95/p99/droppedframes/sciencefairness/holds/memory; absentphysicalheadset/Androidthermal exactEvidenceMissing.",
+          "files": [
+            "docs/evidence/desktop-acceptance.json",
+            "docs/evidence/simulated-xr-acceptance.json",
+            "docs/evidence/windows-vr-acceptance.json",
+            "docs/evidence/android-vr-acceptance.json"
+          ],
+          "dependencies": [
+            "P14.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P15",
+      "title": "Whole-app quality and final planner review",
+      "arabicTitle": "جودة التطبيق والمراجعة النهائية",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P15.01",
+          "title": "Audit95 and premium scorecard",
+          "decision": "Map every original acceptance case and new task to exact evidence scope; all core user journeys and premium asset/screen states audited; fix code blockers before declaration.",
+          "acceptance": "No item Passed from helper/build alone; requirements not removed; M1/M2 visiblejourneys and screenshot matrix all current.",
+          "files": [
+            "docs/evidence/acceptance-95.json",
+            "docs/evidence/final-review.md",
+            "docs/evidence/completion.json"
+          ],
+          "dependencies": [
+            "P13.02",
+            "P14.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P15.02",
+          "title": "Independent final review request",
+          "decision": "Provide source diff/buildSHA/evidence and specific open risks to planner; implementation self-verification is separate from planner acceptance.",
+          "acceptance": "Planner review may request fixes; never mark AcceptedPlanner unless explicit review received; no force/merge.",
+          "files": [
+            "docs/evidence/planner-handoff.md",
+            "docs/evidence/execution-state.json"
+          ],
+          "dependencies": [
+            "P15.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P16",
+      "title": "Push, release handoff and continuation",
+      "arabicTitle": "رفع العمل وتسليمه والاستكمال",
+      "baseline": "PartialLegacy",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P16.01",
+          "title": "Same-branch handoff",
+          "decision": "Commit reviewable milestones, push samebranch/PR afterappropriatechecks; PRtitle/body current, exactHEAD CI; attachPRwhenavailable.",
+          "acceptance": "RemoteHEAD and CI verified; cleanworktreeorclearexplanation; no newPRduplication/merge/force.",
+          "files": [
+            "README.md",
+            "docs/evidence/NEXT.md",
+            "PR#1"
+          ],
+          "dependencies": [
+            "P15.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P16.02",
+          "title": "Resume transition",
+          "decision": "Freeze R1 supportedlab milestone truthfully, carry still-open tasks onward; continue routes to expandedplatform phases, not implicit projectcomplete.",
+          "acceptance": "A fresh continue selects eligibleP17+ oncecoredependenciesverified; hardwaregate never deletes remainingsoftwarebacklog.",
+          "files": [
+            "docs/evidence/execution-state.json",
+            "docs/evidence/release-matrix.json"
+          ],
+          "dependencies": [
+            "P16.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P17",
+      "title": "Compound library and model capability registry",
+      "arabicTitle": "مكتبة المركبات وسجل قدرات النماذج",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P17.01",
+          "title": "Verified expandable catalog",
+          "decision": "Separate Compound identity, MaterialPreparation mixture and model coverage; offline searchArabic/English/name/formula/CID, familyfilter, reference vs usable simulation badge. Import sourced starter catalog then scale in versioned packs.",
+          "acceptance": "UnknowncompoundcanbeReferenceOnly, cannot enter live solver under unsupported profile; salts/hydrates/stereochemistry/mixtures distinct; all fields source/date/license.",
+          "files": [
+            "Content/Catalog",
+            "Runtime/Catalog/CompoundCatalog.cs [new]",
+            "Runtime/UI/CompoundLibraryPanel.cs [new]",
+            "tools/import-pubchem.py [new]"
+          ],
+          "dependencies": [
+            "P06.02",
+            "P08.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P17.02",
+          "title": "Capability package contract",
+          "decision": "Use schemas in07; coverage by compoundset/concentrations/T/P/phase/observable/equipment/modelidentity/evidencematurity; provider dispatch before preparation and every mutation.",
+          "acceptance": "Catalog breadth does not extend aqueoussix coverage; unsupported multicomponent combination rejects/clearlyreference only, no nearest-name substitution.",
+          "files": [
+            "science/packages",
+            "native/solver/include/plv/model_provider.hpp [new]",
+            "Runtime/Catalog/CapabilityRegistry.cs [new]"
+          ],
+          "dependencies": [
+            "P17.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P17.03",
+          "title": "Expandable station hub",
+          "decision": "Modular lab stations analytic/physical/organic/formulation/bio; tiles show exactAvailableResearch/ReferenceOnly/DataPending states and progress; unsupportedstations have informative preview notfake instruments.",
+          "acceptance": "Allstationnavigationworks; current sixstock benchremainsusable; disabledsimulations explain why; no unwired buttons countedfunctional.",
+          "files": [
+            "Runtime/Lab/StationRouter.cs [new]",
+            "Content/Stations",
+            "Prefabs/UI/StationHub"
+          ],
+          "dependencies": [
+            "P17.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P18",
+      "title": "Analytical and physical pharmacy",
+      "arabicTitle": "الكيمياء التحليلية والصيدلة الفيزيائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P18.01",
+          "title": "Analytical experiment packs",
+          "decision": "Deliver aqueousacidbase/buffers/dilution first, then sourcedmodelsforconductometry/UVVisible/calibrationcurves and chromatographydatasets. Eachmodality declares forwardmodel and validateddata domain.",
+          "acceptance": "Knownstandards/blank/calibration/unknownsample andheldoutfixtures; instrumentnoiseidentifiedsourcedorlabelledsynthetic; detectoroutputnotcomputedfromdrugname alone.",
+          "files": [
+            "science/packages/analytical-*",
+            "native/solver/providers",
+            "Runtime/Instruments",
+            "Content/Protocols/Analytical"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P18.02",
+          "title": "Physical pharmacy packs",
+          "decision": "Implement solubility/partition/kinetics/dissolution as separate sourced research providers, explicit temperature/solvent/phase/particle assumptions; equipmentmodel linked.",
+          "acceptance": "Reference curves/massbalances andlimits pass; changeparameterchangesmodeltruthfully; no pretending equilibriumworker handleskinetics.",
+          "files": [
+            "science/packages/physical-*",
+            "native/solver/providers",
+            "Content/Protocols/Physical"
+          ],
+          "dependencies": [
+            "P18.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P18.03",
+          "title": "Instrument technique and interpretation",
+          "decision": "Balance/calibration/sampleprep/cuvette handling or measured datasetworkflow withappropriate teachingpanels; curves/units/LODassumptions noted when supported.",
+          "acceptance": "Fullperform→observe→interpret→review inVR/Desktop for eachclaimedinstrument; decorativeHPLCdoesnotcountchromatographysimulation.",
+          "files": [
+            "Runtime/Instruments",
+            "Runtime/Learning",
+            "Tests/PlayMode/AnalyticalJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P18.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P19",
+      "title": "Organic and medicinal chemistry",
+      "arabicTitle": "الكيمياء العضوية والدوائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P19.01",
+          "title": "Structure and property learning",
+          "decision": "Sourced2D/3Dmolecularinspection,functionalgroups,stereochemistry andstructure-property comparisons; renderactualatom/bondgraph; donotderiveclinicaleffectfromappearance.",
+          "acceptance": "Identity/stereochemicalfixtures andinteractionlearnability; measuredproperty vs predictionclearlylabelled; rolespecificannotation.",
+          "files": [
+            "Runtime/Molecules",
+            "Content/Catalog",
+            "Runtime/Learning/StructureLessonProvider.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P19.02",
+          "title": "Bounded preparation and purification",
+          "decision": "Finite approved experimentpacks for techniquee.g.extraction/recrystallization/TLC with documentedpartition/solubility/reference datasets. Reactions require stoichiometry,condition/rate/yieldreferences; arbitrarymixingnotgeneralreactionpredictor.",
+          "acceptance": "Supportedpackreproducesholdout/massbalance/conditions andfullprocedure; unavailabledata staysDataPending, not randomproduct/yield.",
+          "files": [
+            "science/packages/organic-*",
+            "native/solver/providers",
+            "Content/Protocols/Organic"
+          ],
+          "dependencies": [
+            "P19.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P20",
+      "title": "Pharmaceutics and formulation",
+      "arabicTitle": "الصيدلانيات والتركيبات",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P20.01",
+          "title": "Formulation material properties",
+          "decision": "CuratedAPI/excipient identities, compatible evidence andboundedphysicalmodels; distinguishcomposition from validatedproductquality; sachets/powders/emulsions needphase-specificauthority.",
+          "acceptance": "Mass/unit/preparationandphaseledger; referencematerialnotusableunlesscovered; no assumeduniversalcompatibility.",
+          "files": [
+            "Content/Catalog/Pharmaceutics",
+            "native/core/formulation",
+            "science/packages/formulation-*"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P20.02",
+          "title": "Representative formulation workflows",
+          "decision": "Separate documentedsolution/suspension/emulsion/semi-solid researchpacks andtablet/dissolutiondatasetworkflow; weighing/mixing/order/temperature/stability model-specific.",
+          "acceptance": "Atleastonecomplete supportedjourneyperclaimedpack withsources,observationanderrorconsequences; labelscontainactualcomposition/modelscope.",
+          "files": [
+            "Runtime/Lab/FormulationStation.cs [new]",
+            "Content/Protocols/Formulation",
+            "Runtime/Learning"
+          ],
+          "dependencies": [
+            "P20.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P20.03",
+          "title": "Quality control comparisons",
+          "decision": "Comparebatchcomposition,uniformity/dissolution/assayonlywheremodelorlicensedmeasureddataexists; theoreticalexample vs certifiedpharmacopoeialtestingdistinct.",
+          "acceptance": "Knownbatchdataset andlimits reviewed; reference standardprovenance,methodversionanduncertaintyexported; no manufacturedpasscertificate.",
+          "files": [
+            "Runtime/Research/BatchComparison.cs [new]",
+            "Content/Datasets",
+            "Runtime/UI/ResearchPanel.cs [new]"
+          ],
+          "dependencies": [
+            "P20.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P21",
+      "title": "Pharmacognosy and biochemical methods",
+      "arabicTitle": "العقاقير والطرق الحيوكيميائية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P21.01",
+          "title": "Natural product identification learning",
+          "decision": "Sourcedplant/extract/constituent identity andmicroscopy/referenceimages withlicenses; extractiontechnique usesboundedmixturemodelsorrecordeddatasets.",
+          "acceptance": "Plant/extractnotreducedtosingleCID; mixedcompositionunknownnotinvented; image/specimen IDs retained.",
+          "files": [
+            "Content/Catalog/Pharmacognosy",
+            "Content/Datasets/Microscopy",
+            "Runtime/UI/SpecimenPanel.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P21.02",
+          "title": "Biochemical assay packs",
+          "decision": "Provider-specificstandardcurves/enzymeassayreference datasets withdocumentedconditions; distinguishhypotheticalmechanismteachingfrompredictivebiologymodel.",
+          "acceptance": "Controls/blank/calibrationandholdoutinterpretation; sourceparameters/version recorded; no unvalidatedbiologicaloutcomes.",
+          "files": [
+            "science/packages/biochemical-*",
+            "Runtime/Instruments",
+            "Content/Protocols/Biochemistry"
+          ],
+          "dependencies": [
+            "P21.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P22",
+      "title": "Microbiology and aseptic technique",
+      "arabicTitle": "الميكروبيولوجي وتقنيات العمل المعقم",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P22.01",
+          "title": "Technique station",
+          "decision": "Buildvirtualaseptic-handling/cleanworkspace/instrument-transfer/contamination eventmodel andobservationteaching withdocumentedtrainingobjectives.",
+          "acceptance": "Techniqueerror events auditable andexplained; visualcleanlinessnotproofmicrobiologicalsterility; instructorcriteriareviewable.",
+          "files": [
+            "Runtime/Lab/AsepticStation.cs [new]",
+            "Content/Protocols/Technique",
+            "Runtime/Learning"
+          ],
+          "dependencies": [
+            "P17.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null,
+          "releaseGateDependencies": [
+            "G-R1"
+          ]
+        },
+        {
+          "id": "P22.02",
+          "title": "Evidence-based microbiology lessons",
+          "decision": "Dataset/referenceimage drivenmicrobialidentification/growth/assayexercises; dynamicgrowthonlywithinvalidatedmodelconditions.",
+          "acceptance": "Predictionsmatchdeclaredreference; organisms/media/condition coverageexplicit; no bioscience simulatorclaimfromproceduralanimations.",
+          "files": [
+            "Content/Datasets/Microbiology",
+            "science/packages/microbiology-*",
+            "Runtime/Instruments"
+          ],
+          "dependencies": [
+            "P22.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Scientific model/experimental calibration as declared per capability; no invented data"
+      ],
+      "releaseTrack": "ExpansionAfterFirstRelease"
+    },
+    {
+      "id": "P23",
+      "title": "Student, instructor, expert and research workspaces",
+      "arabicTitle": "مساحات الطالب والمدرس والخبير والباحث",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P23.01",
+          "title": "Four role workspaces",
+          "decision": "Studentguided/expertopen/instructorauthor/researchcompare presets affectguidanceandlayoutonly; samecore/nohiddenauthoritativeprivileges; usersswitchguidancewithassistance recorded.",
+          "acceptance": "Sameactionledger/science acrossroles; novicehelpsavailableandexpertminimal; no universalclinicalrecommendations added.",
+          "files": [
+            "Runtime/Workspaces",
+            "Content/WorkspacePresets",
+            "Runtime/UI/WorkspaceHome.cs [new]"
+          ],
+          "dependencies": [
+            "P17.03",
+            "P12.03",
+            "P11.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.02",
+          "title": "Instructor course and lesson authoring",
+          "decision": "Localcourse/template builder: objective,capability,equipment,preparation,instructions,predictquestions,hinttiers,rubric,review; export/import assignments withoutrequiringcloudaccounts.",
+          "acceptance": "Teachercreatesvalidtask,studentperforms,teacherreviewsactualeventsandnotes; invalidmissingcapabilityblocksgradebutallowsresearchpreview.",
+          "files": [
+            "Runtime/Teaching",
+            "Content/Courses",
+            "Runtime/UI/LessonBuilderPanel.cs [new]",
+            "Tests/PlayMode/InstructorJourneyTests.cs [new]"
+          ],
+          "dependencies": [
+            "P23.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.03",
+          "title": "Research notebook and compare",
+          "decision": "Projects/runs/hypotheses/parameters/repeats/annotations/plots/provenance exports; explicit experimental vs simulateddatalabel andcounterfactualbranches.",
+          "acceptance": "Two actualruns compared withmodel/version/units/assistance/uncertainty; recomputewithchangedmodelseparateversion; reproducibleexport.",
+          "files": [
+            "Runtime/Research",
+            "Runtime/Session/NotebookService.cs",
+            "Runtime/Session/SessionExportService.cs"
+          ],
+          "dependencies": [
+            "P23.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P23.04",
+          "title": "University pilot workflow",
+          "decision": "Coursepackversioning,localanonymouslearnerIDs,consentedfeedbackrubricsandaggregateofflineexports; trialinstructor/studentworkflow, collectformativeevidence honestly.",
+          "acceptance": "Realavailablepilotresults separate fromsoftwaretests; no fabricated participants/universityapproval; cloudmultiuser/LMS integration remainsseparatefuturedecision.",
+          "files": [
+            "Content/Courses",
+            "Runtime/Teaching/CoursePackService.cs [new]",
+            "docs/evidence/university-pilot.json"
+          ],
+          "dependencies": [
+            "P23.03"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [
+        "Physical device/human study where required; simulated/software evidence remains separate"
+      ],
+      "releaseTrack": "FirstUsableRelease"
+    },
+    {
+      "id": "P24",
+      "title": "Expanded platform release and coverage audit",
+      "arabicTitle": "إصدار المنصة الموسعة ومراجعة التغطية",
+      "baseline": "NewExpandedScope",
+      "softwareStatus": "NotAccepted",
+      "plannerStatus": "NotReviewed",
+      "tasks": [
+        {
+          "id": "P24.01",
+          "title": "Per-pack delivery and coverage",
+          "decision": "Audit every declaredcompound/preparation/equipment/experiment/role/observable againstsources,numerical/interaction/evidence; releaseonlyworkingpacks, catalogreference entries truthful.",
+          "acceptance": "No allchemistry claim; visible coverage matrix andremainingdata/devicegates; each advertised feature opens andworks for claimed domain.",
+          "files": [
+            "docs/evidence/platform-coverage.json",
+            "docs/evidence/release-matrix.json"
+          ],
+          "dependencies": [
+            "P18.03",
+            "P19.02",
+            "P20.03",
+            "P21.02",
+            "P22.02",
+            "P23.04",
+            "P13.02"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        },
+        {
+          "id": "P24.02",
+          "title": "Premium institutional demo and planner handoff",
+          "decision": "CaptureactualEnglishArabicVRDesktopstudent/instructor/researchjourneys andsupportedstations; consistentdesign/performance/stability, installation/licensingnotices/exportdocumentation.",
+          "acceptance": "A prospectiveuniversitycantryactualsupportedproduct; marketingusesrenderedapp andtruthfulscope; plannerreceivesexactHEAD/fullremainingbacklog; no automaticmerge.",
+          "files": [
+            "docs/evidence/platform-final-review.md",
+            "artifacts/demo",
+            "README.md",
+            "docs/evidence/planner-handoff.md"
+          ],
+          "dependencies": [
+            "P24.01"
+          ],
+          "status": "Open",
+          "codeCommit": null,
+          "evidence": [],
+          "plannerStatus": "NotReviewed",
+          "implementationEvidence": [],
+          "externalEvidence": [],
+          "acceptanceScope": null,
+          "blocker": null
+        }
+      ],
+      "externalEvidenceGates": [],
+      "releaseTrack": "ExpandedPlatformFinalAudit"
+    }
+  ],
+  "milestones": {
+    "M1-OperatingPremiumLab": "NotVerified",
+    "M2-CoreLearningLab": "NotVerified",
+    "M3-TeachingResearchWorkspace": "NotVerified",
+    "M4-ExpandedPlatform": "NotVerified"
+  },
+  "resumeRule": "Read NEXT/git status, scan executionOrder for first unfinished task whose task AND releaseGateDependencies are VerifiedLocal. Do not reinitialize this ledger. G-R1 evidence is required before new science pack development; true external device/participant gates remain separate.",
+  "releaseGates": [
+    {
+      "id": "G-R1",
+      "title": "First usable learner/instructor/expert release evidence",
+      "status": "Open",
+      "requiredTasks": [
+        "P00.01",
+        "P00.02",
+        "P01.01",
+        "P01.02",
+        "P01.03",
+        "P02.01",
+        "P02.02",
+        "P02.03",
+        "P03.01",
+        "P03.02",
+        "P03.03",
+        "P04.01",
+        "P04.02",
+        "P04.03",
+        "P05.01",
+        "P05.02",
+        "P05.03",
+        "P06.01",
+        "P06.02",
+        "P07.01",
+        "P07.02",
+        "P07.03",
+        "P08.01",
+        "P08.02",
+        "P08.03",
+        "P08.04",
+        "P09.01",
+        "P09.02",
+        "P10.01",
+        "P10.02",
+        "P10.03",
+        "P11.01",
+        "P11.02",
+        "P11.03",
+        "P12.01",
+        "P12.02",
+        "P12.03",
+        "P13.01",
+        "P13.02",
+        "P14.01",
+        "P14.02",
+        "P15.01",
+        "P15.02",
+        "P16.01",
+        "P16.02",
+        "P17.01",
+        "P17.02",
+        "P17.03",
+        "P23.01",
+        "P23.02",
+        "P23.03"
+      ],
+      "requiredJourneyEvidence": [
+        "Learner complete supported laboratory journey",
+        "Instructor author/import/review journey",
+        "Expert compare/export journey"
+      ],
+      "evidence": [],
+      "codeCommit": null,
+      "plannerStatus": "NotReviewed",
+      "externalEvidenceSeparate": [
+        "Physical headset/Android acceptance",
+        "Independent scientific calibration",
+        "Actual formative participants/customer validation"
+      ]
+    }
+  ],
+  "scopeRevision": "v2: first usable release before expanded scientific providers",
+  "gateDependencies": {
+    "P18.01": [
+      "G-R1"
+    ],
+    "P19.01": [
+      "G-R1"
+    ],
+    "P20.01": [
+      "G-R1"
+    ],
+    "P21.01": [
+      "G-R1"
+    ],
+    "P22.01": [
+      "G-R1"
+    ]
+  },
+  "actualHead": "9476d86c41630fa19758a678b54f89b0da0f3e51",
+  "functionalCodeSha": "ab7e9355bf9b2e6da2519f1a71087885d4699d7d",
+  "currentTask": "Formal P06.02 remains Open/next; independent U03/U05 code-first student results, staff submissions and feedback source through 9476d86c4163 verified headlessly; Unity Editor/Player/XR NOT_RUN.",
+  "lastVerifiedTask": "P06.01",
+  "sourcePackage": "PharmaLabVR-Premium-Master-Handoff-v2.zip",
+  "sourcePackageSha256": "1E51FAF0E32B31425566CA23D9646F20A84077FD9DB8796C31D723B648C90CAD",
+  "roundStartedUtc": "2026-10-10T00:38:25.065540+00:00",
+  "executionNotes": [
+    "Imported v2 template once; no prior execution-state existed. Existing P00 foundation evidence remains in progress.json and will be reconciled before granting any new task VerifiedLocal.",
+    "G-R1 remains Open; P18-P22 are gated.",
+    "P00.01/P00.02 verified locally from intake/package/doctor/finding matrix and continuation selector. O10-N3 is being fixed under P01.01; other findings remain open in the matrix.",
+    "P02.01 verified through Unity PlayMode selection over real Native sessions; WindowsDesktop Player built and Boot screenshot captured, while stock HUD click/render remains separate UI evidence. Checkpoint science rollback O10-N1 is still open for a later science task.",
+    "P02.02 verified through a native-backed Unity facade test for unrelated touched revisions, identical command replay, identity conflict and stale revision. P02.03 whole-lab ledger remains next.",
+    "P02.03 VerifiedLocal with bounded Research ledger evidence: 697a311 live parcels, 72c1b49 full receiver/empty source, 2fd4613 disjoint two-tool pools and Unity Lab scene adapter pour. Native 70/70 (15461 assertions), CTest 1/1, PlayMode 17/17, WindowsDesktop build Success. P03 visual drop IDs, distinct profiles, geometry and convergence remain open; T04/M05 catalog remains Partial.",
+    "P04.01 VerifiedLocal at 3271fdf: O10-N1 red real IPhreeqc pH 12.7877 stuck at restored acid revision, then green generation reset and recomputation to pH 1.10723; prior in-flight completion excluded. Native 72/72 (15559 assertions), CTest 1/1, Unity Lab scene PlayMode 18/18 and WindowsDesktop build Success.",
+    "P04.02 VerifiedLocal at 3322c29: red Native pinned-byte mismatch, same-byte IPhreeqc load, cross-platform binary minteq checkout; Unity Lab receiver Current pH after acid transfer, package mismatch recorded-only review, and three Player builds. Native 73/73, PlayMode 21/21, EditMode 22/22. Actual Player click-through and physical/device/experimental gates remain open. Next P04.03.",
+    "P04.03 VerifiedLocal at ea79eb3 for a bounded Research S01-S07 evidence matrix: direct same-assumption PHREEQC delta 1.7e-13, ideal-versus-minteq 0.10723 pH difference at 0.1 M, six pool/charge cases, clean-context reuse, domain bounds, eight-context raw lifecycle. Native 80/80, PlayMode 21/21, EditMode 22/22, three Player builds. S07 actual nonconvergence/hard latency and experimental validation remain Open; next P05.01.",
+    "P05.01 VerifiedLocal at be2864f with test refinement 5106901: fixed10ml Current observation denies before material/event commit, Precision/Bulk actual product profiles, rinse/disposal denial, opposite-transfer gross circulation, exact scheduler age/volume boundaries. Native 85/85, CTest 1/1, PlayMode 21/21, EditMode 22/22 and WindowsDesktop build Success. Device/Player journey and external science gates remain open; next P05.02.",
+    "P06.01 VerifiedLocal at 7abf0af2d763dfd74d98a37379a858e390aa8a37: PlayMode 26/26, EditMode 22/22, CTest 1/1, WindowsDesktop/WindowsVR/AndroidVR fresh builds Success; actual Windows Player missing-minteq Boot-to-Lab failure visible in screenshot/log. See p06-01-scene-lifecycle.md and SHA manifest. G-R1 and wider U01/U02 remain open; next P06.02.",
+    "P06.02 remains Open at dd60197b05fc7963146cfacec98ff50fe37c4cdc: action-driven native Lab/Inspect/Measure/Pause/Hold/recorded Review routing, durable Save state and paused-setup clock correction. Native CTest 1/1, Unity EditMode 22/22, PlayMode 28/28, three Player builds Success. Actual Player Lab/Pause screenshots do not prove Inspect or VR; see p06-02-progress.md and SHA manifest.",
+    "P06.02 continued at 614097bc4a5761badeb32aef69a9794066c713fe: Home/Setup mode routing, confirmed native-backed Lab load, one active XR manager binding body and hands. Native CTest 1/1, Unity PlayMode 31/31, EditMode 22/22, three Player builds Success; actual Windows Player VR-mode mirror lacks spatial panel. See p06-02-boot-xr-progress.md and SHA manifest. Next: functional Setup preferences, spatial VR presenter, Player Inspect/review before P08.01.",
+    "P06.02 continued at 797b836998a45a6804d291f00dd6356d0d84a4c8: world-space VR Canvas with XR UI input and visible Editor camera render; mirrored text red at right-vector -1.0 then corrected and 32/32 PlayMode green. Native CTest 1/1 alone; one concurrent-build run failed 6/92 and needs investigation. Fresh three Player builds Success. This is not Player/headset UI interaction proof. See p06-02-spatial-progress.md and SHA manifest. Next P06.02 Setup preferences and tracked-ray journey before P08.01.",
+    "P06.02 continued at 8bba4902b97d2a031315634c7e772eca6af8d1bf: live Lab Review recorded from native export without hidden durable Save or native revision change; held Review cannot falsely return to Lab; VR Lab/Review camera renders and button-gap test. PlayMode 33/33, EditMode 22/22, CTest 1/1 isolated, three fresh builds Success. Actual WindowsDesktop Player Home clipped at 640x400; synthetic click did not prove transition. See p06-02-review-progress.md and SHA manifest. P06.02 stays Open; next tracked-ray/Player journey and Desktop Home responsiveness before P08.01.",
+    "2026-10-15 ruling: formal next task remains P06.02; user priority P03 Lab native safety subincrement. P03.02 remains Open because P03.01/P07.03 dependencies, distinct pipette/bottle and Unity/Player journeys are not verified. RinseTool rejected solute-bearing rinse source via native ABI RED 880239680456f1ecd4411c9154325b4b9f5a673d (Ubuntu 95/96, 7 assertions failed) to GREEN c7dc1894864f2d9ffb16fab3eaacf34dacfd55a3 (4/4 CI native matrix jobs pass, 1/1 CTest each). Docs at docs/evidence/p03-02-rinse-source-progress.md; no Unity/Player/physical claim. Ledger actualHead denotes last source commit before subsequent evidence-only checkpoint.",
+    "2026-10-15 ruling: planner accepted previous bounded P03.02 rinse only, NOT task. Resume formal P06.02. Added four Unity PlayMode tests test-first but Unity 6000.3.25f1 is absent, so Unity RED/GREEN and Player evidence are not claimed. Functional code 4a184c4eca61458027f3274d87fd88cdf7a97243: Boot Setup and Desktop Settings use session-scoped immutable preference snapshots; Desktop camera and scale, audio, VR panel location/fonts/contrast consume state; returned Review from paused state submits native Continue; Settings Back preserves native Pause; UI reachable; Desktop 640x400 bounds adjusted. New CI headless C# test harness at 37440f128950f5f97614b02148a5e596d433a49f runs actual ScreenRouter/LabPanelController sources with adapters: 39/39 assertions, temporary original Review bypass RED exit 134 then restored GREEN 39/39 (push workflow 38681309492, PR 38681313440). Does not validate Unity, actual Core, Player or physical headset. CI native Windows/Ubuntu workflow jobs are tracked separately; final evidence branch HEAD requires its own checks. P06.02 stays Open, 15 VerifiedLocal / 51 Open, plannerStatus NotReviewed and G-R1 Open. Next exact P06.02 substep: Unity PlayMode/EditMode compile, real Boot→Setup→Lab UI clicks, native hold/review snapshot and Player at 640×400/720p/1080p, tracked-ray simulator/interaction acceptance.",
+    "2026-10-15 development-first ruling per Product Owner: do not block source work on Unity availability. The canonical 25-phase/66-task ledger retains 15 VerifiedLocal and 51 Open. Native CI Windows intermittent 7-case cascade traced to P04.01 rollback waiting for acid but not base Current budget; test now waits both at 92fb159068e2fbcb4c35f8eb5a68407dcdda8f3a (push/PR Windows+Ubuntu green). P06.02 VR Settings authored at d3e4aa8c6ee91b09e56968d8017c78ca10fc1115, P08.01 serialized environment prefab generator at 98dfdd8c62190f7a72fd39c6ab7135c13f37949c, P08.02 downwards physical burette graduations/volume-derived meniscus and persistent assets at 6e9b86f93d79c40e256048a353fcba485b246a6c, P10.01 Esc Pause route at 2a8071cb2dbc0fc2853ba8a8a1929ccaa447f179. Tests authored first but Unity tests never executed. Deferred register docs/evidence/DEFERRED_UNITY_VERIFICATION.md has 66 NOT_RUN rows, TDD RED FileNotFound then GREEN 11/11 tooling tests CI at bbfa43b334c51621643cafa716d60ce662954b9a on Ubuntu. CI at latest source 6e9 pending when noted. No tasks newly VerifiedLocal or AcceptedPlanner, no G-R1 promotion; next coding focus P06.02 and P07.01 mode/XR Boot, then connected P08/P03 tool journeys.",
+    "2026-10-15 additional P08.02 source review: generated liquid meniscus previously retained bootstrap capacity 1.0 m3 while LiquidPresenter switched to native vessel capacity on snapshots, causing a wrong fractional fill. P08_02_ReconfiguredNativeCapacityKeepsMeniscusAndLiquidInSync Unity test authored at 82ae2877c6678a35f98602f8d683b1c77afb115a, source e5d917bf56d29488e371c679f09dffbab945cb88 and Unity-compatible validation fix a3f0ba222368ba1d7d2cb2b0b803be24e54ffa07. Requires Unity EditMode at exact source SHA; no runtime red/green claimed. Prior generated shell asset tests also NOT_RUN; P08.02 officially Open.",
+    "2026-10-15 continuation after 4c5ae3: P07.01 actual BootLaunchAvailability source tested RED missing file af1e0f then GREEN from 37304cd/d​​fa74db via headless CI, including 47+ route assertions. Boot Unity scene-generator contains XR rig, two controller rays, tracked-device raycaster, one XRUIInputModule and action-driven BootWorldPanel since fde822df; audio exclusivity and handedness update at 8c1b55de, all Unity/Player/Headset checks NOT_RUN. P07.02 separate XR receiver grip/no liquid throws d13488b7; InteractionOwnership direct+tracked+!UI gate test-first RED missing 63cfa58b and GREEN da403bf: 54 headless routing assertions; two intentional RED mutations (paused Review and false Boot confirmation) restore GREEN; headless CI push 38699826367. No direct headset/real native-science proof. P06.02/P07.01/P07.02 official Open; 15 VerifiedLocal/51 Open; G-R1 Open; planner not reviewed. Next code: P07.02 Mount/Release and physical geometry binding, P07.03 recovery, P03 tool parcels; Unity 6000.3.25f1 validation deferred to final Codex campaign.",
+    "2026-10-15 development-first continuation: P07.02 ToolMount visual dock + no-grab lock and explicit ReleaseTool action authored test-first Unity f713170 (NOT_RUN) and CI RED missing PanelAction 73b9e1f3, GREEN 7acc36c26f84e6569638f4148c5a82a56b4d3829; ModeCoordinator edit-mode guard fc293fe93dfa39c6cc93b54ece011e6e71ae3919 prevents scene generation from storing VR docking. P07.03 tracking safety source test RED 82d6b37 missing XRTrackingAdmission; GREEN c485f8a88a2d5fcc0328e674e9811a306d01129e; Native XR adapter now only reports tracked input when headset and BOTH controllers are physically reported tracked, with UI/direct-grip valve ownership intact. On final source fc293 CI push 38701397558 panel-routing 63 assertions success, deliberate Review/Boot mutation REDs recovered green; native Windows/Ubuntu jobs in progress at last observation. NO Unity Editor, Player, XR simulator/headset evidence at new SHA; P07.02/P07.03 remain Open, plannerStatus NotReviewed, G-R1 Open, task counts 15 VerifiedLocal/51 Open. Risk: simulated XR InputDevices vs InputSystem tracking interface requires Unity review; actual recovery/dock/physical reach must be tested. Ruling: dependency source may proceed but no planner acceptance.",
+    "2026-10-15 final P07 dock screen source correction: at 89174e8a311b283746eb6056505f3aeb75a8d480, SpatialPanelPresenter no longer overlays Open Review on detail text when docked. Review remains reachable through Pause→Review; docked lab shows one ReleaseTool hit target in the original Review slot, returns Review to slot when unlocked. Functional code SHA now 89174e8; Native/Headless CI at fc293fe93dfa39c6cc93b54ece011e6e71ae3919 Windows/Ubuntu push/PR all success, headless 63/63 with two RED→GREEN mutations. CI for 89174e8 queued/running during checkpoint, Unity no execution. P07.02 still Open; source-review correction is not rendered or XR ray evidence.",
+    "2026-10-15 P07.03 source increment: start evidence 7337dda08c09ad7c031090bb1be52b021a498cbd, test-first commit bdd6e5ecd80832554099a4d8abcf4e9ce54e746b C# RED missing RecoveryAlignmentPolicy (push 38703751397); code f7fd8a642c545f949edb3ff528dc3f2baf977d0c and compatibility fix 475a21ca6ac68d1e707e80b2ded1c656b5dbba09. RecoveryAlignmentPolicy and ScreenRouter/LabPanelController action require VR AND native Pause/Hold AND tracked head AND docked tool; SessionController.TryRecenterView moves XR origin horizontally no CoreSession submit, no Native Continue, no geometry scaling. GeneratedSceneTests.P07_03_RecenterIsHorizontalAndNeverScalesCalibratedTool authored at f9cc38c525a532012d71dee5c302af82900b73bd but Unity NOT_RUN. Headless mutation d08b8d7c85fb4e99a97e4e372c3eb20e6d7e3355 verifies false-success recenter RED then restores GREEN, 79/79 routing assertions; push CI 38704367715 panel-routing success and native platform jobs in progress at observation. P07.03 remains Open, NotReviewed, no new VerifiedLocal, G-R1 Open, 15/51 counts. Next P07.03 snap turn/recovery after load, P03 geometry and parcel work; Unity at final campaign.",
+    "2026-10-15 P07.03 snap increment: RED test commit 67ad3610865dffdc7ee6a4ca8e21f471c801992b, CI push 38705071238 missing PanelAction.SnapLeft and RecoveryAlignmentPolicy.SnapDegrees as expected. GREEN implementation 43ae38ccf27fe687d928e723dc4981bea68211c6: SnapLeft/Right uses same native-held XR tracked-head dock guard as Recenter, 30 degree camera-pivot rotation without Native Continue, Save, solver or instrument movement. Unity Editor test 4d175b30211132d8068bb9067f2a50f314e95e4b and PlayMode ray hitboxes test 920f3c79fee73d0c08b82a22eaf80c05e3b99c69 authored but NOT_RUN. Functional source d569bf7c2d29be5caa656b46927b364c890df4a6 constrains child Text raycast hit regions. Push CI 38705554042 panel-routing success, 87/87 headless assertions, three mutations RED then original source GREEN; native Windows/Ubuntu jobs running when observed. P07.03 Open/NotReviewed, 15 VerifiedLocal/51 Open, G-R1 Open, no Unity/Player/headset run.",
+    "2026-10-15 continued P07.03 post-load/parking scope. RED headless tests dfd60c9459f574913c53f625ed7708ba689db9d2 missing SessionLoadAdmission.cs, CI push 38707742872 CS2001, GREEN source eb658e95aee91d317aace92be11935cfe1b7e3fa, CI push 38707965182 ALL Windows/Ubuntu/native + headless SUCCESS, 95/95 headless assertions. CoreDriver.ReplaceSession now checks imported Native mode against live Native mode and parked VR body before disposal, errors preserve prior session; Native import itself sets SessionLoad hold and requires new neutral input. Unity Native integration tests authored fb50b4726c2b195fac9efdc8f3c8ff9b079fc840 but NOT_RUN. Explicit ParkTool TDD RED f060ea3971be209eb3c6e1251fb3228b9ac781ea CS0117 (push CI 38708491028), source 6ad0cead8070eaffe5205340ba1cad5cf013510e GREEN headless 102 assertions and existing 3 mutation RED->GREEN (push 38708832562 panel-routing success; Windows/Ubuntu native jobs in progress at observation). Park enforces tool unselected and <=0.12 m from dock before pose snap/physics lock, only VR Lab/Pause/Hold action; no material or Save. Unity close-to-dock geometry regression authored 3fbbf1219f09d1cdfd5c219712c67d4eb71ac101, NOT_RUN. Scope caveat: VR user-facing load button, end-to-end controller grab/park, calibrated reach tray/device acceptance and cross-mode UX remain incomplete. P07.03 remains Open/NotReviewed; G-R1 Open; 15 VerifiedLocal/51 Open, PR #1 unmerged.",
+    "2026-10-15 P07.03 VR Load: test RED b192844f3467209fe57eda0389d6223d6a6869f9, CI push 38709463677 CS0117 missing PanelAction.Load. Source GREEN 77bb8b9e206f52cdbbf81a748db54a5c6d6a352f: explicit Load in VR Pause/Hold, spatial action visible only if save exists and tool docked, calls existing pinned SaveService and Native Core import, denies mode mismatch and unparked tool before old handle disposal. Native import forces SessionLoad Hold; no automatic Save/Continue/chemistry. Headless source CI 38709745486 panel-routing SUCCESS with 109 assertions and three prior negative mutation RED->GREEN; Windows/Ubuntu Native pending then. Unity real Native-backed VR Save->Load->SessionLoad test 8183662ce7df6c36075251d52a5f2e454cb2a150 authored NOT_RUN. Fourth false-success Load mutation 8a388a3fda52e0be871778144f3a5e375b174edd CI 38709992513 pending when noted. P07.03 remains Open/NotReviewed, 15 VerifiedLocal/51 Open, G-R1 Open, all 66 deferred Unity task entries NOT_RUN.",
+    "Ruling 2026-10-15: P03.01 Native-only increment proceeds while dependency P07.03 remains Open because Product Owner directed implementation of all phase source before final Unity validation; this does not promote task status. Test first at 56bc9c0799e19d6ffe8c0ef0307fac1a1ffabf4c had wrong JSON field referenceVolumeM3, causing exception and 16 secondary handle-busy failures (push CI 38711926355). Corrected test fixture at 4a851ebb92b31bb48ff52037b54875bdb25a276f produced precise RED in CI 38712269879: 96/97 cases passed, exactly four assertions failed because malformed pending IDs were accepted. Functional fix 5d7c12dfdabc7927c2f2eaa125a236ea773e3660 validates nonempty branch/event/tool identity and nonfuture emitted sequence on positive inFlightInventory; zero material still requires empty ID; keeps legitimate exported pending parcels importable. Native Ubuntu CTest pass at push CI 38712685535, PR CI 38712694119; Windows native still building at evidence creation. Headless C# routing regression unchanged; Unity/Player/XR NOT_RUN. P03.01 remains Open/NotReviewed, 15 VerifiedLocal/51 Open, G-R1 Open, formal selector P06.02 retained. Evidence-only commit follows functional SHA, PR #1 left open/unmerged.",
+    "Ruling 2026-10-15 P03.01 presentation continuation: User directed source-first until final Unity campaign; P07.03 dependency still Open, so no P03.01 promotion. Headless C# test-first RED commit 870a2065bba7052150a5197254a6085948d5d65d missing DropParcelState.cs (CI push 38713548193 CS2001). GREEN functional source 0e00684b365d116ff267144b46ac85e902662776 creates pure DropParcelState, integrates Native InFlightLanded receipt subscription in NativeLabVisuals and matching-only visual disposal in DropPresenter; duplicate or unrelated landing cannot clear a pending different drop; stale snapshot of landed ID cannot resurrect; empty/nonfinite volume hidden. Headless CI push 38713791890 and PR 38713798458 passed 122 assertions; source mutation 8246e2b0de22fc36da42e6399fa6a9841a1525af (CI push 38714105993) intentionally disabled stale suppression, witnessed RED exit 134 with diagnostic then exact-source GREEN, with four previous navigation mutations RED->GREEN. Earlier Native import code 5d7c12dfdabc7927c2f2eaa125a236ea773e3660 push 38712685535/PR 38712694119 all Windows+Ubuntu SUCCESS. Current C# view source has no verified Unity EditMode/PlayMode/Player/XR render at new SHA; final Unity campaign 66 task rows still NOT_RUN. P03.01 Open/NotReviewed, G-R1 Open, 15 VerifiedLocal/51 Open, formal selector P06.02 unchanged, PR #1 unmerged.",
+    "Ruling 2026-10-15 P03.01 post-load parcel-view restoration: headless test-first RED commit 945e6974246155f9388dfb85504a2554b4dc440e for missing DropParcelState.ResetSession, CI 38714692146 CS1061 confirmed; functional  aa0f42259212cbc1dca84e884997d24a090c2808 adds view epoch reset and DropPresenter snapshot read of Native hold.reason SessionLoad or CheckpointRestart. This permits legitimate restoration of a formerly landed parcel ID from earlier save/checkpoint without weakening duplicate/stale suppression during a single live session. GREEN source CI push 38714853023 headless 124 assertions success, five intentional mutation RED->GREEN including stale parcel resurrection. Unity render/real Native Save->Load/drop receipt, XR tracked input/Player NOT_RUN; dependency P07.03 Open and P03.01 Open/NotReviewed. Formal selector P06.02 and 15 VerifiedLocal/51 Open, G-R1 Open unchanged; PR #1 remains unmerged. Follow up Unity final campaign must verify source-boundary event subscriptions and no uncommitted chemistry.",
+    "Ruling 2026-10-15 P03.01 Native restore-boundary fix: previous functional aa0f42259212cbc1dca84e884997d24a090c2808 called DropParcelState.ResetSession on every SnapshotChanged with hold.reason SessionLoad or CheckpointRestart, so unchanged held snapshots could erase last-landed suppression repeatedly. User requested development-first source work, so keep P03.01 and dependency P07.03 Open pending Unity. TDD RED 98d79cec3aeefc7dec3c2e5724d3686bfd6a82fc missing production ApplyNativeSnapshot, headless push CI 38716087729 CS1061. GREEN source 15a067e17ee00995e914442a15f0c8c76c77e83a: pure DropParcelState.ApplyNativeSnapshot accepts restore transitions only once per hold reason change; DropPresenter no longer directly resets on every held snapshot; CoreDriver.NativeSessionRestored raised after accepted import/RestartCheckpoint and before PublishSnapshot; NativeLabVisuals wires and unwires DropPresenter.ResetSession. Test proves repeated snapshots keep last landed hidden, explicit same-reason accepted restore can revive legitimate saved parcel, and changed hold reason creates new epoch. Push CI 38716320883/PR 38716327900 panel-routing 136 headless assertions GREEN; mutation commit 666b9188897e418273b464f54e45e2389c403ca9 push CI 38716458968 restored original and passed 136 with six deliberate RED mutations including repeat-held-reset, Native Windows/Ubuntu still pending at observation. Unity EditMode, PlayMode, Player, simulated XR and physical headset NOT_RUN; 66 deferred task rows NOT_RUN, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged.",
+    "Ruling 2026-10-15 P03.02 source-first slice while P03.01 dependency and P07.03 remain Open: create a distinct pipette research profile and actual Native metered commands, not pretend the burette valve represents a pipette. TDD RED test a53ff552493c93225e423bc961307a6d631c5aab, corrected Bulk-budget test e3d3100cb07704267fe1435014f8c4ed663395aa, push CI 38719239548 Ubuntu 97/98 cases passed with six expected new-case failures: pipette profile not admitted, SetActuator lacked distinct rejection, no aspirate/dispense, rinse path denied. Implementation in 3cb88d90921fdfbf8751c887e568ea25958a1424 and 8dd167a329a3a3a667c18bc29eb35871a02a5f39 adds PipetteProfile, PlaceTool admission, explicit AspiratePipette and DispensePipette with source/destination revision checks, 25mL hard capacity, science budget staging, inventory and material ledger conservation and blocks burette hydraulic actuation for pipette; push 38719760416 and PR 38719769670 all Windows/Ubuntu native SUCCESS. TDD residual RED 75572fb6c478af6fa1b4867a46b31237a5d1e6e6, Ubuntu push 38720128482 98/99 cases passed, expected shared 5e-8 residual failure; GREEN 259b0b96cbf4216df588532fe48d3b632efe7048 separate research pipette 1e-7 m3 tip residue vs burette 5e-8, RinseTool retains profile-specific material and sends represented contamination to waste. Latest green Ubuntu CTest 1/1 success in CI 38720458723, Windows in progress at ledger writing. Calibration pending: research numbers not device calibration; science package/bottle profile and Unity PipetteActuator/actual user fill-refill/rinse UI are NOT IMPLEMENTED/NOT_RUN. P03.02 Open/NotReviewed, no 15/51 promotion, G-R1 Open, PR #1 unmerged.",
+    "Ruling 2026-10-15 P03.02 continue: Add explicit SwitchPipetteSource command only to a registered 25mL research pipette after a metered aspiration/dispense, preserving the tip residue and requiring registered prepared alternate stock, fresh bottle material revision and pipette inventory revision; refuses missing stock and leaves material ledger unchanged. Source TDD RED 659dd0eb3e4aa0e6ae84c4e4877e0498a979eda7, Ubuntu push CI 38721263996 99/100 cases passed, 7 failures isolated to missing source switch and descendant mixed receiver. Functional source 482e2e2c97cd280e832d887d4bf4aa9fe023366a, Ubuntu Native CTest passed CI 38721647508 and PR 38721653481; Windows jobs still building at ledger write. New product ABI demonstrates hydrochloric acid tip residual is carried into next separately prepared sodium hydroxide aliquot, receiver includes real represented Na and Cl, material ledger remains conserved. All chemistry remains Native; research values not physically calibrated. Unity User UI PipetteActuator, independently modeled bottle and calibration remain NOT_IMPLEMENTED/NOT_RUN. P03.01 and P03.02 both Open, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged, 66 deferred Unity task rows NOT_RUN.",
+    "Ruling: 2026-10-15 P03.02 research bottle continuation: HEAD at turn start 52529238ea7d3d30f7461598ba3732d6a31fece8 had parallel completed pipette and prepared-stock switch implementations, so stale original base 5ecbe7e8 was abandoned rather than overwritten. New test-first Native product ABI 26019233c93758414c60fa5fad16e8e5db0b99c8 demonstrated 100/101 test cases passing, exact new bottle case rejected valid bottle PlaceTool before implementation (PR CI 38786863512). Functional source ca1aea83b24429ce0b55615754c7b8bec58e1b63 adds BottleProfile 100mL research-only, package profile pending calibration, accepts PlaceTool stock source up to capacity, denies unsafe SetActuator and raw positive tracked actuation, measured PourBottle uses existing staged TransferFixed, budget and source/receiver/tool revisions, rejects generic bottle RinseTool as not implemented; import enforces bottle profile, capacity, empty residual and no raw actuator. Exact functional code CI PR 38787431765 and push 38787422220 Ubuntu native CTest 1/1 SUCCESS, panel-routing success; Windows native still building at checkpoint. This does not provide bottle film residual, bottle tilt dynamics, real user fill/rinse/refill/transfer or Unity/Player/XR. P03.02 Open/NotReviewed, dependency P03.01 Open, P07.03 Open; 15 VerifiedLocal/51 Open, G-R1 Open, 66 deferred Unity checks NOT_RUN, formal selector P06.02 unchanged, PR #1 not merged.",
+    "2026-10-15 P03.02 source first per planner Full Development First: Native 20 uL bottle film RED fixture revisions b548556/33b94e and BLUE source f7b1ce; fixture branch correction d775e; floating point material pool conservation corrections 285ce8/6e8cee (green Windows/Ubuntu Native six workflow jobs at 6e8cee). Pure C# ResearchInstrumentPayloads at bc14aa9 headless Windows/Ubuntu/native SUCCESS. Native-backed Unity pipette/bottle actuator components, optional setup-only water and waste, real Desktop controls, PlayMode source and shared VR world-space panel actions added through 43690cfa57ead8d650f081bf3959650f4e1ec37d. Last exact HEAD CI may still be queued. Formal nextTask P06.02 remains; 15 VerifiedLocal/51 Open, G-R1 Open, 66 Unity verification NOT_RUN, PR #1 open. No new task/source slice self-accepted.",
+    "2026-10-15 source development continued from actual HEAD 25d9e943 (PR #1 OPEN, Windows/Ubuntu Native CI all jobs SUCCESS). P03.03 test-first RED 880ce0be/dc0d889, functional policies 09ff2e7 and 7669830; 6 headless geometry checks + 6 motion checks, actual LabCaptureTarget rejects moving rigidbody and kinematic transform receiver > research 0.02 m/s, fail-closed NaN/time; generated pipette/bottle OutletExit mesh anchors and separate XRGrabInteractable bodies a93e40 with NUnit tests authored not executed. P03.02 numeric tip residual admission RED 8436348, GREEN 0628c421, push CI 38799030228 SUCCESS (Windows, Ubuntu and headless); cannot dispense 0.05 mL after just 0.05 mL aspirate because Native retains 0.10 mL. P03.03 latest 7669830 headless push/PR success, Native jobs still running when inspected (push 38799497076, PR 38799506521). Official 15 VerifiedLocal/51 Open and all 66 Unity NOT_RUN; G-R1 Open; formal nextTask P06.02 unchanged. Source feature detail docs/evidence/p03-03-moving-receiver-and-tool-outlet-source.md.",
+    "2026-10-15 P06.02 continuation after geometry checkpoint a37150e: actual LabPanelController and SpatialPanelPresenter were fixed to accept user-selected pinned 0.01/0.05/0.1mol/L for non-water and 0 for water, including deliberate reserve stock. Headless RED e4c694af, GREEN code b95639140bae54b79d3e7d92543c8fec67255c10; new real Native Unity PlayMode source bca5bc84affdb7b1160388008f041990278224cc NOT_RUN, deferred until final Unity campaign. Push CI 38800663203 panel-routing success; Native CI at exact final feature SHA still pending. Formal P06.02 Open, 15 VerifiedLocal/51 Open, G-R1 Open, PR #1 unmerged; 66 deferred Unity checks NOT_RUN.",
+    "2026-10-16 code-first P03.03 / P07.03 increment: actual prior branch was 1df05f2e (Windows/Ubuntu Native and headless push+PR CI SUCCESS). TDD RED overlap test caf1a9dd, run 38815117025 CS2001; GREEN actual scene-scoped active LabCaptureTarget EstimateExclusive+pure CaptureTargetSelection and Desktop/XR adapters 2b948d9, push 38815316914 Windows/Ubuntu Native+headless CI SUCCESS. Two physical receivers with different or identical inventory IDs are conservatively rejected rather than first-wins; no Native mass credit or Unity-side physics authority added. TDD RED dock 159242c, expected missing ToolMountAdmission CS2001 run 38815465800; GREEN 2cac163d researched orientation bound 25 degrees / distance 12cm and selected-state denial, edits ToolMount before any side effect; NUnit EditMode authored NOT_RUN. Final feature push run 38815616489 headless SUCCESS, Native Windows+Ubuntu running; PR run 38815626061 queued. P03.03 and P07.03 remain Open, 15 VerifiedLocal/51 Open, G-R1 Open, all 66 deferred Unity checks NOT_RUN, PR #1 unmerged, formal nextTask P06.02.",
+    "2026-10-16 P06.02 continuation: Native Hold/Settings Back regression captured with actual ScreenRouter/LabPanelController headless. RED 9818e55 at GitHub push 38816469130 (resolved hold reopened Hold). First candidate 05f85ee headless failure exposed unsupported direct Lab→Settings test path; corrected test uses Pause→Settings→NativeHold→Settings→recovery; valid RED c7e199 at run 38816737046 (lost Native Pause). GREEN functional 467477a85f9670226291bd3bfbce0a968662f786 tracks pre-interruption Settings destination and returns Pause if session remains Native-paused; never saves or issues Continue/Pause on Back. Green headless C# step push 38816878655 SUCCESS, Native Windows/Ubuntu ongoing at evidence authoring. No full Unity, Player, XR or real scene execution; P06.02 Open, G-R1 Open, PR #1 unmerged, 15 VerifiedLocal/51 Open, all 66 deferred Unity verification NOT_RUN.",
+    "2026-10-16 extended code-first source tranche under user direction to not stop after small edits. Ruling: implement P10.01/P03.03 bounded production source before full dependencies/Unity certification, because Desktop geometry/input contract needs working code, but keep both formal status Open/NotReviewed, exact nextTask P06.02 and G-R1 Open. TDD: wheel RED 311c315 -> GREEN 48af76b9 [push 38821424304 + PR 38821429553 SUCCESS]; physical bench Place RED 82cde77 -> GREEN 7f048880 [push 38821797287 + PR 38821806745 SUCCESS]; shift+left plane drag vs valve RED ccde742 -> GREEN 1a8f72b7 [push 38822097420 + PR 38822102844 SUCCESS]. Fixed camera AddComponent Awake-before-Parent pitfall via explicit binding and initial pitch recovery 8f82aab/92766b0; authored Unity EditMode asset/input tests NOT_RUN. Native 50mL desktop outlet RED bfe3448 -> GREEN 367c904a, actual generated mesh tip landmark and Unity scene test source; [push 38822517798] headless + Ubuntu Native SUCCESS, Windows still running when inspected. Latest functional source 92766b0255b0e5d5bd611a0f7f9340f2ded04654 headless/Native full push 38822741849 and PR 38822749232 still in progress at ledger update. Material authority remains exclusively Native; nothing VerifiedLocal, all 66 deferred Unity rows NOT_RUN.",
+    "2026-10-16 continued beyond Desktop controls into P10.02: implemented strict versioned invariant SetupPreferencesCodec and local PlayerPrefs continuity Boot→Lab without touching Native chemistry at 0d283d9; test-first RED dddaa5f and GREEN CI push 38823403731 SUCCESS. Extended real Runtime/UI AudioPreferenceRouting and MonoBehaviour AudioPreferencesOutput on BootMenu and generated LabRoot to apply sound volume live, TDD RED c271307f; GREEN functional 4fc012d, headless C# green push/PR workflow 38823690022/38823695265, Windows/Ubuntu native still running. Added NUnit EditMode source SetupPreferencesCodecTests and AudioPreferencesOutputTests for final Unity campaign, NOT_RUN. P10.02 Open/NotReviewed, full optional water orientation/replay/remap and PlayerPrefs restart evidence outstanding. Formal nextTask=P06.02, 15 VerifiedLocal/51 Open, all 66 deferred Unity checks NOT_RUN, PR #1 Open, G-R1 Open. Ruling: code-first UX increments allowed under human deferral; no planner acceptance or gate promotion.",
+    "2026-10-16 user explicitly rejected ALL Arabic in PharmaLabVR product, selected English-only. This direct user product decision overrides legacy P10.03 bilingual/RTL instructions. Reverted the nine newly authored multilingual source commits without rewriting history; preserved preceding accepted source and green P10.02 at baseline 7edf9b95. New functional HEAD 18c06baa removes Arabic translations/fonts/RTLTMPro/selection/LocalizedLabel, removes RTL asmdef reference and enforces en-only catalog with strict source tests. No Unity Editor/PlayMode/Player/XR run. CI at 18c06baa headless success, Native Windows/Ubuntu pending. P10.03 Open, 15 VerifiedLocal/51 Open, 66 Unity NOT_RUN, G-R1 Open, PR #1 open, formal nextTask P06.02 unchanged.",
+    "2026-10-16 owner reiterated ENGLISH-ONLY product UI. Functional source 18c06baa removed Arabic/RTL assets and runtime switches; incremental 24ac6ca8 rejects Arabic Unicode ranges in English copy values/keys with atomic failure, adds headless regression; CI exact final functional SHA pending at note. Formal P10.03 Open/NotReviewed, 66 deferred Unity NOT_RUN, G-R1 Open, PR #1 unmerged, nextTask P06.02 unchanged.",
+    "2026-10-16 continuation: started from GitHub fafee12, preserved owner English-only policy; source test RED d0c3ebe → GREEN 182b7b6, P11 filesystem RED 1f41c2c → green panel routing at 8b22c59; unguarded live Desktop loading removed at 186c9ae. Canonical English-only spec corrections at 1417741. No Unity Editor/Player/XR executed; ledger 15 VerifiedLocal / 51 Open and G-R1 Open; final local Codex campaign deferred. PR #1 unmerged.",
+    "2026-10-16 code-first slices P11.01 real filesystem RED 184b980 → cleanup cdf0410; P09.02 headless missing-policy RED 9f1bdd → scientific policy/Unity XR presentation 8b3206f, headless Unity warning-only fix 6424148; actual Unity NOT_RUN, G-R1 Open; preserve unmerged PR #1.",
+    "2026-10-16 continuation b987713 Native valueAvailable from snapshot through Unity/Review; c7b0b05 Load primary-or-backup admission; 8c5c3d2 checksummed atomic research NotebookService; 1cd320b/f6b18f Desktop/VR notebook routing and PlayMode source. RED test SHAs a73a486, 551a2cb, 88d8931, 6471d31; P09/P06/P11 tasks remain Open, G-R1 Open, 66 deferred Unity tests NOT_RUN, English-only, PR #1 unmerged. Source-level tests and selected exact CI runs in NEXT and P11 notebook evidence; do not self-claim completion.",
+    "2026-10-16 P11.03 Ruling: portable .plvpack must remain export-only until proven Native+note restore transaction. RED test commits 283c764, 97777da; codec GREEN b4fdfca (push+PR 3/3 SUCCESS); UI GREEN 2516188 headless SUCCESS, Unity scene test 5dcca1e NOT_RUN. All 66 formal statuses unchanged, P11.03 and G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-16 P11.02 receipts RED 2aa54ec → GREEN 5b3f615 (Native/headless both trigger matrices SUCCESS); P11.03 CSV RED 90eb99b → GREEN 8b2b306 all CI SUCCESS, CSV panel RED 049cae7 → c65f21d, signed numeric RED 2ad97766 → fix 861c5f1 headless success with overall Native pending. XR PlayMode source authored 2a62105 NOT_RUN; no full P11 acceptance. Keep P11.02/P11.03 Open, G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-16 Ruling P11.03 compare saved Native checkpoint vs current recorded Review only: no inferred pH curves/chemistry, delta requires matching pinned model provenance, missing/stale suppress; compare RED 478b73f, routing RED dc23cba, GREEN eae473c and cd6676f, Unity source 587ec4e NOT_RUN. P09 stale RED 2f97d1e GREEN 44bda21 Native/headless both CI triggers SUCCESS. No G-R1 advancement, PR #1 unmerged.",
+    "2026-10-16 added P11 UTF8 hardening RED 41dd54d -> GREEN ebfef7f and headless fixture repair c2151f2, validated backup-only Review RED c6b67ee -> GREEN a2389f6, saved compare backup RED d9c71f0 -> GREEN 8e7941. Headless tests passed at c2151f2 push 38865601352; final Windows/Ubuntu CI results must be independently inspected. Source-only Unity EditMode tests authored 4356a72, NOT_RUN. P09.02, P11.01-03 and G-R1 remain Open; 15 VerifiedLocal/51 Open; PR #1 unmerged.",
+    "2026-10-16 P11.01 new Native disk source RED d0c6574 -> GREEN c3ca7e3 push 38867581980 native Windows/Ubuntu & panel all SUCCESS; native persisted ReceiptIdentityIndex RED 666f8a5 -> GREEN ced83f5 push 38868273059 Ubuntu/headless success Windows pending at ledger entry. New API NOT wired into live Native ABI; no actual crash/fault or Unity acceptance. 66 task counts 15 VerifiedLocal/51 Open; G-R1 Open; English-only and PR #1 unmerged.",
+    "2026-10-16 P11.01 R04 source-level RED 9051937 native missing policy, GREEN a6e0096 pure DirtyCheckpointPolicy 30sim/30wall earliest flush, pause/clock discontinuity require flush; actual checkpoint writer/ABI remains unimplemented. R05 persisted index push 38868273059 + PR 38868280086 all three CI jobs SUCCESS. 66 statuses unchanged, 15 VerifiedLocal/51 Open, G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-16 Native R04/R01 source RED cd58454 (acknowledgeFlush(bool) missing in Ubuntu build 38869493757) -> functional GREEN 314f264 (false failed disk flush retains first-dirty due clock, true only clears); Native CI push 38869832555 and PR 38869840059 pending at ledger write. Never infer complete checkpoint durability before live ABI wiring. English-only, G-R1 Open, 66 statuses unchanged, PR #1 unmerged.",
+    "2026-10-17 P11.01 RED acada39 -> GREEN ef05640 explicit real Native checkpoint with 2-slot SHA256 envelope; push 38968858274 + PR 38968863788 all 3 CI SUCCESS. RED 45acc10 -> GREEN a2e7bea Native verified checkpoint import, C# checkpoint write source b70341c8 NOT_RUN Unity, disk-stage failure test a110c5e; later CI still pending. Critical ruling: no automatic 30sim/30wall checkpoint or full crash recovery, no Windows OS power-loss guarantee, no change 66 formal task statuses; G-R1 Open; PR #1 unmerged.",
+    "2026-10-17 security ruling: plv_import scientific worker initializes lazily, so checksum-valid checkpoint + missing pinned database could have returned PLV_OK; RED 76f2446 in 38970462532; implicit replacement RED 59435f6. GREEN b81b5f0 checks pinned SHA-256 bytes and live session admission before invoking Native import. Positive known pinned minteq test source 442252b; full CI pending at ledger note. P11.01 still Open, 15 VerifiedLocal/51 Open; G-R1 Open, English-only PR #1 unmerged.",
+    "2026-10-17 checkpoint auto RED bc6b869 -> GREEN 211597a (CI 3/3 SUCCESS), imported attach RED 55253f5 -> GREEN 0003452 (3/3 SUCCESS), Unity startup/load binding 169f14c (native/headless CI success, Unity NOT_RUN), branch/model guard RED 012120f -> GREEN 2ed69b1 (Ubuntu/headless green, Windows pending). Critical ruling: error after a committed tick from a post-tick checkpoint failure is still unresolved and must not be advertised as atomic step rejection. 15 VerifiedLocal/51 Open; G-R1 Open, English-only PR #1 unmerged.",
+    "2026-10-17 ruling: error after committed physics tick is misleading; `plv_step` now returns PLV_OK with visible Storage Hold and deferred neutral recovery for post-commit write failure, but pre-tick failure still returns PLV_INTERNAL_ERROR because nothing committed. RED Native 54544b6 Ubuntu 38989173479 4 failing assertions, GREEN 38b09e9 Ubuntu/headless pass, b87ed9a Unity source NOT_RUN, ad4f571 recovery contract CI pending. Keep 15 VerifiedLocal/51 Open; P11.01, G-R1 Open, English-only, PR #1 unmerged.",
+    "2026-10-17 P11.01 continuation from 55de60371 (both CI SUCCESS). Commit 4f95a51 verifies real Native checkpoint restored receipt replay and sequence; 3c63e1a adds separate managed Native checkpoint import with pinned science guard and no live swap; 9786c07 authors Unity EditMode scenario, NOT_RUN. Keep all 66 statuses unchanged (15 VerifiedLocal, 51 Open), G-R1 Open and PR #1 unmerged, English-only."
+  ]
+}

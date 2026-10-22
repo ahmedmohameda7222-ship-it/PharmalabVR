@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Inspector-serialized TMP fields are assigned by Unity, not the headless constructor. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Stubs.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScreenRouter.cs" Link="ScreenRouter.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LocalizationService.cs" Link="LocalizationService.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/MeasurementView.cs" Link="MeasurementView.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ScientificReadoutPolicy.cs" Link="ScientificReadoutPolicy.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/BootLaunchAvailability.cs" Link="BootLaunchAvailability.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/InteractionOwnership.cs" Link="InteractionOwnership.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopWheelRouting.cs" Link="DesktopWheelRouting.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPlacementAdmission.cs" Link="DesktopPlacementAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/DesktopPointerRouting.cs" Link="DesktopPointerRouting.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchAuxiliaryDelivery.cs" Link="ResearchAuxiliaryDelivery.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchPressBuffer.cs" Link="ResearchPressBuffer.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ResearchOutletGeometry.cs" Link="ResearchOutletGeometry.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureAdmission.cs" Link="CaptureAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/CaptureTargetSelection.cs" Link="CaptureTargetSelection.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/ReceiverMotionTracker.cs" Link="ReceiverMotionTracker.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/XRTrackingAdmission.cs" Link="XRTrackingAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/RecoveryAlignmentPolicy.cs" Link="RecoveryAlignmentPolicy.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/ToolMountAdmission.cs" Link="ToolMountAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Input/SessionLoadAdmission.cs" Link="SessionLoadAdmission.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/DropParcelState.cs" Link="DropParcelState.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Tools/ResearchInstrumentPayloads.cs" Link="ResearchInstrumentPayloads.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs" Link="LabPanelController.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Lab/LabBenchReadout.cs" Link="LabBenchReadout.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Lab/ResearchConceptReadout.cs" Link="ResearchConceptReadout.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Lab/NativeMeasurementNote.cs" Link="NativeMeasurementNote.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs" Link="NotebookService.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/ResearchLearningReview.cs" Link="ResearchLearningReview.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/ResearchNotebookPHHistory.cs" Link="ResearchNotebookPHHistory.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/InstructorObservationLabel.cs" Link="InstructorObservationLabel.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/OfflineArchivePicker.cs" Link="OfflineArchivePicker.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ProtocolDefinition.cs" Link="ProtocolDefinition.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ResearchLessonJourney.cs" Link="ResearchLessonJourney.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ResearchConcentrationSelection.cs" Link="ResearchConcentrationSelection.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/ResearchInstrumentMenuLayout.cs" Link="ResearchInstrumentMenuLayout.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/SetupPreferencesCodec.cs" Link="SetupPreferencesCodec.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/UI/AudioPreferenceRouting.cs" Link="AudioPreferenceRouting.cs" />
+  </ItemGroup>
+</Project>

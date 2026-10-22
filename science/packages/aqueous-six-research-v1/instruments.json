@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "burette-50ml-research-v1",
+      "capacityM3": 0.00005,
+      "internalRadiusM": 0.006,
+      "columnLengthM": 0.442,
+      "flow": {
+        "model": "orifice-head",
+        "cd": 0.6,
+        "maxApertureRadiusM": 0.0003,
+        "gravityMPerS2": 9.80665
+      },
+      "dropReferenceVolumeM3": 5e-8,
+      "calibration": "pending"
+    },
+    {
+      "id": "pipette-25ml-research-v1",
+      "capacityM3": 0.000025,
+      "calibration": "pending",
+      "retainedTipVolumeM3": 1e-7,
+      "residualCalibration": "synthetic-research-not-measured"
+    },
+    {
+      "id": "receiver-250ml-research-v1",
+      "capacityM3": 0.00025,
+      "calibration": "synthetic-research-geometry"
+    },
+    {
+      "id": "bottle-100ml-research-v1",
+      "capacityM3": 0.0001,
+      "transfer": {
+        "model": "revision-bound-measured-aliquot",
+        "flowCalibration": "not-validated"
+      },
+      "residual": {
+        "model": "represented-mixed-film",
+        "retainedFilmVolumeM3": 2e-8,
+        "calibration": "synthetic-research-not-validated"
+      },
+      "calibration": "pending"
+    }
+  ]
+}

@@ -1,0 +1,135 @@
+{
+  "schemaVersion": 3,
+  "testedCodeCommitSha": "10d6dae3d62faf2c25d85364b0c29f26a97fb382",
+  "hashAlgorithm": "SHA-256",
+  "treeDigestAlgorithm": "SHA-256 of UTF-8 sorted lines '<lowercase file sha256>  <directory-relative forward-slash path>\\n'",
+  "artifacts": [
+    {
+      "path": "artifacts/WindowsDesktop",
+      "files": 186,
+      "bytes": 101241432,
+      "treeSha256": "62DB64F1D51865AA1E6A67F746EB4C1CC072B59933576512B67E8F49C579909C"
+    },
+    {
+      "path": "artifacts/WindowsVR",
+      "files": 188,
+      "bytes": 104513700,
+      "treeSha256": "807867666ED3107773F890BD5C805598E1828189831EC4F280F060AF4DDDE9D9"
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR.exe",
+      "bytes": 667136,
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653"
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR.exe",
+      "bytes": 667136,
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653"
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR_Data/Plugins/x86_64/openxr_loader.dll",
+      "bytes": 2373632,
+      "sha256": "F7384429C16288D9C2C123ACFCA1E040C9CEC6C5484A3F5A5107D6AA32BA57E8"
+    },
+    {
+      "path": "artifacts/AndroidVR/PharmaLabVR-research.apk",
+      "bytes": 43480156,
+      "sha256": "F4122B956EFA316DF26ADDEA82CB0DFB41468ABA8199A6A78EA09E2BFE24F0D4"
+    },
+    {
+      "path": "unity/Assets/Plugins/x86_64/pharmalab_core.dll",
+      "bytes": 2242048,
+      "sha256": "A94AA31EA1FCC16EF9D7B9885BA9FC9BB37A638B32AE2FF36D2A96627C550E7C"
+    },
+    {
+      "path": "unity/Assets/Plugins/Android/arm64-v8a/libpharmalab_core.so",
+      "bytes": 47621552,
+      "sha256": "39BC0B5514D8B3AA8ED3C9B0FF14718C9C3A3E9BFE80AAA1800994205D704151"
+    },
+    {
+      "path": "unity/Assets/StreamingAssets/science/minteq.v4.dat",
+      "bytes": 334121,
+      "sha256": "AB0A8F7C7375E1BD997990F4BC3A9AF497516F10E57F4AAA3CEFB55DCCAC5AE7"
+    },
+    {
+      "path": "artifacts/test-results/native-final-current.txt",
+      "bytes": 309,
+      "sha256": "BD6E9F738A79CBD583C5C631C28E98B2DFB896D6C6FBE13C750780675463EFA3"
+    },
+    {
+      "path": "artifacts/test-results/ctest-final-current.txt",
+      "bytes": 456,
+      "sha256": "A7C6D43F358779682BBFDC219BABC81A1A207B56A6F4B4489407A45C6450FB9E"
+    },
+    {
+      "path": "artifacts/test-results/python-tooling-oct9-current.txt",
+      "bytes": 967,
+      "sha256": "3285D09E92B1FAD49CF59E978EAB53F2F59191E15AD8E1B6DDF7446918847C02"
+    },
+    {
+      "path": "artifacts/test-results/EditMode-cylinder-fixed-v2.xml",
+      "bytes": 20525,
+      "sha256": "E7F7A2627F3FBF52B01998800A6CCA50AA16A44743C4902C3FDBC7A1946EA186"
+    },
+    {
+      "path": "artifacts/test-results/EditMode-red-cylinder.xml",
+      "bytes": 21685,
+      "sha256": "5B7133166DB84B75A909EB8B203823136B37267F0446516C7D7FC8F8C78909B9"
+    },
+    {
+      "path": "artifacts/test-results/PlayMode-cylinder-fixed.xml",
+      "bytes": 15253,
+      "sha256": "7F83B9DF3915DD45F29A84ABEC9F2C49CEBA78E22EEC17B1AAE9398DD15882C3"
+    },
+    {
+      "path": "artifacts/logs/unity-WindowsDesktop-10d6dae.log",
+      "bytes": 413481,
+      "sha256": "A794AACD6C39F4F4EA2FE02482B52916CF1F80B78C2A9197E1EF9B7AC6C9D797"
+    },
+    {
+      "path": "artifacts/logs/unity-WindowsVR-10d6dae.log",
+      "bytes": 415468,
+      "sha256": "769B3A8FDD8B419DEB912C578973EF3A40B2628EAD72B29B100F8D0B8F109CEF"
+    },
+    {
+      "path": "artifacts/logs/unity-AndroidVR-10d6dae.log",
+      "bytes": 384317,
+      "sha256": "13352FA42DAF56A00A6450413793455AB0BD1150D8048AC972DE1B0EBCC9E43B"
+    },
+    {
+      "path": "artifacts/logs/windows-desktop-10d6dae.log",
+      "bytes": 3231,
+      "sha256": "4B0D9EC47A69F925CA8D746D3DC15CF9EA6D344E2DC67C5A4423A8455A0D9C76"
+    },
+    {
+      "path": "artifacts/performance/windows-desktop-load-continue-10d6dae.json",
+      "bytes": 63716,
+      "sha256": "0EDED311DB8464073C08D6BCAC62FFC94B985BD2304E7B4E3A8047BC5C92DC31"
+    },
+    {
+      "path": "artifacts/sessions/autosave-10d6dae.plv.json",
+      "bytes": 4779,
+      "sha256": "00E9A6CAEB1022C574A8CFD14DAECFAB4D1791E3703CDABD366FEDF1787DA02A"
+    },
+    {
+      "path": "artifacts/screenshots/windows-desktop-10d6dae-boot.png",
+      "bytes": 109686,
+      "sha256": "50FE2B2020AABBDBF439DCDEE3403EDE5DB3C782A9428B0E59B97B0B7D5F1EB2"
+    },
+    {
+      "path": "artifacts/screenshots/windows-desktop-10d6dae-lab.png",
+      "bytes": 106588,
+      "sha256": "A4D8579BBD7ED59F5C4E4152B84EA64B1F69724D8CA24E0A5F6C70B6CB531BE8"
+    },
+    {
+      "path": "artifacts/screenshots/windows-desktop-10d6dae-loaded-held.png",
+      "bytes": 107954,
+      "sha256": "E266C1DD1EAE2D92B1040AF631D73C88E9912256E7F5993E6CA277CBA42A883A"
+    },
+    {
+      "path": "artifacts/screenshots/windows-desktop-10d6dae-loaded-continued.png",
+      "bytes": 101441,
+      "sha256": "FB290BCA17FC05AF1AAEF4549585236D4452D77F609DD2EF43AE3D9EE2F92559"
+    }
+  ]
+}

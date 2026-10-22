@@ -1,0 +1,67 @@
+name: University PostgreSQL tenant isolation
+
+on:
+  push:
+    branches: [feat/foundation-vr-first]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/university-postgres.yml"
+      - "scripts/ci/stop-disposable-supabase.sh"
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/university-postgres.yml"
+      - "scripts/ci/stop-disposable-supabase.sh"
+
+jobs:
+  disposable-supabase:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      # Pin an actual released CLI so Actions never queries 'latest' unauthenticated.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - name: Record exact installed Supabase CLI
+        run: supabase --version
+      - name: Start isolated local Supabase (never link or use remote keys)
+        run: supabase start
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Assert all source migrations installed and 17 RLS tables
+        env:
+          PGPASSWORD: postgres
+        run: |
+          DB="host=127.0.0.1 port=54322 user=postgres dbname=postgres sslmode=disable"
+          EXPECTED=$(find supabase/migrations -maxdepth 1 -type f -name '*.sql' | wc -l)
+          APPLIED=$(psql "$DB" -X -A -t -v ON_ERROR_STOP=1 -c "select count(*) from supabase_migrations.schema_migrations;")
+          RLS=$(psql "$DB" -X -A -t -v ON_ERROR_STOP=1 -c "select count(*) from pg_class c join pg_namespace n on n.oid=c.relnamespace where n.nspname='public' and c.relkind='r' and c.relrowsecurity;")
+          echo "Migrations: $APPLIED/$EXPECTED; RLS tables: $RLS"
+          test "$APPLIED" -eq "$EXPECTED"
+          test "$RLS" -eq 17
+      - name: Execute disposable two-university Auth RLS and academic fixture
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql "host=127.0.0.1 port=54322 user=postgres dbname=postgres sslmode=disable" \
+            -X -v ON_ERROR_STOP=1 -f supabase/security-tests/tenant_isolation.sql
+      - name: Real localhost Auth / Edge / private Storage regression
+        run: |
+          supabase status -o env > "$RUNNER_TEMP/supabase-status.env"
+          set -a
+          source "$RUNNER_TEMP/supabase-status.env"
+          set +a
+          supabase functions serve student-evidence-upload > "$RUNNER_TEMP/u04-edge.log" 2>&1 &
+          EDGE_PID=$!
+          trap 'kill "$EDGE_PID" 2>/dev/null || true' EXIT
+          if ! node supabase/security-tests/staging_http_smoke.mjs; then
+            echo "Local Edge integration failed; showing bounded local service diagnostics:"
+            tail -n 60 "$RUNNER_TEMP/u04-edge.log"
+            exit 1
+          fi
+      - name: Destroy and verify isolated stack without backups
+        if: always()
+        run: bash scripts/ci/stop-disposable-supabase.sh

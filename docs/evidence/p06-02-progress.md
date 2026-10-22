@@ -1,0 +1,13 @@
+# P06.02 — shared panel routing, partial local progress
+
+Functional code: `dd60197b05fc7963146cfacec98ff50fe37c4cdc` (Unity 6000.3.25f1, local Windows). **P06.02 remains Open.** This is Research software evidence, not release acceptance.
+
+## Red → production change → green
+
+- A PlayMode compile regression first required the missing `ScreenRouter` and immutable `PanelState`. The native-backed `LabViewModel` now includes observations. The Lab scene's `SessionController` creates one router and `LabPanelController`; Inspect/Measure select a real native vessel, Pause/Continue submit native commands, Hold removes unavailable Continue, and Save marks the view only after durable `SaveService` success. A scene test exercises action-driven Inspect receiver, observation model/freshness, save on disk, native Pause/Continue, FocusLoss hold, and denied Measure/Continue during hold.
+- A cold Player entered TimeDiscontinuity before the first Lab frame. A red 120 ms first-frame test led to a zero-delta clock baseline and rebasing input adapters to the native sequence watermark. A later paused Setup frame also raised a transport hold; a second red regression led to bounded zero-delta input polling while native pause is active. The green test confirms two delayed paused frames remain unheld and a later delayed **unpaused** frame still enters TimeDiscontinuity hold.
+- The initial observed `Inspect receiver` background-click attempt hit the Pause control. The rendered Pause screenshot is evidence of an actual Player panel and native pause path, **not** evidence of Inspect. Its Player log contains two TimeDiscontinuity warnings after further background interaction. The unit/scene tests cover the targeted pause-clock behavior; a controlled normal Player journey and focus-stress diagnosis remain open.
+
+## Verification and limits
+
+Native Release CTest: 1/1. Unity EditMode: 22/22. Unity PlayMode: 28/28. Fresh WindowsDesktop, WindowsVR and AndroidVR builds each reported `Build Finished, Result: Success` at the functional SHA; the raw logs, test XML, Player captures and binary hashes are listed in `artifact-manifest-p06-02.json`. The WindowsDesktop Player rendered a Lab panel with stock choices, Inspect controls, Save and native Pause; this does not prove Inspect was selected in the Player or a complete student journey. The current panel is Desktop IMGUI and there is no functioning VR world-space panel, Boot/Setup/Review state journey, shared locale controls, or full presenter parity. G-R1 and the 95-item catalog stay unchanged. Physical device, calibration, experimental chemistry and controlled performance evidence are still external gates.

@@ -1,0 +1,73 @@
+name: Native
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  panel-routing:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Compile and exercise shared C# panel routing (headless; not Unity)
+        run: dotnet run --project tools/panel-contract/PanelContract.csproj --configuration Release
+      - name: Exercise real SaveService filesystem boundaries (headless; not Native or Unity)
+        run: dotnet run --project tools/save-contract/SaveContract.csproj --configuration Release
+      - name: Exercise real durable NotebookService event-note persistence (headless)
+        run: dotnet run --project tools/notebook-contract/NotebookContract.csproj --configuration Release
+      - name: Verify paused-Review regression RED then GREEN (headless)
+        run: python tools/panel-contract/check_regression.py
+      - name: Exercise source-linked U02 membership selector security contract (headless; not Supabase)
+        run: dotnet run --project tools/university-contract/UniversityContract.csproj --configuration Release
+      - name: Exercise U05 English-only portal Auth/RLS and view contract (Node; no cloud)
+        run: |
+          node --check portal/app.mjs
+          node --check portal/config.mjs
+          node --check portal/src/api.mjs
+          node --check portal/src/view.mjs
+          node --test portal/test/*.test.mjs
+      - name: Exercise source-linked U04 durable offline outbox (headless; no cloud)
+        run: dotnet run --project tools/outbox-contract/OutboxContract.csproj --configuration Release
+      - name: Exercise pure U04 tenant evidence-status access rules (Node; no cloud)
+        run: node --test supabase/functions/student-evidence-status/policy.test.mjs
+      - name: U04 upload admission SHA and tenant rules (no cloud)
+        run: node --test supabase/functions/student-evidence-upload/intent.test.mjs
+      - name: U04 bounded upload protocol regression (no cloud)
+        run: node --test supabase/functions/student-evidence-upload/protocol.test.mjs
+      - name: U04 idempotent verified quarantine replay regression (no cloud)
+        run: node --test supabase/functions/student-evidence-upload/reconcile.test.mjs
+      - name: Supabase teardown must detect residual containers (isolated fake Docker)
+        run: node --test scripts/tests/test_supabase_teardown.mjs
+  native:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure
+        run: cmake -S . -B build/native -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/native --config Release --parallel 2
+      - name: Upload compiled native build
+        uses: actions/upload-artifact@v6
+        with:
+          name: pharmalabvr-native-${{ matrix.os }}-${{ github.sha }}
+          path: |
+            build/native/**/*.dll
+            build/native/**/*.so
+            build/native/**/*.dylib
+            build/native/**/minteq.v4.dat
+            build/native/**/plv_tests*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Test
+        run: ctest --test-dir build/native -C Release --output-on-failure
+      - name: Verify independent ideal fixtures
+        run: python science/reference/verify_ideal_fixtures.py
+      - name: Verify repository tooling
+        run: python -m unittest discover -s scripts/tests -v

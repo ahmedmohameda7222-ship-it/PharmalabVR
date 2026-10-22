@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "797b836998a45a6804d291f00dd6356d0d84a4c8",
+  "scope": "P06.02 partial: readable Editor XR camera spatial UI; no current-code Player ray or headset acceptance",
+  "artifactProvenance": {
+    "vr-panel-render-editor.png": "Unity PlayMode XR Camera RenderTexture at functional SHA",
+    "windows-vr-player-mirror-blank.png": "actual prior-round Windows Player mirror at 746139a/07c2a; not functional SHA",
+    "builds": "fresh WindowsDesktop, WindowsVR and AndroidVR Player outputs at functional SHA"
+  },
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p06-02-spatial/PlayMode.xml",
+      "sha256": "36F325A9212926F15C9886DC255C7118D3CA33C5D9E0CC2F946024B7B4038EDD",
+      "bytes": 29030
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/PlayMode.log",
+      "sha256": "A9FB1666A70B839ACFE45D59F6761B7FB6B32F5BFBA5D7FC5DF2B4C2C1F3CEB0",
+      "bytes": 61733
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/EditMode.xml",
+      "sha256": "BA6140CBDE29048B570EB5635B8E470EBDF064F3A1DEBD0D72FAA7786DEAAF75",
+      "bytes": 20524
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/EditMode.log",
+      "sha256": "BE98323BA45A0A317A1B928670EA53160B271BAD7EE506EFDBF76D7AE92B9FFA",
+      "bytes": 76739
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/LastTest.log",
+      "sha256": "517F1655F9EFADF4DFDE0E0B48D07E580D58C5C43D1A7590DE68A13D6DFDF73C",
+      "bytes": 1623
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/vr-panel-render-editor.png",
+      "sha256": "408CC91CD662D24DC1D76884506362D3D54CEA5E359FBFCF31A36FBCB0ED4749",
+      "bytes": 22259
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/vr-panel-render-editor.ppm",
+      "sha256": "A9177D580AF290B5CD8F1B9489AEA8F3B25E67D2372146D61DE27EA885942628",
+      "bytes": 786447
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/windows-vr-player-mirror-blank.png",
+      "sha256": "5381378AECB0F0504BC8F6A24469F0D5109B642F48FD5920D6C4F899B00B856D",
+      "bytes": 30778
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/windows-vr-player-mirror-blank.log",
+      "sha256": "22518DAB467CBE020D654E5843F903A5D1E7F96A67EC4C9DDB9F8E9EAA019160",
+      "bytes": 3097
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/unity-WindowsDesktop.log",
+      "sha256": "A0F3B9D5E01041A668603084A52FB2A8585CC05681A4B482E94406A424B5A6FD",
+      "bytes": 394444
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/unity-WindowsVR.log",
+      "sha256": "F0528246485673F2C6F916B27E4691CA4AC5E0A4224F933768A154961C6DBFBD",
+      "bytes": 381573
+    },
+    {
+      "path": "artifacts/evidence-p06-02-spatial/unity-AndroidVR.log",
+      "sha256": "896B297474355C653BC4AE9216A70D0A932AB995AA6DC056FE7B0AAA54238554",
+      "bytes": 385084
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll",
+      "sha256": "42077007A296666D1A4FFD7894AB11135A001460FB5D3BA4768603C73698172E",
+      "bytes": 2287104
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/AndroidVR/PharmaLabVR-research.apk",
+      "sha256": "36FC501E206B77E339A4CC50EB24F867620EE40EE175293F26EE1E8358B489E0",
+      "bytes": 43940236
+    }
+  ]
+}

@@ -1,0 +1,235 @@
+# PharmaLabVR — 66-task source completion matrix
+
+> Separate source-code audit, **not** the official acceptance ledger. Based on tracked paths at 2cf460e and original task acceptance text. An existing file does not prove complete integration. Statuses are deliberately conservative; task-specific hands-on code review and required Unity verification remain open.
+
+**Formal task ledger remains unchanged:** 15 VerifiedLocal, 51 Open; G-R1 and G-U1 unaccepted. No new Unity Editor, PlayMode, Player, or XR execution was performed for this matrix.
+
+| Task | Product outcome | Source status | Existing production path (representative) | Remaining source/acceptance behavior | Depends on | Unity | Milestone |
+|---|---|---|---|---|---|---|---|---|
+| P00.01 | Resume actual checkout | **CompleteSource** | `scripts/doctor.ps1`, `docs/evidence`, `docs/premium-master` | Preserve previously verified local scope; release evidence still gated | — | Not applicable to headless-only scope | Foundation |
+| P00.02 | Persistent task ledger | **CompleteSource** | `docs/evidence/execution-state.json`, `docs/evidence/NEXT.md` | Preserve previously verified local scope; release evidence still gated | P00.01 | Not applicable to headless-only scope | Foundation |
+| P01.01 | Atomic multi-tool tick | **CompleteSource** | `native/core/src/abi.cpp`, `native/core/src/transport.cpp`, `native/tests/test_abi.cpp` | Preserve previously verified local scope; release evidence still gated | P00.02 | Not applicable to headless-only scope | Foundation |
+| P01.02 | Lifecycle, ownership and bounded limits | **CompleteSource** | `native/core/src/abi.cpp`, `native/core/src/solver_worker.cpp`, `native/tests/test_abi.cpp` | Preserve previously verified local scope; release evidence still gated | P01.01 | Not applicable to headless-only scope | Foundation |
+| P01.03 | Complete boundary recovery | **CompleteSource** | `native/core/src/abi.cpp`, `native/tests/test_abi.cpp` | Preserve previously verified local scope; release evidence still gated | P01.02 | Not applicable to headless-only scope | Foundation |
+| P02.01 | Six-stock preparation catalog | **CompleteSource** | `science/packages/aqueous-six-research-v1/stocks.json`, `native/core/src/material.cpp`, `unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs` | Preserve previously verified local scope; release evidence still gated | P01.03 | NOT_RUN | Foundation |
+| P02.02 | Shared command facade | **CompleteSource** | `unity/Assets/PharmaLabVR/Runtime/Core/CoreSession.cs`, `unity/Assets/PharmaLabVR/Runtime/Lab/LabCommandService.cs` | Preserve previously verified local scope; release evidence still gated | P02.01 | NOT_RUN | Foundation |
+| P02.03 | Full ledger | **CompleteSource** | `native/core/src/material.cpp`, `native/core/src/abi.cpp`, `native/tests/test_material.cpp` | Preserve previously verified local scope; release evidence still gated | P02.02 | Not applicable to headless-only scope | Foundation |
+| P03.01 | Burette parcels and final drop | **Partial** | `native/core/src/tool_models.cpp`, `native/core/src/abi.cpp`, `unity/Assets/PharmaLabVR/Runtime/Tools/ToolPresenter.cs` | Close during flow then final drop lands or spills once; actual runtime not standalone helper tests; T04/T05/T08. | P07.03 | NOT_RUN | Foundation |
+| P03.02 | Distinct bottle and pipette | **Partial** | `science/packages/aqueous-six-research-v1/instruments.json`, `native/core/src/tool_models.cpp`, `unity/Assets/PharmaLabVR/Runtime/Tools/PipetteActuator.cs` | User fills/transfers/rinses/refills each tool; identical animation or fresh-water-to-waste alone does not pass; T04/M05. | P03.01 | NOT_RUN | Foundation |
+| P03.03 | Calibrated outlet and placement | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Input/LabGeometryAdapter.cs`, `unity/Assets/PharmaLabVR/Runtime/Input/LabCaptureTarget.cs`, `native/tests/test_transport.cpp` | Actual asset tip and native profile agree; tilt/outside aperture/overflow/moving target/multiple captures and invalid bench placement tested. | P03.02 | NOT_RUN | Foundation |
+| P04.01 | Checkpoint science generations | **CompleteSource** | `native/core/src/abi.cpp`, `native/core/src/scheduler.cpp`, `native/tests/test_science.cpp` | Preserve previously verified local scope; release evidence still gated | P02.03 | Not applicable to headless-only scope | Foundation |
+| P04.02 | Verified package and contextual observations | **CompleteSource** | `unity/Assets/PharmaLabVR/Runtime/Core/ScientificPackage.cs`, `unity/Assets/PharmaLabVR/Runtime/Core/CoreSession.cs`, `unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs` | Preserve previously verified local scope; release evidence still gated | P04.01 | NOT_RUN | Foundation |
+| P04.03 | Scientific evidence matrix | **CompleteSource** | `native/tests/test_science.cpp`, `native/tests/test_solver_lifecycle.cpp`, `science/packages/aqueous-six-research-v1/coverage.json` | Preserve previously verified local scope; release evidence still gated | P04.02 | Not applicable to headless-only scope | Foundation |
+| P05.01 | All-transport scientific admission | **CompleteSource** | `native/core/src/abi.cpp`, `native/core/src/scheduler.cpp`, `native/tests/test_scheduler.cpp` | Preserve previously verified local scope; release evidence still gated | P04.03 | Not applicable to headless-only scope | Foundation |
+| P05.02 | Fair bounded worker | **CompleteSource** | `native/core/src/scheduler.cpp`, `native/core/src/solver_worker.cpp`, `native/tests/test_scheduler.cpp` | Preserve previously verified local scope; release evidence still gated | P05.01 | Not applicable to headless-only scope | Foundation |
+| P05.03 | Stall and holds | **CompleteSource** | `native/core/src/solver_worker.cpp`, `unity/Assets/PharmaLabVR/Runtime/UI/HoldPanel.cs` | Preserve previously verified local scope; release evidence still gated | P05.02 | NOT_RUN | Foundation |
+| P06.01 | Scene lifecycle and view models | **CompleteSource** | `unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs`, `unity/Assets/PharmaLabVR/Runtime/Core/CoreSession.cs`, `unity/Assets/PharmaLabVR/Runtime/Lab/LabViewModel.cs` | Preserve previously verified local scope; release evidence still gated | P05.03 | NOT_RUN | M1 |
+| P06.02 | Shared panel state machine | **Partial** | `unity/Assets/PharmaLabVR/Runtime/UI/LabPanelController.cs`, `unity/Assets/PharmaLabVR/Runtime/UI/ScreenRouter.cs`, `unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs` | Boot/Setup/Lab/Inspect/Measure/Pause/Hold/Review state transitions action-driven; no duplicated chemistry or private IMGUI flow. | P06.01 | NOT_RUN | M1 |
+| P07.01 | Spatial Boot/setup/runtime gating | **Partial** | `unity/Assets/PharmaLabVR/Runtime/UI/BootMenu.cs`, `unity/Assets/PharmaLabVR/Runtime/Input/ModeCoordinator.cs`, `unity/Assets/PharmaLabVR/Editor/BuildPipelineEntry.cs` | Coldstart with controllers can choose/start/setup lab; no-headset PC availability honest; UI press works without mouse. | P08.02 | NOT_RUN | M2 |
+| P07.02 | Body, valve and receiver ownership | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs`, `unity/Assets/PharmaLabVR/Runtime/Tools/ValveActuator.cs`, `unity/Assets/PharmaLabVR/Runtime/Tools/ToolMount.cs` | X01/X02/X05 actual input actions through scene, two hands, UI click while near valve, mount/release; not manual method calls alone. | P07.01 | NOT_RUN | M2 |
+| P07.03 | Comfort and recovery | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Input/RecoveryAlignment.cs` | X03/X04/H02/H03 simulated XR full journey; calibrated instruments never resized; production excludes simulator. | P07.02 | NOT_RUN | M2 |
+| P08.01 | Persistent premium lab shell | **Partial** | `unity/Assets/PharmaLabVR/Editor/BuildLabAssets.cs`, `unity/Assets/PharmaLabVR/Runtime/Tools/InstrumentMeshBuilder.cs`, `unity/Assets/PharmaLabVR/Scenes/Lab.unity` | Real rendered bench at720p/1080p and simulated VR eye; no brown void, cubes-only room, apparatus occlusion or baked concept background. | P06.02 | NOT_RUN | M1 |
+| P08.02 | Readable scientific apparatus | **Partial** | `unity/Assets/PharmaLabVR/Prefabs/Tools`, `unity/Assets/PharmaLabVR/Runtime/Tools/LiquidPresenter.cs`, `unity/Assets/PharmaLabVR/Runtime/Tools/MeniscusPresenter.cs` | V01/V02/V05 model-driven levels, full/half/empty/tilted asset probes plus rendered close-ups; clear stocks clear; no numeric reading cheats. | P08.01 | NOT_RUN | M1 |
+| P08.03 | Shared premium UI system and first-bay screens | **Partial** | `unity/Assets/PharmaLabVR/Runtime/UI`, `unity/Assets/PharmaLabVR/Prefabs/UI`, `unity/Assets/PharmaLabVR/Content/Localization` | Home/Setup/Lab/Prepare/Inspect/Measure/Pause/Hold/Settings are operational for the first bay. Other screen components have truthful unavailable states and remain fun | P03.03 | NOT_RUN | M1 |
+| P08.04 | Visible operating lab milestone | **Missing** | No mapped path confirmed | M1 evidence with recording/screenshots + event/material reconciliation. Direct SubmitOrdered tests cannot substitute for interaction. Physical V03 remains separate. | P08.03 | NOT_RUN | M1 |
+| P09.01 | Truthful observables | **Missing** | No mapped path confirmed | I01-I03 validpH does not authorize certified color/mixing; no last-added-color override or swirl-as-science. | P08.04 | NOT_RUN | M2 |
+| P09.02 | Student-facing model boundaries | **Partial** | `unity/Assets/PharmaLabVR/Runtime/UI/HoldPanel.cs`, `unity/Assets/PharmaLabVR/Content/Localization` | J03 panel-state evidence for Failed/Pending/Stale/Unsupported; no auto-correct overshoot, fabricated endpoint or system fault penalty. | P09.01 | NOT_RUN | M2 |
+| P10.01 | Exact Desktop interaction and Esc | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs`, `unity/Assets/PharmaLabVR/Runtime/Input/DesktopCameraController.cs` | D01-D06 camera/UI focus changes preserve lab-world pose/material; injectedEsc and realPlayer control journey; no stuck disabled adapter. | P09.02 | NOT_RUN | M2 |
+| P10.02 | Orientation/accessibility/settings | **Missing** | No mapped path confirmed | J01/J02/J04 action-driven setup/replay/seated/left-handed; options change actual runtime behavior and persist. | P10.01 | NOT_RUN | M2 |
+| P10.03 | Permanent English-only production (owner override) | **Partial** | `unity/Assets/PharmaLabVR/Runtime/UI/LocalizationService.cs`, `unity/Assets/PharmaLabVR/Content/Localization/en.json` | Superseded Arabic/RTL acceptance is not shipping scope. Verify actual English UI, text scale and clipping through Unity/Player with Native state intact. | P10.02 | NOT_RUN | M2 |
+| P11.01 | Durable journal/index/checkpoints | **Partial** | `native/core/src/checkpoint.cpp`, `unity/Assets/PharmaLabVR/Runtime/Session/SaveService.cs` | R01-R05 interruptedwrite/truncation/fullstorage/pauseddirtyflush/importmismatch/rejectedidentity survive actual disk fault tests. | P10.03 | NOT_RUN | M3 |
+| P11.02 | Review and branches | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs`, `unity/Assets/PharmaLabVR/Scenes/Review.unity` | R06-R08 record/load/fork/review navigation; missing model offers recorded-only review; no empty scene or silent migration. | P11.01 | NOT_RUN | M3 |
+| P11.03 | Export and comparison foundation | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Session/SessionExportService.cs` | Round-trip export schema and compare two known runs, missing/stale observables visibly unavailable; no hidden fabrication. | P11.02 | NOT_RUN | M3 |
+| P12.01 | Two genuine research lessons | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Protocols/ProtocolDefinition.cs`, `unity/Assets/PharmaLabVR/Content/Protocols` | Q01-Q04 real procedure select→perform→review; no forced color-dependent certified completion. | P11.03 | NOT_RUN | M3 |
+| P12.02 | Predict, observe, explain, compare | **Missing** | No mapped path confirmed | Prediction never changes chemistry; stale data cannot justify explanation; explanations for dilution/buffer/conservation tested against fixture and current snapshot. | P12.01 | NOT_RUN | M3 |
+| P12.03 | Concept inspection | **Missing** | No mapped path confirmed | Same actual experiment drives notebook and plots; no curve generated from scripted endpoint; teaching overlays optional and recorded. | P12.02 | NOT_RUN | M3 |
+| P13.01 | Three exact-commit builds | **Partial** | `scripts/build-native.ps1`, `scripts/build-unity.ps1`, `scripts/test-unity.ps1` | B01-B04 verify packagedbytes and launch availablePlayer; record buildSHA vs finaldocsSHA; required unavailableCI notfakePassed. | P12.03 | NOT_RUN | M5 |
+| P13.02 | Licensed artifact manifest | **Partial** | `scripts/package-artifacts.ps1`, `docs/evidence/artifact-manifest.json` | Rebuild reproducible availabletargets; catalog/data licenses preserved; no sources-private docs/credentials/Library/playerbins committed. | P13.01 | NOT_RUN | M5 |
+| P14.01 | Complete telemetry/workloads | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Diagnostics/PerformanceRecorder.cs`, `unity/Assets/PharmaLabVR/Runtime/Core/PlayerPerformanceRecorder.cs`, `unity/Assets/PharmaLabVR/Content/Traces` | K01/K04 actual workload admission, no ring overwrite hiding earlier faults, no calibratedflow change toboostFPS. | P13.02 | NOT_RUN | M5 |
+| P14.02 | Long measured runs | **Partial** | `docs/evidence/desktop-acceptance.json`, `docs/evidence/simulated-xr-acceptance.json`, `docs/evidence/windows-vr-acceptance.json` | K02/K03 actualp95/p99/droppedframes/sciencefairness/holds/memory; absentphysicalheadset/Androidthermal exactEvidenceMissing. | P14.01 | NOT_RUN | M5 |
+| P15.01 | Audit95 and premium scorecard | **Partial** | `docs/evidence/acceptance-95.json`, `docs/evidence/final-review.md`, `docs/evidence/completion.json` | No item Passed from helper/build alone; requirements not removed; M1/M2 visiblejourneys and screenshot matrix all current. | P13.02, P14.01 | NOT_RUN | M5 |
+| P15.02 | Independent final review request | **Partial** | `docs/evidence/execution-state.json` | Planner review may request fixes; never mark AcceptedPlanner unless explicit review received; no force/merge. | P15.01 | NOT_RUN | M5 |
+| P16.01 | Same-branch handoff | **Partial** | `README.md`, `docs/evidence/NEXT.md` | RemoteHEAD and CI verified; cleanworktreeorclearexplanation; no newPRduplication/merge/force. | P15.02 | NOT_RUN | M5 |
+| P16.02 | Resume transition | **Partial** | `docs/evidence/execution-state.json` | A fresh continue selects eligibleP17+ oncecoredependenciesverified; hardwaregate never deletes remainingsoftwarebacklog. | P16.01 | NOT_RUN | M5 |
+| P17.01 | Verified expandable catalog | **Missing** | No mapped path confirmed | UnknowncompoundcanbeReferenceOnly, cannot enter live solver under unsupported profile; salts/hydrates/stereochemistry/mixtures distinct; all fields source/date/licen | P06.02, P08.03 | Not applicable to headless-only scope | M6 |
+| P17.02 | Capability package contract | **Partial** | `science/packages` | Catalog breadth does not extend aqueoussix coverage; unsupported multicomponent combination rejects/clearlyreference only, no nearest-name substitution. | P17.01 | Not applicable to headless-only scope | M6 |
+| P17.03 | Expandable station hub | **Missing** | No mapped path confirmed | Allstationnavigationworks; current sixstock benchremainsusable; disabledsimulations explain why; no unwired buttons countedfunctional. | P17.02 | Not applicable to headless-only scope | M6 |
+| P18.01 | Analytical experiment packs | **Missing** | No mapped path confirmed | Knownstandards/blank/calibration/unknownsample andheldoutfixtures; instrumentnoiseidentifiedsourcedorlabelledsynthetic; detectoroutputnotcomputedfromdrugname alone. | P17.03 | Not applicable to headless-only scope | M6 |
+| P18.02 | Physical pharmacy packs | **Missing** | No mapped path confirmed | Reference curves/massbalances andlimits pass; changeparameterchangesmodeltruthfully; no pretending equilibriumworker handleskinetics. | P18.01 | Not applicable to headless-only scope | M6 |
+| P18.03 | Instrument technique and interpretation | **Missing** | No mapped path confirmed | Fullperform→observe→interpret→review inVR/Desktop for eachclaimedinstrument; decorativeHPLCdoesnotcountchromatographysimulation. | P18.02 | Not applicable to headless-only scope | M6 |
+| P19.01 | Structure and property learning | **Missing** | No mapped path confirmed | Identity/stereochemicalfixtures andinteractionlearnability; measuredproperty vs predictionclearlylabelled; rolespecificannotation. | P17.03 | Not applicable to headless-only scope | M6 |
+| P19.02 | Bounded preparation and purification | **Missing** | No mapped path confirmed | Supportedpackreproducesholdout/massbalance/conditions andfullprocedure; unavailabledata staysDataPending, not randomproduct/yield. | P19.01 | Not applicable to headless-only scope | M6 |
+| P20.01 | Formulation material properties | **Missing** | No mapped path confirmed | Mass/unit/preparationandphaseledger; referencematerialnotusableunlesscovered; no assumeduniversalcompatibility. | P17.03 | Not applicable to headless-only scope | M6 |
+| P20.02 | Representative formulation workflows | **Missing** | No mapped path confirmed | Atleastonecomplete supportedjourneyperclaimedpack withsources,observationanderrorconsequences; labelscontainactualcomposition/modelscope. | P20.01 | Not applicable to headless-only scope | M6 |
+| P20.03 | Quality control comparisons | **Missing** | No mapped path confirmed | Knownbatchdataset andlimits reviewed; reference standardprovenance,methodversionanduncertaintyexported; no manufacturedpasscertificate. | P20.02 | Not applicable to headless-only scope | M6 |
+| P21.01 | Natural product identification learning | **Missing** | No mapped path confirmed | Plant/extractnotreducedtosingleCID; mixedcompositionunknownnotinvented; image/specimen IDs retained. | P17.03 | Not applicable to headless-only scope | M6 |
+| P21.02 | Biochemical assay packs | **Missing** | No mapped path confirmed | Controls/blank/calibrationandholdoutinterpretation; sourceparameters/version recorded; no unvalidatedbiologicaloutcomes. | P21.01 | Not applicable to headless-only scope | M6 |
+| P22.01 | Technique station | **Missing** | No mapped path confirmed | Techniqueerror events auditable andexplained; visualcleanlinessnotproofmicrobiologicalsterility; instructorcriteriareviewable. | P17.03 | Not applicable to headless-only scope | M6 |
+| P22.02 | Evidence-based microbiology lessons | **Missing** | No mapped path confirmed | Predictionsmatchdeclaredreference; organisms/media/condition coverageexplicit; no bioscience simulatorclaimfromproceduralanimations. | P22.01 | Not applicable to headless-only scope | M6 |
+| P23.01 | Four role workspaces | **Missing** | No mapped path confirmed | Sameactionledger/science acrossroles; novicehelpsavailableandexpertminimal; no universalclinicalrecommendations added. | P17.03, P12.03, P11.03 | NOT_RUN | M4 |
+| P23.02 | Instructor course and lesson authoring | **Missing** | No mapped path confirmed | Teachercreatesvalidtask,studentperforms,teacherreviewsactualeventsandnotes; invalidmissingcapabilityblocksgradebutallowsresearchpreview. | P23.01 | NOT_RUN | M4 |
+| P23.03 | Research notebook and compare | **Partial** | `unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs`, `unity/Assets/PharmaLabVR/Runtime/Session/SessionExportService.cs` | Two actualruns compared withmodel/version/units/assistance/uncertainty; recomputewithchangedmodelseparateversion; reproducibleexport. | P23.02 | NOT_RUN | M4 |
+| P23.04 | University pilot workflow | **Missing** | No mapped path confirmed | Realavailablepilotresults separate fromsoftwaretests; no fabricated participants/universityapproval; cloudmultiuser/LMS integration remainsseparatefuturedecision. | P23.03 | NOT_RUN | M4 |
+| P24.01 | Per-pack delivery and coverage | **Missing** | No mapped path confirmed | No allchemistry claim; visible coverage matrix andremainingdata/devicegates; each advertised feature opens andworks for claimed domain. | P18.03, P19.02, P20.03, P21.02, P22.02, P23.04, P13.02 | Not applicable to headless-only scope | M6 |
+| P24.02 | Premium institutional demo and planner handoff | **Partial** | `README.md` | A prospectiveuniversitycantryactualsupportedproduct; marketingusesrenderedapp andtruthfulscope; plannerreceivesexactHEAD/fullremainingbacklog; no automaticmerge. | P24.01 | Not applicable to headless-only scope | M6 |
+
+## M1 audit delta
+
+- Authored `ResearchBurette` prefab is now instantiated in the generated Lab scene rather than replaced by a primitive. It is bound to real Desktop/XR ownership and the single authored outlet.
+- `NativeMeteredInstrumentVisual` subscribes at runtime to the current scene's CoreDriver, so bottle/pipette displays can receive genuine Native snapshots after scene loading.
+- The source-bottle inventory is no longer painted as fabricated contents of the burette. A separately supported Native loading pathway remains required before burette fill should be shown.
+- `scripts/test-unity.ps1` regenerates scenes before running actual tests; those Unity tests are authored but **NOT_RUN** here.
+- M1 remains **Partial**: no current-SHA Unity-generated scene, PlayMode/Player, rendering, UI interaction, or XR verification; receiver presentation and instrument operation need further product work.
+
+## Next production slice
+
+Complete source-level first-bay receiver and real bottle/pipette/burette manipulation under Native material authority, then the guided learner protocol. Preserve all existing formal VerifiedLocal/Open fields unchanged.
+
+## M3 audit delta — source increments after 27a3099 (21 October 2026)
+
+- **P11.02 Partial:** The shared Desktop/XR `RecordCurrentPH` action now commits an offline Notebook entry only for a Native Supported/Current pH whose observation revision matches the selected vessel's material revision. The entry records the actual Native event sequence, model and database identity. Existing notebook branch isolation and durability remain authoritative; no auto-generated evidence is graded.
+- **P12.01 Partial:** Strong-acid and mixed-acid research lessons have real source-backed instructions and Native-state summaries. The PlayMode source `M3_ResearchLessonTransfersAndRecordsActualNativePHIntoOfflineNotebook` drives source selection, learner prediction, measured bottle transfer, Native pH inspection, offline notebook persistence, Save and recorded Review without synthetic science.
+- **P12.02 Partial source advance (not acceptance):** Learners explicitly choose a pre-transfer pH prediction in Desktop/XR. It is a branch/event-linked notebook annotation, never a solver command, manufactured observation, grade or certified endpoint. Explanations/comparison and Unity action-driven verification remain open.
+- **Evidence boundary:** Headless .NET CI validates the pH note construction and shared panel routing; Unity Editor/PlayMode/Player/XR journey on this source remains **NOT_RUN** until the local Codex verification campaign. The official 15 VerifiedLocal / 51 Open, and G-R1 / G-U1 statuses remain unchanged.
+- **Next:** complete student prediction/observation/explanation and review semantics, plus actual XR/desktop scene verification. No claim of scientific endpoint certification.
+
+## M3 learner-results Review integration — 21 October 2026
+
+- **P11.02/P12.02 Partial (source):** Desktop and XR recorded Review display local branch-scoped student predictions and pH annotations alongside, but explicitly separate from, Native observations/receipts. Desktop includes an Open Notebook action. Imported/recoverable recorded-only branches never inherit unrelated active-branch notes.
+- **Test evidence:** Headless C# tests use real durable NotebookService writes, reads and branch isolation. A RED commit identified missing product implementation; the following integrated source commit adds a branch-filtered learner-review renderer. Unity Editor/PlayMode/Player/XR remains NOT_RUN, official acceptance statuses unchanged.
+
+## M2 auxiliary apparatus physical handling — 21 October 2026
+
+- **P07.01/P07.02/P08.02 Partial (source):** Native-metered stock bottle and pipette are physically selectable via Desktop F and assigned explicitly to the current XR manager. Desktop left-drag moves these auxiliary props, restores their original kinematic Rigidbody on bench placement and never turns their pose into the registered burette's Native geometry/stopcock command. Measured science remains the explicit Native command path.
+- **Tests:** RED test-only HEAD `82f86e7` failed compilation on missing routing functions as expected. Headless C# tests for new routing and authored Unity Editor test source are added for GREEN. No Unity Editor/PlayMode/Player/XR run; formal VerifiedLocal/acceptance ledger unchanged.
+
+## M2 physical research delivery from actual handheld instruments — 22 October 2026
+
+- **P07.01/P07.02/P08.02 Partial, product source advanced:** Desktop G while actively holding a research pipette or stock bottle, and a fresh XR direct-grip trigger, now request the existing metered Native dispense/pour command ONLY if a single scene receiver exclusively captures the actual authored outlet. The Native command panel still checks Pause/Hold, prepared stock, tip inventory, branch and material revisions, and produces the receipt. No chemistry is generated by transforms or UI.
+- **Safety:** Missing receiver, tool not held, capture ambiguity, inactive Native, UI-owned trigger or inaccurate geometry cannot issue the physical-delivery command. The burette keeps independent actuator sampling. Source test added to Unity EditorIntegration; execution remains NOT_RUN pending local Codex. Formal task statuses unchanged.
+
+## M3 durable lesson prediction recovery — 22 October 2026
+
+- **P11.02/P12.02 Partial, source advanced:** Selecting a lesson on the same open Native branch reloads its first durable student pH hypothesis from the local checksummed Notebook; a scene/controller rebuild does not allow silently changing that answer. Different Native branches and lesson IDs do not inherit it. If the Notebook is unavailable/corrupt, selection reports an error rather than manufacturing success.
+- **Evidence:** RED headless contract commit b8f87cb failed on absent RecoverSavedPrediction. GREEN verification pending for production lesson helper, SessionController integration and a Unity PlayMode journey assertion. Unity execution remains NOT_RUN; no acceptance promotion.
+
+## XR kinematic apparatus grip alignment — 22 October 2026
+
+- **P07.02/P08.02 Partial:** Generated-stock/pipette Rigidbody instances rest kinematically and now explicitly use XRI Kinematic movement type when selected, rather than relying on a default velocity-driven grab mode. The generated-scene Editor test asserts grip movement configuration. Actual XR held motion remains NOT_RUN; this is source/binding readiness only.
+
+## M2 frame-accurate gesture capture (22 October 2026)
+
+- **P07.01/P07.02 Partial:** Desktop pick/place F, Native Pause Esc and physical G are now captured in Unity Update (every rendered frame) rather than exclusively at the lower-frequency Native simulation tick. Direct-grip XR trigger presses are also captured every frame. A bounded one-shot ResearchPressBuffer bridges events to the next Native sample; no duplicate receipt and no pending request after focus loss, Pause/Hold, mode reset, owner change or timeout.
+- **Headless evidence:** RED contract commit 05d30b6 failed compilation on missing press buffer; current source includes production buffer and behavioral cancellation/replay tests. Native C++ scientific code is unchanged; Unity Editor/PlayMode/Player/XR still NOT_RUN and formal acceptance ledger unchanged.
+
+## M2 XR visible delivery status — 22 October 2026
+
+- **P07.02/P08.02 Partial:** The shared XR Lab panel now refreshes the physical receiver-alignment/Native-refusal message during LateUpdate, not only after panel navigation. The last acknowledged Native result remains in the existing instrument receipt view. An authored Unity PlayMode test checks that a geometry refusal is visible on the active Lab panel without changing scientific inventory. Unity execution remains NOT_RUN.
+
+## Physical press-time admission and ownership — 22 October 2026
+
+- **M2/P07.01/P07.02 Partial:** Desktop G and XR direct-trigger intents now check unique receiver capture when first pressed, then recheck geometry at the later Native step. A press outside the receiving aperture cannot be retroactively admitted by moving the tool into place during the buffer window. Each XR intent is also bound to the specific tracked controller that originally pressed; a handoff/regrip cancels it. No Native material command can be issued without the existing guarded shared panel receipt.
+- **Testing boundary:** Headless ResearchAuxiliaryDelivery/ResearchPressBuffer tests validate the policy and replay cancellation. Unity scene/Player/XR timing is source-authored but remains NOT_RUN until the owner-authorized local Codex campaign.
+
+## M2/M3 XR research instrument menu layout — 22 October 2026
+
+- **P07.02 / P12.01 Partial:** Fixed actual overlapping ray-hit targets on the XR stock and experiment menu by splitting operations (page 1), preparation (page 2), pre-transfer student prediction (page 3) and reserve/lesson selection (page 4). All existing Native-controlled instrument commands remain available, now on distinct rows, and page transition buttons redraw immediately.
+- **Headless CI:** RED test-only commit `55f7055` failed on absent menu-layout source; new source enumerates active page controls and verifies unique row positions across preparation, reserve and learner states. Unity XR visual/integration still NOT_RUN; formal acceptance ledger unchanged.
+
+## XR first-run Settings collision fix — 22 October 2026
+
+- **P06.02/P07.02 Partial:** The first Native-paused stock preparation Lab legitimately offers Settings, but the world panel no longer renders its -82pt global Settings ray target on top of the instrument-pages science buttons. Exit instruments restores Settings on the normal Lab page. New Unity PlayMode test follows Research instruments → Stock setup → More tools and lessons → Strong acid lesson → predictions and verifies visible ray target rows are unique. Headless RED at 8046cec found missing ShowGlobalSettings; GREEN production change applies it. Editor/Player/XR execution NOT_RUN, formal statuses unchanged.
+
+## M3 student-selected explanation after Native observation (22 October 2026)
+
+- **P11.02/P12.02 Partial:** The Notebook now offers Desktop and XR students three explicit, ungraded reflection choices (composition hypothesis, method uncertainty, model limitations). Recording requires the real current Supported Native receiver pH, its matching saved measurement annotation, current Native branch/event revision, and a selected Research lesson. Only one explanation per event and lesson is accepted and saved as a local notebook annotation, never a model result or university grade.
+- **Tests:** Test-first headless RED commit f668956 failed on absent BuildRecordedExplanation. The integrated headless contract validates provenance/rejection and the shared PanelAction routing; Unity PlayMode source extends the full first experiment Save/Review journey with a recorded explanation. All Unity runtime test runs remain NOT_RUN; formal acceptance ledger unchanged.
+
+## Student XR Notebook entry from guided lesson — 22 October 2026
+
+- **P11.02/P12.02 Partial:** Guided prediction page 3 now presents the actual 'Open notebook' action at a free ray target whenever the Native Lab makes Notebook available. Initial paused stock preparation does not misrepresent Notebook readiness. A PlayMode source test follows lesson/prediction page → accepted stock preparation → Notebook navigation; NOT_RUN in Unity until local verification. Headless RED commit d14ce2b established missing menu capability and GREEN source carries the bounded route; no formal acceptance promotion.
+
+## Scientific correctness: unrounded Native pH in learner reflection (22 October 2026)
+
+- **P12.02 Partial:** Prediction threshold comparisons no longer classify the 2-decimal UI label as science. The LabViewModel observation DTO now retains the exact Native `value`, `valueAvailable` and `computationState` alongside the existing model, database, freshness, vessel and material revision. The Notebook observation gate refuses missing/unready/nonfinite Native values and stale UI display text. It records the raw value alongside the rounded presentation. A learner's below/at-least-7 comparison uses the unrounded Native value, with no Unity-side chemistry computation or grade.
+- **Test-first:** RED `a3c714a` was verified failing on missing Native raw observation fields. Production headless tests now check 6.999 vs 7.001 both displayed 7.00, mismatched UI text rejection and unavailable-value refusal. Unity integration remains NOT_RUN; formal VerifiedLocal/Open statuses remain unchanged.
+
+## P23 read-only offline teaching package review (22 October 2026)
+
+- **P23.02/P23.04 Partial (source):** Recorded Desktop Review can inspect a local student .plvpack through an allowlisted filename in the application's sessions directory. XR can inspect the currently exported pack. PortableSessionArchive/NotebookService validate the complete Native branch, event sequence and annotation checksums; imported data never enters the running Native session. The preview explicitly labels all evidence offline, ungraded and NOT ATTESTED; it cannot grant enrollment or server authorization.
+- **Tests:** The strict portable-reader RED compile failure at 2e38a42 was followed by the f927f47 core parser. The separate PreviewPortableArchive routing RED test at 75814a9 is addressed in this source batch. Unity EditMode has an actual archive preview/tamper test source, still NOT_RUN pending local Codex. No production Supabase change or formal acceptance promotion.
+
+## Instructor offline Native pH precision — 22 October 2026
+
+- **P23.02/P12.02 Partial:** Read-only instructor preview shows raw Native pH alongside its 2-decimal display only for available, Supported/Current/Ready finite numbers that agree with the shown display. It distinguishes raw 6.999 and 7.001 even when both display 7.00, without generating grades or inferred chemistry. Unavailable and inconsistent values are not shown as scientific results.
+- **Test-first:** RED `47d16fd` introduced cross-boundary precision and unavailable-value checks; production pure label renderer is compiled through headless panel-contract. Unity instructor scene verification remains NOT_RUN; formal acceptance ledger unchanged.
+
+## P23 XR safe archive picker integration — 22 October 2026
+
+- **P23.02/P23.04 Partial (source):** Recorded Review can enumerate a bounded set of direct local .plvpack files from the app's sessions directory and cycle the chosen archive by an XR button. Only allowlisted filenames from the actual directory may be previewed; symlink/reparse-point files are rejected before reading. A second press explicitly opens the selected, checksum-checked Native/student archive, never changing running Native materials or academic authority. Desktop can also choose among packs or type a safe filename.
+- **Tests:** Headless RED commit 2f9aa84 fails on absent OfflineArchivePicker, GREEN pure picker validates canonical, bounded filenames and deterministic cycling. Shared panel routing and Unity PlayMode student-export → instructor-preview source are extended. Actual Unity/Player/XR execution NOT_RUN; formal acceptance unchanged.
+
+## Unity-source precision integration regression (22 October 2026)
+
+- **P12.02/P23.02 Partial:** Authored EditMode NativeObservationPrecisionTests verifies Unity JsonUtility retains raw 6.999/7.001 despite both displaying 7.00, rejects an incoherent display and an unavailable raw observation. Extended InstructorPortableReviewTests checks read-only preview reveals actual raw pH alongside display. Test fixtures are labeled as DTO fixtures, not Native scientific results. Unity Editor/PlayMode/Player/XR tests are NOT_RUN; formal statuses unchanged.
+
+## M3 Native pH idempotent recording (22 October 2026)
+
+- **P11.02/P12.02 Partial:** Reopening Measure on the same Native branch/event/vessel/material revision no longer appends a second Native pH note to the durable offline journal. Eligibility is checked against the checksummed existing Notebook, so route changes and controller recreation do not reset the limit. The gate does not treat learner hypotheses or unrelated branches/events as measurements. Future genuine Native events remain recordable.
+- **Evidence:** Test-first headless contract commit `ccfd2ba` checks same-event refusal, later-event/other-vessel/branch admission and hypothesis separation. Unity PlayMode source extends real measurement–Notebook–Measure–Notebook navigation, asserts a rejected duplicate and preserves the original learner explanation workflow. Unity tests remain NOT_RUN; official release acceptance unmodified.
+
+## Imported learner annotations on XR recorded Review — 22 October 2026
+
+- **P23.02/P23.04 Partial (source):** Offline instructor-preview XR panel now shows one actual branch-scoped student note, its source Native event and ordinal, with a Next imported note action at the existing Notebook row (without overlapping ray targets). Live Notebook remains available whenever a multi-note imported preview is not active. Branch and event-bound checksums are validated on import, and the panel labels these as unverified student annotations. Imported preview/selection and annotation cursor clear after Native restoration to prevent stale cross-session context.
+- **Headless CI:** RenderPage method tested with actual durable NotebookService test entries, checks exact source note, bounded excerpts/index and cross-branch isolation. Shared Notebook/Preview screen route is also covered. Unity Player/XR tests remain NOT_RUN, official acceptance unchanged.
+
+## XR panel hit-target hardening (22 October 2026)
+
+- **P07.02/P12.02 Partial (source):** All informational and button-label Text components in the world-space SpatialPanelPresenter are now excluded from GraphicRaycaster targeting; only the authored Button Image remains interactive. This prevents variable-length model provenance, saved learner text and instructor descriptions from stealing XR ray clicks from real commands. PlayMode source test M2_XRScientificTextMustNotStealRayClicksFromInstrumentButtons asserts it for every generated panel Text/Button. Runtime Unity/XR verification still NOT_RUN.
+
+## M3 Native-origin pH event history — 22 October 2026
+
+- **P11.02/P12.03 Partial:** Notebook XR summary and Desktop recorded Review show only chronological, branch-matched receiver pH notes with original Native event numbers and unrounded values. Nonfinite/malformed observations and learner-authored notes create no points. Explicitly labeled local annotations, NOT a certified titration curve or attested performance record. Headless RED source at `2ead6eb`; Unity NOT_RUN; formal release acceptance unchanged.
+
+## M3 Notebook atomic multi-writer safety (22 October 2026)
+
+- **P11.02/P12.02 Partial (source):** A process-exclusive persistent lock now spans each offline student Notebook's validation, read, append and atomic replace, preventing two learners/tools from silently replacing one another's event-linked annotations. Unique create-new staging no longer truncates a stale predictable .tmp crash artifact; checksums, source branch/event validation and the prior backup policy remain unchanged. The headless .NET contract exercises blocked writers, unchanged journal on refusal, fresh append after unlock and preservation of stale crash-stage files.
+- **Evidence boundary:** Test-first RED commit 2185327 precedes the production change. This is local durable Notebook integrity, not a Native scientific update, teacher attestation or release acceptance. Unity Editor/PlayMode/Player/XR remain NOT_RUN; formal acceptance statuses unchanged.
+
+## P23 offline Desktop and XR imported-note paging (22 October 2026)
+
+- **P23.02/P23.04 Partial source:** Desktop recorded Review now presents the currently selected imported student annotation with explicit Next student note navigation, matching the already implemented XR annotated evidence page. The Unity PlayMode source exercises a real predicted student hypothesis plus a new notebook explanation note, exports the actual portable archive, opens it read-only as a teaching preview, pages both notes, and confirms Native session/event immutability. Unity runtime tests remain NOT_RUN; no scientific attestation or formal acceptance promotion.
+
+## M3 guided research evidence checklist — 22 October 2026
+
+- **P12.01/P12.02 Partial:** Desktop and XR lesson guidance now surfaces an explicit evidence checklist of stock preparation, student hypothesis, Native material transfer, current supported Native pH, durable pH note and learner reflection; mixed-acid adds reserve stock. Every item is recomputed from matching Native branch material/observation metadata and the branch-scoped local Notebook. Pending items are never presented as complete; a changed Native branch disables progress. No grade, endpoint or institutional attestation is inferred.
+- **Tests:** RED headless test `0d0acfdf` validates empty, branch mismatch, partial Native state and durable complete evidence. Unity PlayMode source checks the end-to-end Research lesson now exposes recorded pH/reflection milestones. Unity NOT_RUN, official acceptance unchanged.
+
+## M3 compact XR guided study evidence — 22 October 2026
+
+- **P07.02/P12.01 Partial:** The full evidence checklist remains in Desktop Lab; XR spatial Lab and prediction pages now use the bounded next-pending-step summary computed from the same Native material and branch-scoped local Notebook evidence. Displays counts of documented steps, explicitly `not graded`, rather than a long scroll-overlapping procedure. Also shortens instrument instructions to a readable direct-grip/Native delivery hint. No Native execution semantics or verification statuses changed.
+- **Headless RED:** `505e168` tests finite concise guidance on new/recorded states; Unity Editor/PlayMode/XR NOT_RUN.
+
+## P12 Native-backed concept inspection — 22 October 2026
+
+- **P12.03 Partial (source):** Shared Desktop/XR Learn view exposes actual Native research-additive volume, bounded capacity, material revision, event sequence and fully supported Current IPhreeqc pH (model/database identity). Stale/unsupported/missing observation, unrepresented vessel or invalid volume displays unavailable instead of inventing a plot, endpoint, calculated pH or score. Guided XR lesson page offers a dedicated non-overlapping 'Inspect Native concepts' action; Desktop uses the same routed ScreenId.Learn. Headless test-first RED commit 91e44ea checks source provenance and refuses stale/missing pH; GREEN panel contract and production code follow. Unity Player/XR NOT_RUN; acceptance ledger unchanged.
+
+## M3 restored Native event ceiling on learner prediction evidence — 22 October 2026
+
+- **P11.02/P12.02 Partial source:** The first durable prediction is recovered only when its Notebook event is no later than the current canonical Native event sequence, in addition to the existing branch, receiver, lesson and text identity checks. Both on-screen EvidenceChecklist and SessionController lesson reselection now use the same ceiling. After restoring an earlier Native checkpoint, a future-event annotation cannot be used to claim a completed prediction or suppress a new one. Other branch/lesson safeguards remain unchanged.
+- **Verification:** Headless RED `21ee8e2` failed compilation on the missing event-bounded overload, and tests now exercise future event 9 vs current event 7 and the exact visibility boundary. Unity Editor/PlayMode/Player/XR remains NOT_RUN; original formal acceptance statuses unchanged.
+
+## M3 research lesson narrative pH admission alignment — 22 October 2026
+
+- **P12.01/P12.02 Partial:** Guided Summary and the full evidence checklist now require the same Native scientific readout classification as the pH UI (supported, Ready, Current, finite, available) plus exact receiver material revision and complete model/database/maturity identities. Pending/failed/unavailable or superseded measurements no longer appear as a confirmed research observation merely because metadata retains Supported/Current flags.
+- **TDD:** RED headless commit `b44a2b2` failed with a pending-solver false positive. Corrected code uses ScientificReadoutPolicy; Unity EditMode/PlayMode/Player/XR remains NOT_RUN and formal acceptance fields remain unchanged.
+
+## M3/XR genuine Pause/Hold lesson guidance (22 October 2026)
+
+- **P07.02/P12.01 Partial:** The compact XR Research lesson status now prioritizes Native Hold (tracking/neutral recovery) and genuine Native Pause (controlled Continue) over the next chemistry task. The special first-run preparation pause remains allowed to guide stock setup rather than hiding setup behind a misleading recovery requirement. This is a presentation-only instruction, not a synthetic Continue or command.
+- **Tests:** RED headless `57342d2` failed on missing state-aware CompactEvidenceStatus overload, followed by the production logic and wiring. Unity Editor/Player/XR execution remains NOT_RUN and formal acceptance remains unchanged.
+
+## M3 checkpoint-bounded local Notebook display and learner export — 22 October 2026
+
+- **P11.02/P12.02/P23.03 Partial source:** NotebookService now supports a checksum-validated, read-only branch-and-maximum-Native-event projection. Active Notebook displays entries no later than the current Native event; saved recorded Review and its separate learner-annotation CSV use the *recorded checkpoint's* event sequence, not the possibly later live session. A legacy saved review without event metadata cannot silently attach unbounded student notes. The Native scientific CSV remains unchanged.
+- **Test-first:** RED `1392288` asserts event-7 view excludes event-11 note, preserves eligible branch records, and rejects noncanonical ceilings; the Unity EditMode source checks preserved exported checkpoint event metadata. Unity Editor/PlayMode/Player/XR verification is still NOT_RUN; no formal task acceptance promotion.

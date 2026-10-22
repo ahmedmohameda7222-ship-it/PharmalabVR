@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Native identity fields are populated by Unity JsonUtility or the headless equivalent. -->
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NativeReviewAuthorityCache.cs" Link="NativeReviewAuthorityCache.cs" />
+    <Compile Include="StubUnityJson.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/NotebookService.cs" Link="NotebookService.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/PortableSessionArchive.cs" Link="PortableSessionArchive.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/RecordedSessionReview.cs" Link="RecordedSessionReview.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/SessionExportService.cs" Link="SessionExportService.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/RecordedRunComparison.cs" Link="RecordedRunComparison.cs" />
+  </ItemGroup>
+</Project>

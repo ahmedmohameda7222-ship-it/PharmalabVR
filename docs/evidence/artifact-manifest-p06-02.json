@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "functionalCodeSha": "dd60197b05fc7963146cfacec98ff50fe37c4cdc",
+  "scope": "P06.02 partial local Research routing and pause-clock regression; no Player Inspect or VR journey claim",
+  "artifacts": [
+    {
+      "path": "artifacts/evidence-p06-02/PlayMode.xml",
+      "sha256": "418DAC1F866DB47BF9BC09E19FAF65A93A7FFD1737D11C929C0CAC2959044225",
+      "bytes": 27136
+    },
+    {
+      "path": "artifacts/evidence-p06-02/EditMode.xml",
+      "sha256": "1F3F0FDB2DC31F6CDE7C2DBA48A3A44ED1063AE8A71C23F627D860D1246FAA20",
+      "bytes": 20526
+    },
+    {
+      "path": "artifacts/evidence-p06-02/LastTest.log",
+      "sha256": "25E709D02AF21F62B318DADE91854625DAE4DC204E373194880DF9E834067EB0",
+      "bytes": 1623
+    },
+    {
+      "path": "artifacts/evidence-p06-02/unity-WindowsDesktop.log",
+      "sha256": "5013D8DC9AFE8C84F41256A6C9C6F1492B34F36D07833F840C8E1B3AAD659450",
+      "bytes": 350342
+    },
+    {
+      "path": "artifacts/evidence-p06-02/unity-WindowsVR.log",
+      "sha256": "D7B8200293BA037ABA62B7E61A0C7ED204D7A077F30F5CD6F5E2C605421DA33A",
+      "bytes": 380708
+    },
+    {
+      "path": "artifacts/evidence-p06-02/unity-AndroidVR.log",
+      "sha256": "15E3B760D89EDCDCC712EC7EEA960E552657C1DDC03A70C97538F1D43C2DB6F5",
+      "bytes": 385046
+    },
+    {
+      "path": "artifacts/evidence-p06-02/windows-desktop-paused-setup-fixed.log",
+      "sha256": "8F38426FAC1672D9FDB3319F17E3704CFB5D81E45C093D125B216D0A79CE3C09",
+      "bytes": 3231
+    },
+    {
+      "path": "artifacts/evidence-p06-02/windows-desktop-background-print.png",
+      "sha256": "350870F7852456AFBAAEFA03D63A7F5709D1539E51197CE348475B9CCD3A67E4",
+      "bytes": 65058
+    },
+    {
+      "path": "artifacts/evidence-p06-02/windows-desktop-inspect-receiver2.png",
+      "sha256": "AB12B6EE4901E787BA270205AFD90859620DB74FEB64DF152B2973F596EC6515",
+      "bytes": 45669
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/WindowsDesktop/PharmaLabVR_Data/Plugins/x86_64/pharmalab_core.dll",
+      "sha256": "42077007A296666D1A4FFD7894AB11135A001460FB5D3BA4768603C73698172E",
+      "bytes": 2287104
+    },
+    {
+      "path": "artifacts/WindowsVR/PharmaLabVR.exe",
+      "sha256": "3070E580E019576B9AFCDEB4FEC18D03CEBC119F6AE84D597412905C749AD653",
+      "bytes": 667136
+    },
+    {
+      "path": "artifacts/AndroidVR/PharmaLabVR-research.apk",
+      "sha256": "677EA4282487919EA9C1E05C8002A94B090895B6DCFB4134A6753A8F4DAD6321",
+      "bytes": 43636030
+    }
+  ]
+}

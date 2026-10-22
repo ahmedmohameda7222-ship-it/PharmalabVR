@@ -1,0 +1,98 @@
+using System;
+using System.IO;
+using PharmaLabVR.Core;
+
+namespace PharmaLabVR.Session
+{
+    public sealed class SaveService
+    {
+        private const int MaxSaveBytes = 16 * 1024 * 1024;
+
+        public string Save(CoreSession session, string directory, string name)
+        {
+            if (session == null || !session.IsOpen) throw new InvalidOperationException("No open native session.");
+            ValidateName(name);
+            // Validate the exact UTF-8 byte envelope before creating any file or
+            // replacing the last confirmed save. LoadOne enforces the same bound.
+            // Never report success for a Native export that cannot be re-imported.
+            var bytes = System.Text.Encoding.UTF8.GetBytes(session.ExportSession());
+            if (bytes.Length == 0 || bytes.Length > MaxSaveBytes)
+                throw new InvalidDataException("Native session export is empty or exceeds the 16 MiB save limit.");
+            Directory.CreateDirectory(directory);
+            var target = Path.Combine(directory, name + ".plv.json");
+            var temporary = target + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write,
+                    FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                if (File.Exists(target))
+                    File.Replace(temporary, target, target + ".bak", true);
+                else
+                    File.Move(temporary, target);
+                return target;
+            }
+            catch
+            {
+                // Failed flush/replace must not publish an uncommitted export.
+                // Preserve the original I/O failure if temp cleanup also fails.
+                try
+                {
+                    if (File.Exists(temporary)) File.Delete(temporary);
+                }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
+        // Admission checks candidate existence only; the actual Load path performs
+        // size, format, package and Native import verification. A valid confirmed
+        // backup remains available if an interrupted replacement lost its primary.
+        public static bool HasSaveCandidate(string path) =>
+            !string.IsNullOrWhiteSpace(path) &&
+            (File.Exists(path) || File.Exists(path + ".bak"));
+
+        public CoreSession Load(string path, string expectedScientificDatabasePath)
+        {
+            if (path == null) throw new ArgumentNullException(nameof(path));
+            if (string.IsNullOrEmpty(expectedScientificDatabasePath)) throw new InvalidOperationException("Scientific package is not ready.");
+            try { return LoadOne(path, expectedScientificDatabasePath); }
+            catch (Exception primary) when (IsRecoverableReadFailure(primary))
+            {
+                try { return LoadOne(path + ".bak", expectedScientificDatabasePath); }
+                catch (Exception backup) when (IsRecoverableReadFailure(backup))
+                {
+                    throw new InvalidDataException("Neither the last save nor its confirmed backup can be loaded.",
+                        new AggregateException(primary, backup));
+                }
+            }
+        }
+
+        private static CoreSession LoadOne(string path, string expectedScientificDatabasePath)
+        {
+            var info = new FileInfo(path);
+            if (!info.Exists || info.Length <= 0 || info.Length > MaxSaveBytes)
+                throw new InvalidDataException("Save is missing, empty, or oversized.");
+            // Invalid UTF-8 bytes must not turn into replacement characters
+            // in Native identities, values or saved scientific metadata.
+            var strictUtf8 = new System.Text.UTF8Encoding(false, true);
+            return CoreSession.ImportSession(File.ReadAllText(info.FullName, strictUtf8),
+                expectedScientificDatabasePath);
+        }
+
+        private static bool IsRecoverableReadFailure(Exception error) =>
+            error is not ScientificPackageMismatchException &&
+            (error is InvalidDataException || error is InvalidOperationException ||
+             error is ArgumentException || error is IOException);
+
+        private static void ValidateName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name) || Path.GetFileName(name) != name || name.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+                throw new ArgumentException("Save name must be one safe file name.", nameof(name));
+        }
+    }
+}

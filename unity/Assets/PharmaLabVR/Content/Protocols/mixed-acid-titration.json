@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "mixed-acid-titration-research",
+  "maturity": "Research",
+  "certifiedScoring": false,
+  "requiredObservables": [
+    "pH",
+    "volume"
+  ],
+  "optionalUnsupportedObservables": [
+    "indicatorColor",
+    "localMixing"
+  ],
+  "tracks": [
+    "cumulativeDeliveredVolumeM3",
+    "stageDeliveredVolumeM3"
+  ],
+  "limitations": [
+    "The first endpoint is not forced to equal HCl exactly.",
+    "Refilling the burette does not reset material history.",
+    "Indicator persistence and optical mixtures require independent data."
+  ],
+  "steps": [
+    "During Native setup, prepare supported HCl in the primary bottle and an acetic-acid reserve. Document both choices.",
+    "Prime the graduated burette from represented stock, or dispense a measured bottle aliquot into the receiver.",
+    "Use Native pipette source switching and controlled delivery for the second stock; record every accepted receipt.",
+    "Inspect the receiver pH support, revision and freshness; add branch-linked notebook observations, then Save and Review."
+  ]
+}

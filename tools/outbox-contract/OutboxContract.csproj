@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="NativeCoreSessionStub.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityNativeReceiptProducer.cs" Link="UniversityNativeReceiptProducer.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityEvidenceIntegrity.cs" Link="UniversityEvidenceIntegrity.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagingSessionRegistration.cs" Link="UniversityStagingSessionRegistration.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagedEvidenceStatus.cs" Link="UniversityStagedEvidenceStatus.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversitySyncOutbox.cs" Link="UniversitySyncOutbox.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/University/UniversityStagingTransport.cs" Link="UniversityStagingTransport.cs" />
+  </ItemGroup>
+</Project>
