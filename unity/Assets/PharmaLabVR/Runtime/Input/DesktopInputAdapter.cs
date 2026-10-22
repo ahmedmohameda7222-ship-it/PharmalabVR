@@ -58,7 +58,14 @@ namespace PharmaLabVR.Input
             var uiCapture = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null &&
                  SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
-            if (uiCapture) return;
+            if (uiCapture)
+            {
+                // Crossing into UI invalidates a pending world gesture; it
+                // must not fire later when the pointer leaves the panel.
+                pickPress.Clear();
+                deliveryPress.Clear();
+                return;
+            }
             var frame = (ulong)Time.frameCount;
             if (Keyboard.current.fKey.wasPressedThisFrame)
                 pickPress.Capture("desktop-pick-or-place", frame, true);
@@ -248,7 +255,10 @@ namespace PharmaLabVR.Input
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(
                     Mouse.current.position.ReadValue())))
+            {
+                deliveryPress.Clear();
                 return;
+            }
             var physicalId = heldTool.GetComponent<DesktopGrabbable>()?.ToolId;
             if (!deliveryPress.TryConsume((ulong)Time.frameCount, physicalId, true))
                 return;
@@ -282,7 +292,11 @@ namespace PharmaLabVR.Input
                 !pickPress.TryConsume((ulong)Time.frameCount, "desktop-pick-or-place", true))
                 return;
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
-                (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()))) return;
+                (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue())))
+            {
+                pickPress.Clear();
+                return;
+            }
             actuator = 0f;
             if (heldTool != null)
             {

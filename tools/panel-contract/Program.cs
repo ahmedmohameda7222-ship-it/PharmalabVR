@@ -592,6 +592,10 @@ internal static class Program
         Check(!bufferedPress.TryConsume(71, "research-stock-bottle-visual", true),
             "Unadmitted input was stored for later transfer.");
         bufferedPress.Capture("research-stock-bottle-visual", 80, true);
+        Check(!bufferedPress.TryConsume(81, "research-stock-bottle-visual", false) &&
+              !bufferedPress.TryConsume(82, "research-stock-bottle-visual", true),
+            "A UI-owned or blocked queued press was incorrectly revived later.");
+        bufferedPress.Capture("research-stock-bottle-visual", 85, true);
         bufferedPress.Clear();
         Check(!bufferedPress.TryConsume(81, "research-stock-bottle-visual", true),
             "Focus loss or mode change failed to clear the pending physical gesture.");

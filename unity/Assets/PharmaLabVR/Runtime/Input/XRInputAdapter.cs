@@ -169,18 +169,18 @@ namespace PharmaLabVR.Input
             }
             var capture = LabCaptureTarget.EstimateExclusive(grip.transform, captureTarget);
             var intent = ResearchAuxiliaryDelivery.Resolve(pendingId, true, true,
-                    capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
-                    Mathf.Approximately(capture[0].fraction, 1f), true);
-                if (intent == ResearchAuxiliaryDeliveryIntent.None)
-                {
-                    LastPhysicalDeliveryFeedback =
-                        "Align the direct-gripped instrument outlet over the stationary receiver.";
-                    return;
+                capture.Length == 1 && capture[0].destinationInventoryId == "receiver" &&
+                Mathf.Approximately(capture[0].fraction, 1f), true);
+            if (intent == ResearchAuxiliaryDeliveryIntent.None)
+            {
+                LastPhysicalDeliveryFeedback =
+                    "Align the direct-gripped instrument outlet over the stationary receiver.";
+                return;
             }
             var accepted = deliveryPanel.Request(
-                    intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
-                        PanelAction.BottlePour : PanelAction.PipetteDispense);
-                var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
+                intent == ResearchAuxiliaryDeliveryIntent.BottlePour ?
+                    PanelAction.BottlePour : PanelAction.PipetteDispense);
+            var session = coreDriver.transform.root.GetComponentInChildren<SessionController>(true);
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
                 (session?.LastError ?? "Native operation refused.");
