@@ -61,6 +61,37 @@ namespace PharmaLabVR.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator M2_XRScientificTextMustNotStealRayClicksFromInstrumentButtons()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var panel = scene.GetRootGameObjects()
+                    .SelectMany(root => root.GetComponentsInChildren<SpatialPanelPresenter>(true))
+                    .Single();
+                var content = panel.GetComponentsInChildren<Text>(true);
+                Assert.That(content.Length, Is.GreaterThan(6));
+                Assert.That(content.All(text => !text.raycastTarget), Is.True,
+                    "Readouts and button labels cannot intercept direct XR UI raycasts.");
+                var clicks = panel.GetComponentsInChildren<Button>(true);
+                Assert.That(clicks.Length, Is.GreaterThan(8));
+                Assert.That(clicks.All(button =>
+                    button.GetComponent<Image>() != null &&
+                    button.GetComponent<Image>().raycastTarget), Is.True,
+                    "Only the actual Button Image should own each XR interaction.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator M2_XRResearchInstrumentPagesShowDistinctVisibleActions()
         {
 #if UNITY_EDITOR
