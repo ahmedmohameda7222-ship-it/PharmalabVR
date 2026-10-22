@@ -284,6 +284,53 @@ internal static class Program
         predictiveView.Vessels[1].CommittedVolumeM3 = 1e-8;
         Check(!predictionJourney.CanPredict("predict-branch", predictiveView, false, null),
             "Prediction must precede, not follow, Native receiver material transfer.");
+        // Guided steps must reflect real Native and local Notebook evidence,
+        // never a fabricated score or assumed completion.
+        var blankSteps = predictionJourney.EvidenceChecklist(
+            "predict-branch", new LabViewModel(), Array.Empty<NotebookEntry>());
+        Check(blankSteps.Contains("Pending: prepare Native stock") &&
+              blankSteps.Contains("Pending: student hypothesis") &&
+              blankSteps.Contains("Pending: recorded Native pH") &&
+              !blankSteps.Contains("certified complete"),
+            "New lab incorrectly claims Native or learner progress.");
+        var changedSteps = predictionJourney.EvidenceChecklist(
+            "different-branch", predictiveView, Array.Empty<NotebookEntry>());
+        Check(changedSteps.Contains("different Native branch") &&
+              !changedSteps.Contains("Recorded:"),
+            "Research checklist inherited progress across Native branch boundaries.");
+        predictiveView.Vessels[0].CommittedVolumeM3 = 1e-7;
+        predictiveView.Vessels[0].MaterialRevision = "1";
+        predictiveView.Vessels[1].MaterialRevision = "3";
+        predictiveView.Observations[0].Support = "Supported";
+        predictiveView.Observations[0].Freshness = "Current";
+        predictiveView.Observations[0].ComputationState = "Ready";
+        predictiveView.Observations[0].AsOfMaterialRevision = "3";
+        predictiveView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        predictiveView.Observations[0].Value = 7.13;
+        predictiveView.Observations[0].ValueAvailable = true;
+        var hypothesis = new NotebookEntry("predict-branch", "5", "receiver",
+            "Student hypothesis for strong-acid-titration-research: receiver pH predicted below 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        var measured = new NotebookEntry("predict-branch", "7", "receiver", nativeNote,
+            DateTime.UtcNow.ToString("O"));
+        var explained = new NotebookEntry("predict-branch", "7", "receiver",
+            "Student explanation for strong-acid-titration-research at Native event 7 · model-limitations: " +
+            "Selected by learner; not Native scientific evidence.",
+            DateTime.UtcNow.ToString("O"));
+        var steps = predictionJourney.EvidenceChecklist("predict-branch",
+            predictiveView, new[] { hypothesis, measured, explained });
+        Check(steps.Contains("Recorded: student hypothesis") &&
+              steps.Contains("Observed: Native receiver transfer") &&
+              steps.Contains("Recorded: Native pH") &&
+              steps.Contains("Recorded: learner reflection") &&
+              steps.Contains("No certified grade"),
+            "Evidence checklist failed to connect real Native events and durable student notes.");
+        var unrecorded = predictionJourney.EvidenceChecklist("predict-branch",
+            predictiveView, new[] { hypothesis });
+        Check(unrecorded.Contains("Pending: recorded Native pH") &&
+              unrecorded.Contains("Pending: learner reflection"),
+            "Current Native pH without a saved Notebook observation was presented as recorded work.");
         Check(ResearchLessonJourney.IsSupportedPrediction("below-7") &&
               ResearchLessonJourney.IsSupportedPrediction("at-least-7") &&
               !ResearchLessonJourney.IsSupportedPrediction("made-up-endpoint"),
