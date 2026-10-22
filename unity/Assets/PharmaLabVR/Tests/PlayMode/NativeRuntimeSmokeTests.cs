@@ -53,8 +53,19 @@ namespace PharmaLabVR.Tests.PlayMode
                     System.Reflection.BindingFlags.NonPublic |
                     System.Reflection.BindingFlags.Instance);
                 Assert.That(field, Is.Not.Null);
+                var router = driver.transform.root.GetComponentInChildren<ScreenRouter>(true);
+                router.Show(ScreenId.Lab);
+                // This source test runs the Desktop scene by default. Present
+                // the same authored world panel for its explicit VR update,
+                // then inject a new adapter result WITHOUT navigating again.
+                var panelRootField = typeof(SpatialPanelPresenter).GetField("panelRoot",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(panelRootField, Is.Not.Null);
+                var worldPanel = (GameObject)panelRootField.GetValue(panel);
+                Assert.That(worldPanel, Is.Not.Null);
+                worldPanel.SetActive(true);
                 field.SetValue(xrInput, "Align the direct-gripped instrument outlet over the stationary receiver.");
-                driver.transform.root.GetComponentInChildren<ScreenRouter>(true).Show(ScreenId.Lab);
                 panel.SendMessage("LateUpdate", SendMessageOptions.DontRequireReceiver);
                 Assert.That(status.text, Does.Contain("Physical delivery:"));
                 Assert.That(status.text, Does.Contain("Align the direct-gripped instrument"));
