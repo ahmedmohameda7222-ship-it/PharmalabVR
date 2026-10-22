@@ -237,9 +237,14 @@ namespace PharmaLabVR.Session
                 var definition = JsonUtility.FromJson<ProtocolDefinition>(file.text);
                 if (definition == null || definition.id != id)
                     throw new InvalidOperationException("Research lesson identity mismatch.");
-                selectedResearchLesson = new ResearchLessonJourney(
+                var lesson = new ResearchLessonJourney(
                     definition, driver.CurrentNativeBranchId);
-                selectedResearchPrediction = null;
+                var recoveredPrediction = ResearchLessonJourney.RecoverSavedPrediction(
+                    notebook.Read(NotebookFilePath(), driver.Session.BranchId),
+                    lesson.Definition.id, driver.Session.BranchId);
+                // Rebuild memory only after durable journal recovery succeeds.
+                selectedResearchLesson = lesson;
+                selectedResearchPrediction = recoveredPrediction;
                 LastError = null;
                 if (router?.Current != null) router.Show(ScreenId.Lab);
                 return true;

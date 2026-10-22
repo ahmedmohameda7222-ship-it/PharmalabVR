@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using PharmaLabVR.Lab;
 using PharmaLabVR.UI;
+using PharmaLabVR.Session;
 
 namespace PharmaLabVR.Protocols
 {
@@ -47,6 +49,34 @@ namespace PharmaLabVR.Protocols
                 " is " + (belowSeven ? "below 7" : "at least 7") +
                 "; criterion " + (predictedBelow == belowSeven ? "matched" : "not matched") +
                 ". Research reflection only; not a grade or endpoint.";
+        }
+
+        // The first durable hypothesis for the same local Native branch and
+        // lesson survives a scene/controller rebuild. Annotation only; never
+        // infer chemistry or import hypotheses across independent branches.
+        public static string RecoverSavedPrediction(IReadOnlyList<NotebookEntry> entries,
+            string lessonId, string nativeBranchId)
+        {
+            if (entries == null || string.IsNullOrWhiteSpace(lessonId) ||
+                string.IsNullOrWhiteSpace(nativeBranchId))
+                return null;
+            var prefix = "Student hypothesis for " + lessonId +
+                ": receiver pH predicted ";
+            const string suffix =
+                ". This is a learner prediction, not a Native result or certified endpoint.";
+            foreach (var entry in entries)
+            {
+                if (entry == null || entry.BranchId != nativeBranchId ||
+                    entry.VesselId != "receiver" || entry.Text == null ||
+                    !entry.Text.StartsWith(prefix, StringComparison.Ordinal) ||
+                    !entry.Text.EndsWith(suffix, StringComparison.Ordinal))
+                    continue;
+                var answer = entry.Text.Substring(prefix.Length,
+                    entry.Text.Length - prefix.Length - suffix.Length);
+                if (answer == "below 7") return "below-7";
+                if (answer == "at least 7") return "at-least-7";
+            }
+            return null;
         }
 
         public static bool IsSupportedPrediction(string choice) =>

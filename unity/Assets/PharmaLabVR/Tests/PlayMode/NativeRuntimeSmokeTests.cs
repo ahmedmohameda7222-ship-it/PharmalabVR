@@ -113,6 +113,11 @@ namespace PharmaLabVR.Tests.PlayMode
                     Is.True, sessions.LastError);
                 Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1));
                 Assert.That(sessions.ReadNotebookEntries()[0].Text, Does.Contain("Student hypothesis"));
+                Assert.That(panels.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(sessions.CanRecordResearchPrediction, Is.False,
+                    "Re-selecting same lesson must reuse the durable original hypothesis.");
+                Assert.That(sessions.ResearchPredictionSummary, Does.Contain("below 7"));
                 Assert.That(panels.Request(PanelAction.RecordResearchPrediction, "at-least-7"),
                     Is.False, "A second prediction must not overwrite the original hypothesis.");
                 Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
