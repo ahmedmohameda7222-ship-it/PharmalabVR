@@ -130,6 +130,82 @@ namespace PharmaLabVR.Tests.PlayMode
 
         // Source test only. Real Editor/Player execution remains the final
         // local Codex verification gate; no simulated pH or note fixture.
+        // This is a real local .plvpack journey, not a cloud teacher grant.
+        // Unity runtime execution remains reserved for the final local gate.
+        [UnityTest]
+        public IEnumerator M4_ReadOnlyStudentArchiveReviewCannotMutateNativeOrCrossFilesystem()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string notes = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root => root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root => root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root => root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var name = "teacher-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, name);
+                notes = Path.Combine(Application.persistentDataPath, "sessions", name + ".plv-notes");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.RecordResearchPrediction, "below-7"),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.ExportPortable), Is.True, sessions.LastError);
+                var portable = sessions.LastPortableArchivePath;
+                Assert.That(File.Exists(portable), Is.True);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
+                var session = driver.Session;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.PreviewPortableArchive,
+                    Path.GetFileName(portable)), Is.True, sessions.LastError);
+                var teaching = sessions.LastInstructorPortableReview;
+                Assert.That(teaching, Is.Not.Null);
+                Assert.That(teaching.NativeBranchId, Is.EqualTo(session.BranchId));
+                Assert.That(teaching.StudentAnnotations.Count, Is.EqualTo(1));
+                Assert.That(teaching.Summary, Does.Contain("NOT ATTESTED OR GRADED"));
+                Assert.That(teaching.Summary, Does.Contain("Student hypothesis"));
+                Assert.That(driver.Session, Is.SameAs(session));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(panels.Request(PanelAction.PreviewPortableArchive,
+                    "../outside.plvpack"), Is.False, "Imported filename traversal must be rejected.");
+                Assert.That(sessions.LastInstructorPortableReview, Is.Null,
+                    "Failed import must not leave apparently verified teaching evidence.");
+                Assert.That(driver.Session, Is.SameAs(session));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+            }
+            finally
+            {
+                if (notes != null)
+                {
+                    var folder = Path.GetDirectoryName(notes);
+                    var basePath = Path.Combine(folder,
+                        Path.GetFileName(notes).Replace(".plv-notes", ""));
+                    foreach (var extension in new[] {
+                        ".plv-notes", ".plv.json", ".plvpack",
+                        ".plv-notes.bak", ".plv.json.bak", ".plvpack.bak",
+                        ".plv-notes.tmp", ".plv.json.tmp", ".plvpack.tmp" })
+                    {
+                        var target = basePath + extension;
+                        if (File.Exists(target)) File.Delete(target);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         [UnityTest]
         public IEnumerator M3_ResearchLessonTransfersAndRecordsActualNativePHIntoOfflineNotebook()
         {
