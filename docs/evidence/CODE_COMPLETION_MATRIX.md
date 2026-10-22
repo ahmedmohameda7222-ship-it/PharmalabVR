@@ -172,3 +172,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 ## Unity-source precision integration regression (22 October 2026)
 
 - **P12.02/P23.02 Partial:** Authored EditMode NativeObservationPrecisionTests verifies Unity JsonUtility retains raw 6.999/7.001 despite both displaying 7.00, rejects an incoherent display and an unavailable raw observation. Extended InstructorPortableReviewTests checks read-only preview reveals actual raw pH alongside display. Test fixtures are labeled as DTO fixtures, not Native scientific results. Unity Editor/PlayMode/Player/XR tests are NOT_RUN; formal statuses unchanged.
+
+## M3 Native pH idempotent recording (22 October 2026)
+
+- **P11.02/P12.02 Partial:** Reopening Measure on the same Native branch/event/vessel/material revision no longer appends a second Native pH note to the durable offline journal. Eligibility is checked against the checksummed existing Notebook, so route changes and controller recreation do not reset the limit. The gate does not treat learner hypotheses or unrelated branches/events as measurements. Future genuine Native events remain recordable.
+- **Evidence:** Test-first headless contract commit `ccfd2ba` checks same-event refusal, later-event/other-vessel/branch admission and hypothesis separation. Unity PlayMode source extends real measurement–Notebook–Measure–Notebook navigation, asserts a rejected duplicate and preserves the original learner explanation workflow. Unity tests remain NOT_RUN; official release acceptance unmodified.

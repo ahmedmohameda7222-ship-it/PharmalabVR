@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using PharmaLabVR.Session;
 using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Lab
@@ -10,6 +12,29 @@ namespace PharmaLabVR.Lab
     // Scientific computations remain exclusively in Native C++/IPhreeqc.
     public static class NativeMeasurementNote
     {
+        // One scientific observation record per Native event and vessel
+        // material revision. A learner's text/prediction does not masquerade
+        // as a Native note, and independent events remain eligible.
+        public static bool WasRecorded(IReadOnlyList<NotebookEntry> entries,
+            string branchId, string eventSequence, string vesselId, string materialRevision)
+        {
+            if (entries == null || string.IsNullOrWhiteSpace(branchId) ||
+                string.IsNullOrWhiteSpace(eventSequence) ||
+                string.IsNullOrWhiteSpace(vesselId) ||
+                string.IsNullOrWhiteSpace(materialRevision))
+                return false;
+            var fingerprint = " · vessel " + vesselId +
+                " · material revision " + materialRevision +
+                " · event " + eventSequence + " · Supported/Current";
+            return entries.Any(item => item != null &&
+                item.BranchId == branchId && item.EventSequence == eventSequence &&
+                item.VesselId == vesselId && item.Text != null &&
+                item.Text.StartsWith("Native pH ", StringComparison.Ordinal) &&
+                item.Text.Contains(fingerprint, StringComparison.Ordinal) &&
+                item.Text.Contains("Research observation only; no certified endpoint inferred.",
+                    StringComparison.Ordinal));
+        }
+
         public static string Build(LabViewModel view, string vesselId,
             MeasurementAvailability availability, string displayedValue)
         {

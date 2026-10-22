@@ -281,6 +281,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries[1].Text, Does.Contain("Research reflection only"));
                 Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
                     "Notebook navigation cannot duplicate a measurement action.");
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
+                Assert.That(sessions.CanRecordCurrentNativePH, Is.False,
+                    "Re-entering measurement at the same Native event cannot record a duplicate pH.");
+                Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.False,
+                    "Repeat measurement action should be denied without a new Native event.");
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
                 Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2));
                 Assert.That(sessions.CanRecordResearchExplanation, Is.True,
                     "Student explanation requires recorded, Current Native pH.");

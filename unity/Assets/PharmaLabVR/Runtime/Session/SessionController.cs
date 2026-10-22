@@ -139,14 +139,28 @@ namespace PharmaLabVR.Session
                     return false;
                 try
                 {
-                    NativeMeasurementNote.Build(driver.CurrentLabView,
-                        driver.SelectedMeasurementVesselId,
+                    var view = driver.CurrentLabView;
+                    var vesselId = driver.SelectedMeasurementVesselId;
+                    NativeMeasurementNote.Build(view, vesselId,
                         driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
                         driver.Measurement?.DisplayValue);
-                    return router.Current.SelectedEntityId == driver.SelectedMeasurementVesselId &&
-                        router.Current.NativeRevision == driver.CurrentLabView.EventSequence;
+                    if (router.Current.SelectedEntityId != vesselId ||
+                        router.Current.NativeRevision != view.EventSequence)
+                        return false;
+                    var vessel = view.Vessels.First(v => v.Id == vesselId);
+                    var notes = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    return !NativeMeasurementNote.WasRecorded(notes,
+                        driver.Session.BranchId, view.EventSequence, vesselId,
+                        vessel.MaterialRevision);
                 }
-                catch (InvalidOperationException) { return false; }
+                catch (Exception error) when (error is InvalidOperationException ||
+                                              error is IOException ||
+                                              error is UnauthorizedAccessException ||
+                                              error is InvalidDataException ||
+                                              error is ArgumentException)
+                {
+                    return false;
+                }
             }
         }
 
@@ -158,7 +172,7 @@ namespace PharmaLabVR.Session
             {
                 if (!CanRecordCurrentNativePH)
                     throw new InvalidOperationException(
-                        "Only a current, revision-matched Native pH reading can be recorded.");
+                        "A current, revision-matched, previously unrecorded Native pH reading is required.");
                 var view = driver.CurrentLabView;
                 var vessel = driver.SelectedMeasurementVesselId;
                 var note = NativeMeasurementNote.Build(view, vessel,
