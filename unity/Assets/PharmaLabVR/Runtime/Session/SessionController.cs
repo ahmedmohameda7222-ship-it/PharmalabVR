@@ -427,7 +427,9 @@ namespace PharmaLabVR.Session
             "Choose a Research lesson (not graded)." :
             selectedResearchLesson.CompactEvidenceStatus(
                 driver?.CurrentNativeBranchId, driver?.CurrentLabView,
-                ReadNotebookEntries());
+                ReadNotebookEntries(),
+                paused: driver?.IsNativePaused == true && driver?.SourceNeedsPreparation != true,
+                held: driver?.IsTimeHeld == true);
         public string ResearchLessonSteps => selectedResearchLesson == null ?
             string.Empty : selectedResearchLesson.Instructions;
         public bool HasResearchLesson => selectedResearchLesson != null;

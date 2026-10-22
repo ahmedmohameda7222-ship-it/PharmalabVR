@@ -218,10 +218,16 @@ namespace PharmaLabVR.Protocols
         // XR receives a single factual next step, never the full desktop
         // checklist overlapping its physical input targets.
         public string CompactEvidenceStatus(string liveBranchId, LabViewModel native,
-            IReadOnlyList<NotebookEntry> notes)
+            IReadOnlyList<NotebookEntry> notes, bool paused = false, bool held = false)
         {
             if (liveBranchId != BranchId || native?.Vessels == null)
                 return "Research evidence unavailable for this Native branch (not graded).";
+            // A tracked Native hold or a genuine pause takes precedence over
+            // every apparent next study step. No simulated recovery is implied.
+            if (held)
+                return "Hold: restore tracking and neutral input; use Native recovery before lab work (not graded).";
+            if (paused)
+                return "Pause: choose controlled Native Continue before lab transfers (not graded).";
             var lines = EvidenceChecklist(liveBranchId, native, notes)
                 .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
             var total = lines.Count(line => line.StartsWith("Pending: ", StringComparison.Ordinal) ||

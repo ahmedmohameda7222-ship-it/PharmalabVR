@@ -223,3 +223,8 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P12.01/P12.02 Partial:** Guided Summary and the full evidence checklist now require the same Native scientific readout classification as the pH UI (supported, Ready, Current, finite, available) plus exact receiver material revision and complete model/database/maturity identities. Pending/failed/unavailable or superseded measurements no longer appear as a confirmed research observation merely because metadata retains Supported/Current flags.
 - **TDD:** RED headless commit `b44a2b2` failed with a pending-solver false positive. Corrected code uses ScientificReadoutPolicy; Unity EditMode/PlayMode/Player/XR remains NOT_RUN and formal acceptance fields remain unchanged.
+
+## M3/XR genuine Pause/Hold lesson guidance (22 October 2026)
+
+- **P07.02/P12.01 Partial:** The compact XR Research lesson status now prioritizes Native Hold (tracking/neutral recovery) and genuine Native Pause (controlled Continue) over the next chemistry task. The special first-run preparation pause remains allowed to guide stock setup rather than hiding setup behind a misleading recovery requirement. This is a presentation-only instruction, not a synthetic Continue or command.
+- **Tests:** RED headless `57342d2` failed on missing state-aware CompactEvidenceStatus overload, followed by the production logic and wiring. Unity Editor/Player/XR execution remains NOT_RUN and formal acceptance remains unchanged.
