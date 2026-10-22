@@ -1180,6 +1180,23 @@ internal static class Program
                 "source", "source", "", true),
             "Physical immersion must not siphon a different Native reserve source.");
 
+        // Restored Native authority must disown held physical gestures until
+        // real controls are neutral and the previous grip has been released.
+        var restoredGate = new ResearchRestorationGestureGate();
+        Check(restoredGate.IsArmed, "Fresh laboratory input should begin armed.");
+        restoredGate.RequireFreshNeutralInput();
+        Check(!restoredGate.IsArmed &&
+              !restoredGate.ObserveNeutral(false, true, true) &&
+              !restoredGate.ObserveNeutral(true, false, true) &&
+              !restoredGate.ObserveNeutral(true, true, false),
+            "Native restoration accepted held equipment, depressed controls or missing tracking.");
+        Check(restoredGate.ObserveNeutral(true, true, true) &&
+              restoredGate.IsArmed,
+            "A released tool, neutral controls and valid tracking did not re-arm input.");
+        restoredGate.RequireFreshNeutralInput();
+        Check(!restoredGate.IsArmed,
+            "A second Native session restoration reused an earlier neutral baseline.");
+
         // M2: holding a real visual-only pipette/stock bottle must never
         // turn pointer motion into a Native burette valve command. They can
         // still be moved on the workbench with an ordinary left drag.

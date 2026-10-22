@@ -8,7 +8,8 @@ using PharmaLabVR.UI;
 
 namespace PharmaLabVR.Input
 {
-    public sealed class DesktopInputAdapter : MonoBehaviour, ILabInputAdapter
+    public sealed class DesktopInputAdapter : MonoBehaviour, ILabInputAdapter,
+        INativeRestorationInputAdapter
     {
         [SerializeField] private Transform labFrame;
         [SerializeField] private Transform heldTool;
@@ -29,6 +30,8 @@ namespace PharmaLabVR.Input
         private bool pointerSelectionActive;
         private Vector3 initialDragOffset;
         private bool heldToolOriginalKinematic;
+        private readonly ResearchRestorationGestureGate restorationGestureGate = new();
+        public bool HasFreshPhysicalGestureSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
@@ -78,6 +81,26 @@ namespace PharmaLabVR.Input
 
         private void Update()
         {
+            if (!restorationGestureGate.IsArmed)
+            {
+                // A Native restore invalidates the *old* physical selection.
+                // Do not let F/G, a held mouse press or a drag auto-reselect
+                // a tool after Continue. Only real released controls re-arm.
+                var pointerNeutral = Mouse.current == null ||
+                    (!Mouse.current.leftButton.isPressed &&
+                     !Mouse.current.rightButton.isPressed &&
+                     !Mouse.current.middleButton.isPressed);
+                var keysNeutral = Keyboard.current != null &&
+                    !Keyboard.current.anyKey.isPressed;
+                restorationGestureGate.ObserveNeutral(heldTool == null,
+                    pointerNeutral && keysNeutral,
+                    inputEnabled && !awaitingFocusContinue && coreDriver != null);
+                pickPress.Clear();
+                ClearDeliveryPress();
+                actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return; // The first neutral frame never generates a gesture.
+            }
             if (!inputEnabled || awaitingFocusContinue || coreDriver == null ||
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld || Keyboard.current == null)
             {
@@ -194,6 +217,20 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return System.Array.Empty<LabInputSample>();
             }
+            // A restored Native session must sample neutral geometry during
+            // Hold recovery, but must not carry any old Desktop manipulation.
+            if (!restorationGestureGate.IsArmed)
+            {
+                actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
+                pickPress.Clear();
+                ClearDeliveryPress();
+                return new[] { LabGeometryAdapter.BuildSample(
+                    heldToolId, ++sequence, nowNs, labFrame, registeredTool, 0f,
+                    geometryProfileHash, !awaitingFocusContinue,
+                    captureTarget != null ?
+                        LabCaptureTarget.EstimateExclusive(registeredTool, captureTarget) : null) };
+            }
             // Esc is handled in Update, independently of the Native tick.
             // Sampling must never be the only listener for single-frame input.
             if (coreDriver != null && (coreDriver.IsNativePaused || coreDriver.IsTimeHeld))
@@ -238,6 +275,24 @@ namespace PharmaLabVR.Input
                 heldToolId, ++sequence, nowNs, labFrame, sampledTool, sampledActuator,
                 geometryProfileHash, true, captureTarget != null ?
                     LabCaptureTarget.EstimateExclusive(sampledTool, captureTarget) : null) };
+        }
+
+        public void ResetForNativeRestoration()
+        {
+            // Restore the real body's original physics mode. No pose or
+            // material is teleported or fabricated by this interaction reset.
+            if (heldTool != null && heldTool.TryGetComponent<Rigidbody>(out var body))
+                body.isKinematic = heldToolOriginalKinematic;
+            heldTool = null;
+            actuator = 0f;
+            pointerDragActive = false;
+            pointerSelectionActive = false;
+            pickPress.Clear();
+            ClearDeliveryPress();
+            LastPhysicalDeliveryFeedback = null;
+            LastPhysicalInspectionFeedback = null;
+            instrumentPresenter?.PresentActuatorInput(0f);
+            restorationGestureGate.RequireFreshNeutralInput();
         }
 
         public void ResetBaselines()

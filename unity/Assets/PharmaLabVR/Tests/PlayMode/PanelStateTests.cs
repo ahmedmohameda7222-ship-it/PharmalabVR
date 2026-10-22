@@ -1395,6 +1395,22 @@ namespace PharmaLabVR.Tests.PlayMode
                     root.GetComponentsInChildren<CoreDriver>(true)).Single();
                 Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
                 Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                var roots = scene.GetRootGameObjects();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopGrabbable>(true))
+                    .Single(tool => tool.ToolId == "research-pipette-visual");
+                var pipetteBody = pipette.GetComponent<Rigidbody>();
+                var originallyKinematic = pipetteBody.isKinematic;
+                var beginHold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(beginHold, Is.Not.Null);
+                beginHold.Invoke(desktop, new object[] { pipette.transform });
+                Assert.That(desktop.HasHeldTool, Is.True);
                 var original = driver.Session;
                 var revision = driver.CurrentLabView.EventSequence;
                 Assert.That(driver.SelectMeasurementVessel("receiver"), Is.True);
@@ -1410,6 +1426,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
                 Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("source"),
                     "Restored source screen must not retain the previous receiver's pH selection.");
+                Assert.That(desktop.HasHeldTool, Is.False,
+                    "Restoration must release the old Desktop hand-to-tool owner.");
+                Assert.That(pipetteBody.isKinematic, Is.EqualTo(originallyKinematic),
+                    "Restoring ownership must preserve the authored physical Rigidbody policy.");
+                Assert.That(desktop.HasFreshPhysicalGestureSinceRestore, Is.False,
+                    "An old Desktop press cannot be reused after Native import.");
+                Assert.That(xr.HasFreshGripSinceRestore, Is.False,
+                    "An old XR grip/trigger cannot be reused after Native import.");
                 Assert.That(driver.IsNativePaused, Is.True);
             }
             finally
@@ -1460,6 +1484,12 @@ namespace PharmaLabVR.Tests.PlayMode
                     "Explicit Load must not create material or observation revisions.");
                 Assert.That(session.RecordedReview, Is.Null,
                     "Load cannot implicitly open or recompute Review.");
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasFreshPhysicalGestureSinceRestore, Is.False);
+                Assert.That(xr.HasFreshGripSinceRestore, Is.False);
             }
             finally
             {

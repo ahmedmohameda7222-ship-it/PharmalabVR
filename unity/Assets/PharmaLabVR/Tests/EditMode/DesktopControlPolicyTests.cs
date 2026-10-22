@@ -80,6 +80,21 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_RestoredNativeSessionNeedsRealReleasedToolsNeutralControlsAndTracking()
+        {
+            var gate = new ResearchRestorationGestureGate();
+            Assert.That(gate.IsArmed, Is.True);
+            gate.RequireFreshNeutralInput();
+            Assert.That(gate.IsArmed, Is.False);
+            Assert.That(gate.ObserveNeutral(false, true, true), Is.False);
+            Assert.That(gate.ObserveNeutral(true, false, true), Is.False);
+            Assert.That(gate.ObserveNeutral(true, true, false), Is.False);
+            Assert.That(gate.ObserveNeutral(true, true, true), Is.True);
+            gate.RequireFreshNeutralInput();
+            Assert.That(gate.IsArmed, Is.False);
+        }
+
+        [Test]
         public void P10_01_WheelCannotMoveHeldInstrumentAndCameraTogether()
         {
             Assert.That(DesktopWheelRouting.Resolve(true, false, 120d),

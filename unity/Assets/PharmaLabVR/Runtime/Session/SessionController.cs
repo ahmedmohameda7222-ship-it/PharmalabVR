@@ -803,6 +803,10 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Hold)
             {
                 GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
+                var desktopInput = driver.transform.root.GetComponentInChildren<DesktopInputAdapter>(true);
+                if (driver.CurrentMode == "Desktop" && desktopInput != null &&
+                    !desktopInput.HasFreshPhysicalGestureSinceRestore)
+                    GUILayout.Label("Session restored: release the held instrument, all keyboard keys and mouse buttons. Then pick up a tool again.");
                 if (HasResearchLesson)
                     GUILayout.Label("Saved learner lesson recovered from local Notebook. " +
                         ResearchPredictionSummary + " Native Hold remains active until Continue.");

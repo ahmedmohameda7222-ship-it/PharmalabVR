@@ -300,6 +300,7 @@ namespace PharmaLabVR.Core
             // A previously selected receiver cannot stay selected while the
             // UI resets to the saved source and asks for fresh inspection.
             SelectedMeasurementVesselId = "source";
+            ResetPhysicalInteractionAfterNativeRestoration();
             HoldChanged?.Invoke(true);
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
@@ -337,9 +338,22 @@ namespace PharmaLabVR.Core
             establishFrameClock = true;
             previous?.Dispose();
             SynchronizeInputSequences();
+            ResetPhysicalInteractionAfterNativeRestoration();
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
             PublishSnapshot();
+        }
+
+        // The Native session was already accepted. Every old physical
+        // selection/gesture now belongs to the wrong scientific authority.
+        // Keep the lab pose non-authoritative but block gestures until the
+        // student releases inputs and establishes a fresh neutral state.
+        private void ResetPhysicalInteractionAfterNativeRestoration()
+        {
+            if (inputAdapterBehaviours == null) return;
+            foreach (var behaviour in inputAdapterBehaviours)
+                if (behaviour is INativeRestorationInputAdapter adapter)
+                    adapter.ResetForNativeRestoration();
         }
 
         public void SynchronizeInputSequences()

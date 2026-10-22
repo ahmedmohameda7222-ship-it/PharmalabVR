@@ -443,6 +443,10 @@ namespace PharmaLabVR.UI
             {
                 ScreenId.Hold => state.HoldReason +
                     " hold. Close the valve and restore a neutral tracked input." +
+                    (driver.transform.root.GetComponentInChildren<XRInputAdapter>(true) is var xr &&
+                     xr != null && !xr.HasFreshGripSinceRestore ?
+                        "\nAfter SessionLoad: release every tool grip and trigger on both tracked hands, then re-grip a tool." :
+                        string.Empty) +
                     (panels != null && panels.HasResearchLesson ?
                         "\nSaved Research lesson and hypothesis recovered from local Notebook; " +
                         "Native Continue is still required.\n" + panels.ResearchPredictionSummary :

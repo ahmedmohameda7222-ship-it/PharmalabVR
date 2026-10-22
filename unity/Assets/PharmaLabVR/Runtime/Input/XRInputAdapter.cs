@@ -9,7 +9,8 @@ using PharmaLabVR.Session;
 
 namespace PharmaLabVR.Input
 {
-    public sealed class XRInputAdapter : MonoBehaviour, ILabInputAdapter
+    public sealed class XRInputAdapter : MonoBehaviour, ILabInputAdapter,
+        INativeRestorationInputAdapter
     {
         [SerializeField] private Transform labFrame;
         [SerializeField] private Transform leftController;
@@ -31,6 +32,8 @@ namespace PharmaLabVR.Input
         [SerializeField] private string geometryProfileHash = "unassigned";
         private ulong sequence;
         private bool inputEnabled;
+        private readonly ResearchRestorationGestureGate restorationGestureGate = new();
+        public bool HasFreshGripSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
         private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
@@ -108,6 +111,31 @@ namespace PharmaLabVR.Input
 
         private void Update()
         {
+            if (!restorationGestureGate.IsArmed)
+            {
+                // Even if XR Interaction Toolkit still reports a previous
+                // selected grip, it cannot operate the replacement Native
+                // session. A real release and neutral tracked controllers
+                // must precede any new direct-grip or trigger action.
+                var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(
+                    UnityEngine.XR.XRNode.Head);
+                var headTracked = head.isValid &&
+                    head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,
+                        out var tracked) && tracked;
+                var noSelections =
+                    (grabInteractable == null || !grabInteractable.isSelected) &&
+                    (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
+                    (researchBottleGrab == null || !researchBottleGrab.isSelected);
+                var neutral = ControllerNeutral(leftActionController) &&
+                    ControllerNeutral(rightActionController);
+                restorationGestureGate.ObserveNeutral(noSelections, neutral,
+                    inputEnabled && coreDriver != null &&
+                    XRTrackingAdmission.HasFreshTracking(headTracked,
+                        Tracked(leftActionController), Tracked(rightActionController)));
+                ClearDeliveryPress();
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return; // Ignore the first fresh neutral frame.
+            }
             if (!inputEnabled || coreDriver == null ||
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
                 coreDriver.SourceNeedsPreparation)
@@ -171,8 +199,9 @@ namespace PharmaLabVR.Input
             var selected = grabInteractable != null && grabInteractable.isSelected;
             var owner = selected ? SelectingController() : null;
             var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
-            var blocked = coreDriver != null &&
-                (coreDriver.IsTimeHeld || coreDriver.IsNativePaused);
+            var blocked = !restorationGestureGate.IsArmed ||
+                (coreDriver != null &&
+                 (coreDriver.IsTimeHeld || coreDriver.IsNativePaused));
             var actuator = selected && !blocked ? Actuator(owner, directBodyGrip) : 0f;
             // Every admitted recovery baseline must reflect actual head and both
             // controller tracking. An unheld tool is not evidence of tracked XR.
@@ -247,6 +276,17 @@ namespace PharmaLabVR.Input
                 (session?.LastError ?? "Native operation refused.");
         }
 
+        private static bool ControllerNeutral(ActionBasedController controller)
+        {
+            if (controller == null || !controller.gameObject.activeInHierarchy)
+                return false;
+            var grip = controller.selectActionValue.action;
+            var trigger = controller.activateActionValue.action;
+            return grip != null && grip.enabled && trigger != null &&
+                trigger.enabled && grip.ReadValue<float>() <= 0.1f &&
+                trigger.ReadValue<float>() <= 0.1f;
+        }
+
         private ActionBasedController OwnerForInteractor(Transform selection)
         {
             if (selection == null) return null;
@@ -287,6 +327,17 @@ namespace PharmaLabVR.Input
             if (controller == null || !controller.gameObject.activeInHierarchy) return false;
             var action = controller.isTrackedAction.action;
             return action != null && action.enabled && action.ReadValue<float>() > 0.5f;
+        }
+
+        public void ResetForNativeRestoration()
+        {
+            // Never invoke a new SelectEnter/SelectExit for the student:
+            // XR Interaction Toolkit retains its physical grip until the
+            // student releases it. It is simply inert for this Native epoch.
+            ClearDeliveryPress();
+            instrumentPresenter?.PresentActuatorInput(0f);
+            LastPhysicalDeliveryFeedback = null;
+            restorationGestureGate.RequireFreshNeutralInput();
         }
 
         public void ResetBaselines()
