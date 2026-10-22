@@ -5,17 +5,16 @@ namespace PharmaLabVR.Input
     public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate }
 
     // The visible bottle must represent the actual selected Native source.
-    // A pipette switched to an unrepresented reserve cannot draw from the
-    // original stock bottle merely because its tip is geometrically immersed.
+    // Only the Native tool's currently assigned source (not the prefab default)
+    // may admit physical immersion after an explicit reserve switch.
     public static class ResearchPhysicalSourceBinding
     {
         public static bool Matches(string configuredSourceId, string visibleBottleId,
             string nativeSourceId, bool nativeToolExists) =>
             !string.IsNullOrWhiteSpace(configuredSourceId) &&
             !string.IsNullOrWhiteSpace(visibleBottleId) &&
-            string.Equals(configuredSourceId, visibleBottleId, System.StringComparison.Ordinal) &&
-            (!nativeToolExists || string.Equals(nativeSourceId, visibleBottleId,
-                System.StringComparison.Ordinal));
+            string.Equals(nativeToolExists ? nativeSourceId : configuredSourceId,
+                visibleBottleId, System.StringComparison.Ordinal);
     }
 
     public static class ResearchAuxiliaryDelivery

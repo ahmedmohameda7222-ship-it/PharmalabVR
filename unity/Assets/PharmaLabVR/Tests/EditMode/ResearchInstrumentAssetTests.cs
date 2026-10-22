@@ -91,6 +91,39 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_ReserveStockHasNativeBoundVisibleImmersionAndPhysicalInputConnections()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchReserveStockBottle.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            var target = prefab.GetComponent<ResearchStockAspirateTarget>();
+            Assert.That(target, Is.Not.Null);
+            Assert.That(target.NativeInventoryId, Is.EqualTo("reserve-stock"));
+            Assert.That(prefab.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<BottlePourActuator>(), Is.Null,
+                "Reserve is a prepared pipette intake station, not a second Native pouring tool.");
+            Assert.That(prefab.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+            Assert.That(prefab.transform.Find("ParkedResearchCap"), Is.Not.Null);
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var reserve = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(item => item.NativeInventoryId == "reserve-stock");
+                Assert.That(reserve.name, Is.EqualTo("ResearchReserveStockBottle"));
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasReserveStockAspirateTarget, Is.True);
+                Assert.That(xr.HasReserveStockAspirateTarget, Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState()
         {
             var root = new GameObject("dock-return-body");

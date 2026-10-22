@@ -12,11 +12,18 @@ namespace PharmaLabVR.Input
         [SerializeField, Min(0.001f)] private float mouthRadiusMetres = 0.025f;
         private ReceiverMotionTracker bottleMotion = new ReceiverMotionTracker();
 
-        public string NativeInventoryId => "source";
+        [SerializeField] private string nativeInventoryId = "source";
+        public string NativeInventoryId => nativeInventoryId;
+        public void ConfigureInventory(string value)
+        {
+            if (value != "source" && value != "reserve-stock")
+                throw new ArgumentException("A supported physical stock inventory is required.", nameof(value));
+            nativeInventoryId = value;
+        }
 
-        // Native may retarget this pipette to reserve-stock. This physical
-        // source bottle represents ONLY the "source" vessel. Source selection
-        // is read fresh at both gesture edges, not cached across commands.
+        // Each actual bottle represents its serialized Native inventory.
+        // Source selection is read fresh at both gesture edges; reserve
+        // switches cannot reuse a source-bottle immersion gesture.
         public bool NativeSourceMatches(CoreSession session, PipetteActuator pipette)
         {
             if (session == null || !session.IsOpen || pipette == null)

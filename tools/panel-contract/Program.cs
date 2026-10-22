@@ -1179,6 +1179,15 @@ internal static class Program
               !ResearchPhysicalSourceBinding.Matches(
                 "source", "source", "", true),
             "Physical immersion must not siphon a different Native reserve source.");
+        Check(ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", "reserve-stock", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", "source", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", null, false) &&
+              ResearchPhysicalSourceBinding.Matches(
+                "source", "source", null, false),
+            "A switched Native pipette must draw only from its real represented reserve vessel.");
 
         // Restored Native authority must disown held physical gestures until
         // real controls are neutral and the previous grip has been released.

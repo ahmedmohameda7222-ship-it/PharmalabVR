@@ -36,6 +36,22 @@ namespace PharmaLabVR.Input
         public bool HasFreshGripSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
+        [SerializeField] private ResearchStockAspirateTarget reserveStockAspirateTarget;
+        [SerializeField] private XRGrabInteractable reserveStockGrip;
+        public bool HasReserveStockAspirateTarget =>
+            reserveStockAspirateTarget != null &&
+            reserveStockAspirateTarget.NativeInventoryId == "reserve-stock";
+        public void ConfigureReserveStockAspirateTarget(ResearchStockAspirateTarget target)
+        {
+            if (target == null || target.NativeInventoryId != "reserve-stock")
+                throw new System.ArgumentException(
+                    "The physical reserve target must represent Native reserve-stock.", nameof(target));
+            reserveStockAspirateTarget = target;
+            reserveStockGrip = target.GetComponent<XRGrabInteractable>();
+            if (reserveStockGrip == null)
+                throw new System.ArgumentException(
+                    "An XR reserve bottle must have a real physical grip.", nameof(target));
+        }
         private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
         public void ConfigureStockAspirateTarget(ResearchStockAspirateTarget target) =>
             stockAspirateTarget = target != null ? target :
@@ -55,11 +71,19 @@ namespace PharmaLabVR.Input
             var receiver = capture.Length == 1 &&
                 capture[0].destinationInventoryId == "receiver" &&
                 Mathf.Approximately(capture[0].fraction, 1f);
-            var source = id == "research-pipette-visual" &&
+            var pipette = physicalTool != null ?
+                physicalTool.GetComponent<PipetteActuator>() : null;
+            var primary = id == "research-pipette-visual" &&
                 StockAspirateTarget != null &&
-                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session,
-                    physicalTool != null ? physicalTool.GetComponent<PipetteActuator>() : null) &&
+                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
                 StockAspirateTarget.IsImmersed(physicalTool);
+            var reserve = id == "research-pipette-visual" &&
+                reserveStockAspirateTarget != null &&
+                reserveStockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
+                reserveStockAspirateTarget.IsImmersed(physicalTool);
+            // An immersion gesture is exclusive to exactly one represented
+            // Native inventory; coincident bottles cannot double-authorize.
+            var source = primary != reserve;
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
                 !coreDriver.IsTimeHeld;
@@ -125,7 +149,8 @@ namespace PharmaLabVR.Input
                 var noSelections =
                     (grabInteractable == null || !grabInteractable.isSelected) &&
                     (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
-                    (researchBottleGrab == null || !researchBottleGrab.isSelected);
+                    (researchBottleGrab == null || !researchBottleGrab.isSelected) &&
+                    (reserveStockGrip == null || !reserveStockGrip.isSelected);
                 var neutral = ControllerNeutral(leftActionController) &&
                     ControllerNeutral(rightActionController);
                 restorationGestureGate.ObserveNeutral(noSelections, neutral,

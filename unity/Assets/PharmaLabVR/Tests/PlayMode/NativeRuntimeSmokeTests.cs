@@ -22,6 +22,65 @@ using UnityEditor.SceneManagement;
 
 namespace PharmaLabVR.Tests.PlayMode
 {
+        // Actual reserve-stock solvent comes from Native inventory. Both
+        // physically distinct bottle apertures must match the currently
+        // registered Native pipette source, never arbitrary proximity.
+        [UnityTest]
+        public IEnumerator M2_PreparedReserveStockIsPhysicalPipetteIntakeWithoutInventedMaterial()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<PipetteActuator>(true)).Single();
+                var targets = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).ToArray();
+                var source = targets.Single(target => target.NativeInventoryId == "source");
+                var reserve = targets.Single(target => target.NativeInventoryId == "reserve-stock");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(reserve.IsImmersed(pipette.transform), Is.False,
+                    "An unprepared reserve is not an aspiratable liquid.");
+                Assert.That(actions.Request(PanelAction.PrepareReserveStock,
+                    "acetic-acid", 0.05), Is.True);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True);
+                Assert.That(actions.Request(PanelAction.PipetteSwitchReserve),
+                    Is.True, actions.LastError);
+                var before = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3;
+                Assert.That(before, Is.GreaterThan(0d));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.False,
+                    "Source bottle must not authorize a Native reserve aspiration.");
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
+                var liquid = reserve.transform.Find("NativeBottleLiquid");
+                var tip = pipette.transform.Find("OutletExit");
+                var surface = liquid.TransformPoint(new Vector3(0f,
+                    liquid.GetComponent<MeshFilter>().sharedMesh.bounds.max.y, 0f));
+                pipette.transform.rotation = reserve.transform.rotation;
+                pipette.transform.position +=
+                    surface - tip.position - reserve.transform.up * .006f;
+                Assert.That(reserve.IsImmersed(pipette.transform), Is.True);
+                Assert.That(actions.Request(PanelAction.PipetteAspirate),
+                    Is.True, actions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3, Is.LessThan(before));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
     public sealed class NativeRuntimeSmokeTests
     {
         // A student imports a real offline study pack into a new isolated
@@ -155,7 +214,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 var panels = roots.SelectMany(root =>
                     root.GetComponentsInChildren<LabPanelController>(true)).Single();
                 var source = roots.SelectMany(root =>
-                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).Single();
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(item => item.NativeInventoryId == "source");
                 var pipette = roots.SelectMany(root =>
                     root.GetComponentsInChildren<PipetteActuator>(true)).Single().transform;
                 var receiver = roots.SelectMany(root =>

@@ -176,7 +176,8 @@ namespace PharmaLabVR.Editor
             // remain explicit SessionController commands under Native authority.
             foreach (var item in new[] {
                 ("ResearchPipette", new Vector3(-0.34f, 0.49f, 0.26f)),
-                ("ResearchStockBottle", new Vector3(-0.58f, 0.49f, 0.22f))
+                ("ResearchStockBottle", new Vector3(-0.58f, 0.49f, 0.22f)),
+                ("ResearchReserveStockBottle", new Vector3(-0.58f, 0.49f, -0.22f))
             })
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -188,7 +189,9 @@ namespace PharmaLabVR.Editor
                 toolInstance.transform.localPosition = item.Item2;
                 toolInstance.AddComponent<DesktopGrabbable>().Configure(
                     item.Item1 == "ResearchPipette" ?
-                        "research-pipette-visual" : "research-stock-bottle-visual");
+                        "research-pipette-visual" :
+                    item.Item1 == "ResearchStockBottle" ?
+                        "research-stock-bottle-visual" : "research-reserve-stock-bottle-visual");
             }
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
@@ -331,6 +334,15 @@ namespace PharmaLabVR.Editor
                     "Generated stock bottle lacks a physical immersion target.");
             desktopInput.ConfigureStockAspirateTarget(aspirationTarget);
             xrInput.ConfigureStockAspirateTarget(aspirationTarget);
+            var reserveGrip = lab.transform.Find("ResearchReserveStockBottle")?.GetComponent<
+                UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            var reserveTarget = reserveGrip != null ?
+                reserveGrip.GetComponent<ResearchStockAspirateTarget>() : null;
+            if (reserveTarget == null || reserveTarget.NativeInventoryId != "reserve-stock")
+                throw new InvalidOperationException(
+                    "Generated reserve stock needs a distinct Native-linked immersion target.");
+            desktopInput.ConfigureReserveStockAspirateTarget(reserveTarget);
+            xrInput.ConfigureReserveStockAspirateTarget(reserveTarget);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }

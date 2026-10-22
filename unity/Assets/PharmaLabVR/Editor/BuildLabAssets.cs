@@ -20,6 +20,7 @@ namespace PharmaLabVR.Editor
             GenerateResearchBurette();
             GenerateResearchPipette();
             GenerateResearchStockBottle();
+            GenerateResearchReserveStockBottle();
             GenerateResearchReceiver();
             GenerateMeasurementPanel();
             AssetDatabase.SaveAssets();
@@ -247,13 +248,20 @@ namespace PharmaLabVR.Editor
             finally { Object.DestroyImmediate(root); }
         }
 
-        private static void GenerateResearchStockBottle()
+        private static void GenerateResearchStockBottle() =>
+            GenerateResearchStockBottle("ResearchStockBottle", "source");
+
+        private static void GenerateResearchReserveStockBottle() =>
+            GenerateResearchStockBottle("ResearchReserveStockBottle", "reserve-stock");
+
+        private static void GenerateResearchStockBottle(string prefabName,
+            string nativeInventoryId)
         {
             var glass = CreateMaterial("ResearchBottleGlass",
                 new Color(0.69f, 0.85f, 0.91f, 0.65f), 0.03f, 0.70f);
             var ink = CreateMaterial("ResearchBottleCap",
                 new Color(0.09f, 0.30f, 0.35f), 0.04f, 0.35f);
-            var root = new GameObject("ResearchStockBottle");
+            var root = new GameObject(prefabName);
             try
             {
                 Part(root.transform, "StockBottleBody", PrimitiveType.Cylinder,
@@ -277,7 +285,8 @@ namespace PharmaLabVR.Editor
                 label.transform.SetParent(root.transform, false);
                 label.transform.localPosition = new Vector3(-0.052f, 0.09f, -0.076f);
                 var text = label.AddComponent<TextMesh>();
-                text.text = "100mL Research";
+                text.text = nativeInventoryId == "source" ?
+                    "100mL Research stock" : "50mL Research reserve";
                 text.fontSize = 20;
                 text.characterSize = 0.007f;
                 text.color = new Color(0.04f, 0.16f, 0.18f);
@@ -286,15 +295,19 @@ namespace PharmaLabVR.Editor
                 var liquid = Part(root.transform, "NativeBottleLiquid", PrimitiveType.Cylinder,
                     Vector3.zero, new Vector3(0.061f, 0f, 0.061f), fillMaterial);
                 root.AddComponent<NativeMeteredInstrumentVisual>().ConfigureRepresentation(
-                    liquid.transform, "source", false, 1e-4, 0.12f, 0.013f);
-                root.AddComponent<BottlePourActuator>();
-                root.AddComponent<PharmaLabVR.Input.ResearchStockAspirateTarget>();
+                    liquid.transform, nativeInventoryId, false,
+                    nativeInventoryId == "source" ? 1e-4 : 5e-5,
+                    0.12f, 0.013f);
+                if (nativeInventoryId == "source")
+                    root.AddComponent<BottlePourActuator>();
+                root.AddComponent<PharmaLabVR.Input.ResearchStockAspirateTarget>()
+                    .ConfigureInventory(nativeInventoryId);
                 var bottleBody = root.AddComponent<Rigidbody>();
                 bottleBody.isKinematic = true;
                 bottleBody.useGravity = false;
                 root.AddComponent<XRGrabInteractable>();
                 PrefabUtility.SaveAsPrefabAsset(root,
-                    "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+                    "Assets/PharmaLabVR/Prefabs/Tools/" + prefabName + ".prefab");
             }
             finally { Object.DestroyImmediate(root); }
         }

@@ -35,6 +35,17 @@ namespace PharmaLabVR.Input
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
+        [SerializeField] private ResearchStockAspirateTarget reserveStockAspirateTarget;
+        public bool HasReserveStockAspirateTarget =>
+            reserveStockAspirateTarget != null &&
+            reserveStockAspirateTarget.NativeInventoryId == "reserve-stock";
+        public void ConfigureReserveStockAspirateTarget(ResearchStockAspirateTarget target)
+        {
+            if (target == null || target.NativeInventoryId != "reserve-stock")
+                throw new System.ArgumentException(
+                    "The physical reserve target must represent Native reserve-stock.", nameof(target));
+            reserveStockAspirateTarget = target;
+        }
         private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
         public void ConfigureStockAspirateTarget(ResearchStockAspirateTarget target) =>
             stockAspirateTarget = target != null ? target :
@@ -60,11 +71,19 @@ namespace PharmaLabVR.Input
             var receiver = capture.Length == 1 &&
                 capture[0].destinationInventoryId == "receiver" &&
                 Mathf.Approximately(capture[0].fraction, 1f);
-            var source = physicalId == "research-pipette-visual" &&
+            var pipette = physicalTool != null ?
+                physicalTool.GetComponent<PipetteActuator>() : null;
+            var primary = physicalId == "research-pipette-visual" &&
                 StockAspirateTarget != null &&
-                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session,
-                    physicalTool != null ? physicalTool.GetComponent<PipetteActuator>() : null) &&
+                StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
                 StockAspirateTarget.IsImmersed(physicalTool);
+            var reserve = physicalId == "research-pipette-visual" &&
+                reserveStockAspirateTarget != null &&
+                reserveStockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette) &&
+                reserveStockAspirateTarget.IsImmersed(physicalTool);
+            // An immersion gesture is exclusive to exactly one represented
+            // Native inventory; coincident bottles cannot double-authorize.
+            var source = primary != reserve;
             var ready = coreDriver != null && coreDriver.Session != null &&
                 !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
                 !coreDriver.IsNativePaused;
