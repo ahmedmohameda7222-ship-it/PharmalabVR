@@ -386,6 +386,38 @@ internal static class Program
             Check(!NativeMeasurementNote.WasRecorded(notes, "student-branch", "7",
                     "receiver", "3"),
                 "A student-authored prediction is not a genuine previously recorded Native observation.");
+            // A learner's pH history contains only actual logged Native
+            // observation notes. Never manufacture intermediate curve points.
+            var historyNotes = researchNotes.Read(learningPath, "idempotent-branch");
+            Check(ResearchNotebookPHHistory.Summarize(
+                    historyNotes, "idempotent-branch", "receiver", 4)
+                    .Contains("event 7") &&
+                  ResearchNotebookPHHistory.Summarize(
+                    historyNotes, "idempotent-branch", "receiver", 4)
+                    .Contains("pH 7.13"),
+                "Existing raw Native pH observation was absent from local event history.");
+            var nextNote = nativeNote.Replace("Native pH 7.13", "Native pH 6.99")
+                .Replace(" · event 7 ·", " · event 8 ·");
+            researchNotes.Append(learningPath, "idempotent-branch", "8", "receiver", nextNote);
+            researchNotes.Append(learningPath, "idempotent-branch", "9", "receiver",
+                nextNote.Replace(" · event 8 ·", " · event 9 ·")
+                    .Replace("raw Native pH 6.99", "raw Native pH NaN"));
+            var eventTrend = ResearchNotebookPHHistory.Summarize(
+                researchNotes.Read(learningPath, "idempotent-branch"),
+                "idempotent-branch", "receiver", 4);
+            Check(eventTrend.Contains("event 7") && eventTrend.Contains("event 8") &&
+                  eventTrend.Contains("pH 6.99") && !eventTrend.Contains("event 9") &&
+                  eventTrend.IndexOf("event 7", StringComparison.Ordinal) <
+                  eventTrend.IndexOf("event 8", StringComparison.Ordinal),
+                "Native pH trend fabricated a point, lost event order or accepted invalid raw data.");
+            var compactTrend = ResearchNotebookPHHistory.Summarize(
+                researchNotes.Read(learningPath, "idempotent-branch"),
+                "idempotent-branch", "receiver", 1);
+            Check(!compactTrend.Contains("event 7") && compactTrend.Contains("event 8"),
+                "XR compact pH history must show the latest recorded Native event.");
+            Check(ResearchNotebookPHHistory.Summarize(
+                notes, "student-branch", "receiver", 4).Contains("No recorded Native pH"),
+                "Learner predictions must not be confused with raw Native measurements.");
             var result = ResearchLearningReview.Render(notes, "student-branch", false);
             Check(result.Contains("2 student annotations") &&
                   result.Contains("Student hypothesis") && result.Contains("Native pH 6.20") &&
