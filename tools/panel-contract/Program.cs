@@ -396,6 +396,26 @@ internal static class Program
             Check(compact.Length < 320 && compact.Contains("6.20") &&
                   compact.Contains("Student hypothesis"),
                 "XR recorded review must expose readable learner findings.");
+            var studentPage0 = ResearchLearningReview.RenderPage(
+                notes, "student-branch", 0);
+            var studentPage1 = ResearchLearningReview.RenderPage(
+                notes, "student-branch", 1);
+            Check(studentPage0.Contains("1/2") && studentPage0.Contains("Student hypothesis") &&
+                  !studentPage0.Contains("Native pH 6.20") &&
+                  studentPage1.Contains("2/2") && studentPage1.Contains("Native pH 6.20") &&
+                  !studentPage1.Contains("Student hypothesis"),
+                "XR teacher cannot inspect each actual imported student finding individually.");
+            Check(ResearchLearningReview.RenderPage(notes, "student-branch", 5)
+                    == studentPage1 &&
+                  ResearchLearningReview.RenderPage(notes, "student-branch", -1)
+                    == studentPage0,
+                "Out-of-range annotation paging did not remain bounded.");
+            Check(!ResearchLearningReview.RenderPage(notes, "different-tenant-branch", 0)
+                    .Contains("Native pH 6.20") &&
+                  !ResearchLearningReview.RenderPage(notes, "different-tenant-branch", 0)
+                    .Contains("Student hypothesis") &&
+                  studentPage0.Length < 180 && studentPage1.Length < 180,
+                "XR instructor note paging crossed Native branches or overflowed its panel.");
             var isolated = ResearchLearningReview.Render(notes, "different-tenant-branch", false);
             Check(!isolated.Contains("6.20") && !isolated.Contains("hypothesis"),
                 "Other Native branch review must not inherit this student's annotations.");
