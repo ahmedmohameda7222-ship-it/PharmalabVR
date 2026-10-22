@@ -418,6 +418,13 @@ internal static class Program
             Check(ResearchNotebookPHHistory.Summarize(
                 notes, "student-branch", "receiver", 4).Contains("No recorded Native pH"),
                 "Learner predictions must not be confused with raw Native measurements.");
+            var recordedTrendReview = ResearchLearningReview.Render(
+                researchNotes.Read(learningPath, "idempotent-branch"),
+                "idempotent-branch", false);
+            Check(recordedTrendReview.Contains("Local recorded Native pH by event") &&
+                  recordedTrendReview.Contains("event 8") &&
+                  recordedTrendReview.Contains("not a certified titration curve"),
+                "Recorded Desktop Review must surface the actual stored Native pH event history.");
             var result = ResearchLearningReview.Render(notes, "student-branch", false);
             Check(result.Contains("2 student annotations") &&
                   result.Contains("Student hypothesis") && result.Contains("Native pH 6.20") &&
