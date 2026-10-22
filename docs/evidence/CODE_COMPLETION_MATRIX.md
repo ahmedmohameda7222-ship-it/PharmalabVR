@@ -135,3 +135,7 @@ Complete source-level first-bay receiver and real bottle/pipette/burette manipul
 
 - **P07.02 / P12.01 Partial:** Fixed actual overlapping ray-hit targets on the XR stock and experiment menu by splitting operations (page 1), preparation (page 2), pre-transfer student prediction (page 3) and reserve/lesson selection (page 4). All existing Native-controlled instrument commands remain available, now on distinct rows, and page transition buttons redraw immediately.
 - **Headless CI:** RED test-only commit `55f7055` failed on absent menu-layout source; new source enumerates active page controls and verifies unique row positions across preparation, reserve and learner states. Unity XR visual/integration still NOT_RUN; formal acceptance ledger unchanged.
+
+## XR first-run Settings collision fix — 22 October 2026
+
+- **P06.02/P07.02 Partial:** The first Native-paused stock preparation Lab legitimately offers Settings, but the world panel no longer renders its -82pt global Settings ray target on top of the instrument-pages science buttons. Exit instruments restores Settings on the normal Lab page. New Unity PlayMode test follows Research instruments → Stock setup → More tools and lessons → Strong acid lesson → predictions and verifies visible ray target rows are unique. Headless RED at 8046cec found missing ShowGlobalSettings; GREEN production change applies it. Editor/Player/XR execution NOT_RUN, formal statuses unchanged.

@@ -444,7 +444,9 @@ namespace PharmaLabVR.UI
             buttons["Save session"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Notebook ? -194f : -250f);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
-            SetButton("Settings", state.SupportedActions.Contains("Settings"));
+            SetButton("Settings", state.SupportedActions.Contains("Settings") &&
+                (state.ScreenId != ScreenId.Lab ||
+                 ResearchInstrumentMenuLayout.ShowGlobalSettings(instrumentPage)));
             SetButton("Back", state.SupportedActions.Contains("Back"));
             SetButton("Release docked tool", state.SupportedActions.Contains("ReleaseTool") &&
                 dockReleaseVisible);
@@ -464,7 +466,7 @@ namespace PharmaLabVR.UI
             {
                 foreach (var name in new[] { "Inspect receiver", "Inspect source", "Measure",
                     "Open review", "Pause", "Save session", "Release docked tool", "Park tool",
-                    "Research instruments" }) SetButton(name, false);
+                    "Research instruments", "Settings" }) SetButton(name, false);
                 var mayTransfer = !driver.SourceNeedsPreparation &&
                     !driver.IsNativePaused && !driver.IsTimeHeld;
                 var visible = ResearchInstrumentMenuLayout.Visible(

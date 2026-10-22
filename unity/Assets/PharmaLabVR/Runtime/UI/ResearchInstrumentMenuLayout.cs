@@ -14,6 +14,9 @@ namespace PharmaLabVR.UI
 
     public static class ResearchInstrumentMenuLayout
     {
+        public static bool ShowGlobalSettings(int instrumentPage) =>
+            instrumentPage == 0;
+
         public static readonly string[] AllNames =
         {
             "Pipette aspirate 0.05 ml", "Pipette dispense 0.05 ml",
