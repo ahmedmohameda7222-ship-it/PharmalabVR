@@ -23,6 +23,14 @@ namespace PharmaLabVR.Input
                 DesktopPointerAction.ToolDrag : DesktopPointerAction.Valve;
         }
 
+        // Selection click is never reinterpreted as a valve or drag gesture.
+        public static DesktopPointerAction ResolveForHeldInstrument(bool hasHeldTool,
+            bool isNativeBurette, bool shiftPressed, bool leftPressed,
+            bool overUi, bool enabled, bool selectingFromClick) =>
+            selectingFromClick ? DesktopPointerAction.None :
+                ResolveForHeldInstrument(hasHeldTool, isNativeBurette,
+                    shiftPressed, leftPressed, overUi, enabled);
+
         public static bool ShouldSampleHeldAsNative(bool hasHeldTool,
             bool isNativeBurette) => hasHeldTool && isNativeBurette;
     }

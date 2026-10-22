@@ -951,7 +951,7 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
-                GUILayout.Label("Desktop: F selects/places burette, pipette or bottle on the bench. " +
+                GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
                     "Held pipette/bottle: left-drag moves; G requests a measured Native delivery only over receiver. " +
                     "Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");

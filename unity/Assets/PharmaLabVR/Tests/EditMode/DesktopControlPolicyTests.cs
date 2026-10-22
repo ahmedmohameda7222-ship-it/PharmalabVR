@@ -1,5 +1,6 @@
 using NUnit.Framework;
 using PharmaLabVR.Input;
+using UnityEngine;
 
 namespace PharmaLabVR.Tests.EditMode
 {
@@ -28,6 +29,54 @@ namespace PharmaLabVR.Tests.EditMode
                 Is.EqualTo(DesktopPointerAction.None));
             Assert.That(DesktopPointerRouting.Resolve(true, true, true, true, true),
                 Is.EqualTo(DesktopPointerAction.None));
+        }
+
+        [Test]
+        public void P10_01_ClickedColliderRatherThanViewCenterIsPicked()
+        {
+            var cameraOwner = new GameObject("ClickSelectionCamera");
+            var clicked = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var centered = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            try
+            {
+                var camera = cameraOwner.AddComponent<Camera>();
+                camera.pixelRect = new Rect(0f, 0f, 800f, 600f);
+                camera.transform.position = Vector3.zero;
+                camera.transform.rotation = Quaternion.identity;
+                clicked.transform.position = new Vector3(1.5f, 0f, 4f);
+                centered.transform.position = new Vector3(0f, 0f, 4f);
+                clicked.transform.localScale = Vector3.one * 0.35f;
+                centered.transform.localScale = Vector3.one * 0.35f;
+                Physics.SyncTransforms();
+                var screenPoint = camera.WorldToScreenPoint(clicked.transform.position);
+                var clickRay = DesktopInputAdapter.SelectionRay(camera,
+                    new Vector2(screenPoint.x, screenPoint.y), true);
+                Assert.That(Physics.Raycast(clickRay, out var clickHit, 5f), Is.True);
+                Assert.That(clickHit.collider.gameObject, Is.SameAs(clicked));
+                var fRay = DesktopInputAdapter.SelectionRay(camera, Vector2.zero, false);
+                Assert.That(Physics.Raycast(fRay, out var centerHit, 5f), Is.True);
+                Assert.That(centerHit.collider.gameObject, Is.SameAs(centered));
+            }
+            finally
+            {
+                Object.DestroyImmediate(clicked);
+                Object.DestroyImmediate(centered);
+                Object.DestroyImmediate(cameraOwner);
+            }
+        }
+
+        [Test]
+        public void P10_01_SelectionClickCannotAlsoActuateOrDragTheNativeTool()
+        {
+            Assert.That(DesktopPointerRouting.ResolveForHeldInstrument(
+                true, true, false, true, false, true, true),
+                Is.EqualTo(DesktopPointerAction.None));
+            Assert.That(DesktopPointerRouting.ResolveForHeldInstrument(
+                true, false, true, true, false, true, true),
+                Is.EqualTo(DesktopPointerAction.None));
+            Assert.That(DesktopPointerRouting.ResolveForHeldInstrument(
+                true, true, false, true, false, true, false),
+                Is.EqualTo(DesktopPointerAction.Valve));
         }
 
         [Test]

@@ -25,6 +25,8 @@ namespace PharmaLabVR.Input
         private bool inputEnabled = true;
         private bool awaitingFocusContinue;
         private bool pointerDragActive;
+        // The selection mouse press must never also actuate a Native valve.
+        private bool pointerSelectionActive;
         private Vector3 initialDragOffset;
         private bool heldToolOriginalKinematic;
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
@@ -55,6 +57,8 @@ namespace PharmaLabVR.Input
                     ?.RequestDesktopPause();
                 return;
             }
+            if (Mouse.current == null || !Mouse.current.leftButton.isPressed)
+                pointerSelectionActive = false;
             var uiCapture = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null &&
                  SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue()));
@@ -69,6 +73,12 @@ namespace PharmaLabVR.Input
             var frame = (ulong)Time.frameCount;
             if (Keyboard.current.fKey.wasPressedThisFrame)
                 pickPress.Capture("desktop-pick-or-place", frame, true);
+            if (heldTool == null && Mouse.current != null &&
+                Mouse.current.leftButton.wasPressedThisFrame)
+            {
+                pointerSelectionActive = true;
+                pickPress.Capture("desktop-pointer-pick", frame, true);
+            }
             if (Keyboard.current.gKey.wasPressedThisFrame &&
                 heldTool != null && heldTool != registeredTool)
             {
@@ -91,6 +101,7 @@ namespace PharmaLabVR.Input
 
         private void OnDisable()
         {
+            pointerSelectionActive = false;
             pickPress.Clear();
             deliveryPress.Clear();
             actuator = 0f;
@@ -119,6 +130,7 @@ namespace PharmaLabVR.Input
                 actuator = 0f;
                 instrumentPresenter?.PresentActuatorInput(0f);
                 pointerDragActive = false;
+                pointerSelectionActive = false;
                 pickPress.Clear();
                 deliveryPress.Clear();
                 Debug.LogWarning("InputHold: focus was lost; explicit Continue is required.");
@@ -168,7 +180,7 @@ namespace PharmaLabVR.Input
             var pointerAction = DesktopPointerRouting.ResolveForHeldInstrument(
                 heldTool != null, IsHoldingNativeTool, shiftHeld,
                 Mouse.current != null && Mouse.current.leftButton.isPressed,
-                pointerOverUi, inputEnabled);
+                pointerOverUi, inputEnabled, pointerSelectionActive);
             if (pointerAction == DesktopPointerAction.ToolDrag)
             {
                 actuator = 0f; // A physical drag is never a valve opening.
@@ -199,6 +211,7 @@ namespace PharmaLabVR.Input
             actuator = 0f;
             instrumentPresenter?.PresentActuatorInput(0f);
             pointerDragActive = false;
+            pointerSelectionActive = false;
             pickPress.Clear();
             deliveryPress.Clear();
             awaitingFocusContinue = false;
@@ -218,6 +231,7 @@ namespace PharmaLabVR.Input
             {
                 actuator = 0f;
                 pointerDragActive = false;
+                pointerSelectionActive = false;
                 instrumentPresenter?.PresentActuatorInput(0f);
             }
         }
@@ -300,10 +314,19 @@ namespace PharmaLabVR.Input
                 (session?.LastError ?? "Native research transfer refused.");
         }
 
+        // Pointer picking selects real bench geometry; F remains crosshair pick/placement.
+        public static Ray SelectionRay(Camera camera, Vector2 pointerPixels, bool pointerPick)
+        {
+            if (camera == null) throw new System.ArgumentNullException(nameof(camera));
+            return pointerPick ? camera.ScreenPointToRay(pointerPixels) :
+                new Ray(camera.transform.position, camera.transform.forward);
+        }
+
         private void HandlePickOrPlace()
         {
-            if (!inputEnabled ||
-                !pickPress.TryConsume((ulong)Time.frameCount, "desktop-pick-or-place", true))
+            var pending = pickPress.PendingToolId;
+            if (!inputEnabled || pending == null ||
+                !pickPress.TryConsume((ulong)Time.frameCount, pending, true))
                 return;
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue())))
@@ -314,12 +337,17 @@ namespace PharmaLabVR.Input
             actuator = 0f;
             if (heldTool != null)
             {
-                // An F release is a real bench placement, not "drop in air".
-                // Refusal leaves hold ownership, pose and Rigidbody unchanged.
-                TryPlaceHeldTool();
+                // Only F places on the bench; clicking cannot silently drop a tool.
+                if (pending == "desktop-pick-or-place")
+                    TryPlaceHeldTool();
                 return;
             }
-            if (viewCamera == null || holdAnchor == null || !Physics.Raycast(viewCamera.transform.position, viewCamera.transform.forward, out var hit, 3f)) return;
+            if (viewCamera == null || holdAnchor == null) return;
+            var ray = SelectionRay(viewCamera,
+                Mouse.current != null ? Mouse.current.position.ReadValue() : Vector2.zero,
+                pending == "desktop-pointer-pick");
+            if (!Physics.Raycast(ray, out var hit, 3f, Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore)) return;
             var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
             if (grabbable == null) return;
             BeginHold(grabbable.transform);
