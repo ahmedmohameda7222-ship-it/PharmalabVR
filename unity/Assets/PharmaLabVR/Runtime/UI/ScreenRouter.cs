@@ -472,11 +472,11 @@ namespace PharmaLabVR.UI
                 ScreenId.Setup => new[] { "Home", "ConfirmSetup" },
                 ScreenId.Hold => driver != null && driver.CurrentMode == "VR" ?
                     (confirmedRecoveryReady ?
-                        new[] { "Save", "Load", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
-                        new[] { "Save", "Load", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
+                        new[] { "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
+                        new[] { "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
                     (confirmedRecoveryReady ?
-                        new[] { "Save", "Load", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "Continue" } :
-                        new[] { "Save", "Load", "RestorePortable", "ChoosePortableArchive", "Review", "Settings" }),
+                        new[] { "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "Continue" } :
+                        new[] { "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings" }),
                 ScreenId.Lab when driver != null && driver.SourceNeedsPreparation =>
                     new[] { "PrepareResearchStock", "PrepareReserveStock", "PrepareRinseWater",
                         "SelectResearchLesson", "RecordResearchPrediction", "Learn", "Settings" },
@@ -491,8 +491,8 @@ namespace PharmaLabVR.UI
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?
-                    new[] { "Lab", "Save", "Load", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
-                    new[] { "Lab", "Save", "Load", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review" },
+                    new[] { "Lab", "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
+                    new[] { "Lab", "Save", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review" },
                 ScreenId.Review => driver != null && driver.IsTimeHeld ?
                     new[] { "Settings", "Save", "ExportCsv" } :
                     new[] { "Lab", "Settings", "Save", "Notebook", "ExportCsv",

@@ -16,6 +16,9 @@ namespace PharmaLabVR.Session
     {
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string saveName = "autosave";
+        private string selectedLocalNativeSaveName;
+        public string ActiveLocalSessionName => saveName;
+        public string SelectedLocalNativeSaveName => selectedLocalNativeSaveName;
         [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
         public string LastPortableArchivePath { get; private set; }
@@ -706,6 +709,7 @@ namespace PharmaLabVR.Session
                 selectedArchiveFileName = null;
                 instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
+                selectedLocalNativeSaveName = null;
                 selectedResearchLesson = null;
                 selectedResearchPrediction = null;
                 pendingLessonRecoveryEpoch = null;
@@ -884,6 +888,116 @@ namespace PharmaLabVR.Session
             }
         }
 
+        private IReadOnlyList<string> AvailableLocalNativeSaves()
+        {
+            var root = Path.Combine(Application.persistentDataPath, "sessions");
+            if (!Directory.Exists(root)) return Array.Empty<string>();
+            return OfflineArchivePicker.LocalNativeSaveNamesNewest(root,
+                Directory.EnumerateFiles(root, "*.plv.json*",
+                    SearchOption.TopDirectoryOnly), 64);
+        }
+
+        public bool CanChooseLocalNativeSave
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                if ((screen != ScreenId.Pause && screen != ScreenId.Hold) ||
+                    driver?.Session == null || !driver.Session.IsOpen)
+                    return false;
+                try { return AvailableLocalNativeSaves().Count > 0; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
+        public bool CanLoadSelectedLocalNativeSave
+        {
+            get
+            {
+                if (!CanChooseLocalNativeSave ||
+                    (driver.CurrentMode == "VR" && !CanReleaseTool) ||
+                    (driver.CurrentMode != "VR" && driver.CurrentMode != "Desktop") ||
+                    !OfflineArchivePicker.ValidNativeSaveName(selectedLocalNativeSaveName))
+                    return false;
+                try { return AvailableLocalNativeSaves().Contains(selectedLocalNativeSaveName); }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
+        // List/select never touches Native material, observation or Notebook.
+        public bool ChooseNextLocalNativeSave()
+        {
+            try
+            {
+                if (!CanChooseLocalNativeSave)
+                    throw new InvalidOperationException(
+                        "Choose local Native saves only while paused or SessionLoad-held.");
+                var names = AvailableLocalNativeSaves();
+                if (names.Count == 0)
+                    throw new InvalidDataException("There are no local Native saves to select.");
+                selectedLocalNativeSaveName =
+                    OfflineArchivePicker.NextName(names, selectedLocalNativeSaveName);
+                LastError = null;
+                router.Show(router.Current.ScreenId);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Local save selection refused: " + error.Message;
+                return false;
+            }
+        }
+
+        // Switch the note namespace BEFORE the Native replacement event, so
+        // the recovered lesson/hypothesis is always read from this saved run,
+        // never from the previously active student's Notebook. The Native
+        // session is never swapped unless Load/import succeeds.
+        public bool LoadSelectedLocalNativeSave()
+        {
+            if (!CanLoadSelectedLocalNativeSave)
+            {
+                LastError = "Select an existing local Native save in Pause/Hold; " +
+                    "VR instruments must be parked before loading.";
+                return false;
+            }
+            var previousName = saveName;
+            var previousNative = driver.Session;
+            var name = selectedLocalNativeSaveName;
+            var file = Path.Combine(Application.persistentDataPath, "sessions",
+                name + ".plv.json");
+            try
+            {
+                // A selected file may have changed since listing. Reject
+                // symbolic links on either the primary or backup candidate.
+                foreach (var candidate in new[] { file, file + ".bak" })
+                    if (File.Exists(candidate) &&
+                        (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidDataException(
+                            "Linked local saves cannot replace the active Native session.");
+                if (!SaveService.HasSaveCandidate(file))
+                    throw new InvalidDataException("The selected Native save no longer exists.");
+                saveName = name;
+                var loaded = ContinueFrom(file);
+                if (!loaded)
+                {
+                    if (ReferenceEquals(previousNative, driver.Session))
+                        saveName = previousName;
+                    return false;
+                }
+                LastDurableSavePath = File.Exists(file) ? file : file + ".bak";
+                return true;
+            }
+            catch (Exception error)
+            {
+                if (ReferenceEquals(previousNative, driver?.Session))
+                    saveName = previousName;
+                LastError = "Selected local Native save refused: " + error.Message;
+                return false;
+            }
+        }
+
         public bool LoadSavedSession()
         {
             var screen = router?.Current?.ScreenId;
@@ -1011,6 +1125,16 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose another local Native save", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = CanLoadSelectedLocalNativeSave;
+                if (GUILayout.Button("Load selected local Native save", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.LoadSelectedSave);
+                GUI.enabled = true;
+                GUILayout.Label("Current save: " + saveName +
+                    " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
+                    ". A restored run will enter Native SessionLoad Hold.");
                 GUI.enabled = CanChooseLocalPortableArchive;
                 if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
                     panels?.Request(PanelAction.ChoosePortableArchive);
@@ -1036,6 +1160,16 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose another local Native save", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = CanLoadSelectedLocalNativeSave;
+                if (GUILayout.Button("Load selected local Native save", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.LoadSelectedSave);
+                GUI.enabled = true;
+                GUILayout.Label("Current save: " + saveName +
+                    " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
+                    ". A restored run will enter Native SessionLoad Hold.");
                 GUI.enabled = CanChooseLocalPortableArchive;
                 if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
                     panels?.Request(PanelAction.ChoosePortableArchive);

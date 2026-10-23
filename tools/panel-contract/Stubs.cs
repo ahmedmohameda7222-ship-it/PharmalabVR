@@ -240,6 +240,24 @@ namespace PharmaLabVR.Session
             return true;
         }
         public bool CanLoadSavedSession => LoadPermitted;
+        public bool CanChooseLocalNativeSave => true;
+        public bool NativeSelectedLoadPermitted { get; set; } = true;
+        public bool CanLoadSelectedLocalNativeSave => NativeSelectedLoadPermitted;
+        public string ActiveLocalSessionName => "active-study";
+        public string SelectedLocalNativeSaveName => "old-study";
+        public int LocalNativeChooseCalls { get; private set; }
+        public int LocalNativeLoadCalls { get; private set; }
+        public bool ChooseNextLocalNativeSave()
+        {
+            LocalNativeChooseCalls++;
+            return true;
+        }
+        public bool LoadSelectedLocalNativeSave()
+        {
+            if (!NativeSelectedLoadPermitted) return false;
+            LocalNativeLoadCalls++;
+            return true;
+        }
         public bool DispensePermitted { get; set; } = true;
         public bool CanPipetteDispense => DispensePermitted;
         public bool CanFillBurette => true;

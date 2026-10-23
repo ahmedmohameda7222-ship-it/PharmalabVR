@@ -91,6 +91,60 @@ namespace PharmaLabVR.Session
                 .Take(limit).Select(item => item.Key).ToArray();
         }
 
+        // A local Native save is distinct from a portable student .plvpack.
+        // Only direct children with a safe stem may appear in the chooser;
+        // both confirmed primary and confirmed .bak are eligible. This lists
+        // names only. Native import and scientific package validation happen
+        // independently, after the learner explicitly chooses Load.
+        private static readonly Regex NativeSaveName = new Regex(
+            @"\A[A-Za-z0-9_-]{1,96}\z", RegexOptions.CultureInvariant);
+
+        public static bool ValidNativeSaveName(string stem) =>
+            stem != null && NativeSaveName.IsMatch(stem);
+
+        public static IReadOnlyList<string> LocalNativeSaveNamesNewest(
+            string sessionFolder, IEnumerable<string> candidatePaths, int limit = 64)
+        {
+            if (string.IsNullOrWhiteSpace(sessionFolder) || candidatePaths == null ||
+                limit < 1 || limit > 64)
+                throw new ArgumentException("A bounded local Native-save directory is required.");
+            var directory = Path.GetFullPath(sessionFolder);
+            var comparison = Path.DirectorySeparatorChar == '\\' ?
+                StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            const string primaryExtension = ".plv.json";
+            const string backupExtension = ".plv.json.bak";
+            var latest = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+            foreach (var candidate in candidatePaths)
+            {
+                if (string.IsNullOrWhiteSpace(candidate)) continue;
+                try
+                {
+                    var path = Path.GetFullPath(candidate);
+                    if (!string.Equals(Path.GetDirectoryName(path), directory, comparison) ||
+                        !File.Exists(path) ||
+                        (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                        continue;
+                    var name = Path.GetFileName(path);
+                    var extension = name.EndsWith(backupExtension, StringComparison.Ordinal) ?
+                        backupExtension : name.EndsWith(primaryExtension, StringComparison.Ordinal) ?
+                            primaryExtension : null;
+                    if (extension == null) continue;
+                    var stem = name.Substring(0, name.Length - extension.Length);
+                    if (!ValidNativeSaveName(stem)) continue;
+                    var changed = File.GetLastWriteTimeUtc(path);
+                    if (!latest.TryGetValue(stem, out var older) || changed > older)
+                        latest[stem] = changed;
+                }
+                catch (ArgumentException) { }
+                catch (NotSupportedException) { }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+            return latest.OrderByDescending(item => item.Value)
+                .ThenBy(item => item.Key, StringComparer.Ordinal)
+                .Take(limit).Select(item => item.Key).ToArray();
+        }
+
         public static string NewStudentExportName(string label,
             string nativeEventSequence, string uniqueHex)
         {

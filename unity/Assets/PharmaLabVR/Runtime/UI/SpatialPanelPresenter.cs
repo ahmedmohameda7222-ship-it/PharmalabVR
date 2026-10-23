@@ -187,6 +187,13 @@ namespace PharmaLabVR.UI
             });
             AddInstrumentButton("Export portable study", -82f,
                 () => panels?.Request(PanelAction.ExportPortable));
+            AddInstrumentButton("Choose Native save", -138f,
+                () => panels?.Request(PanelAction.ChooseLocalSave));
+            AddInstrumentButton("Load chosen Native save", -194f, () =>
+            {
+                if (panels?.Request(PanelAction.LoadSelectedSave) == true)
+                    portableRecoveryPage = false;
+            });
             AddInstrumentButton("Back to pause/hold", -306f,
                 () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
@@ -607,6 +614,8 @@ namespace PharmaLabVR.UI
             SetButton("Choose study package", false);
             SetButton("Restore study package", false);
             SetButton("Export portable study", false);
+            SetButton("Choose Native save", false);
+            SetButton("Load chosen Native save", false);
             SetButton("Back to pause/hold", false);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
@@ -759,14 +768,24 @@ namespace PharmaLabVR.UI
                 SetButton("Export portable study",
                     state.ScreenId == ScreenId.Pause &&
                     state.SupportedActions.Contains("ExportPortable"));
+                SetButton("Choose Native save",
+                    state.SupportedActions.Contains("ChooseLocalSave") &&
+                    panels != null && panels.CanChooseLocalNativeSave);
+                SetButton("Load chosen Native save",
+                    state.SupportedActions.Contains("LoadSelectedSave") &&
+                    panels != null && panels.CanLoadSelectedLocalNativeSave);
                 SetButton("Back to pause/hold", true);
-                detail.text = "OFFLINE STUDY PACKAGES · NOT ATTESTED / NOT GRADED\n" +
-                    "In Pause, export this branch's Native session + Notebook as .plvpack. " +
-                    "To import, place a package in the local sessions folder and choose it. " +
-                    "The Native model, branch, event and Notebook must validate.\n" +
-                    "Selected: " + (panels?.SelectedArchiveFileName ?? "none") +
+                detail.text = "OFFLINE SESSION RECOVERY · NOT ATTESTED / NOT GRADED\n" +
+                    "Native saves: choose an existing .plv.json session, then load it. " +
+                    "Its own local Notebook is read at the restored Native event ceiling.\n" +
+                    "Current: " + (panels?.ActiveLocalSessionName ?? "none") +
+                    " · Selected Native save: " +
+                    (panels?.SelectedLocalNativeSaveName ?? "none") +
+                    "\nStudy packages: .plvpack also carries a portable Notebook snapshot. " +
+                    "A package is imported to a new isolated session after validation.\n" +
+                    "Selected .plvpack: " + (panels?.SelectedArchiveFileName ?? "none") +
                     "\nLast export: " + (panels?.LastPortableArchiveFileName ?? "none") +
-                    "\nRestored Native SessionLoad still requires an explicit neutral grip.";
+                    "\nBoth loads require Native SessionLoad Hold and fresh neutral grip.";
                 if (!string.IsNullOrEmpty(panels?.LastError))
                     detail.text += "\n" + panels.LastError;
             }

@@ -1669,6 +1669,35 @@ internal static class Program
               !ResearchXRPanelHitLayout.SplitReviewAndRecenter(
                 "Pause", false, true),
             "XR Pause/Hold Review and Recenter hit rectangles must be exclusive.");
+        // Native save chooser is a bounded offline discovery API only:
+        // no candidate bytes are treated as Native authority by the picker.
+        var chooserFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-save-picker-" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(chooserFolder);
+        try
+        {
+            var oldSave = System.IO.Path.Combine(chooserFolder, "older.plv.json");
+            var nextBackup = System.IO.Path.Combine(chooserFolder, "newer.plv.json.bak");
+            var unrelated = System.IO.Path.Combine(chooserFolder, "nope.plv.json.tmp");
+            System.IO.File.WriteAllText(oldSave, "untrusted placeholder only");
+            System.IO.File.WriteAllText(nextBackup, "untrusted placeholder only");
+            System.IO.File.WriteAllText(unrelated, "untrusted placeholder only");
+            System.IO.File.SetLastWriteTimeUtc(oldSave,
+                new System.DateTime(2020, 1, 1, 0, 0, 0, System.DateTimeKind.Utc));
+            System.IO.File.SetLastWriteTimeUtc(nextBackup,
+                new System.DateTime(2025, 1, 1, 0, 0, 0, System.DateTimeKind.Utc));
+            var names = OfflineArchivePicker.LocalNativeSaveNamesNewest(
+                chooserFolder, new[] { oldSave, nextBackup, unrelated,
+                    System.IO.Path.Combine(chooserFolder, "..", "outside.plv.json") });
+            Check(names.Count == 2 && names[0] == "newer" && names[1] == "older" &&
+                  OfflineArchivePicker.NextName(names, names[0]) == "older" &&
+                  OfflineArchivePicker.ValidNativeSaveName("older") &&
+                  !OfflineArchivePicker.ValidNativeSaveName("../older") &&
+                  !OfflineArchivePicker.ValidNativeSaveName("older.plv.json"),
+                "Offline Native saved-session chooser admitted traversal/staging or lost a backup.");
+        }
+        finally { System.IO.Directory.Delete(chooserFolder, true); }
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.
@@ -2521,11 +2550,28 @@ internal static class Program
             Check(panels.Request(PanelAction.Measure, "receiver"), "Measure action refused");
             Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
             Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0 &&
+                  !panels.Request(PanelAction.ChooseLocalSave) &&
+                  !panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 0 &&
                   !panels.Request(PanelAction.RestorePortable) &&
                   session.PortableRestoreCalls == 0,
                 "Live Desktop Measure unexpectedly permitted any Native session replacement");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            Check(router.Current.SupportedActions.Contains("ChooseLocalSave") &&
+                  router.Current.SupportedActions.Contains("LoadSelectedSave") &&
+                  panels.Request(PanelAction.ChooseLocalSave) &&
+                  session.LocalNativeChooseCalls == 1 &&
+                  session.LocalNativeLoadCalls == 0,
+                "Pause did not expose a side-effect-free local Native save selector.");
+            session.NativeSelectedLoadPermitted = false;
+            Check(!panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 0 && driver.IsNativePaused,
+                "Invalid selected Native save bypassed guarded admission.");
+            session.NativeSelectedLoadPermitted = true;
+            Check(panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 1 && driver.IsNativePaused,
+                "Selected Native save did not route through Pause without unpausing.");
             Check(router.Current.SupportedActions.Contains("RestorePortable") &&
                   router.Current.SupportedActions.Contains("ChoosePortableArchive") &&
                   panels.Request(PanelAction.ChoosePortableArchive),

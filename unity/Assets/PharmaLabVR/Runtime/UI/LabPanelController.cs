@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -18,6 +18,12 @@ namespace PharmaLabVR.UI
         public bool CanReleaseTool => sessions?.CanReleaseTool == true;
         public bool CanParkTool => sessions?.CanParkTool == true;
         public bool CanLoadSavedSession => sessions?.CanLoadSavedSession == true;
+        public bool CanChooseLocalNativeSave =>
+            sessions?.CanChooseLocalNativeSave == true;
+        public bool CanLoadSelectedLocalNativeSave =>
+            sessions?.CanLoadSelectedLocalNativeSave == true;
+        public string SelectedLocalNativeSaveName => sessions?.SelectedLocalNativeSaveName;
+        public string ActiveLocalSessionName => sessions?.ActiveLocalSessionName;
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public bool CanFillBurette => sessions?.CanFillBurette == true;
         public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
@@ -189,6 +195,10 @@ namespace PharmaLabVR.UI
                     return sessions.ParkToolAtDock();
                 case PanelAction.Load:
                     return sessions.LoadSavedSession();
+                case PanelAction.ChooseLocalSave:
+                    return sessions.ChooseNextLocalNativeSave();
+                case PanelAction.LoadSelectedSave:
+                    return sessions.LoadSelectedLocalNativeSave();
                 case PanelAction.Recenter:
                     return sessions.TryRecenterView();
                 case PanelAction.SnapLeft:
