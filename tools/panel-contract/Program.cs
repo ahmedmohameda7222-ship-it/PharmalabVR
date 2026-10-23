@@ -591,7 +591,32 @@ internal static class Program
                 "student-branch", "7");
             Check(emptyNotebook.Contains("no recorded annotations", StringComparison.Ordinal),
                 "A genuinely empty notebook must not be misreported as corrupted.");
-            var corruptNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+            // A previously committed .bak may contain OLD valid evidence.
+            // When the current primary is visibly corrupt it must NOT be
+            // silently promoted to the student's current Notebook or Review.
+            var backedJournal = System.IO.Path.Combine(
+                learningDirectory, "backed-journal.plv-notes");
+            researchNotes.Append(backedJournal, "student-branch", "7",
+                "receiver", "Old backup-only learner hypothesis.");
+            researchNotes.Append(backedJournal, "student-branch", "11",
+                "receiver", "Latest current learner measurement.");
+            Check(System.IO.File.Exists(backedJournal + ".bak"),
+                "Regression fixture lacks an actually committed prior journal backup.");
+            System.IO.File.WriteAllText(backedJournal,
+                "PLV-NOTEBOOK-V1\\nCORRUPTED-CURRENT-PRIMARY\\n");
+            var corruptBackedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, backedJournal, "student-branch",
+                "student-branch", "11", false);
+            var corruptBackedNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, backedJournal, "student-branch", "11");
+            Check(corruptBackedReview.Contains("Local notebook unavailable",
+                    StringComparison.Ordinal) &&
+                  corruptBackedNotebook.Contains("Research notebook unavailable",
+                    StringComparison.Ordinal) &&
+                  !corruptBackedReview.Contains("Old backup-only", StringComparison.Ordinal) &&
+                  !corruptBackedNotebook.Contains("Old backup-only", StringComparison.Ordinal),
+                "Corrupt current Notebook silently surfaced a stale .bak as current learner evidence.");
+                        var corruptNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
                 researchNotes, damagedJournalPath, "student-branch", "7");
             Check(corruptNotebook.Contains("Research notebook unavailable", StringComparison.Ordinal) &&
                   !corruptNotebook.Contains("no recorded annotations", StringComparison.Ordinal) &&
