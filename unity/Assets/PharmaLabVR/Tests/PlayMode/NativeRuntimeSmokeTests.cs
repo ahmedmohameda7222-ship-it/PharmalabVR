@@ -25,6 +25,73 @@ namespace PharmaLabVR.Tests.PlayMode
     public sealed class NativeRuntimeSmokeTests
     {
         [UnityTest]
+        public IEnumerator M3_SessionLoadNeverChoosesContradictoryLearnerPrediction()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string save = null;
+            string notes = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var id = "ambiguous-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, id);
+                notes = Path.Combine(Application.persistentDataPath,
+                    "sessions", id + ".plv-notes");
+                Assert.That(panels.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.RecordResearchPrediction,
+                    "below-7"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+                    "This is a learner prediction, not a Native result or certified endpoint."),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                var branch = driver.Session.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
+                save = sessions.LastDurableSavePath;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(sessions.HasResearchLesson, Is.False,
+                    "Contradictory same-lesson hypotheses cannot restore guidance by list order.");
+                Assert.That(sessions.LastError, Does.Contain("ambiguous"));
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2),
+                    "Ambiguous student Notebook evidence must remain available for review.");
+            }
+            finally
+            {
+                foreach (var file in new[] {
+                    save, save == null ? null : save + ".bak",
+                    notes, notes == null ? null : notes + ".bak" })
+                    if (!string.IsNullOrEmpty(file) && File.Exists(file))
+                        File.Delete(file);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator M3_XRPortableStudyPageExportsRealLocalNativeBranchFromPause()
         {
 #if UNITY_EDITOR

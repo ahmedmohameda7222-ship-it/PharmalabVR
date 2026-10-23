@@ -740,7 +740,19 @@ namespace PharmaLabVR.Session
                 var entries = notebook.Read(NotebookFilePath(), branch, eventSequence);
                 var lessonId = ResearchLessonJourney.RecoverSavedLessonId(
                     entries, branch, eventSequence);
-                if (lessonId == null) return; // no hypothesis or conflicting lessons
+                if (lessonId == null)
+                {
+                    if (ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                            entries, branch, eventSequence))
+                    {
+                        lastLessonRecoveryError =
+                            "Saved learner guidance is ambiguous: conflicting local " +
+                            "hypotheses at this Native checkpoint. Inspect the Notebook; " +
+                            "no prediction or lesson was auto-selected.";
+                        LastError = lastLessonRecoveryError;
+                    }
+                    return;
+                }
                 var asset = lessonId == "strong-acid-titration-research" ?
                     strongAcidProtocol : mixedAcidProtocol;
                 if (asset == null)

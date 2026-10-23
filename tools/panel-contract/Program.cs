@@ -384,6 +384,39 @@ internal static class Program
               ResearchLessonJourney.RecoverSavedLessonId(
                 new[] { hypothesis }, "predict-branch", "4") == null,
             "A future, foreign or not-yet-recorded prediction must not restore a lesson.");
+        var contradictoryPrediction = new NotebookEntry(
+            "predict-branch", "6", "receiver",
+            "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        Check(ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, contradictoryPrediction }, "predict-branch", "7") &&
+              !ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, futureHypothesis }, "predict-branch", "7") &&
+              !ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, hypothesis }, "predict-branch", "7"),
+            "Conflicting on-branch learner guidance needs an explicit visible warning.");
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, contradictoryPrediction },
+                predictiveDefinition.id, "predict-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, contradictoryPrediction }, "predict-branch", "7") == null,
+            "Contradictory student hypotheses for the SAME lesson must not auto-restore.");
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, contradictoryPrediction,
+                    new NotebookEntry("predict-branch", "6", "receiver",
+                        "Student hypothesis for mixed-acid-titration-research: receiver pH predicted below 7. " +
+                        "This is a learner prediction, not a Native result or certified endpoint.",
+                        DateTime.UtcNow.ToString("O")) },
+                "predict-branch", "7") == null,
+            "A contradictory lesson must not be ignored to auto-select another lesson.");
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, contradictoryPrediction },
+                predictiveDefinition.id, "predict-branch", "5") == "below-7" &&
+              ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, hypothesis }, predictiveDefinition.id,
+                "predict-branch", "7") == "below-7",
+            "Future conflicting notes must remain outside the restored event ceiling; exact duplicates are stable.");
         var conflictingLesson = new NotebookEntry("predict-branch", "6", "receiver",
             "Student hypothesis for mixed-acid-titration-research: receiver pH predicted at least 7. " +
             "This is a learner prediction, not a Native result or certified endpoint.",
