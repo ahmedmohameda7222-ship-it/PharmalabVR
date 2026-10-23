@@ -1375,7 +1375,22 @@ internal static class Program
                 ResearchAuxiliaryDeliveryIntent.None,
             "Physical priming needs exclusive source-bottle and burette-inlet authority.");
 
-        // M2: physical aspiration must reach the Native-rendered liquid
+        // A 1 mL Native water meniscus is narrower than its visible cup rim.
+        // No rinse when the pipette is in the dry annulus around the liquid.
+        var rinseWaterRadius = ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+            0.010, 0.5, 0.008, 0.5, 0.008);
+        Check(Math.Abs(rinseWaterRadius - 0.004) < 1e-12 &&
+              ResearchSourceImmersionAdmission.MayAspirate(
+                  1, 1, .043, .036, .056, .003 * .003, rinseWaterRadius, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+                  1, 1, .043, .036, .056, .007 * .007, rinseWaterRadius, 0),
+            "Inside the cup rim but outside actual Native water is a dry rinse.");
+        Check(ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+                0.01, 0.5, 0, 0.5, 0.008) == 0d &&
+              ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+                0.01, double.NaN, 0.008, 0.5, 0.008) == 0d,
+            "Empty or malformed Native-water geometry must fail closed.");
+                // M2: physical aspiration must reach the Native-rendered liquid
         // surface, not just a lip; disallowed geometry cannot generate an intent.
         Check(ResearchSourceImmersionAdmission.MayAspirate(
             1, 1, .171, .162, .192, .0001, .025, 0),
