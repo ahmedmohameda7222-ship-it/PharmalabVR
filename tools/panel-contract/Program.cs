@@ -1262,7 +1262,41 @@ internal static class Program
               noteXrSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal),
             "Desktop/XR must use fresh physical receiver gestures for the real Notebook command.");
 
-        // M3: a SECOND deliberate physical receiver contact on Measure must
+        // M2 source-only physical pipette selection is invoked from both
+        // Desktop/XR adapters. The public SessionController must really
+        // define it (not just a stub) and validate physical ownership again.
+        var physicalPipetteSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(physicalPipetteSessionSource.Contains(
+                "public bool TryPhysicalSelectPipetteSource(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "ResearchPhysicalPipetteSelectionAdmission.MaySelect(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "IsPipetteDirectlyGripped(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "TryPipetteSwitchReserve()", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "TryPipetteSwitchPrimary()", StringComparison.Ordinal),
+            "Native source-switch gesture is called by Desktop/XR but lacks its actual SessionController implementation.");
+        Check(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "reserve-stock", true, true, true, true, false) &&
+              ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "rinse-water", true, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", false, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, false, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, false, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, false, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, true),
+            "Physical pipette source selection must refuse unsupported, unprepared, unheld, paused, dry or already selected stock.");
+
+                // M3: a SECOND deliberate physical receiver contact on Measure must
         // persist only the current Native observation, never replay the first
         // Lab inspection gesture or create synthetic notebook evidence.
         Check(ResearchPhysicalMeasurementRecording.CanRecord(
