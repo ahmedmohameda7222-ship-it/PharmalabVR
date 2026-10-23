@@ -282,7 +282,8 @@ namespace PharmaLabVR.Session
                         router.Current.NativeRevision != view.EventSequence)
                         return false;
                     var vessel = view.Vessels.First(v => v.Id == vesselId);
-                    var notes = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    var notes = notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, view.EventSequence);
                     return !NativeMeasurementNote.WasRecorded(notes,
                         driver.Session.BranchId, view.EventSequence, vesselId,
                         vessel.MaterialRevision);
@@ -349,7 +350,8 @@ namespace PharmaLabVR.Session
                     NativeMeasurementNote.Build(driver.CurrentLabView, "receiver",
                         driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
                         driver.Measurement?.DisplayValue);
-                    var recorded = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    var recorded = notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, driver.CurrentLabView.EventSequence);
                     return recorded.Any(item => item.BranchId == driver.Session.BranchId &&
                         item.VesselId == "receiver" &&
                         item.EventSequence == driver.CurrentLabView.EventSequence &&
@@ -361,6 +363,7 @@ namespace PharmaLabVR.Session
                 catch (Exception error) when (error is InvalidOperationException ||
                                               error is IOException ||
                                               error is UnauthorizedAccessException ||
+                                              error is InvalidDataException ||
                                               error is ArgumentException)
                 {
                     return false;
@@ -580,7 +583,8 @@ namespace PharmaLabVR.Session
                 var lesson = new ResearchLessonJourney(
                     definition, driver.CurrentNativeBranchId);
                 var recoveredPrediction = ResearchLessonJourney.RecoverSavedPrediction(
-                    notebook.Read(NotebookFilePath(), driver.Session.BranchId),
+                    notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, driver.CurrentLabView?.EventSequence),
                     lesson.Definition.id, driver.Session.BranchId,
                     driver.CurrentLabView?.EventSequence);
                 // Rebuild memory only after durable journal recovery succeeds.
@@ -748,7 +752,7 @@ namespace PharmaLabVR.Session
                 if (!string.Equals(driver.CurrentNativeBranchId, branch, StringComparison.Ordinal))
                     throw new InvalidOperationException("Restored Native branch mismatch.");
                 var eventSequence = driver.CurrentLabView.EventSequence;
-                var entries = notebook.Read(NotebookFilePath(), branch, eventSequence);
+                var entries = notebook.ReadCurrent(NotebookFilePath(), branch, eventSequence);
                 var lessonId = ResearchLessonJourney.RecoverSavedLessonId(
                     entries, branch, eventSequence);
                 if (lessonId == null)
@@ -1803,7 +1807,7 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("No open Native session.");
                 // Reading a healthy notebook must not erase an earlier failed
                 // note-commit error before Desktop/XR has rendered it.
-                return notebook.Read(NotebookFilePath(), driver.Session.BranchId,
+                return notebook.ReadCurrent(NotebookFilePath(), driver.Session.BranchId,
                     driver.CurrentLabView?.EventSequence);
             }
             catch (Exception exception)
@@ -1875,16 +1879,22 @@ namespace PharmaLabVR.Session
                 var notesPath = NotebookFilePath(); // Enforces safe session file naming.
                 var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv-results.csv");
                 var review = RecordedReview;
-                SessionExportService.WriteCsv(target, review);
-                LastCsvExportPath = target;
-                // Preserve the scientific CSV schema; a separate file contains
-                // local learner annotations only for the same Native branch.
+                // Verify current learner evidence before publishing a scientific
+                // CSV, so a damaged journal cannot cause a partial export.
+                IReadOnlyList<NotebookEntry> localNotes = null;
                 if (driver?.Session != null && driver.Session.IsOpen &&
                     driver.Session.BranchId == review.BranchId &&
                     !string.IsNullOrWhiteSpace(review.EventSequence))
                 {
-                    var localNotes = notebook.Read(notesPath, review.BranchId,
-                        review.EventSequence);
+                    localNotes = notebook.ReadCurrent(notesPath,
+                        review.BranchId, review.EventSequence);
+                }
+                SessionExportService.WriteCsv(target, review);
+                LastCsvExportPath = target;
+                // Scientific output and student annotations are distinct.
+                // Do not silently export an older recovered backup as current.
+                if (localNotes != null)
+                {
                     var learnerTarget = Path.Combine(Path.GetDirectoryName(notesPath),
                         saveName + ".plv-student-annotations.csv");
                     ResearchLearningReview.WriteCsv(learnerTarget, localNotes, review.BranchId);
