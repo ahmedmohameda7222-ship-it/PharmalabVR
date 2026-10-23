@@ -633,7 +633,7 @@ internal static class Program
             var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
                 researchNotes, recordedNativePath, learningPath,
                 "student-branch", "7", false);
-            Check(recordedOnlyAtSeven.Contains("recorded-only", StringComparison.Ordinal) &&
+            Check(recordedOnlyAtSeven.Contains("Recorded-only", StringComparison.Ordinal) &&
                   recordedOnlyAtSeven.Contains("Student hypothesis", StringComparison.Ordinal) &&
                   !recordedOnlyAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
                   !recordedOnlyAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
