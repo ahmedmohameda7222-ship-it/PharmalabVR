@@ -654,7 +654,32 @@ internal static class Program
                   !recordedOnlyAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
                   !recordedOnlyAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
                 "Saved model-unavailable Review lost bounded student notes or leaked future evidence.");
-            var mismatchedSidecar = ResearchLearningReview.ReadRecordedOnlyJournal(
+            // Recorded-only Review must also export the same constrained
+            // student annotation CSV without a live Native model. Scientific
+            // and student file identities remain distinct; no future notes.
+            var recordedOnlyEntries = ResearchLearningReview.ReadRecordedOnlyEntries(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "7");
+            var recordedOnlyCsv = ResearchLearningReview.RenderCsv(
+                recordedOnlyEntries, "student-branch");
+            Check(recordedOnlyEntries.Count == 1 &&
+                  recordedOnlyCsv.Contains("studentAnnotation", StringComparison.Ordinal) &&
+                  recordedOnlyCsv.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !recordedOnlyCsv.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !recordedOnlyCsv.Contains("Private unrelated", StringComparison.Ordinal),
+                "Saved model-unavailable Review could not export only recorded, event-bounded learner annotations.");
+            var wrongExportSidecarRejected = false;
+            try
+            {
+                ResearchLearningReview.ReadRecordedOnlyEntries(researchNotes,
+                    recordedNativePath,
+                    System.IO.Path.Combine(learningDirectory, "other.plv-notes"),
+                    "student-branch", "11");
+            }
+            catch (System.IO.InvalidDataException) { wrongExportSidecarRejected = true; }
+            Check(wrongExportSidecarRejected,
+                "Student CSV export paired a different sidecar with saved Native evidence.");
+                        var mismatchedSidecar = ResearchLearningReview.ReadRecordedOnlyJournal(
                 researchNotes, recordedNativePath,
                 System.IO.Path.Combine(learningDirectory, "other.plv-notes"),
                 "student-branch", "11", false);
