@@ -437,6 +437,11 @@ namespace PharmaLabVR.Session
         }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
+        // A validated Saved Native Review can remain readable when its
+        // scientific model is unavailable. This never authorizes live play
+        // or borrows learner notes from the current Native session.
+        private RecordedSessionReview recordedOnlyReviewSource;
+        private string recordedOnlyReviewSavePath;
         private RecordedSessionReview cachedLearningReviewSource;
         private string cachedLearningReviewFull;
         private string cachedLearningReviewCompact;
@@ -461,9 +466,14 @@ namespace PharmaLabVR.Session
                 if (driver?.Session == null || !driver.Session.IsOpen ||
                     recorded.BranchId != driver.Session.BranchId)
                 {
+                    // A model mismatch can still yield a recorded-only,
+                    // validated saved Native review, with its exact sidecar
+                    // annotations shown as *unverified learner notes*.
+                    // This must not read the active session's journal.
                     cachedLearningReviewFull =
-                        "Local student notebook unavailable for this recorded branch.";
-                    cachedLearningReviewCompact = cachedLearningReviewFull;
+                        ReadRecordedOnlySavedAnnotations(recorded, false);
+                    cachedLearningReviewCompact =
+                        ReadRecordedOnlySavedAnnotations(recorded, true);
                 }
                 else
                 {
@@ -497,7 +507,29 @@ namespace PharmaLabVR.Session
             }
             return compact ? cachedLearningReviewCompact : cachedLearningReviewFull;
         }
-        [SerializeField] private TextAsset strongAcidProtocol;
+        private string ReadRecordedOnlySavedAnnotations(
+            RecordedSessionReview recorded, bool compact)
+        {
+            if (recorded == null ||
+                !ReferenceEquals(recorded, recordedOnlyReviewSource) ||
+                string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath))
+                return "Local student notebook unavailable for this recorded branch.";
+            try
+            {
+                return ResearchLearningReview.ReadRecordedOnlyJournal(
+                    notebook, recordedOnlyReviewSavePath, NotebookFilePath(),
+                    recorded.BranchId, recorded.EventSequence, compact);
+            }
+            catch (Exception error) when (error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException ||
+                                         error is InvalidOperationException)
+            {
+                return "Recorded-only student notebook unavailable for this saved Native review.";
+            }
+        }
+
+                [SerializeField] private TextAsset strongAcidProtocol;
         [SerializeField] private TextAsset mixedAcidProtocol;
         private ResearchLessonJourney selectedResearchLesson;
         private string selectedResearchPrediction;
@@ -655,6 +687,8 @@ namespace PharmaLabVR.Session
                 // A different saved-file identity cannot reuse an old
                 // baseline comparison, even with the same Native driver.
                 recordedCache.InvalidateComparison();
+                recordedOnlyReviewSource = null;
+                recordedOnlyReviewSavePath = null;
                 // Reusing a Native driver does not authorize notes cached
                 // under the previous session filename.
                 InvalidateLearningReview();
@@ -701,6 +735,8 @@ namespace PharmaLabVR.Session
 
         private void OnNativeSessionRestored()
         {
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             LastInstrumentReceipt = null;
             LastPortableImportSummary = null;
             LastDurableSavePath = null;
@@ -2052,6 +2088,8 @@ namespace PharmaLabVR.Session
 
         public void CloseReview()
         {
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             RecordedReview = null;
             CurrentComparison = null;
             LastInstructorPortableReview = null;
@@ -2061,6 +2099,8 @@ namespace PharmaLabVR.Session
         public bool ContinueFrom(string path)
         {
             CoreSession imported = null;
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             RecordedReview = null;
             CurrentComparison = null;
             try
@@ -2077,7 +2117,12 @@ namespace PharmaLabVR.Session
             catch (ScientificPackageMismatchException exception)
             {
                 imported?.Dispose();
-                try { RecordedReview = RecordedSessionReview.OpenRecoverable(path); }
+                try
+                {
+                    RecordedReview = RecordedSessionReview.OpenRecoverable(path);
+                    recordedOnlyReviewSource = RecordedReview;
+                    recordedOnlyReviewSavePath = Path.GetFullPath(path);
+                }
                 catch (Exception reviewError)
                 {
                     LastError = "Live resume blocked and recorded review unavailable: " + reviewError.Message;
