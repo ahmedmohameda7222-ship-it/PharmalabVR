@@ -1277,7 +1277,27 @@ internal static class Program
                 .Contains("!PhysicallyOwnsPipette(physicalPipette)", StringComparison.Ordinal),
             "A public rinse endpoint must not consume Native water without physical pipette ownership.");
 
-        // M2 source-only physical pipette selection is invoked from both
+        // M2 first-use cleaning: RinseTool requires a Native tool
+        // registration. Neither instrument may depend on a prior pour
+        // or aspiration to establish its actual PlaceTool revision.
+        foreach (var instrumentFile in new[] {
+            "unity/Assets/PharmaLabVR/Runtime/Tools/PipetteActuator.cs",
+            "unity/Assets/PharmaLabVR/Runtime/Tools/BottlePourActuator.cs"
+        })
+        {
+            var instrumentSource = System.IO.File.ReadAllText(instrumentFile);
+            var rinseAt = instrumentSource.LastIndexOf(
+                "public LabCommandReceipt Rinse(double quantityM3)", StringComparison.Ordinal);
+            Check(rinseAt >= 0 &&
+                  instrumentSource.Substring(rinseAt).Contains(
+                    "native.EnsurePlaced(toolId, sourceId, sinkId,", StringComparison.Ordinal) &&
+                  instrumentSource.Substring(rinseAt).Contains(
+                    "return native.Rinse(", StringComparison.Ordinal),
+                "Cold-start Native rinse must register the physical instrument before RinseTool: " +
+                instrumentFile);
+        }
+
+                // M2 source-only physical pipette selection is invoked from both
         // Desktop/XR adapters. The public SessionController must really
         // define it (not just a stub) and validate physical ownership again.
         var physicalPipetteSessionSource = System.IO.File.ReadAllText(
