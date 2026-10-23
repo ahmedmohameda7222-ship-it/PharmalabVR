@@ -216,6 +216,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
                 Assert.That(panel.Request(PanelAction.CompareSaved), Is.True, session.LastError);
                 Assert.That(session.CurrentComparison, Is.Not.Null);
+                Assert.That(session.CurrentComparison.BaselineEventSequence, Is.EqualTo(firstEvent));
+                Assert.That(session.CurrentComparison.CandidateEventSequence, Is.EqualTo(laterEvent));
+                Assert.That(session.CurrentComparison.LineageSummary,
+                    Does.Contain("Same Native branch"));
                 Assert.That(session.ComparisonSummary,
                     Does.Contain("Recorded baseline file: " + first));
                 Assert.That(panel.Request(PanelAction.ExportComparisonCsv), Is.True,

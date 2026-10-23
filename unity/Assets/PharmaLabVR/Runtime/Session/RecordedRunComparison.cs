@@ -14,6 +14,33 @@ namespace PharmaLabVR.Session
     {
         public string BaselineBranchId { get; }
         public string CandidateBranchId { get; }
+        public string BaselineEventSequence { get; }
+        public string CandidateEventSequence { get; }
+        // A copy of a saved file is not automatically an independent run.
+        public string LineageSummary
+        {
+            get
+            {
+                if (!string.Equals(BaselineBranchId, CandidateBranchId,
+                    StringComparison.Ordinal))
+                    return "Different Native branches; recorded comparison is not proof of independent trials.";
+                if (BaselineEventSequence == "unavailable" ||
+                    CandidateEventSequence == "unavailable")
+                    return "Same Native branch with Native event unknown; independent trial not established.";
+                if (BaselineEventSequence == CandidateEventSequence)
+                    return "Same Native branch at the same recorded event; possibly two copies of one checkpoint.";
+                return "Same Native branch at different recorded events; checkpoints not independent trials.";
+            }
+        }
+
+        private static string CanonicalEvent(string value)
+        {
+            return ulong.TryParse(value, NumberStyles.None,
+                CultureInfo.InvariantCulture, out var number) &&
+                number.ToString(CultureInfo.InvariantCulture) == value ?
+                value : "unavailable";
+        }
+
         public string BaselineModelIdentity { get; }
         public string CandidateModelIdentity { get; }
         public IReadOnlyList<ComparisonRow> Rows { get; }
@@ -23,6 +50,8 @@ namespace PharmaLabVR.Session
         {
             BaselineBranchId = baseline.BranchId;
             CandidateBranchId = candidate.BranchId;
+            BaselineEventSequence = CanonicalEvent(baseline.EventSequence);
+            CandidateEventSequence = CanonicalEvent(candidate.EventSequence);
             BaselineModelIdentity = baseline.ModelIdentity;
             CandidateModelIdentity = candidate.ModelIdentity;
             Rows = rows;
@@ -184,6 +213,7 @@ namespace PharmaLabVR.Session
                 throw new InvalidDataException("Recorded comparison exceeds two Native vessel collections.");
             var output = new StringBuilder();
             output.Append("schemaVersion,recordKind,baselineBranchId,candidateBranchId,");
+            output.Append("baselineEventSequence,candidateEventSequence,lineage,");
             output.Append("baselineModelIdentity,candidateModelIdentity,");
             output.Append("baselineProviderModelId,baselineDatabaseIdentity,");
             output.Append("candidateProviderModelId,candidateDatabaseIdentity,vesselId,observableId,");
@@ -193,6 +223,8 @@ namespace PharmaLabVR.Session
             {
                 AppendRow(output, "1", "recorded-only-not-attested",
                     recorded.BaselineBranchId, recorded.CandidateBranchId,
+                    recorded.BaselineEventSequence, recorded.CandidateEventSequence,
+                    recorded.LineageSummary,
                     recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
                     row.BaselineProviderModelId, row.BaselineDatabaseIdentity,
                     row.CandidateProviderModelId, row.CandidateDatabaseIdentity,
@@ -249,14 +281,14 @@ namespace PharmaLabVR.Session
 
         private static void AppendRow(StringBuilder output, params string[] columns)
         {
-            if (columns.Length != 20)
+            if (columns.Length != 23)
                 throw new InvalidOperationException("Recorded comparison CSV column count changed.");
             for (var index = 0; index < columns.Length; index++)
             {
                 if (index > 0) output.Append(',');
                 // Only finite C# double values emitted using invariant
                 // round-trip format can bypass spreadsheet text escaping.
-                output.Append(index == 15 || index == 16 || index == 18 ?
+                output.Append(index == 18 || index == 19 || index == 21 ?
                     columns[index] ?? string.Empty : EscapeText(columns[index]));
             }
             output.Append('\n');

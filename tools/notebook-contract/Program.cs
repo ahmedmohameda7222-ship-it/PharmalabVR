@@ -473,13 +473,35 @@ internal static class Program
             var sourceRun = System.Text.Json.Nodes.JsonNode.Parse(recorded);
             sourceRun["observations"][0]["modelId"] = "IPhreeqc-research";
             sourceRun["observations"][0]["databaseIdentity"] = "minteq-test";
+            sourceRun["eventSequence"] = "4";
             var candidateRun = System.Text.Json.Nodes.JsonNode.Parse(sourceRun.ToJsonString());
             candidateRun["branchId"] = "second-run";
+            candidateRun["eventSequence"] = "7";
             candidateRun["commandReceipts"] = null;
             candidateRun["observations"][0]["value"] = 6.7;
             var firstRun = RecordedSessionReview.FromJson(sourceRun.ToJsonString());
             var secondRun = RecordedSessionReview.FromJson(candidateRun.ToJsonString());
             var compared = RecordedRunComparison.Compare(firstRun, secondRun);
+            Require(compared.BaselineEventSequence == "4" &&
+                compared.CandidateEventSequence == "7" &&
+                compared.LineageSummary.Contains("Different Native branches"),
+                "Real recorded comparison lost explicit Native event/branch lineage.");
+            var checkpointNode = System.Text.Json.Nodes.JsonNode.Parse(candidateRun.ToJsonString());
+            checkpointNode["branchId"] = "research-branch";
+            var sameBranchProgress = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(checkpointNode.ToJsonString()));
+            Require(sameBranchProgress.LineageSummary.Contains(
+                    "Same Native branch at different recorded events"),
+                "One continuing Native experiment was mislabeled as independent research.");
+            checkpointNode["eventSequence"] = "4";
+            var sameEventCopy = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(checkpointNode.ToJsonString()));
+            Require(sameEventCopy.LineageSummary.Contains("same recorded event"),
+                "A same-event saved copy was mislabeled as another experiment.");
+            var unknownNativeEvent = RecordedRunComparison.Compare(review, review);
+            Require(unknownNativeEvent.BaselineEventSequence == "unavailable" &&
+                unknownNativeEvent.LineageSummary.Contains("Native event unknown"),
+                "Legacy missing Native event metadata was invented during comparison.");
             Require(compared.Rows.Count == 1 &&
                 compared.Rows[0].BaselineDisplay == "7.10" &&
                 compared.Rows[0].CandidateDisplay == "6.70" &&
@@ -488,16 +510,19 @@ internal static class Program
                 "Two authentic supported Native observations did not compare correctly.");
             var exportedComparison = RecordedRunComparisonCsv.RenderCsv(compared);
             var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(comparisonColumns.Length == 20 &&
+            Require(comparisonColumns.Length == 23 &&
                 comparisonColumns[1] == "recorded-only-not-attested" &&
-                comparisonColumns[6] == "IPhreeqc-research" &&
-                comparisonColumns[7] == "minteq-test" &&
-                comparisonColumns[8] == "IPhreeqc-research" &&
-                comparisonColumns[9] == "minteq-test" &&
-                comparisonColumns[15] == "7.1" &&
-                comparisonColumns[16] == "6.7" &&
-                comparisonColumns[17] == "true" &&
-                double.TryParse(comparisonColumns[18],
+                comparisonColumns[4] == "4" &&
+                comparisonColumns[5] == "7" &&
+                comparisonColumns[6].Contains("Different Native branches") &&
+                comparisonColumns[9] == "IPhreeqc-research" &&
+                comparisonColumns[10] == "minteq-test" &&
+                comparisonColumns[11] == "IPhreeqc-research" &&
+                comparisonColumns[12] == "minteq-test" &&
+                comparisonColumns[18] == "7.1" &&
+                comparisonColumns[19] == "6.7" &&
+                comparisonColumns[20] == "true" &&
+                double.TryParse(comparisonColumns[21],
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture,
                     out var delta) && Math.Abs(delta + 0.4) < 1e-10,
@@ -529,9 +554,9 @@ internal static class Program
                 "Stale recorded Native pH was turned into an invented comparison delta.");
             var staleComparisonColumns = RecordedRunComparisonCsv.RenderCsv(staleComparison)
                 .TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(staleComparisonColumns[16] == "" &&
-                staleComparisonColumns[17] == "false" &&
-                staleComparisonColumns[18] == "",
+            Require(staleComparisonColumns[19] == "" &&
+                staleComparisonColumns[20] == "false" &&
+                staleComparisonColumns[21] == "",
                 "Stale Native observations became numeric recorded CSV evidence.");
             candidateRun["observations"][0]["freshness"] = "Current";
             candidateRun["scientificPackage"]["identity"] = "different-model-database";
@@ -542,10 +567,10 @@ internal static class Program
                 "Different scientific packages generated an unverified cross-model delta.");
             var incompatibleCsvFields = RecordedRunComparisonCsv.RenderCsv(differentPackage)
                 .TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(incompatibleCsvFields[15] == "7.1" &&
-                incompatibleCsvFields[16] == "6.7" &&
-                incompatibleCsvFields[17] == "false" &&
-                incompatibleCsvFields[18] == "",
+            Require(incompatibleCsvFields[18] == "7.1" &&
+                incompatibleCsvFields[19] == "6.7" &&
+                incompatibleCsvFields[20] == "false" &&
+                incompatibleCsvFields[21] == "",
                 "Scientific package mismatch exported an invented numeric pH delta.");
             // A matching package alone is insufficient: the recorded Native
             // provider model and database must also agree before ΔpH.
@@ -558,10 +583,10 @@ internal static class Program
                 RecordedSessionReview.FromJson(alteredProvider.ToJsonString()));
             var providerFields = RecordedRunComparisonCsv.RenderCsv(providerDifferent)
                 .TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(providerFields[6] == "IPhreeqc-research" &&
-                providerFields[8] == "another-provider" &&
-                providerFields[17] == "false" &&
-                providerFields[18] == "",
+            Require(providerFields[9] == "IPhreeqc-research" &&
+                providerFields[11] == "another-provider" &&
+                providerFields[20] == "false" &&
+                providerFields[21] == "",
                 "Provider mismatch exported an unsupported numeric comparison delta.");
             // Confirmed backup-only recorded comparison must remain usable when
             // the primary checkpoint is malformed, and fail closed otherwise.

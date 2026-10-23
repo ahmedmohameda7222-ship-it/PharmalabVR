@@ -1351,12 +1351,15 @@ namespace PharmaLabVR.Session
             }
             if (screen == ScreenId.Compare)
             {
-                GUILayout.Label("Two recorded Native runs · no recomputation");
+                GUILayout.Label("Two recorded Native snapshots · no recomputation");
                 if (CurrentComparison == null) GUILayout.Label("Comparison unavailable.");
                 else
                 {
                     GUILayout.Label("Saved baseline branch: " + CurrentComparison.BaselineBranchId);
                     GUILayout.Label("Review candidate branch: " + CurrentComparison.CandidateBranchId);
+                    GUILayout.Label("Saved Native event: " + CurrentComparison.BaselineEventSequence);
+                    GUILayout.Label("Review Native event: " + CurrentComparison.CandidateEventSequence);
+                    GUILayout.Label(CurrentComparison.LineageSummary);
                     GUILayout.Label("Baseline package: " + CurrentComparison.BaselineModelIdentity);
                     GUILayout.Label("Candidate package: " + CurrentComparison.CandidateModelIdentity);
                     foreach (var row in CurrentComparison.Rows)
@@ -2442,6 +2445,9 @@ namespace PharmaLabVR.Session
                 if (comparison == null) return "No recorded run comparison is open.";
                 var summary = "Saved " + comparison.BaselineBranchId + " vs review " +
                     comparison.CandidateBranchId + " (recorded; no recomputation)" +
+                    "\nNative events: saved " + comparison.BaselineEventSequence +
+                    " / review " + comparison.CandidateEventSequence +
+                    "\n" + comparison.LineageSummary +
                     "\nRecorded baseline file: " +
                     (validatedComparisonBaselineName ?? "unavailable");
                 var shown = 0;
