@@ -1817,17 +1817,25 @@ namespace PharmaLabVR.Session
         {
             get
             {
-                var entries = ReadNotebookEntries();
-                if (entries.Count == 0) return "Research notebook: no recorded annotations.";
-                var latest = entries[entries.Count - 1];
-                var preview = latest.Text.Replace('\r', ' ').Replace('\n', ' ');
-                if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
-                return "Research notebook · " + entries.Count + " event-linked notes\n" +
-                    "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
-                    preview + "\n" +
-                    ResearchNotebookPHHistory.Summarize(entries,
-                        driver?.Session?.BranchId, "receiver", 3) +
-                    "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
+                if (driver?.Session == null || !driver.Session.IsOpen ||
+                    driver.CurrentLabView == null)
+                    return "Research notebook unavailable: no active Native session.";
+                try
+                {
+                    // Do not convert a corrupt or torn journal into an empty
+                    // learner notebook; render only verified Native-bounded
+                    // annotations from the exact current session namespace.
+                    return ResearchLearningReview.ReadActiveNotebookSummary(
+                        notebook, NotebookFilePath(), driver.Session.BranchId,
+                        driver.CurrentLabView.EventSequence);
+                }
+                catch (Exception error) when (error is IOException ||
+                        error is UnauthorizedAccessException ||
+                        error is ArgumentException ||
+                        error is InvalidOperationException)
+                {
+                    return "Research notebook unavailable: offline journal could not be verified.";
+                }
             }
         }
 

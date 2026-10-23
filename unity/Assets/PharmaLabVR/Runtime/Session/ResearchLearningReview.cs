@@ -41,6 +41,42 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Live Notebook must distinguish genuinely absent observations from
+        // an unreadable checksum-protected journal. Both its latest entry
+        // and pH history are scoped to the current Native event ceiling.
+        public static string ReadActiveNotebookSummary(NotebookService journal,
+            string filePath, string activeBranchId, string activeEventSequence)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(filePath) ||
+                string.IsNullOrWhiteSpace(activeBranchId))
+                return "Research notebook unavailable: no active Native journal.";
+            try
+            {
+                var entries = journal.Read(filePath, activeBranchId,
+                    activeEventSequence);
+                if (entries.Count == 0)
+                    return "Research notebook: no recorded annotations.";
+                var latest = entries[entries.Count - 1];
+                var preview = latest.Text.Replace('\r', ' ').Replace('\n', ' ');
+                if (preview.Length > 105)
+                    preview = preview.Substring(0, 105) + "...";
+                return "Research notebook · " + entries.Count +
+                    " event-linked notes\n" +
+                    "Latest · event " + latest.EventSequence + " · " +
+                    latest.VesselId + "\n" + preview + "\n" +
+                    ResearchNotebookPHHistory.Summarize(entries, activeBranchId,
+                        "receiver", 3) +
+                    "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                         error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException)
+            {
+                return "Research notebook unavailable: offline journal could not be verified.";
+            }
+        }
+
         // Student CSV has its own schema; not certified Native results.
         public static string RenderCsv(IReadOnlyList<NotebookEntry> notes, string reviewBranchId)
         {
