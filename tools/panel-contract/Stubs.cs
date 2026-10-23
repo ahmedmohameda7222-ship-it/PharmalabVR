@@ -211,9 +211,11 @@ namespace PharmaLabVR.Session
             CsvExportCalls++;
             return true;
         }
+        public string LastPortableArchivePath { get; private set; }
         public bool ExportPortableSession()
         {
             PortableExportCalls++;
+            LastPortableArchivePath = "/offline/student.plvpack";
             return true;
         }
         public string NotebookSummary => "Headless note stub; not a Native observation.";

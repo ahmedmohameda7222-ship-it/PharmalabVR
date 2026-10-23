@@ -185,6 +185,8 @@ namespace PharmaLabVR.UI
                 if (panels?.Request(PanelAction.RestorePortable) == true)
                     portableRecoveryPage = false;
             });
+            AddInstrumentButton("Export portable study", -82f,
+                () => panels?.Request(PanelAction.ExportPortable));
             AddInstrumentButton("Back to pause/hold", -306f,
                 () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
@@ -599,6 +601,7 @@ namespace PharmaLabVR.UI
                 new Vector2(0f, state.ScreenId == ScreenId.Hold ? -138f : -194f);
             SetButton("Choose study package", false);
             SetButton("Restore study package", false);
+            SetButton("Export portable study", false);
             SetButton("Back to pause/hold", false);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
@@ -625,6 +628,27 @@ namespace PharmaLabVR.UI
             SetButton("Load saved session", state.SupportedActions.Contains("Load") &&
                 panels != null && panels.CanLoadSavedSession && !parkVisible);
             SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
+            // Both actions live at y=30 on Pause/Hold. Give them separate,
+            // capped ray-hit rectangles instead of an overlapping full row.
+            var splitReviewRecenter = ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                state.ScreenId.ToString(),
+                state.SupportedActions.Contains("Review"),
+                state.SupportedActions.Contains("Recenter"));
+            var recenterRect = buttons["Recenter view"].GetComponent<RectTransform>();
+            recenterRect.sizeDelta =
+                new Vector2(splitReviewRecenter ? 176f : 368f, 46f);
+            recenterRect.anchoredPosition = new Vector2(
+                splitReviewRecenter ? 94f : 0f, 30f);
+            buttons["Recenter view"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(splitReviewRecenter ? 164f : 368f, 35f);
+            if (splitReviewRecenter)
+            {
+                reviewRect.sizeDelta = new Vector2(176f, 46f);
+                reviewRect.anchoredPosition = new Vector2(-94f, 30f);
+                buttons["Open review"].GetComponentInChildren<Text>(true)
+                    .rectTransform.sizeDelta = new Vector2(164f, 35f);
+            }
             SetButton("Snap left 30", state.SupportedActions.Contains("SnapLeft"));
             SetButton("Snap right 30", state.SupportedActions.Contains("SnapRight"));
             if (panels != null && !string.IsNullOrEmpty(panels.LastError))
@@ -722,13 +746,17 @@ namespace PharmaLabVR.UI
                 SetButton("Restore study package",
                     state.SupportedActions.Contains("RestorePortable") &&
                     panels != null && panels.CanRestoreLocalPortableSession);
+                SetButton("Export portable study",
+                    state.ScreenId == ScreenId.Pause &&
+                    state.SupportedActions.Contains("ExportPortable"));
                 SetButton("Back to pause/hold", true);
-                detail.text = "OFFLINE STUDENT RESTORE · NOT ATTESTED / NOT GRADED\n" +
-                    "Place a .plvpack in the local sessions folder. Choose a package, " +
-                    "then restore it to a new isolated session. The Native model, " +
-                    "branch, event and Notebook integrity must all validate.\n" +
+                detail.text = "OFFLINE STUDY PACKAGES · NOT ATTESTED / NOT GRADED\n" +
+                    "In Pause, export this branch's Native session + Notebook as .plvpack. " +
+                    "To import, place a package in the local sessions folder and choose it. " +
+                    "The Native model, branch, event and Notebook must validate.\n" +
                     "Selected: " + (panels?.SelectedArchiveFileName ?? "none") +
-                    "\nNative SessionLoad Hold requires an explicit new neutral grip.";
+                    "\nLast export: " + (panels?.LastPortableArchiveFileName ?? "none") +
+                    "\nRestored Native SessionLoad still requires an explicit neutral grip.";
                 if (!string.IsNullOrEmpty(panels?.LastError))
                     detail.text += "\n" + panels.LastError;
             }

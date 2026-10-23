@@ -1153,6 +1153,24 @@ internal static class Program
             true, true, true, false, double.NaN),
             "XR receiver inspection must fail closed on Hold, tracking, held tool, UI or distance.");
 
+        // XR Pause/Hold places Review and Recenter on the same row. The
+        // visual policy must give two independent raycast rectangles, and
+        // Pause must expose the actual existing offline export action.
+        var xrPortableUiSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrPortableUiSource.Contains("Export portable study", StringComparison.Ordinal) &&
+              xrPortableUiSource.Contains("SplitReviewAndRecenter(", StringComparison.Ordinal) &&
+              xrPortableUiSource.Contains("LastPortableArchiveFileName", StringComparison.Ordinal),
+            "XR offline Pause lost its export route/filename or Review-Recenter raycast split.");
+        Check(ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Pause", true, true) &&
+              ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Hold", true, true) &&
+              !ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Lab", true, true) &&
+              !ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Pause", false, true),
+            "XR Pause/Hold Review and Recenter hit rectangles must be exclusive.");
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.
@@ -1985,6 +2003,10 @@ internal static class Program
                   router.Current.SupportedActions.Contains("ChoosePortableArchive") &&
                   panels.Request(PanelAction.ChoosePortableArchive),
                 "Offline student package selection missing from Pause.");
+            Check(router.Current.SupportedActions.Contains("ExportPortable") &&
+                  panels.Request(PanelAction.ExportPortable) &&
+                  panels.LastPortableArchiveFileName == "student.plvpack",
+                "Paused XR package page must expose a real branch-local export with visible filename.");
             session.PortableRestorePermitted = false;
             Check(!panels.Request(PanelAction.RestorePortable) &&
                   session.PortableRestoreCalls == 0,

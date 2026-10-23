@@ -32,6 +32,9 @@ namespace PharmaLabVR.UI
         public bool CanRestoreLocalPortableSession =>
             sessions?.CanRestoreLocalPortableSession == true;
         public string LastPortableImportSummary => sessions?.LastPortableImportSummary;
+        public string LastPortableArchiveFileName =>
+            string.IsNullOrEmpty(sessions?.LastPortableArchivePath) ? null :
+            System.IO.Path.GetFileName(sessions.LastPortableArchivePath);
         public string SelectedArchiveFileName => sessions?.SelectedArchiveFileName;
         public string InstructorPortableSummary => sessions?.InstructorPortableSummary ??
             "No offline instructor preview selected.";

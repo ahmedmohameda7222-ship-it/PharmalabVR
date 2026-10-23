@@ -25,6 +25,87 @@ namespace PharmaLabVR.Tests.PlayMode
     public sealed class NativeRuntimeSmokeTests
     {
         [UnityTest]
+        public IEnumerator M3_XRPortableStudyPageExportsRealLocalNativeBranchFromPause()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string exported = null;
+            string notesPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var id = "xr-portable-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, id);
+                notesPath = Path.Combine(Application.persistentDataPath,
+                    "sessions", id + ".plv-notes");
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "I will recheck the Native receiver pH before deciding."),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                var recordedRevision = driver.CurrentLabView.EventSequence;
+                var recordedBranch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Portable study restore"].gameObject.activeSelf, Is.True);
+                buttons["Portable study restore"].onClick.Invoke();
+                Assert.That(buttons["Export portable study"].gameObject.activeSelf, Is.True,
+                    "The XR Pause package page must expose local Native+Notebook export.");
+                buttons["Export portable study"].onClick.Invoke();
+                exported = sessions.LastPortableArchivePath;
+                Assert.That(exported, Is.Not.Null.And.Not.Empty, sessions.LastError);
+                Assert.That(File.Exists(exported), Is.True);
+                var data = PortableSessionArchive.Read(exported);
+                Assert.That(data.BranchId, Is.EqualTo(recordedBranch));
+                Assert.That(data.EventSequence, Is.EqualTo(recordedRevision));
+                Assert.That(data.NotebookSnapshot, Does.Contain(
+                    "I will recheck the Native receiver pH before deciding."));
+                Assert.That(panels.LastPortableArchiveFileName,
+                    Is.EqualTo(Path.GetFileName(exported)));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(recordedRevision),
+                    "XR package export cannot issue an unauthorized material command.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "Export should keep Native Pause until explicit student navigation.");
+            }
+            finally
+            {
+                foreach (var candidate in new[] {
+                    exported, exported == null ? null : exported + ".bak",
+                    notesPath, notesPath == null ? null : notesPath + ".bak" })
+                    if (!string.IsNullOrEmpty(candidate) && File.Exists(candidate))
+                        File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [UnityTest]
         public IEnumerator M2_DesktopNotebookAndReviewSampleNeutralWithoutNewNativeMaterial()
         {
 #if UNITY_EDITOR

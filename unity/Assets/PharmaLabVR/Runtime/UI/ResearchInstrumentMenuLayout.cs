@@ -12,6 +12,16 @@ namespace PharmaLabVR.UI
         public ResearchMenuItem(string name, int row) { Name = name; Row = row; }
     }
 
+    // Deterministic XR ray-hit allocation independent of Unity graphics:
+    // Pause/Hold Review and Recenter both occupy the upper row.
+    public static class ResearchXRPanelHitLayout
+    {
+        public static bool SplitReviewAndRecenter(string screen,
+            bool reviewSupported, bool recenterSupported) =>
+            (screen == "Pause" || screen == "Hold") &&
+            reviewSupported && recenterSupported;
+    }
+
     public static class ResearchInstrumentMenuLayout
     {
         public static bool ShowGlobalSettings(int instrumentPage) =>
