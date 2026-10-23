@@ -520,6 +520,24 @@ internal static class Program
                 exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',')[23] ==
                     "unavailable",
                 "Recorded comparison export lost exact selected baseline name or anonymous source label.");
+            // A real Native run can be saved before the first observable pH.
+            // Its independent recorded comparison must still state which file
+            // was selected, without manufacturing an observation or delta.
+            var noObservationDocument = System.Text.Json.Nodes.JsonNode.Parse(
+                sourceRun.ToJsonString());
+            noObservationDocument["observations"] = new System.Text.Json.Nodes.JsonArray();
+            var noObservationReview = RecordedSessionReview.FromJson(
+                noObservationDocument.ToJsonString());
+            var noObservationCompare = RecordedRunComparison.Compare(
+                noObservationReview, noObservationReview);
+            var noObservationCsv = RecordedRunComparisonCsv.RenderCsv(
+                noObservationCompare, "student-first");
+            var noObservationLines = noObservationCsv.TrimEnd('\n').Split('\n');
+            Require(noObservationCompare.Rows.Count == 0 &&
+                noObservationLines.Length == 2 &&
+                noObservationLines[1].Contains(",recorded-no-observations,") &&
+                noObservationLines[1].EndsWith(",student-first"),
+                "Empty comparison CSV lost Native baseline identity or invented measured results.");
             var invalidNameRefused = false;
             try { RecordedRunComparisonCsv.RenderCsv(compared, "=HYPERLINK(1)"); }
             catch (InvalidDataException) { invalidNameRefused = true; }
