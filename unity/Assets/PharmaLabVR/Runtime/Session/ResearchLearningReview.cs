@@ -65,31 +65,47 @@ namespace PharmaLabVR.Session
         // this when live Native import failed for an unavailable scientific
         // model. A sidecar from another saved session is never acceptable,
         // and the result is explicitly learner annotation, not Native proof.
+        // Both read-only Preview and student CSV export use the same exact
+        // Native-save/Notebook-sidecar admission. The caller must first hold
+        // the validated saved RecordedSessionReview reference returned by
+        // OpenRecoverable after model-dependent import failed.
+        public static IReadOnlyList<NotebookEntry> ReadRecordedOnlyEntries(
+            NotebookService journal, string recordedSavePath,
+            string notebookPath, string recordedBranchId,
+            string recordedEventSequence)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(recordedSavePath) ||
+                string.IsNullOrWhiteSpace(notebookPath) ||
+                string.IsNullOrWhiteSpace(recordedBranchId) ||
+                string.IsNullOrWhiteSpace(recordedEventSequence))
+                throw new InvalidDataException(
+                    "Recorded-only journal requires a saved Native review identity.");
+            var nativePath = Path.GetFullPath(recordedSavePath);
+            if (!nativePath.EndsWith(".plv.json", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "Recorded-only source must be a saved Native session file.");
+            var exactSidecar = nativePath.Substring(0,
+                nativePath.Length - ".plv.json".Length) + ".plv-notes";
+            if (!string.Equals(exactSidecar, Path.GetFullPath(notebookPath),
+                StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "Recorded-only annotations must belong to this saved Native file.");
+            // Refuse an existing corrupt primary even if its .bak is valid;
+            // Native event + branch boundaries apply before CSV packaging.
+            return journal.ReadCurrent(exactSidecar, recordedBranchId,
+                recordedEventSequence);
+        }
+
         public static string ReadRecordedOnlyJournal(NotebookService journal,
             string recordedSavePath, string notebookPath, string recordedBranchId,
             string recordedEventSequence, bool compact)
         {
             const string unavailable =
                 "Recorded-only student notebook unavailable for this saved Native review.";
-            if (journal == null || string.IsNullOrWhiteSpace(recordedSavePath) ||
-                string.IsNullOrWhiteSpace(notebookPath) ||
-                string.IsNullOrWhiteSpace(recordedBranchId) ||
-                string.IsNullOrWhiteSpace(recordedEventSequence))
-                return unavailable;
             try
             {
-                var nativePath = Path.GetFullPath(recordedSavePath);
-                if (!nativePath.EndsWith(".plv.json", StringComparison.OrdinalIgnoreCase))
-                    return unavailable;
-                // Require the sidecar of the exact native save that failed
-                // model-dependent import, never the currently active session
-                // or another person's journal in the same directory.
-                var sidecar = nativePath.Substring(0,
-                    nativePath.Length - ".plv.json".Length) + ".plv-notes";
-                if (!string.Equals(sidecar, Path.GetFullPath(notebookPath),
-                    StringComparison.OrdinalIgnoreCase))
-                    return unavailable;
-                var entries = journal.ReadCurrent(sidecar, recordedBranchId,
+                var entries = ReadRecordedOnlyEntries(journal,
+                    recordedSavePath, notebookPath, recordedBranchId,
                     recordedEventSequence);
                 return "Recorded-only student annotations · scientific model unavailable. " +
                     "These are not independently verified Native evidence.\n" +

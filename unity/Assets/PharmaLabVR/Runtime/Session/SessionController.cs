@@ -1926,11 +1926,23 @@ namespace PharmaLabVR.Session
                 // Verify current learner evidence before publishing a scientific
                 // CSV, so a damaged journal cannot cause a partial export.
                 IReadOnlyList<NotebookEntry> localNotes = null;
-                if (driver?.Session != null && driver.Session.IsOpen &&
-                    driver.Session.BranchId == review.BranchId &&
-                    !string.IsNullOrWhiteSpace(review.EventSequence))
+                var scope = ResearchLearningReview.SelectNotebookScope(
+                    review.BranchId, driver?.Session?.BranchId,
+                    driver?.Session?.IsOpen == true,
+                    ReferenceEquals(review, recordedOnlyReviewSource) &&
+                    !string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath));
+                if (scope == RecordedNotebookScope.Live)
                 {
                     localNotes = notebook.ReadCurrent(notesPath,
+                        review.BranchId, review.EventSequence);
+                }
+                else if (scope == RecordedNotebookScope.RecordedOnly)
+                {
+                    // Saved model-unavailable Review may export its *student
+                    // annotations* only from the exact confirmed Native
+                    // save sidecar. No solver, live session or attestation.
+                    localNotes = ResearchLearningReview.ReadRecordedOnlyEntries(
+                        notebook, recordedOnlyReviewSavePath, notesPath,
                         review.BranchId, review.EventSequence);
                 }
                 SessionExportService.WriteCsv(target, review);
