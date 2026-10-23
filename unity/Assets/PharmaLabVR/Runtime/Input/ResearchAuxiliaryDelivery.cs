@@ -2,7 +2,7 @@ namespace PharmaLabVR.Input
 {
     // Grants only a *request* for a Native command. Actual transfer and receipt
     // come from the existing SessionController/IPhreeqc authority.
-    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve, BottleRefillFromReserve }
+    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve, BottleRefillFromReserve, PipetteRinse }
 
     // The visible bottle must represent the actual selected Native source.
     // Only the Native tool's currently assigned source (not the prefab default)
@@ -25,6 +25,21 @@ namespace PharmaLabVR.Input
         public static bool MayActuate(string screenId, bool nativeReady) =>
             nativeReady && string.Equals(screenId, "Lab",
                 System.StringComparison.Ordinal);
+    }
+
+    // Mutually exclusive rinse-water station. A gesture never grants water
+    // inventory; only a successful Native RinseTool receipt can do so.
+    public static class ResearchPhysicalRinseSelection
+    {
+        public static ResearchAuxiliaryDeliveryIntent Resolve(
+            string toolId, bool directlyHeld, bool deliberatePress,
+            bool receiverCapture, bool primaryImmersion, bool reserveImmersion,
+            bool rinseImmersion, bool nativeWaterReady, bool nativeReady) =>
+            toolId == "research-pipette-visual" && directlyHeld &&
+            deliberatePress && !receiverCapture && !primaryImmersion &&
+            !reserveImmersion && rinseImmersion && nativeWaterReady && nativeReady ?
+                ResearchAuxiliaryDeliveryIntent.PipetteRinse :
+                ResearchAuxiliaryDeliveryIntent.None;
     }
 
     // A deliberate press while immersed in a DIFFERENT prepared stock asks

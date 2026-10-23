@@ -193,6 +193,16 @@ namespace PharmaLabVR.Editor
                     item.Item1 == "ResearchStockBottle" ?
                         "research-stock-bottle-visual" : "research-reserve-stock-bottle-visual");
             }
+            var rinsePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            if (rinsePrefab == null)
+                throw new InvalidOperationException("Missing Native-bound open rinse station.");
+            var rinseStation = (GameObject)PrefabUtility.InstantiatePrefab(rinsePrefab);
+            rinseStation.transform.SetParent(lab.transform, false);
+            rinseStation.transform.localPosition = new Vector3(-0.14f, 0.49f, -0.20f);
+            var rinseTarget = rinseStation.GetComponent<ResearchRinseWaterTarget>();
+            if (rinseTarget == null)
+                throw new InvalidOperationException("Rinse station lacks real immersion admission.");
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
@@ -343,6 +353,8 @@ namespace PharmaLabVR.Editor
                     "Generated reserve stock needs a distinct Native-linked immersion target.");
             desktopInput.ConfigureReserveStockAspirateTarget(reserveTarget);
             xrInput.ConfigureReserveStockAspirateTarget(reserveTarget);
+            desktopInput.ConfigureRinseWaterTarget(rinseTarget);
+            xrInput.ConfigureRinseWaterTarget(rinseTarget);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }

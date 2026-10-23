@@ -55,6 +55,11 @@ namespace PharmaLabVR.Input
                 throw new System.ArgumentException(
                     "An XR reserve bottle must have a real physical grip.", nameof(target));
         }
+        [SerializeField] private ResearchRinseWaterTarget rinseWaterTarget;
+        public bool HasPhysicalRinseWaterTarget => rinseWaterTarget != null;
+        public void ConfigureRinseWaterTarget(ResearchRinseWaterTarget target) =>
+            rinseWaterTarget = target != null ? target :
+                throw new System.ArgumentNullException(nameof(target));
         private ResearchAuxiliaryDeliveryIntent pendingDeliveryIntent;
         public void ConfigureStockAspirateTarget(ResearchStockAspirateTarget target) =>
             stockAspirateTarget = target != null ? target :
@@ -82,6 +87,8 @@ namespace PharmaLabVR.Input
             var reserveImmersed = id == "research-pipette-visual" &&
                 reserveStockAspirateTarget != null &&
                 reserveStockAspirateTarget.IsImmersed(physicalTool);
+            var rinseImmersed = id == "research-pipette-visual" &&
+                rinseWaterTarget != null && rinseWaterTarget.IsImmersed(physicalTool);
             var primary = primaryImmersed &&
                 StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette);
             var reserve = reserveImmersed &&
@@ -90,7 +97,7 @@ namespace PharmaLabVR.Input
             // stock immersion even when only one matches Native tool state.
             if (id == "research-pipette-visual" &&
                 (primaryImmersed || reserveImmersed) &&
-                (receiver || primaryImmersed == reserveImmersed))
+                (receiver || rinseImmersed || primaryImmersed == reserveImmersed))
                 return ResearchAuxiliaryDeliveryIntent.None;
             var source = primary != reserve;
             var inlet = registeredTool != null ?
@@ -112,6 +119,10 @@ namespace PharmaLabVR.Input
                     ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve :
                     ResearchAuxiliaryDeliveryIntent.None;
             }
+            var rinse = ResearchPhysicalRinseSelection.Resolve(
+                id, true, true, receiver, primaryImmersed, reserveImmersed,
+                rinseImmersed, coreDriver.RinseWaterPrepared, ready);
+            if (rinse != ResearchAuxiliaryDeliveryIntent.None) return rinse;
             var select = ResearchPhysicalSourceSelection.Resolve(
                 id, true, true, receiver,
                 primaryImmersed, reserveImmersed, primary, reserve, ready);
@@ -269,7 +280,7 @@ namespace PharmaLabVR.Input
                     if (requested == ResearchAuxiliaryDeliveryIntent.None)
                     {
                         LastPhysicalDeliveryFeedback =
-                            "Immerse pipette in prepared stock: first trigger selects a new Native source; next trigger aspirates. Receiver and burette actions stay separate.";
+                            "Immerse pipette in prepared stock or prepared Native rinse water: first trigger selects a new Native source; next trigger aspirates. Receiver and burette actions stay separate.";
                         continue;
                     }
                     if (deliveryPress.PendingToolId != null &&
@@ -423,6 +434,9 @@ namespace PharmaLabVR.Input
                 intent == ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve ?
                     session != null && session.TryPhysicalRefillSourceFromReserve(
                         grip.transform, StockAspirateTarget) :
+                intent == ResearchAuxiliaryDeliveryIntent.PipetteRinse ?
+                    session != null && session.TryPhysicalRinsePipette(
+                        grip.transform, rinseWaterTarget) :
                 intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
                     session != null && session.TryPhysicalFillBuretteFromBottle(
                         grip.transform, registeredTool != null ?

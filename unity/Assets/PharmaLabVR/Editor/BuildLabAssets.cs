@@ -21,6 +21,7 @@ namespace PharmaLabVR.Editor
             GenerateResearchPipette();
             GenerateResearchStockBottle();
             GenerateResearchReserveStockBottle();
+            GenerateResearchRinseStation();
             GenerateResearchReceiver();
             GenerateMeasurementPanel();
             AssetDatabase.SaveAssets();
@@ -321,6 +322,54 @@ namespace PharmaLabVR.Editor
             finally { Object.DestroyImmediate(root); }
         }
 
+
+        // An open physical rinse station; volume comes solely from Native.
+        private static void GenerateResearchRinseStation()
+        {
+            var glass = CreateMaterial("ResearchRinseGlass",
+                new Color(0.68f, 0.86f, 0.90f, 0.48f), 0.02f, 0.65f);
+            var water = CreateMaterial("NativeRinseWater",
+                new Color(0.23f, 0.61f, 0.86f, 0.72f), 0f, 0.50f);
+            var root = new GameObject("ResearchRinseStation");
+            try
+            {
+                Part(root.transform, "CupFoot", PrimitiveType.Cylinder,
+                    new Vector3(0f, 0.005f, 0f),
+                    new Vector3(0.041f, 0.005f, 0.041f), glass);
+                for (var i = 0; i < 12; ++i)
+                {
+                    var angle = i * Mathf.PI * 2f / 12f;
+                    var side = Part(root.transform, "OpenCupWall " + i,
+                        PrimitiveType.Cube,
+                        new Vector3(0.014f * Mathf.Cos(angle), 0.035f,
+                            0.014f * Mathf.Sin(angle)),
+                        new Vector3(0.011f, 0.06f, 0.003f), glass);
+                    side.transform.localRotation = Quaternion.Euler(0f,
+                        90f - i * 30f, 0f);
+                }
+                var mouth = new GameObject("Opening").transform;
+                mouth.SetParent(root.transform, false);
+                mouth.localPosition = new Vector3(0f, 0.065f, 0f);
+                var fill = Part(root.transform, "NativeRinseWaterLiquid",
+                    PrimitiveType.Cylinder, Vector3.zero,
+                    new Vector3(0.011f, 0f, 0.011f), water);
+                root.AddComponent<NativeMeteredInstrumentVisual>()
+                    .ConfigureRepresentation(fill.transform, "rinse-water",
+                        false, 1e-6, 0.025f, 0.009f);
+                root.AddComponent<PharmaLabVR.Input.ResearchRinseWaterTarget>();
+                var title = new GameObject("RinseWaterLabel");
+                title.transform.SetParent(root.transform, false);
+                title.transform.localPosition = new Vector3(-0.055f, 0.007f, -0.027f);
+                var label = title.AddComponent<TextMesh>();
+                label.text = "Native rinse water (1 mL max)";
+                label.fontSize = 18;
+                label.characterSize = 0.004f;
+                label.color = new Color(0.07f, 0.24f, 0.29f);
+                PrefabUtility.SaveAsPrefabAsset(root,
+                    "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
 
         // Serialized laboratory receiver. The geometry and visible liquid are
         // authored once as a prefab; only Native snapshots can set fill.

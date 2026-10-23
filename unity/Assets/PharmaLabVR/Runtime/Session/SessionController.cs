@@ -1498,6 +1498,31 @@ namespace PharmaLabVR.Session
 
         public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
             () => ResearchBottle.Pour(1e-8));
+        // The actual scene station must still contain Native water at the
+        // command edge; a stale target or distant held pipette never rinses.
+        public bool TryPhysicalRinsePipette(Transform physicalPipette,
+            ResearchRinseWaterTarget physicalWater)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var actualPipette = root != null ?
+                root.GetComponentInChildren<PipetteActuator>(true) : null;
+            var actualWater = root != null ?
+                root.GetComponentInChildren<ResearchRinseWaterTarget>(true) : null;
+            if (driver?.Session == null || driver.SourceNeedsPreparation ||
+                driver.IsNativePaused || driver.IsTimeHeld ||
+                !driver.RinseWaterPrepared || physicalPipette == null ||
+                actualPipette == null || actualPipette.transform != physicalPipette ||
+                physicalWater == null || physicalWater != actualWater ||
+                !physicalWater.IsImmersed(physicalPipette) ||
+                router?.Current?.ScreenId != ScreenId.Lab)
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Rinse refused. Prepare real Native water, immerse the physical pipette tip and return to an active Lab.";
+                return false;
+            }
+            return TryPipetteWaterRinse();
+        }
+
         public bool TryPipetteWaterRinse() => TryResearchCommand("Pipette rinse 0.01 ml",
             () => ResearchPipette.Rinse(1e-8));
         public bool TryBottleWaterRinse() => TryResearchCommand("Bottle rinse 0.01 ml",

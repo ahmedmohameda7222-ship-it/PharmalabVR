@@ -46,7 +46,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 var dispensed = pipette.Dispense(5e-8);
                 Assert.That(dispensed.Accepted, Is.True, dispensed.Code);
                 Assert.That(pipette.RepresentedTipVolumeM3, Is.EqualTo(1e-7).Within(1e-12));
+                var waterBefore = JsonUtility.FromJson<LedgerSnapshot>(session.ReadSnapshot())
+                    .vessels.Single(v => v.id == "rinse-water").inventory.researchAdditiveVolumeM3;
+                var pipetteWash = pipette.Rinse(1e-8);
+                Assert.That(pipetteWash.Accepted, Is.True, pipetteWash.Code);
                 var after = JsonUtility.FromJson<LedgerSnapshot>(session.ReadSnapshot());
+                Assert.That(after.vessels.Single(v => v.id == "rinse-water")
+                    .inventory.researchAdditiveVolumeM3, Is.LessThan(waterBefore),
+                    "Native RinseTool must debit actual water volume.");
                 Assert.That(after.vessels.Single(v => v.id == "receiver").inventory.chlorideMol,
                     Is.GreaterThan(0), "Receiver must have real represented solute.");
                 Assert.That(after.sinks.Single(s => s.id == "waste").inventory.chlorideMol,
