@@ -839,6 +839,8 @@ namespace PharmaLabVR.UI
             return "Recorded · no recomputation\n" +
                 (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values)) +
                 "\n" + latest + "\n" +
+                "Recorded comparison baseline: " + (panels?.ComparisonBaselineName ?? "none") +
+                " (selected or active local Native save)\n" +
                 (panels?.LearningReviewCompact ?? "Local student notebook unavailable.") +
                 (panels?.SelectedArchiveFileName != null ?
                     "\nSelected local .plvpack: " + panels.SelectedArchiveFileName : "") +

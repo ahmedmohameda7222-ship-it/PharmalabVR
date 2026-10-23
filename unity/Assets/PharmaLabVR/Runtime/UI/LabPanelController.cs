@@ -25,6 +25,7 @@ namespace PharmaLabVR.UI
             sessions?.CanLoadSelectedLocalNativeSave == true;
         public string SelectedLocalNativeSaveName => sessions?.SelectedLocalNativeSaveName;
         public string SelectedLocalNativeSavePreview => sessions?.SelectedLocalNativeSavePreview;
+        public string ComparisonBaselineName => sessions?.ComparisonBaselineName ?? "none";
         public string ActiveLocalSessionName => sessions?.ActiveLocalSessionName;
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public bool CanFillBurette => sessions?.CanFillBurette == true;

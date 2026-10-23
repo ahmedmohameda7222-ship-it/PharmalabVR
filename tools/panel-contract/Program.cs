@@ -1720,6 +1720,16 @@ internal static class Program
               xrRecoverySource.Contains("panels?.SelectedLocalNativeSavePreview"),
             "Read-only Native-save preview lost Desktop or XR recovery integration.");
 
+        // Comparison must use the explicitly chosen offline file, not silently
+        // replace it with an active Save name; scientific comparison already
+        // requires matching recorded Native model/provider provenance.
+        Check(previewSource.Contains("public string ComparisonBaselineName") &&
+              previewSource.Contains("RecordedRunComparison.CompareSaved(path, RecordedReview)") &&
+              previewSource.Contains("ComparisonBaselinePath()") &&
+              previewSource.Contains("recordedCache.InvalidateComparison(); // selection changes saved baseline") &&
+              xrRecoverySource.Contains("panels?.ComparisonBaselineName"),
+            "Selected saved-file comparison is not wired through real Desktop/XR Review.");
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.

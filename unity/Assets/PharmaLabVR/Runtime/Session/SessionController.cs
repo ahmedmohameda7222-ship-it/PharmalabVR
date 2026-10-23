@@ -1003,6 +1003,7 @@ namespace PharmaLabVR.Session
                 selectedLocalNativeSavePreview = PreviewRecordedLocalNativeSave(
                     Path.Combine(Application.persistentDataPath, "sessions"),
                     selectedLocalNativeSaveName);
+                recordedCache.InvalidateComparison(); // selection changes saved baseline
                 LastError = null;
                 router.Show(router.Current.ScreenId);
                 return true;
@@ -1319,7 +1320,9 @@ namespace PharmaLabVR.Session
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;
                 GUI.enabled = comparisonEnabled && CanCompareSaved;
-                var requestComparison = GUILayout.Button("Compare with last saved Native checkpoint",
+                GUILayout.Label("Recorded comparison baseline: " + ComparisonBaselineName +
+                    " (selected local save, or current saved checkpoint).");
+                var requestComparison = GUILayout.Button("Compare with selected/active saved Native study",
                     GUILayout.Height(44f));
                 GUI.enabled = comparisonEnabled;
                 if (requestComparison) panels?.Request(PanelAction.CompareSaved);
@@ -2362,14 +2365,51 @@ namespace PharmaLabVR.Session
             return Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv.json");
         }
 
+        // Only an explicit local-save chooser operation selects an older run
+        // as the comparison baseline. SaveCopy, Native restoration or Configure
+        // discard that selection preview and revert to the active checkpoint.
+        private bool HasSelectedComparisonBaseline =>
+            selectedLocalNativeSavePreview != null &&
+            OfflineArchivePicker.ValidNativeSaveName(selectedLocalNativeSaveName);
+
+        public string ComparisonBaselineName =>
+            HasSelectedComparisonBaseline ? selectedLocalNativeSaveName : saveName;
+
+        private string validatedComparisonBaselineName;
+
+        private string ComparisonBaselinePath()
+        {
+            var name = ComparisonBaselineName;
+            if (!OfflineArchivePicker.ValidNativeSaveName(name))
+                throw new InvalidDataException("Comparison baseline has an invalid local filename.");
+            if (HasSelectedComparisonBaseline &&
+                selectedLocalNativeSavePreview.StartsWith("Preview unavailable:",
+                    StringComparison.Ordinal))
+                throw new InvalidDataException(
+                    "Selected Native file could not be previewed. Choose another saved run.");
+            var path = Path.Combine(Application.persistentDataPath, "sessions",
+                name + ".plv.json");
+            // No symlinked primary or backup may escape the offline sandbox
+            // during the later read (including an adversarial file change).
+            foreach (var candidate in new[] { path, path + ".bak" })
+                if (File.Exists(candidate) &&
+                    (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException(
+                        "Linked comparison baseline files cannot be used.");
+            return path;
+        }
+
         public bool CanCompareSaved
         {
             get
             {
                 if (RecordedReview == null) return false;
-                try { return SaveService.HasSaveCandidate(SavedNativePath()); }
+                try { return SaveService.HasSaveCandidate(ComparisonBaselinePath()); }
                 catch (ArgumentException) { return false; }
                 catch (InvalidOperationException) { return false; }
+                catch (InvalidDataException) { return false; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
             }
         }
 
@@ -2380,7 +2420,9 @@ namespace PharmaLabVR.Session
                 var comparison = CurrentComparison;
                 if (comparison == null) return "No recorded run comparison is open.";
                 var summary = "Saved " + comparison.BaselineBranchId + " vs review " +
-                    comparison.CandidateBranchId + " (recorded; no recomputation)";
+                    comparison.CandidateBranchId + " (recorded; no recomputation)" +
+                    "\nRecorded baseline file: " +
+                    (validatedComparisonBaselineName ?? "unavailable");
                 var shown = 0;
                 foreach (var row in comparison.Rows)
                 {
@@ -2400,14 +2442,20 @@ namespace PharmaLabVR.Session
         public bool OpenSavedComparison()
         {
             CurrentComparison = null;
+            validatedComparisonBaselineName = null;
             try
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
                     throw new InvalidOperationException("Compare requires an open recorded Review.");
-                var path = SavedNativePath();
+                var name = ComparisonBaselineName;
+                var path = ComparisonBaselinePath();
                 if (!SaveService.HasSaveCandidate(path))
-                    throw new InvalidDataException("No confirmed saved Native checkpoint is available.");
-                CurrentComparison = RecordedRunComparison.CompareSaved(path, RecordedReview);
+                    throw new InvalidDataException("The selected Native baseline no longer exists.");
+                // Reparse and validate the file now; merely choosing/previewing
+                // it cannot authorize chemistry, Native import, or a pH delta.
+                var comparison = RecordedRunComparison.CompareSaved(path, RecordedReview);
+                validatedComparisonBaselineName = name;
+                CurrentComparison = comparison;
                 LastError = null;
                 return true;
             }
