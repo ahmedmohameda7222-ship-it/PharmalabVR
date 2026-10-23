@@ -579,6 +579,24 @@ internal static class Program
             var damagedReview = ResearchLearningReview.ReadRecordedJournal(
                 researchNotes, damagedJournalPath, "student-branch",
                 "student-branch", "7", false);
+            var activeNotebookAtSeven = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, learningPath, "student-branch", "7");
+            Check(activeNotebookAtSeven.Contains("Latest · event 7", StringComparison.Ordinal) &&
+                  activeNotebookAtSeven.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !activeNotebookAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !activeNotebookAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
+                "Notebook screen displayed future or foreign annotations after checkpoint restore.");
+            var emptyNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, System.IO.Path.Combine(learningDirectory, "no-notes.plv-notes"),
+                "student-branch", "7");
+            Check(emptyNotebook.Contains("no recorded annotations", StringComparison.Ordinal),
+                "A genuinely empty notebook must not be misreported as corrupted.");
+            var corruptNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, damagedJournalPath, "student-branch", "7");
+            Check(corruptNotebook.Contains("Research notebook unavailable", StringComparison.Ordinal) &&
+                  !corruptNotebook.Contains("no recorded annotations", StringComparison.Ordinal) &&
+                  !corruptNotebook.Contains("Private unverified", StringComparison.Ordinal),
+                "Corrupted offline Notebook misleadingly appeared empty or leaked unverified notes.");
             Check(damagedReview.Contains("Local notebook unavailable", StringComparison.Ordinal) &&
                   !damagedReview.Contains("Private unverified", StringComparison.Ordinal),
                 "Damaged Notebook interrupted offline Review or leaked unverified notes.");
