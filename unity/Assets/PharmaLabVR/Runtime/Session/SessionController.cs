@@ -525,7 +525,8 @@ namespace PharmaLabVR.Session
             try
             {
                 return ResearchLearningReview.ReadRecordedOnlyJournal(
-                    notebook, recordedOnlyReviewSavePath, NotebookFilePath(),
+                    notebook, recordedOnlyReviewSavePath,
+                    ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath),
                     recorded.BranchId, recorded.EventSequence, compact);
             }
             catch (Exception error) when (error is IOException ||
@@ -1942,7 +1943,8 @@ namespace PharmaLabVR.Session
                     // annotations* only from the exact confirmed Native
                     // save sidecar. No solver, live session or attestation.
                     localNotes = ResearchLearningReview.ReadRecordedOnlyEntries(
-                        notebook, recordedOnlyReviewSavePath, notesPath,
+                        notebook, recordedOnlyReviewSavePath,
+                        ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath),
                         review.BranchId, review.EventSequence);
                 }
                 // Two-file writes may fail at either target. Stage and publish

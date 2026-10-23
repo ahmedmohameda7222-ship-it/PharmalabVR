@@ -69,7 +69,18 @@ namespace PharmaLabVR.Session
         // Native-save/Notebook-sidecar admission. The caller must first hold
         // the validated saved RecordedSessionReview reference returned by
         // OpenRecoverable after model-dependent import failed.
-        public static IReadOnlyList<NotebookEntry> ReadRecordedOnlyEntries(
+        public static string SidecarForSavedNative(string recordedSavePath)
+        {
+            if (string.IsNullOrWhiteSpace(recordedSavePath))
+                throw new InvalidDataException("Saved Native review path is missing.");
+            var source = Path.GetFullPath(recordedSavePath);
+            if (!source.EndsWith(".plv.json", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Saved Native review file extension is invalid.");
+            return source.Substring(0, source.Length - ".plv.json".Length) +
+                ".plv-notes";
+        }
+
+                public static IReadOnlyList<NotebookEntry> ReadRecordedOnlyEntries(
             NotebookService journal, string recordedSavePath,
             string notebookPath, string recordedBranchId,
             string recordedEventSequence)
@@ -80,12 +91,7 @@ namespace PharmaLabVR.Session
                 string.IsNullOrWhiteSpace(recordedEventSequence))
                 throw new InvalidDataException(
                     "Recorded-only journal requires a saved Native review identity.");
-            var nativePath = Path.GetFullPath(recordedSavePath);
-            if (!nativePath.EndsWith(".plv.json", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidDataException(
-                    "Recorded-only source must be a saved Native session file.");
-            var exactSidecar = nativePath.Substring(0,
-                nativePath.Length - ".plv.json".Length) + ".plv-notes";
+            var exactSidecar = SidecarForSavedNative(recordedSavePath);
             if (!string.Equals(exactSidecar, Path.GetFullPath(notebookPath),
                 StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException(
