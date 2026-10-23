@@ -28,6 +28,7 @@ namespace PharmaLabVR.Input
         private bool pointerDragActive;
         // The selection mouse press must never also actuate a Native valve.
         private bool pointerSelectionActive;
+        private bool pointerBottleInspectionAtPress;
         private Vector3 initialDragOffset;
         private bool heldToolOriginalKinematic;
         private readonly ResearchRestorationGestureGate restorationGestureGate = new();
@@ -236,6 +237,11 @@ namespace PharmaLabVR.Input
                 Mouse.current.leftButton.wasPressedThisFrame)
             {
                 pointerSelectionActive = true;
+                // Retain the modifier on the original mouse press; a later
+                // modifier press cannot retroactively inspect a picked bottle.
+                pointerBottleInspectionAtPress =
+                    Keyboard.current.leftAltKey.isPressed ||
+                    Keyboard.current.rightAltKey.isPressed;
                 pickPress.Capture("desktop-pointer-pick", frame, true);
             }
             if (Keyboard.current.gKey.wasPressedThisFrame &&
@@ -544,6 +550,8 @@ namespace PharmaLabVR.Input
             if (!inputEnabled || pending == null ||
                 !pickPress.TryConsume((ulong)Time.frameCount, pending, true))
                 return;
+            var inspectModifierAtPress = pointerBottleInspectionAtPress;
+            pointerBottleInspectionAtPress = false;
             if ((EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
                 (Mouse.current != null && SessionController.PointerOverDesktopHud(Mouse.current.position.ReadValue())))
             {
@@ -584,11 +592,60 @@ namespace PharmaLabVR.Input
                 }
                 return; // Foreign or ambiguous capture cannot become a generic pick.
             }
+            var stockBottle = hit.collider.GetComponentInParent<ResearchStockAspirateTarget>();
+            var inspectionModifierNow = Keyboard.current != null &&
+                (Keyboard.current.leftAltKey.isPressed ||
+                 Keyboard.current.rightAltKey.isPressed);
+            if (pending == "desktop-pointer-pick" &&
+                (inspectModifierAtPress || inspectionModifierNow))
+            {
+                var stockId = ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                    stockBottle?.NativeInventoryId, inspectModifierAtPress,
+                    inspectionModifierNow, heldTool == null,
+                    IsOperatingLabScreen() && restorationGestureGate.IsArmed &&
+                    screenGestureGate.IsArmed && coreDriver?.Session?.IsOpen == true &&
+                    !coreDriver.SourceNeedsPreparation &&
+                    !coreDriver.IsNativePaused && !coreDriver.IsTimeHeld);
+                if (stockId != null) TryInspectStockBottle(stockBottle, stockId);
+                // Never reinterpret a cancelled Alt-click as a physical grab.
+                return;
+            }
             var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
             if (grabbable == null) return;
             LastPhysicalInspectionFeedback = null;
             BeginHold(grabbable.transform);
             if (IsHoldingNativeTool) heldToolId = grabbable.ToolId;
+        }
+
+        // Alt-click an actual stock body for its Native inventory metadata.
+        // No chemistry command, fabricated pH or material edit is involved.
+        public bool TryInspectStockBottle(ResearchStockAspirateTarget physicalBottle,
+            string inventoryId)
+        {
+            var sceneStock = inventoryId == "source" ?
+                StockAspirateTarget : inventoryId == "reserve-stock" ?
+                reserveStockAspirateTarget : null;
+            if (!inputEnabled || awaitingFocusContinue || heldTool != null ||
+                !restorationGestureGate.IsArmed || !screenGestureGate.IsArmed ||
+                !IsOperatingLabScreen() || coreDriver?.Session?.IsOpen != true ||
+                coreDriver.SourceNeedsPreparation || coreDriver.IsNativePaused ||
+                coreDriver.IsTimeHeld || physicalBottle == null ||
+                physicalBottle != sceneStock || !physicalBottle.isActiveAndEnabled ||
+                (inventoryId == "reserve-stock" && !coreDriver.ReserveStockPrepared))
+            {
+                LastPhysicalInspectionFeedback =
+                    "Stock inspection refused. Use an unheld prepared bottle in the active Native Lab.";
+                return false;
+            }
+            var panel = coreDriver.transform.root
+                .GetComponentInChildren<LabPanelController>(true);
+            var accepted = panel != null &&
+                panel.Request(PanelAction.Inspect, inventoryId);
+            LastPhysicalInspectionFeedback = accepted ?
+                "Native " + inventoryId +
+                " selected for material inspection; unsupported measurements remain unavailable." :
+                "Native stock inspection unavailable for this vessel.";
+            return accepted;
         }
 
         // Shared Desktop click -> scene aperture identity -> Native vessel

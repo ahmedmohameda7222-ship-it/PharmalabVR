@@ -62,6 +62,33 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_PhysicalNativeStockInspectionDemandsExclusiveFreshGesture()
+        {
+            Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, true, true), Is.EqualTo("source"));
+            Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "reserve-stock", true, true, true, true), Is.EqualTo("reserve-stock"));
+            Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", false, true, true, true), Is.Null);
+            Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, false, true, true), Is.Null);
+            Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "receiver", true, true, true, true), Is.Null);
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .03, .2, .2), Is.EqualTo("receiver"));
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .2, .03, .2), Is.EqualTo("source"));
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .2, .2, .03), Is.EqualTo("reserve-stock"));
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .03, .03, .2), Is.Null);
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, false, false, .2, .03, .2), Is.Null);
+            Assert.That(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, true, .2, .03, .2), Is.Null);
+        }
+
+        [Test]
         public void P10_01_ClickedColliderRatherThanViewCenterIsPicked()
         {
             var cameraOwner = new GameObject("ClickSelectionCamera");

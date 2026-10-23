@@ -42,7 +42,43 @@ namespace PharmaLabVR.Input
                 ResearchAuxiliaryDeliveryIntent.None;
     }
 
-    // A deliberate press while immersed in a DIFFERENT prepared stock asks
+    // The physical inspection gesture only selects an existing Native vessel.
+    // It cannot change tool ownership, stock, solute or measurement support.
+    // Multiple touched vessels are ambiguous, not "closest wins".
+    public static class ResearchPhysicalInspectionSelection
+    {
+        private const double MaximumHandDistanceMeters = 0.06;
+
+        public static string DesktopBottleInventory(string inventoryId,
+            bool modifierAtPress, bool modifierAtExecution, bool emptyHand,
+            bool liveNativeLab)
+        {
+            if (!modifierAtPress || !modifierAtExecution ||
+                !emptyHand || !liveNativeLab) return null;
+            return inventoryId == "source" || inventoryId == "reserve-stock" ?
+                inventoryId : null;
+        }
+
+        public static string XrUniqueInventory(bool liveNativeLab, bool trackedHand,
+            bool emptyHand, bool overUi, double receiverMeters,
+            double sourceMeters, double reserveMeters)
+        {
+            if (!liveNativeLab || !trackedHand || !emptyHand || overUi ||
+                double.IsNaN(receiverMeters) || double.IsNaN(sourceMeters) ||
+                double.IsNaN(reserveMeters) || receiverMeters < 0 ||
+                sourceMeters < 0 || reserveMeters < 0)
+                return null;
+            var receiver = receiverMeters <= MaximumHandDistanceMeters;
+            var source = sourceMeters <= MaximumHandDistanceMeters;
+            var reserve = reserveMeters <= MaximumHandDistanceMeters;
+            if ((receiver ? 1 : 0) + (source ? 1 : 0) +
+                (reserve ? 1 : 0) != 1) return null;
+            if (receiver) return "receiver";
+            return source ? "source" : "reserve-stock";
+        }
+    }
+
+        // A deliberate press while immersed in a DIFFERENT prepared stock asks
     // only to change the pipette's Native source. Student must press again to
     // aspirate, so no unobserved mixing/volume changes can be hidden by UI.
     public static class ResearchPhysicalSourceSelection

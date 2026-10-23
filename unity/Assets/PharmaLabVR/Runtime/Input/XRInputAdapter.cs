@@ -291,22 +291,29 @@ namespace PharmaLabVR.Input
                     deliveryPress.Capture(item.id, (ulong)Time.frameCount, true);
                 }
             }
-            TryInspectReceiverByTouch();
+            TryInspectPhysicalVesselByTouch();
         }
 
-        // Touch an actual receiver collider with an empty tracked hand and
-        // squeeze its trigger. Read only through shared Native panel routing.
-        // No liquid, synthetic observation or button activation is fabricated.
-        private void TryInspectReceiverByTouch()
+        // The trigger on a tracked, empty hand touches exactly one actual
+        // vessel. No grip may own that hand or receiver. Inspecting stock
+        // shows Native material facts, never a fabricated pH.
+        private void TryInspectPhysicalVesselByTouch()
         {
-            if (captureTarget == null || !captureTarget.isActiveAndEnabled ||
-                deliveryPanel == null || coreDriver?.Session == null) return;
-            var noInstrumentsHeld =
+            if (captureTarget == null || deliveryPanel == null ||
+                coreDriver?.Session?.IsOpen != true) return;
+            var receiverGrip = captureTarget.GetComponent<XRGrabInteractable>();
+            var emptyHands =
                 (grabInteractable == null || !grabInteractable.isSelected) &&
                 (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
                 (researchBottleGrab == null || !researchBottleGrab.isSelected) &&
-                (reserveStockGrip == null || !reserveStockGrip.isSelected);
-            if (!noInstrumentsHeld) return;
+                (reserveStockGrip == null || !reserveStockGrip.isSelected) &&
+                (receiverGrip == null || !receiverGrip.isSelected);
+            if (!emptyHands) return;
+            var live = inputEnabled && restorationGestureGate.IsArmed &&
+                screenGestureGate.IsArmed && IsOperatingLabScreen() &&
+                !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
+                !coreDriver.IsNativePaused;
+            if (!live) return;
             foreach (var hand in new[] { leftActionController, rightActionController })
             {
                 if (!Tracked(hand)) continue;
@@ -315,31 +322,43 @@ namespace PharmaLabVR.Input
                     continue;
                 var ray = hand.GetComponentInChildren<XRRayInteractor>(true);
                 var overUi = ray != null && ray.IsOverUIGameObject();
-                var distance = float.PositiveInfinity;
-                foreach (var collider in captureTarget.GetComponentsInChildren<Collider>(true))
-                {
-                    if (collider == null || !collider.enabled ||
-                        !collider.gameObject.activeInHierarchy) continue;
-                    distance = Mathf.Min(distance, Vector3.Distance(
-                        hand.transform.position,
-                        collider.ClosestPoint(hand.transform.position)));
-                }
-                var ready = inputEnabled && restorationGestureGate.IsArmed &&
-                    screenGestureGate.IsArmed && !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
-                    !coreDriver.IsNativePaused;
-                if (!ResearchXRReceiverInspectionAdmission.MayInspect(
-                        ready, true, noInstrumentsHeld, overUi, distance))
-                    continue;
-                var accepted = deliveryPanel.Request(PanelAction.Measure,
-                    captureTarget.InventoryId);
+                var id = ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                    live, Tracked(hand), emptyHands, overUi,
+                    ClosestInspectionColliderDistance(captureTarget, hand.transform.position),
+                    ClosestInspectionColliderDistance(StockAspirateTarget, hand.transform.position),
+                    coreDriver.ReserveStockPrepared ?
+                        ClosestInspectionColliderDistance(reserveStockAspirateTarget,
+                            hand.transform.position) : float.PositiveInfinity);
+                if (id == null) continue;
+                var accepted = deliveryPanel.Request(
+                    id == "receiver" ? PanelAction.Measure : PanelAction.Inspect, id);
                 LastPhysicalInspectionFeedback = accepted ?
-                    "Native receiver selected for current supported pH observation." :
-                    "Native receiver observation unavailable on this screen or science state.";
-                break; // both hands pressing is one selection gesture
+                    (id == "receiver" ?
+                        "Native receiver selected for supported pH inspection." :
+                        "Native " + id +
+                        " selected for material inspection; unsupported observations remain unavailable.") :
+                    "Native vessel inspection unavailable on this screen or science state.";
+                break; // One deliberate trigger inspects at most one vessel.
             }
         }
 
-        private void OnDisable() => ClearDeliveryPress();
+        private static float ClosestInspectionColliderDistance(
+            Behaviour vessel, Vector3 handPosition)
+        {
+            if (vessel == null || !vessel.isActiveAndEnabled ||
+                !vessel.gameObject.activeInHierarchy) return float.PositiveInfinity;
+            var distance = float.PositiveInfinity;
+            foreach (var collider in vessel.GetComponentsInChildren<Collider>(true))
+            {
+                if (collider == null || !collider.enabled ||
+                    !collider.gameObject.activeInHierarchy) continue;
+                distance = Mathf.Min(distance, Vector3.Distance(
+                    handPosition, collider.ClosestPoint(handPosition)));
+            }
+            return distance;
+        }
+
+                private void OnDisable() => ClearDeliveryPress();
 
         public LabInputSample[] SampleInputs(ulong nowNs)
         {

@@ -95,6 +95,33 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_PhysicalSourceAndReserveInspectionTargetsRemainDistinctNativeVessels()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var stocks = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).ToArray();
+                Assert.That(stocks.Count(item => item.NativeInventoryId == "source"), Is.EqualTo(1));
+                Assert.That(stocks.Count(item => item.NativeInventoryId == "reserve-stock"), Is.EqualTo(1));
+                foreach (var item in stocks)
+                {
+                    Assert.That(item.GetComponent<DesktopGrabbable>(), Is.Not.Null);
+                    Assert.That(item.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+                    Assert.That(item.GetComponentsInChildren<Collider>(true)
+                        .Any(c => c.enabled && c.gameObject.activeInHierarchy), Is.True);
+                }
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                Assert.That(receiver.GetComponent<XRGrabInteractable>(), Is.Not.Null,
+                    "Receiver grip must block touch inspection while XR receiver is held.");
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void M2_GeneratedStockBottleExposesSourceImmersionToBothPhysicalInputRoutes()
         {
             var bottle = AssetDatabase.LoadAssetAtPath<GameObject>(

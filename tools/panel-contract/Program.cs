@@ -1288,7 +1288,22 @@ internal static class Program
                 "source", true, true, true, false) == null,
             "Alt-click must inspect only a prepared real bottle, never pick or transfer on stale gestures.");
 
-                // XR empty-hand fingertip/trigger can select a real receiver for its
+                // This headless suite cannot launch Unity input, but keeps both
+        // actual scene routes wired to the policy exercised above.
+        var stockInspectDesktop = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var stockInspectXr = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(stockInspectDesktop.Contains("pointerBottleInspectionAtPress", StringComparison.Ordinal) &&
+              stockInspectDesktop.Contains("TryInspectStockBottle(", StringComparison.Ordinal) &&
+              stockInspectDesktop.Contains("PanelAction.Inspect, inventoryId", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("TryInspectPhysicalVesselByTouch(", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("ResearchPhysicalInspectionSelection.XrUniqueInventory(", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("receiverGrip == null || !receiverGrip.isSelected", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("PanelAction.Measure : PanelAction.Inspect", StringComparison.Ordinal),
+            "Physical Desktop/XR inspection must reach shared Native stock/receiver panel routes.");
+
+        // XR empty-hand fingertip/trigger can select a real receiver for its
         // existing Native pH panel, but cannot read when a tool/GUI owns
         // the trigger, tracking is stale, or the receiver is out of touch.
         Check(ResearchXRReceiverInspectionAdmission.MayInspect(
