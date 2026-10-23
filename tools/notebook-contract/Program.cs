@@ -21,6 +21,51 @@ internal static class Program
         var notes = new NotebookService();
         try
         {
+            // Regression: a two-file CSV request is one reported operation.
+            // A filesystem error at the SECOND destination must restore
+            // any earlier scientific CSV, never leave a misleading partial
+            // success, and never modify the prior student evidence.
+            var pairRoot = Path.Combine(root, "paired-csv");
+            Directory.CreateDirectory(pairRoot);
+            var scientificCsvPath = Path.Combine(pairRoot, "session.plv-results.csv");
+            var learnerCsvPath = Path.Combine(pairRoot,
+                "session.plv-student-annotations.csv");
+            File.WriteAllText(scientificCsvPath, "OLD_CONFIRMED_SCIENCE");
+            Directory.CreateDirectory(learnerCsvPath); // a real mid-commit failure
+            var pairRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "NEW_UNCONFIRMED_SCIENCE", learnerCsvPath, "NEW_LEARNER");
+            }
+            catch (IOException) { pairRefused = true; }
+            Require(pairRefused && File.ReadAllText(scientificCsvPath) ==
+                    "OLD_CONFIRMED_SCIENCE" && Directory.Exists(learnerCsvPath),
+                "Failed second CSV publication destroyed an earlier confirmed result.");
+            Directory.Delete(learnerCsvPath);
+            RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                "CONFIRMED_SCIENCE", learnerCsvPath, "CONFIRMED_STUDENT");
+            Require(File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Paired scientific/student CSV output failed to publish both files.");
+            File.Delete(scientificCsvPath);
+            File.Delete(learnerCsvPath);
+            Directory.CreateDirectory(learnerCsvPath);
+            pairRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "UNCONFIRMED_NEW_SCIENCE", learnerCsvPath, "NEW_LEARNER");
+            }
+            catch (IOException) { pairRefused = true; }
+            Require(pairRefused && !File.Exists(scientificCsvPath),
+                "Failed second CSV publication left a newly introduced scientific file.");
+            Directory.Delete(learnerCsvPath);
+            Require(!Directory.GetFiles(pairRoot).Any(f =>
+                    f.EndsWith(".stage", StringComparison.Ordinal) ||
+                    f.EndsWith(".rollback", StringComparison.Ordinal)),
+                "Aborted paired CSV left staging or rollback debris.");
+
             var first = notes.Append(path, "research-branch", "7", "receiver",
                 "I predict the pH will decrease after transfer.");
             Require(first.EventSequence == "7" && first.BranchId == "research-branch",
