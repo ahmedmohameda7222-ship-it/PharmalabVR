@@ -1166,7 +1166,28 @@ internal static class Program
         Check(!DesktopPlacementAdmission.CanPlace(double.NaN, 1.0, true, false) &&
               !DesktopPlacementAdmission.CanPlace(0.04, double.PositiveInfinity, true, false),
             "Invalid physical pose must fail closed before any Rigidbody release");
-        // P10.01 held-tool mouse plane drag has priority over left-drag valve;
+        // M2 Desktop receiver control: left click still only inspects Native pH;
+        // F explicitly picks the physical receiver, and F releases it on bench.
+        Check(DesktopReceiverRouting.Resolve(true, true, false) ==
+              DesktopReceiverAction.Inspect &&
+              DesktopReceiverRouting.Resolve(true, false, true) ==
+              DesktopReceiverAction.Pick,
+            "Click-to-inspect and F-to-reposition must not share receiver ownership.");
+        Check(DesktopReceiverRouting.Resolve(false, false, true) ==
+              DesktopReceiverAction.None &&
+              DesktopReceiverRouting.Resolve(true, true, true) ==
+              DesktopReceiverAction.None,
+            "An unsupported or simultaneous receiver gesture must not pick it up.");
+        Check(DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.045, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.035, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.35, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.045, 0.04, 0.1, true, false),
+            "Receiver placement must use its physical bottom, not embed its center in the bench.");
+                // P10.01 held-tool mouse plane drag has priority over left-drag valve;
         // both routes share exclusive ownership and obey HUD focus.
         // A momentary input event may occur between Native simulation ticks.
         // Capture the actual Unity-frame press, then consume exactly once on
