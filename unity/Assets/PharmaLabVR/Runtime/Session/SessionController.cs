@@ -710,6 +710,7 @@ namespace PharmaLabVR.Session
                 selectedResearchPrediction = null;
                 pendingLessonRecoveryEpoch = null;
             }
+            RecoverInterruptedCsvForCurrentSession();
         }
 
         private void OnEnable()
@@ -717,6 +718,7 @@ namespace PharmaLabVR.Session
             ReconcileNativeReviewAuthority();
             AttachNativeRestoration();
             ReconcileLessonAuthority();
+            RecoverInterruptedCsvForCurrentSession();
         }
 
         private void OnDisable() => DetachNativeRestoration();
@@ -1836,7 +1838,33 @@ namespace PharmaLabVR.Session
         }
 
 
-        private string NotebookFilePath()
+        // On boot and when selecting a saved session identity, reconcile any
+        // interrupted two-file export under the same cross-process lease.
+        // An invalid/tampered recovery marker fails CLOSED and remains on
+        // disk for inspection; never silently overwrite previous CSVs.
+        private bool RecoverInterruptedCsvForCurrentSession()
+        {
+            try
+            {
+                var notesPath = NotebookFilePath();
+                var directory = Path.GetDirectoryName(notesPath);
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    Path.Combine(directory, saveName + ".plv-results.csv"),
+                    Path.Combine(directory, saveName + ".plv-student-annotations.csv"));
+                return true;
+            }
+            catch (Exception error) when (error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException ||
+                                         error is InvalidOperationException)
+            {
+                LastError = "Previous CSV export recovery unavailable: " +
+                    error.Message;
+                return false;
+            }
+        }
+
+                private string NotebookFilePath()
         {
             if (string.IsNullOrWhiteSpace(saveName) || Path.GetFileName(saveName) != saveName ||
                 saveName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -1921,6 +1949,9 @@ namespace PharmaLabVR.Session
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
                     throw new InvalidOperationException("CSV export requires an open recorded Native Review.");
+                if (!RecoverInterruptedCsvForCurrentSession())
+                    throw new InvalidOperationException(LastError ??
+                        "An interrupted CSV export could not be reconciled.");
                 var notesPath = NotebookFilePath(); // Enforces safe session file naming.
                 var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv-results.csv");
                 var review = RecordedReview;
