@@ -91,6 +91,8 @@ namespace PharmaLabVR.Input
                 reserveStockAspirateTarget.IsImmersed(physicalTool);
             var rinseImmersed = id == "research-pipette-visual" &&
                 rinseWaterTarget != null && rinseWaterTarget.IsImmersed(physicalTool);
+            var bottleOutletImmersed = id == "research-stock-bottle-visual" &&
+                rinseWaterTarget != null && rinseWaterTarget.IsImmersed(physicalTool);
             var primary = primaryImmersed &&
                 StockAspirateTarget.NativeSourceMatches(coreDriver?.Session, pipette);
             var reserve = reserveImmersed &&
@@ -121,6 +123,13 @@ namespace PharmaLabVR.Input
                     ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve :
                     ResearchAuxiliaryDeliveryIntent.None;
             }
+            // A wetted bottle outlet cannot also pour or prime the burette.
+            // Even when invalid, fail closed rather than selecting a second
+            // material command from the same physical trigger.
+            if (bottleOutletImmersed)
+                return ResearchPhysicalBottleRinseSelection.Resolve(
+                    id, true, true, receiver, prime, bottleOutletImmersed,
+                    coreDriver.RinseWaterPrepared, ready);
             var rinse = ResearchPhysicalRinseSelection.Resolve(
                 id, true, true, receiver, primaryImmersed, reserveImmersed,
                 rinseImmersed, coreDriver.RinseWaterPrepared, ready);
@@ -285,7 +294,7 @@ namespace PharmaLabVR.Input
                     if (requested == ResearchAuxiliaryDeliveryIntent.None)
                     {
                         LastPhysicalDeliveryFeedback =
-                            "Immerse pipette in prepared stock or prepared Native rinse water: first trigger selects a new Native source; next trigger aspirates. Receiver and burette actions stay separate.";
+                            "Immerse pipette in prepared stock or dip a pipette/stock-bottle outlet into prepared Native rinse water: first trigger selects a new Native source; next trigger aspirates. Receiver and burette actions stay separate.";
                         continue;
                     }
                     if (deliveryPress.PendingToolId != null &&
@@ -539,6 +548,9 @@ namespace PharmaLabVR.Input
                 intent == ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve ?
                     session != null && session.TryPhysicalRefillSourceFromReserve(
                         grip.transform, StockAspirateTarget) :
+                intent == ResearchAuxiliaryDeliveryIntent.BottleRinse ?
+                    session != null && session.TryPhysicalRinseBottle(
+                        grip.transform, rinseWaterTarget) :
                 intent == ResearchAuxiliaryDeliveryIntent.PipetteRinse ?
                     session != null && session.TryPhysicalRinsePipette(
                         grip.transform, rinseWaterTarget) :

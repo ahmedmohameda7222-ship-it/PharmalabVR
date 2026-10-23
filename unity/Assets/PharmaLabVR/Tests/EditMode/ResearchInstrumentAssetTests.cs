@@ -240,6 +240,48 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_InvertedSourceBottleOutletRequiresActualNativeWaterForFilmRinse()
+        {
+            var waterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            var stockPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            Assert.That(waterPrefab, Is.Not.Null);
+            Assert.That(stockPrefab, Is.Not.Null);
+            Assert.That(stockPrefab.GetComponent<BottlePourActuator>(), Is.Not.Null);
+            var station = Object.Instantiate(waterPrefab);
+            var bottle = Object.Instantiate(stockPrefab);
+            try
+            {
+                var tip = bottle.transform.Find("OutletExit");
+                var mouth = station.transform.Find("Opening");
+                Assert.That(tip, Is.Not.Null);
+                Assert.That(mouth, Is.Not.Null);
+                bottle.transform.rotation = Quaternion.Euler(180f, 0f, 0f);
+                bottle.transform.position += mouth.position -
+                    Vector3.up * 0.043f - tip.position;
+                var target = station.GetComponent<ResearchRinseWaterTarget>();
+                Assert.That(target.IsImmersed(bottle.transform), Is.False,
+                    "Dry Native-water station may not rinse the stock-bottle outlet.");
+                var visual = station.GetComponent<NativeMeteredInstrumentVisual>();
+                visual.ApplySnapshot(
+                    "{\"vessels\":[{\"id\":\"rinse-water\",\"inventory\":{\"researchAdditiveVolumeM3\":0.000001}}]}");
+                Assert.That(target.IsImmersed(bottle.transform), Is.True,
+                    "Physically inverted outlet in actual Native water must be admitted.");
+                bottle.transform.position += Vector3.right * 0.008f;
+                Assert.That(target.IsImmersed(bottle.transform), Is.False,
+                    "A mouth inside the cup but outside the real meniscus is dry.");
+                visual.ApplySnapshot("{\"vessels\":[]}");
+                Assert.That(target.IsImmersed(bottle.transform), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(bottle);
+                Object.DestroyImmediate(station);
+            }
+        }
+
+        [Test]
         public void M2_PhysicalNativeRinseIntentRejectsCompetingTargetsAndHolds()
         {
             ResearchAuxiliaryDeliveryIntent Resolve(bool water, bool receiver = false,

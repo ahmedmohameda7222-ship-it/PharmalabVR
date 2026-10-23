@@ -1194,7 +1194,7 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
                 GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
-                    "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. G with pipette tip immersed downward in the open prepared-water cup rinses 0.01 ml through Native waste. " +
+                    "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. G with pipette tip or inverted stock-bottle outlet submerged in the open prepared-water cup rinses 0.01 ml through Native waste; the bottle stock inventory is not replaced. " +
                     "Left-click receiver = inspect current Native pH; Alt+left-click source/reserve bottle = inspect its actual Native inventory. Point view center at receiver and F = pick receiver, drag/arrow reposition, F upright near bench to put its foot down. Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
@@ -1249,7 +1249,7 @@ namespace PharmaLabVR.Session
                 }
                 if (driver.RinseWaterPrepared)
                 {
-                    GUILayout.Label("Physical rinse: hold pipette, dip its outlet into the open Native-water cup, press G. No physical water means no rinse.");
+                    GUILayout.Label("Physical rinse: dip the directly held pipette tip OR the inverted source-bottle outlet into prepared Native water and press G; only the tool film is washed into Native waste.");
                     if (GUILayout.Button("Pipette: water rinse 0.01 ml", GUILayout.Height(32f)))
                         TryPipetteWaterRinse();
                     if (GUILayout.Button("Bottle: water rinse 0.01 ml", GUILayout.Height(32f)))
@@ -1530,6 +1530,69 @@ namespace PharmaLabVR.Session
 
         public bool TryPipetteWaterRinse() => TryResearchCommand("Pipette rinse 0.01 ml",
             () => ResearchPipette.Rinse(1e-8));
+        // Directly dip the real SOURCE bottle's downward outlet into the
+        // Native-water meniscus. This washes its metered tip film; it never
+        // silently dilutes or replaces the bottle's original stock inventory.
+        // Never allow a public call to skip the real Desktop/XR hand authority.
+        public bool TryPhysicalRinseBottle(Transform heldSourceBottle,
+            ResearchRinseWaterTarget physicalWater)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var nativeBottle = root != null ?
+                root.GetComponentInChildren<BottlePourActuator>(true) : null;
+            var stock = root != null ? root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(item => item.NativeInventoryId == "source") : null;
+            var water = root != null ?
+                root.GetComponentInChildren<ResearchRinseWaterTarget>(true) : null;
+            var receiver = root != null ?
+                root.GetComponentInChildren<LabCaptureTarget>(true) : null;
+            var inlet = root != null ?
+                root.GetComponentInChildren<ResearchBuretteInletTarget>(true) : null;
+
+            var owned = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = root.GetComponentInChildren<DesktopInputAdapter>(true);
+                owned = desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == heldSourceBottle &&
+                    desktop.HasFreshPhysicalGestureSinceRestore &&
+                    desktop.HasFreshLabScreenGesture &&
+                    !desktop.IsHoldingNativeTool;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var xr = root.GetComponentInChildren<XRInputAdapter>(true);
+                owned = xr != null &&
+                    xr.IsSourceBottleDirectlyGripped(heldSourceBottle) &&
+                    xr.HasFreshGripSinceRestore && xr.HasFreshLabScreenGesture;
+            }
+
+            var active = driver?.Session?.IsOpen == true &&
+                !driver.SourceNeedsPreparation && !driver.IsNativePaused &&
+                !driver.IsTimeHeld && driver.RinseWaterPrepared &&
+                router?.Current?.ScreenId == ScreenId.Lab;
+            var receiverCapture = heldSourceBottle != null && receiver != null &&
+                LabCaptureTarget.EstimateExclusive(heldSourceBottle, receiver).Length != 0;
+            var inletCapture = heldSourceBottle != null && inlet != null &&
+                driver?.Session?.IsOpen == true &&
+                inlet.AdmitsBottle(heldSourceBottle, true, driver.Session);
+            if (!active || !owned || heldSourceBottle == null ||
+                nativeBottle == null || nativeBottle.transform != heldSourceBottle ||
+                stock == null || stock.transform != heldSourceBottle ||
+                physicalWater == null || physicalWater != water ||
+                !physicalWater.IsImmersed(heldSourceBottle) ||
+                receiverCapture || inletCapture)
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Bottle rinse refused: hold the actual source bottle, " +
+                    "dip its downward outlet in prepared Native water, and keep " +
+                    "it clear of the receiver and burette inlet in an active Lab.";
+                return false;
+            }
+            return TryBottleWaterRinse();
+        }
+
         public bool TryBottleWaterRinse() => TryResearchCommand("Bottle rinse 0.01 ml",
             () => ResearchBottle.Rinse(1e-8));
         public string ActivePipetteStockInventoryId

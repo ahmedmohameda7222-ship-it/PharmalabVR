@@ -2,7 +2,7 @@ namespace PharmaLabVR.Input
 {
     // Grants only a *request* for a Native command. Actual transfer and receipt
     // come from the existing SessionController/IPhreeqc authority.
-    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve, BottleRefillFromReserve, PipetteRinse }
+    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve, BottleRefillFromReserve, PipetteRinse, BottleRinse }
 
     // The visible bottle must represent the actual selected Native source.
     // Only the Native tool's currently assigned source (not the prefab default)
@@ -39,6 +39,23 @@ namespace PharmaLabVR.Input
             deliberatePress && !receiverCapture && !primaryImmersion &&
             !reserveImmersion && rinseImmersion && nativeWaterReady && nativeReady ?
                 ResearchAuxiliaryDeliveryIntent.PipetteRinse :
+                ResearchAuxiliaryDeliveryIntent.None;
+    }
+
+    // Wash the metered stock-bottle OUTLET, not its whole stock inventory.
+    // The Native RinseTool (and not this intent) owns water/waste/film changes.
+    // Destination arbitration is exclusive at the exact moment of the press.
+    public static class ResearchPhysicalBottleRinseSelection
+    {
+        public static ResearchAuxiliaryDeliveryIntent Resolve(
+            string toolId, bool directlyHeld, bool deliberatePress,
+            bool receiverCapture, bool capturedBuretteInlet,
+            bool immersedInNativeWater, bool waterPrepared, bool nativeReady) =>
+            toolId == "research-stock-bottle-visual" &&
+            directlyHeld && deliberatePress && !receiverCapture &&
+            !capturedBuretteInlet && immersedInNativeWater &&
+            waterPrepared && nativeReady ?
+                ResearchAuxiliaryDeliveryIntent.BottleRinse :
                 ResearchAuxiliaryDeliveryIntent.None;
     }
 
