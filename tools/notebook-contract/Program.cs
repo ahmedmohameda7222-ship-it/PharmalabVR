@@ -90,6 +90,40 @@ internal static class Program
                     File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
                 "Invalid recovery metadata modified confirmed student evidence.");
             File.Delete(scientificCsvPath + ".pair.pending");
+                        // A tampered confirmed preimage is not a valid rollback source,
+            // even when the durable marker itself still parses correctly.
+            var digestCrashObserved = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "TAMPER_TEST_UNCONFIRMED_SCIENCE", learnerCsvPath,
+                    "TAMPER_TEST_UNCONFIRMED_NOTES", null,
+                    () => throw new InvalidOperationException("Simulated crash"));
+            }
+            catch (InvalidOperationException) { digestCrashObserved = true; }
+            var sciPreimage = Directory.GetFiles(pairRoot,
+                "session.plv-results.csv.*.rollback").Single();
+            File.WriteAllText(sciPreimage, "TAMPERED_BACKUP");
+            var tamperRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath);
+            }
+            catch (InvalidDataException) { tamperRefused = true; }
+            Require(digestCrashObserved && tamperRefused &&
+                    File.ReadAllText(scientificCsvPath) ==
+                        "TAMPER_TEST_UNCONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    File.Exists(scientificCsvPath + ".pair.pending"),
+                "Tampered recovery copy altered confirmed or interrupted output.");
+            File.WriteAllText(sciPreimage, "CONFIRMED_SCIENCE");
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Repaired verified preimages could not complete interrupted recovery.");
+
                         // A concurrent Desktop/Review export must not interleave
             // scientific results from one revision with another note CSV.
             var parallelDenied = false;
@@ -149,7 +183,28 @@ internal static class Program
                     f.EndsWith(".rollback", StringComparison.Ordinal)),
                 "Aborted paired CSV left staging or rollback debris.");
 
-            var first = notes.Append(path, "research-branch", "7", "receiver",
+            // A first-ever export has no preimages. An interrupted publish
+            // must delete the unconfirmed new scientific CSV and keep both
+            // paths absent, not invent an empty student CSV.
+            var newPairInterrupted = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "UNCONFIRMED_FIRST_SCIENCE", learnerCsvPath,
+                    "UNCONFIRMED_FIRST_STUDENT", null,
+                    () => throw new InvalidOperationException("Simulated first-export crash"));
+            }
+            catch (InvalidOperationException) { newPairInterrupted = true; }
+            Require(newPairInterrupted &&
+                    File.Exists(scientificCsvPath) &&
+                    !File.Exists(learnerCsvPath) &&
+                    RecordedCsvPairWriter.RecoverInterruptedPair(
+                        scientificCsvPath, learnerCsvPath) &&
+                    !File.Exists(scientificCsvPath) &&
+                    !File.Exists(learnerCsvPath) &&
+                    !File.Exists(scientificCsvPath + ".pair.pending"),
+                "Interrupted first-ever CSV pair retained unconfirmed science output.");
+                        var first = notes.Append(path, "research-branch", "7", "receiver",
                 "I predict the pH will decrease after transfer.");
             Require(first.EventSequence == "7" && first.BranchId == "research-branch",
                 "Native event reference was not preserved in the note.");
