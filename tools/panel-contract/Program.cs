@@ -666,6 +666,17 @@ internal static class Program
             catch (System.IO.InvalidDataException) { invalidSavedReviewPathRejected = true; }
             Check(invalidSavedReviewPathRejected,
                 "A non-Native filename became a recorded-only learner sidecar.");
+                        // Production Unity adapters are not compiled by the headless
+            // suite. Pin their saved-source routing in the contract so a
+            // future edit cannot silently revert to the active saveName.
+            var recordedOnlyController = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+            Check(recordedOnlyController.Contains(
+                    "ReadRecordedOnlySavedAnnotations(", StringComparison.Ordinal) &&
+                  recordedOnlyController.Split(
+                    "ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath)")
+                    .Length >= 3,
+                "Unity recorded-only Review/CSV route drifted back to an unrelated active notebook.");
                         var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
                 researchNotes, recordedNativePath, learningPath,
                 "student-branch", "7", false);
