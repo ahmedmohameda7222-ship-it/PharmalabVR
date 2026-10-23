@@ -547,7 +547,42 @@ internal static class Program
                 "Private unrelated student annotation.");
             // A Native checkpoint at event 7 must not display/export local
             // annotations from event 11 merely because the branch ID agrees.
-            var historical = researchNotes.Read(learningPath, "student-branch", "7");
+            // Real recorded review must load only branch+event-bounded journal
+            // evidence. The same persisted path must never expose a future
+            // measurement, and corrupt bytes must not crash the Review screen.
+            var boundedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "student-branch",
+                "student-branch", "7", false);
+            Check(boundedReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !boundedReview.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !boundedReview.Contains("Private unrelated", StringComparison.Ordinal),
+                "Restored event-7 Review exposed future or cross-branch Notebook evidence.");
+            var restoredReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "student-branch",
+                "student-branch", "11", false);
+            Check(restoredReview.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  restoredReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !restoredReview.Contains("Private unrelated", StringComparison.Ordinal),
+                "Valid saved Native review lost current durable student observations.");
+            var foreignReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "other-live-branch",
+                "student-branch", "11", false);
+            Check(!foreignReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !foreignReview.Contains("Native pH 6.20", StringComparison.Ordinal),
+                "Review displayed recorded notes from another live Native branch.");
+            var damagedJournalPath = System.IO.Path.Combine(
+                learningDirectory, "damaged.plv-notes");
+            researchNotes.Append(damagedJournalPath, "student-branch", "7",
+                "receiver", "Private unverified damaged journal content.");
+            System.IO.File.WriteAllText(damagedJournalPath,
+                "PLV-NOTEBOOK-V1\\ninvalid-record\\n");
+            var damagedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, damagedJournalPath, "student-branch",
+                "student-branch", "7", false);
+            Check(damagedReview.Contains("Local notebook unavailable", StringComparison.Ordinal) &&
+                  !damagedReview.Contains("Private unverified", StringComparison.Ordinal),
+                "Damaged Notebook interrupted offline Review or leaked unverified notes.");
+                        var historical = researchNotes.Read(learningPath, "student-branch", "7");
             Check(historical.Count == 1 && historical[0].EventSequence == "7" &&
                   !historical[0].Text.Contains("Native pH 6.20"),
                 "Recorded checkpoint at event 7 exposed later event-11 learner evidence.");
