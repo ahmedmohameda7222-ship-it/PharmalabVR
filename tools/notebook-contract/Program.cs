@@ -65,6 +65,26 @@ internal static class Program
                         File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
                     "A second CSV writer bypassed the held export lease.");
             }
+                        // Fault injection: if rollback ITSELF cannot proceed, a
+            // confirmed prior CSV copy must be left for manual recovery.
+            File.Delete(learnerCsvPath);
+            Directory.CreateDirectory(learnerCsvPath);
+            var rollbackFailed = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "SOME_UNCONFIRMED_SCIENCE", learnerCsvPath, "NEW_STUDENT",
+                    () => throw new IOException("Injected rollback disk failure"));
+            }
+            catch (IOException) { rollbackFailed = true; }
+            var recoverySnapshots = Directory.GetFiles(pairRoot, "*.rollback");
+            Require(rollbackFailed && recoverySnapshots.Length == 1 &&
+                    File.ReadAllText(recoverySnapshots[0]) == "CONFIRMED_SCIENCE",
+                "Failed rollback destroyed the last confirmed scientific CSV recovery copy.");
+            File.Copy(recoverySnapshots[0], scientificCsvPath, true);
+            File.Delete(recoverySnapshots[0]);
+            Directory.Delete(learnerCsvPath);
+            File.WriteAllText(learnerCsvPath, "CONFIRMED_STUDENT");
                         File.Delete(scientificCsvPath);
             File.Delete(learnerCsvPath);
             Directory.CreateDirectory(learnerCsvPath);
