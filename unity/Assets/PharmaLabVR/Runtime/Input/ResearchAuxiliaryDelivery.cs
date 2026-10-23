@@ -92,6 +92,19 @@ namespace PharmaLabVR.Input
         }
     }
 
+        // A source-switch press is only a request to Native. Physical geometry,
+    // current selected source and tracked ownership must all remain valid.
+    // Native still rejects unsafe tip contents or incompatible revisions.
+    public static class ResearchPhysicalPipetteSelectionAdmission
+    {
+        public static bool MaySelect(string stockInventoryId, bool nativePrepared,
+            bool directFreshOwnership, bool activeLab, bool immersed,
+            bool alreadyNativeSelected) =>
+            (stockInventoryId == "source" || stockInventoryId == "reserve-stock") &&
+            nativePrepared && directFreshOwnership && activeLab && immersed &&
+            !alreadyNativeSelected;
+    }
+
         // A deliberate press while immersed in a DIFFERENT prepared stock asks
     // only to change the pipette's Native source. Student must press again to
     // aspirate, so no unobserved mixing/volume changes can be hidden by UI.

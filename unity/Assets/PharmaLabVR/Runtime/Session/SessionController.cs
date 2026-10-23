@@ -1513,7 +1513,9 @@ namespace PharmaLabVR.Session
                 root.GetComponentInChildren<ResearchRinseWaterTarget>(true) : null;
             if (driver?.Session == null || driver.SourceNeedsPreparation ||
                 driver.IsNativePaused || driver.IsTimeHeld ||
-                !driver.RinseWaterPrepared || physicalPipette == null ||
+                !driver.RinseWaterPrepared || !driver.Session.IsOpen ||
+                !PhysicallyOwnsPipette(physicalPipette) ||
+                physicalPipette == null ||
                 actualPipette == null || actualPipette.transform != physicalPipette ||
                 physicalWater == null || physicalWater != actualWater ||
                 !physicalWater.IsImmersed(physicalPipette) ||
@@ -1543,6 +1545,71 @@ namespace PharmaLabVR.Session
                         return target.NativeInventoryId;
                 return null;
             }
+        }
+
+        // Both gestures (pipette source selection and water cleaning) must
+        // independently prove current physical ownership at the command edge.
+        // A public controller entry point may never rely only on the caller
+        // saying the tip is immersed.
+        private bool PhysicallyOwnsPipette(Transform physicalPipette)
+        {
+            if (driver == null || physicalPipette == null) return false;
+            if (driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root
+                    .GetComponentInChildren<DesktopInputAdapter>(true);
+                return desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == physicalPipette &&
+                    desktop.HasFreshPhysicalGestureSinceRestore &&
+                    desktop.HasFreshLabScreenGesture;
+            }
+            if (driver.CurrentMode == "VR")
+            {
+                var xr = driver.transform.root
+                    .GetComponentInChildren<XRInputAdapter>(true);
+                return xr != null && xr.IsPipetteDirectlyGripped(physicalPipette) &&
+                    xr.HasFreshGripSinceRestore && xr.HasFreshLabScreenGesture;
+            }
+            return false;
+        }
+
+        // Missing production route for physical first-press source switching.
+        // Re-check the *actual* immersed prefab and Native tool source before
+        // calling the existing revision-checked SwitchPipetteSource command.
+        public bool TryPhysicalSelectPipetteSource(Transform heldPipette,
+            ResearchStockAspirateTarget physicalStock)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var actualPipette = root != null ?
+                root.GetComponentInChildren<PipetteActuator>(true) : null;
+            var stockId = physicalStock != null ? physicalStock.NativeInventoryId : null;
+            var actualStock = root != null ? root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == stockId) : null;
+            var active = driver?.Session?.IsOpen == true &&
+                !driver.SourceNeedsPreparation && !driver.IsNativePaused &&
+                !driver.IsTimeHeld && router?.Current?.ScreenId == ScreenId.Lab;
+            var prepared = active && (stockId == "source" ||
+                (stockId == "reserve-stock" && driver.ReserveStockPrepared));
+            var actualPhysicalTool = heldPipette != null && actualPipette != null &&
+                actualPipette.transform == heldPipette;
+            var alreadySelected = actualPhysicalTool && physicalStock != null &&
+                physicalStock.NativeSourceMatches(driver.Session, actualPipette);
+            var immersed = actualPhysicalTool && physicalStock != null &&
+                physicalStock == actualStock && physicalStock.IsImmersed(heldPipette);
+            if (!ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                    stockId, prepared, actualPhysicalTool &&
+                    PhysicallyOwnsPipette(heldPipette), active, immersed,
+                    alreadySelected))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Source switch refused: directly hold the pipette, " +
+                    "immerse its tip in a different prepared Native stock, then " +
+                    "press once. Release stale gestures after Native restoration.";
+                return false;
+            }
+            return stockId == "source" ?
+                TryPipetteSwitchPrimary() : TryPipetteSwitchReserve();
         }
 
         public bool TryPipetteSwitchPrimary() => TryResearchCommand("Pipette switch to source",

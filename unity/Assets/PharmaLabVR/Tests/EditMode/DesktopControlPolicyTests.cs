@@ -62,6 +62,27 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_PipettePhysicalSourceSelectionRequiresRealImmersionAndFreshOwnership()
+        {
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, false), Is.True);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "reserve-stock", true, true, true, true, false), Is.True);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "rinse-water", true, true, true, true, false), Is.False);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "reserve-stock", false, true, true, true, false), Is.False);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, false, true, true, false), Is.False);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, false, true, false), Is.False);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, false, false), Is.False);
+            Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, true), Is.False);
+        }
+
+        [Test]
         public void M3_PhysicalSecondReceiverContactRecordsOnlyValidCurrentNativePH()
         {
             Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(

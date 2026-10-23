@@ -1262,6 +1262,21 @@ internal static class Program
               noteXrSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal),
             "Desktop/XR must use fresh physical receiver gestures for the real Notebook command.");
 
+        // The same live physical grip authority must also guard an
+        // otherwise geometrically valid Native pipette rinse.
+        var physicalRinseSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var physicalSessionRinseBodyStart = physicalRinseSessionSource.IndexOf(
+            "public bool TryPhysicalRinsePipette(", StringComparison.Ordinal);
+        var physicalSessionRinseBodyEnd = physicalRinseSessionSource.IndexOf(
+            "public bool TryPipetteWaterRinse()", StringComparison.Ordinal);
+        Check(physicalSessionRinseBodyStart >= 0 &&
+              physicalSessionRinseBodyEnd > physicalSessionRinseBodyStart &&
+              physicalRinseSessionSource.Substring(physicalSessionRinseBodyStart,
+                physicalSessionRinseBodyEnd - physicalSessionRinseBodyStart)
+                .Contains("!PhysicallyOwnsPipette(physicalPipette)", StringComparison.Ordinal),
+            "A public rinse endpoint must not consume Native water without physical pipette ownership.");
+
         // M2 source-only physical pipette selection is invoked from both
         // Desktop/XR adapters. The public SessionController must really
         // define it (not just a stub) and validate physical ownership again.
