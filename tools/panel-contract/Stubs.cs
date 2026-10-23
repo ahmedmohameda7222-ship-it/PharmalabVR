@@ -254,6 +254,10 @@ namespace PharmaLabVR.Session
         public bool CanLoadSelectedLocalNativeSave => NativeSelectedLoadPermitted;
         public string ActiveLocalSessionName => "active-study";
         public string SelectedLocalNativeSaveName => "old-study";
+        // Presentation contract stubs only, never synthetic Native evidence.
+        public string SelectedLocalNativeSavePreview =>
+            "Recorded-only saved file preview (headless stub).";
+        public string ComparisonBaselineName => "old-study";
         public int LocalNativeChooseCalls { get; private set; }
         public int LocalNativeLoadCalls { get; private set; }
         public bool ChooseNextLocalNativeSave()
