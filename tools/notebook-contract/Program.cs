@@ -488,12 +488,16 @@ internal static class Program
                 "Two authentic supported Native observations did not compare correctly.");
             var exportedComparison = RecordedRunComparisonCsv.RenderCsv(compared);
             var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(comparisonColumns.Length == 16 &&
+            Require(comparisonColumns.Length == 20 &&
                 comparisonColumns[1] == "recorded-only-not-attested" &&
-                comparisonColumns[11] == "7.1" &&
-                comparisonColumns[12] == "6.7" &&
-                comparisonColumns[13] == "true" &&
-                double.TryParse(comparisonColumns[14],
+                comparisonColumns[6] == "IPhreeqc-research" &&
+                comparisonColumns[7] == "minteq-test" &&
+                comparisonColumns[8] == "IPhreeqc-research" &&
+                comparisonColumns[9] == "minteq-test" &&
+                comparisonColumns[15] == "7.1" &&
+                comparisonColumns[16] == "6.7" &&
+                comparisonColumns[17] == "true" &&
+                double.TryParse(comparisonColumns[18],
                     System.Globalization.NumberStyles.Float,
                     System.Globalization.CultureInfo.InvariantCulture,
                     out var delta) && Math.Abs(delta + 0.4) < 1e-10,
@@ -525,9 +529,9 @@ internal static class Program
                 "Stale recorded Native pH was turned into an invented comparison delta.");
             var staleComparisonColumns = RecordedRunComparisonCsv.RenderCsv(staleComparison)
                 .TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(staleComparisonColumns[12] == "" &&
-                staleComparisonColumns[13] == "false" &&
-                staleComparisonColumns[14] == "",
+            Require(staleComparisonColumns[16] == "" &&
+                staleComparisonColumns[17] == "false" &&
+                staleComparisonColumns[18] == "",
                 "Stale Native observations became numeric recorded CSV evidence.");
             candidateRun["observations"][0]["freshness"] = "Current";
             candidateRun["scientificPackage"]["identity"] = "different-model-database";
@@ -538,11 +542,27 @@ internal static class Program
                 "Different scientific packages generated an unverified cross-model delta.");
             var incompatibleCsvFields = RecordedRunComparisonCsv.RenderCsv(differentPackage)
                 .TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(incompatibleCsvFields[11] == "7.1" &&
-                incompatibleCsvFields[12] == "6.7" &&
-                incompatibleCsvFields[13] == "false" &&
-                incompatibleCsvFields[14] == "",
+            Require(incompatibleCsvFields[15] == "7.1" &&
+                incompatibleCsvFields[16] == "6.7" &&
+                incompatibleCsvFields[17] == "false" &&
+                incompatibleCsvFields[18] == "",
                 "Scientific package mismatch exported an invented numeric pH delta.");
+            // A matching package alone is insufficient: the recorded Native
+            // provider model and database must also agree before ΔpH.
+            var alteredProvider = System.Text.Json.Nodes.JsonNode.Parse(
+                sourceRun.ToJsonString());
+            alteredProvider["branchId"] = "provider-change";
+            alteredProvider["commandReceipts"] = null;
+            alteredProvider["observations"][0]["modelId"] = "another-provider";
+            var providerDifferent = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(alteredProvider.ToJsonString()));
+            var providerFields = RecordedRunComparisonCsv.RenderCsv(providerDifferent)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(providerFields[6] == "IPhreeqc-research" &&
+                providerFields[8] == "another-provider" &&
+                providerFields[17] == "false" &&
+                providerFields[18] == "",
+                "Provider mismatch exported an unsupported numeric comparison delta.");
             // Confirmed backup-only recorded comparison must remain usable when
             // the primary checkpoint is malformed, and fail closed otherwise.
             var comparisonFile = Path.Combine(root, "compare.plv.json");

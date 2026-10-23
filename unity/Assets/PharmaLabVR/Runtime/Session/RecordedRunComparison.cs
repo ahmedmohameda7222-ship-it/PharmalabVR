@@ -50,6 +50,10 @@ namespace PharmaLabVR.Session
             public bool CandidateRawAvailable { get; }
             public double BaselineRawPH { get; }
             public double CandidateRawPH { get; }
+            public string BaselineProviderModelId { get; }
+            public string BaselineDatabaseIdentity { get; }
+            public string CandidateProviderModelId { get; }
+            public string CandidateDatabaseIdentity { get; }
 
             internal ComparisonRow(string vessel, string observable,
                 RecordedSessionReview baselineRun, RecordedSessionReview candidateRun,
@@ -64,6 +68,10 @@ namespace PharmaLabVR.Session
                 CandidateRawAvailable = CandidateStatus == "Current" && b != null;
                 BaselineRawPH = BaselineRawAvailable ? a.value : 0.0;
                 CandidateRawPH = CandidateRawAvailable ? b.value : 0.0;
+                BaselineProviderModelId = a?.modelId ?? string.Empty;
+                BaselineDatabaseIdentity = a?.databaseIdentity ?? string.Empty;
+                CandidateProviderModelId = b?.modelId ?? string.Empty;
+                CandidateDatabaseIdentity = b?.databaseIdentity ?? string.Empty;
                 BaselineDisplay = BaselineStatus == "Current" ? a.DisplayValue : "--";
                 CandidateDisplay = CandidateStatus == "Current" ? b.DisplayValue : "--";
                 bool samePackage =
@@ -176,7 +184,9 @@ namespace PharmaLabVR.Session
                 throw new InvalidDataException("Recorded comparison exceeds two Native vessel collections.");
             var output = new StringBuilder();
             output.Append("schemaVersion,recordKind,baselineBranchId,candidateBranchId,");
-            output.Append("baselineModelIdentity,candidateModelIdentity,vesselId,observableId,");
+            output.Append("baselineModelIdentity,candidateModelIdentity,");
+            output.Append("baselineProviderModelId,baselineDatabaseIdentity,");
+            output.Append("candidateProviderModelId,candidateDatabaseIdentity,vesselId,observableId,");
             output.Append("unit,baselineStatus,candidateStatus,baselineRawPH,candidateRawPH,");
             output.Append("deltaAvailable,deltaPH,deltaReason\n");
             foreach (var row in recorded.Rows)
@@ -184,6 +194,8 @@ namespace PharmaLabVR.Session
                 AppendRow(output, "1", "recorded-only-not-attested",
                     recorded.BaselineBranchId, recorded.CandidateBranchId,
                     recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
+                    row.BaselineProviderModelId, row.BaselineDatabaseIdentity,
+                    row.CandidateProviderModelId, row.CandidateDatabaseIdentity,
                     row.VesselId, row.ObservableId, "pH",
                     row.BaselineStatus, row.CandidateStatus,
                     row.BaselineRawAvailable ?
@@ -237,14 +249,14 @@ namespace PharmaLabVR.Session
 
         private static void AppendRow(StringBuilder output, params string[] columns)
         {
-            if (columns.Length != 16)
+            if (columns.Length != 20)
                 throw new InvalidOperationException("Recorded comparison CSV column count changed.");
             for (var index = 0; index < columns.Length; index++)
             {
                 if (index > 0) output.Append(',');
                 // Only finite C# double values emitted using invariant
                 // round-trip format can bypass spreadsheet text escaping.
-                output.Append(index == 11 || index == 12 || index == 14 ?
+                output.Append(index == 15 || index == 16 || index == 18 ?
                     columns[index] ?? string.Empty : EscapeText(columns[index]));
             }
             output.Append('\n');
