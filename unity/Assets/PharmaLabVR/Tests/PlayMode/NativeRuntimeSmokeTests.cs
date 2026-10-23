@@ -201,6 +201,18 @@ namespace PharmaLabVR.Tests.PlayMode
                     "Browsing saved runs cannot change Native chemistry.");
                 Assert.That(session.ComparisonBaselineName, Is.EqualTo(first));
                 Assert.That(panel.Request(PanelAction.Review), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.ChooseLocalSave), Is.True,
+                    "Recorded Review should let the student browse previous Native runs.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(panel.Request(PanelAction.LoadSelectedSave), Is.False,
+                    "Recorded Review may inspect previous saves but may never import them.");
+                for (var i = 0; i < 64 &&
+                     session.SelectedLocalNativeSaveName != first; ++i)
+                    Assert.That(panel.Request(PanelAction.ChooseLocalSave),
+                        Is.True, session.LastError);
+                Assert.That(session.ComparisonBaselineName, Is.EqualTo(first));
+                Assert.That(driver.Session, Is.SameAs(laterNative));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
                 Assert.That(panel.Request(PanelAction.CompareSaved), Is.True, session.LastError);
                 Assert.That(session.CurrentComparison, Is.Not.Null);
                 Assert.That(session.ComparisonSummary,

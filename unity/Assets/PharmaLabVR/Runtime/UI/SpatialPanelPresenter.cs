@@ -164,6 +164,8 @@ namespace PharmaLabVR.UI
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
+            AddInstrumentButton("Choose comparison run", -250f,
+                () => panels?.Request(PanelAction.ChooseLocalSave));
             AddButton("Preview portable archive", 30f, PanelAction.PreviewPortableArchive);
             AddButton("Choose local archive", -26f, PanelAction.ChoosePortableArchive);
             AddButton("Compare saved", -194f, PanelAction.CompareSaved);
@@ -600,6 +602,25 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
+            // These peer buttons share an XR ray row only after narrowing
+            // both hit surfaces and labels; no invisible CSV/chooser overlap.
+            var canChooseComparison = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("ChooseLocalSave") &&
+                panels?.CanChooseLocalNativeSave == true;
+            SetButton("Choose comparison run", canChooseComparison);
+            var csv = buttons["Export results CSV"].GetComponent<RectTransform>();
+            csv.sizeDelta = new Vector2(canChooseComparison ? 176f : 368f, 46f);
+            csv.anchoredPosition = new Vector2(canChooseComparison ? -94f : 0f, -250f);
+            var csvLabel = buttons["Export results CSV"].GetComponentInChildren<Text>(true);
+            csvLabel.text = canChooseComparison ? "Export CSV" : "Export results CSV";
+            csvLabel.rectTransform.sizeDelta = new Vector2(
+                canChooseComparison ? 164f : 368f, 35f);
+            var chooser = buttons["Choose comparison run"].GetComponent<RectTransform>();
+            chooser.sizeDelta = new Vector2(176f, 46f);
+            chooser.anchoredPosition = new Vector2(94f, -250f);
+            var chooserLabel = buttons["Choose comparison run"].GetComponentInChildren<Text>(true);
+            chooserLabel.text = "Pick saved run";
+            chooserLabel.rectTransform.sizeDelta = new Vector2(164f, 35f);
             SetButton("Preview portable archive", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("PreviewPortableArchive") &&
                 panels != null && panels.CanPreviewLocalPortableArchive);
@@ -841,6 +862,8 @@ namespace PharmaLabVR.UI
                 "\n" + latest + "\n" +
                 "Recorded comparison baseline: " + (panels?.ComparisonBaselineName ?? "none") +
                 " (selected or active local Native save)\n" +
+                (panels?.SelectedLocalNativeSavePreview ??
+                    "Choose a local Native save for recorded comparison.") + "\n" +
                 (panels?.LearningReviewCompact ?? "Local student notebook unavailable.") +
                 (panels?.SelectedArchiveFileName != null ?
                     "\nSelected local .plvpack: " + panels.SelectedArchiveFileName : "") +

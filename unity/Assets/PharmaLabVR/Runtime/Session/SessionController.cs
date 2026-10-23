@@ -910,8 +910,10 @@ namespace PharmaLabVR.Session
             get
             {
                 var screen = router?.Current?.ScreenId;
-                if ((screen != ScreenId.Pause && screen != ScreenId.Hold) ||
-                    driver?.Session == null || !driver.Session.IsOpen)
+                if ((screen != ScreenId.Pause && screen != ScreenId.Hold &&
+                     screen != ScreenId.Review) ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    (screen == ScreenId.Review && driver.IsTimeHeld))
                     return false;
                 try { return AvailableLocalNativeSaves().Count > 0; }
                 catch (IOException) { return false; }
@@ -923,7 +925,10 @@ namespace PharmaLabVR.Session
         {
             get
             {
-                if (!CanChooseLocalNativeSave ||
+                // Browsing in recorded Review never grants live Native import.
+                var screen = router?.Current?.ScreenId;
+                if ((screen != ScreenId.Pause && screen != ScreenId.Hold) ||
+                    !CanChooseLocalNativeSave ||
                     (driver.CurrentMode == "VR" && !CanReleaseTool) ||
                     (driver.CurrentMode != "VR" && driver.CurrentMode != "Desktop") ||
                     !OfflineArchivePicker.ValidNativeSaveName(selectedLocalNativeSaveName))
@@ -994,7 +999,7 @@ namespace PharmaLabVR.Session
             {
                 if (!CanChooseLocalNativeSave)
                     throw new InvalidOperationException(
-                        "Choose local Native saves only while paused or SessionLoad-held.");
+                        "Choose local Native saves in Pause/Hold or read-only Review.");
                 var names = AvailableLocalNativeSaves();
                 if (names.Count == 0)
                     throw new InvalidDataException("There are no local Native saves to select.");
@@ -1319,6 +1324,12 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;
+                GUI.enabled = comparisonEnabled && CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose next saved Native comparison baseline",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = comparisonEnabled;
+                GUILayout.Label(SelectedLocalNativeSavePreview);
                 GUI.enabled = comparisonEnabled && CanCompareSaved;
                 GUILayout.Label("Recorded comparison baseline: " + ComparisonBaselineName +
                     " (selected local save, or current saved checkpoint).");

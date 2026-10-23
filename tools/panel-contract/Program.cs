@@ -1730,6 +1730,15 @@ internal static class Program
               xrRecoverySource.Contains("panels?.ComparisonBaselineName"),
             "Selected saved-file comparison is not wired through real Desktop/XR Review.");
 
+        // Native comparison selection in Review is read-only, with two
+        // disjoint XR ray-hit regions for CSV vs saved-baseline selection.
+        Check(previewSource.Contains("screen != ScreenId.Pause && screen != ScreenId.Hold)") &&
+              previewSource.Contains("Browsing in recorded Review never grants live Native import.") &&
+              xrRecoverySource.Contains("AddInstrumentButton(\"Choose comparison run\"") &&
+              xrRecoverySource.Contains("canChooseComparison ? 176f : 368f") &&
+              xrRecoverySource.Contains("chooser.anchoredPosition = new Vector2(94f, -250f)"),
+            "Review baseline chooser or non-overlapping XR hit admission lost.");
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.
@@ -2686,6 +2695,14 @@ internal static class Program
             Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
             Check(router.Current.SupportedActions.Contains("CompareSaved"),
                 "Review cannot explicitly compare with a recorded saved checkpoint.");
+            Check(router.Current.SupportedActions.Contains("ChooseLocalSave") &&
+                  panels.Request(PanelAction.ChooseLocalSave) &&
+                  session.LocalNativeChooseCalls == 2 &&
+                  !router.Current.SupportedActions.Contains("LoadSelectedSave") &&
+                  !panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 1 &&
+                  driver.IsNativePaused,
+                "Review selected a recorded baseline by importing or unpausing Native.");
             Check(panels.Request(PanelAction.CompareSaved),
                 "Compare action did not use session-owned recorded source data.");
             Check(router.Current.ScreenId == ScreenId.Compare &&
