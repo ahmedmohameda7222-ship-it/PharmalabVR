@@ -2,7 +2,7 @@ namespace PharmaLabVR.Input
 {
     // Grants only a *request* for a Native command. Actual transfer and receipt
     // come from the existing SessionController/IPhreeqc authority.
-    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve }
+    public enum ResearchAuxiliaryDeliveryIntent { None, BottlePour, PipetteDispense, PipetteAspirate, BurettePrime, PipetteSelectPrimary, PipetteSelectReserve, BottleRefillFromReserve }
 
     // The visible bottle must represent the actual selected Native source.
     // Only the Native tool's currently assigned source (not the prefab default)

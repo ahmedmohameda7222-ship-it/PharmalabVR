@@ -65,4 +65,23 @@ namespace PharmaLabVR.Input
             !double.IsNaN(value) && !double.IsInfinity(value);
     }
 
+    // Only geometrical admission. The real reserve/source transfer still
+    // needs an accepted Native revision-checked inventory command.
+    public static class ResearchReserveBottleRefillAdmission
+    {
+        public static bool MayRefill(double sourceUpright,
+            double reserveOutletDown, double heightAboveSourceMouth,
+            double lateralSquared, double sourceMouthRadius,
+            double sourceSpeed, bool nativeReservePrepared)
+        {
+            return nativeReservePrepared &&
+                ResearchBuretteInletAdmission.MayPrime(sourceUpright,
+                    reserveOutletDown, heightAboveSourceMouth, lateralSquared,
+                    sourceMouthRadius, true, true) &&
+                !double.IsNaN(sourceSpeed) && !double.IsInfinity(sourceSpeed) &&
+                sourceSpeed >= 0 && sourceSpeed <=
+                    CaptureAdmission.MaximumReceiverSpeedMetresPerSecond;
+        }
+    }
+
 }

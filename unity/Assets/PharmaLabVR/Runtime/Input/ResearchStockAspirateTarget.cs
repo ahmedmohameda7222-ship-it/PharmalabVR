@@ -66,6 +66,33 @@ namespace PharmaLabVR.Input
                 transform.position.x, transform.position.y, transform.position.z);
         }
 
+        // This source mouth is a separate receiving station for an actual
+        // inverted reserve bottle. It never authorizes a pipette aspiration.
+        public bool AdmitsReservePour(Transform reserveBottle, bool nativeReservePrepared)
+        {
+            if (!isActiveAndEnabled || NativeInventoryId != "source" ||
+                reserveBottle == null || !reserveBottle.gameObject.activeInHierarchy)
+                return false;
+            var reserveTarget = reserveBottle.GetComponent<ResearchStockAspirateTarget>();
+            if (reserveTarget == null || reserveTarget.NativeInventoryId != "reserve-stock")
+                return false;
+            var outlet = reserveBottle.Find("OutletExit");
+            var mouth = transform.Find("OutletExit");
+            if (outlet == null || mouth == null) return false;
+            var up = transform.up;
+            var delta = outlet.position - mouth.position;
+            var height = Vector3.Dot(delta, up);
+            var lateral = delta - up * height;
+            var speed = bottleMotion.Observe(Time.frameCount,
+                Time.realtimeSinceStartupAsDouble,
+                transform.position.x, transform.position.y, transform.position.z);
+            return ResearchReserveBottleRefillAdmission.MayRefill(
+                Vector3.Dot(up, Vector3.up),
+                Vector3.Dot(outlet.TransformDirection(Vector3.down), -up),
+                height, lateral.sqrMagnitude, mouthRadiusMetres, speed,
+                nativeReservePrepared);
+        }
+
         public bool IsImmersed(Transform pipette)
         {
             if (!isActiveAndEnabled || pipette == null || !pipette.gameObject.activeInHierarchy)

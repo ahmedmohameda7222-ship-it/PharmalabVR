@@ -102,6 +102,15 @@ namespace PharmaLabVR.Input
             var ready = IsOperatingLabScreen() && coreDriver != null &&
                 coreDriver.Session != null && !coreDriver.SourceNeedsPreparation &&
                 !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused;
+            if (physicalId == "research-reserve-stock-bottle-visual")
+            {
+                var refill = !receiver && StockAspirateTarget != null &&
+                    StockAspirateTarget.AdmitsReservePour(physicalTool,
+                        coreDriver.ReserveStockPrepared);
+                return ready && refill ?
+                    ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve :
+                    ResearchAuxiliaryDeliveryIntent.None;
+            }
             var select = ResearchPhysicalSourceSelection.Resolve(
                 physicalId, true, true, receiver,
                 primaryImmersed, reserveImmersed, primary, reserve, ready);
@@ -489,7 +498,10 @@ namespace PharmaLabVR.Input
                     reserveStockAspirateTarget : null;
             var accepted = selectedStock != null ?
                 session != null && session.TryPhysicalSelectPipetteSource(
-                    heldTool, selectedStock) :
+                    heldTool, selectedStock) : 
+                intent == ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve ?
+                    session != null && session.TryPhysicalRefillSourceFromReserve(
+                        heldTool, StockAspirateTarget) :
                 intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
                     session != null && session.TryPhysicalFillBuretteFromBottle(
                         heldTool, registeredTool != null ?

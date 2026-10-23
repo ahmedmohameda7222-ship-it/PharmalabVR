@@ -103,6 +103,15 @@ namespace PharmaLabVR.Input
             var ready = IsOperatingLabScreen() && coreDriver != null &&
                 coreDriver.Session != null && !coreDriver.SourceNeedsPreparation &&
                 !coreDriver.IsNativePaused && !coreDriver.IsTimeHeld;
+            if (id == "research-reserve-stock-bottle-visual")
+            {
+                var refill = !receiver && StockAspirateTarget != null &&
+                    StockAspirateTarget.AdmitsReservePour(physicalTool,
+                        coreDriver.ReserveStockPrepared);
+                return ready && refill ?
+                    ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve :
+                    ResearchAuxiliaryDeliveryIntent.None;
+            }
             var select = ResearchPhysicalSourceSelection.Resolve(
                 id, true, true, receiver,
                 primaryImmersed, reserveImmersed, primary, reserve, ready);
@@ -241,7 +250,8 @@ namespace PharmaLabVR.Input
             }
             foreach (var item in new[] {
                 (grip: researchPipetteGrab, id: "research-pipette-visual"),
-                (grip: researchBottleGrab, id: "research-stock-bottle-visual")
+                (grip: researchBottleGrab, id: "research-stock-bottle-visual"),
+                (grip: reserveStockGrip, id: "research-reserve-stock-bottle-visual")
             })
             {
                 if (item.grip == null || !item.grip.isSelected ||
@@ -369,7 +379,8 @@ namespace PharmaLabVR.Input
             var pendingId = deliveryPress.PendingToolId;
             if (pendingId == null) return;
             var grip = pendingId == "research-pipette-visual" ? researchPipetteGrab :
-                pendingId == "research-stock-bottle-visual" ? researchBottleGrab : null;
+                pendingId == "research-stock-bottle-visual" ? researchBottleGrab :
+                pendingId == "research-reserve-stock-bottle-visual" ? reserveStockGrip : null;
             if (grip == null || !grip.isSelected ||
                 grip.firstInteractorSelecting is not XRDirectInteractor)
             {
@@ -408,7 +419,10 @@ namespace PharmaLabVR.Input
                     reserveStockAspirateTarget : null;
             var accepted = selectedStock != null ?
                 session != null && session.TryPhysicalSelectPipetteSource(
-                    grip.transform, selectedStock) :
+                    grip.transform, selectedStock) : 
+                intent == ResearchAuxiliaryDeliveryIntent.BottleRefillFromReserve ?
+                    session != null && session.TryPhysicalRefillSourceFromReserve(
+                        grip.transform, StockAspirateTarget) :
                 intent == ResearchAuxiliaryDeliveryIntent.BurettePrime ?
                     session != null && session.TryPhysicalFillBuretteFromBottle(
                         grip.transform, registeredTool != null ?
@@ -432,6 +446,18 @@ namespace PharmaLabVR.Input
             return grip != null && grip.enabled && trigger != null &&
                 trigger.enabled && grip.ReadValue<float>() <= 0.1f &&
                 trigger.ReadValue<float>() <= 0.1f;
+        }
+
+        public bool IsReserveBottleDirectlyGripped(Transform physicalReserve)
+        {
+            if (physicalReserve == null || reserveStockGrip == null ||
+                reserveStockGrip.transform != physicalReserve ||
+                !reserveStockGrip.isSelected ||
+                reserveStockGrip.firstInteractorSelecting is not XRDirectInteractor)
+                return false;
+            var owner = OwnerForInteractor(
+                reserveStockGrip.firstInteractorSelecting.transform);
+            return Tracked(owner);
         }
 
         public bool IsPipetteDirectlyGripped(Transform physicalPipette)

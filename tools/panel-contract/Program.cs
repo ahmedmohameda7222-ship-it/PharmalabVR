@@ -1301,6 +1301,20 @@ internal static class Program
               integrationSource.Contains("router.Show(router.Current.ScreenId);"),
             "Unity product route lost physical Native burette prime or offline Pause archive chooser.");
 
+        Check(ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, .002, false) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, .2, .07, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, -.02, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .04, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, 1.0, true),
+            "Native reserve-to-source refill must require real inverted outlet over stable stock mouth.");
+
         // The source bottle can physically prime the real burette only at
         // its separate upright receiving mouth, never at the receiver or
         // via a held/undocked burette, dry stock, or an open valve.

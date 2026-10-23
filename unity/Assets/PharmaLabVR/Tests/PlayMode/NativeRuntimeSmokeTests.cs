@@ -25,6 +25,75 @@ namespace PharmaLabVR.Tests.PlayMode
     public sealed class NativeRuntimeSmokeTests
     {
         [UnityTest]
+        public IEnumerator M2_ActualReserveBottleRefillsSourceOnlyWithNativeMeasuredTransfer()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var stock = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(x => x.NativeInventoryId == "source");
+                var reserve = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(x => x.NativeInventoryId == "reserve-stock");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareReserveStock,
+                    "acetic-acid", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                var hold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(hold, Is.Not.Null);
+                hold.Invoke(desktop, new object[] { reserve.transform });
+                var sourceBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3;
+                var reserveBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3;
+                var eventBefore = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.False, "Unaligned physical reserve bottle cannot refill Native source.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventBefore));
+                reserve.transform.rotation = Quaternion.Euler(180f, 0f, 0f);
+                var outlet = reserve.transform.Find("OutletExit");
+                var mouth = stock.transform.Find("OutletExit");
+                Assert.That(outlet, Is.Not.Null);
+                Assert.That(mouth, Is.Not.Null);
+                reserve.transform.position +=
+                    mouth.position + stock.transform.up * .07f - outlet.position;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.True);
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3,
+                    Is.EqualTo(sourceBefore + 1e-8).Within(1e-11));
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3,
+                    Is.EqualTo(reserveBefore - 1e-8).Within(1e-11));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(eventBefore));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
         public IEnumerator M3_SessionLoadNeverChoosesContradictoryLearnerPrediction()
         {
 #if UNITY_EDITOR

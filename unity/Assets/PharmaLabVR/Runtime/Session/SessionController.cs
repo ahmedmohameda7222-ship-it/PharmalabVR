@@ -1521,6 +1521,49 @@ namespace PharmaLabVR.Session
             () => ResearchPipette.SwitchPreparedSource("source"));
         public bool TryPipetteSwitchReserve() => TryResearchCommand("Pipette switch to reserve",
             () => ResearchPipette.SwitchPreparedSource("reserve-stock"));
+        // Explicit reserve-bottle gesture routed to the existing Native
+        // measured refill. The geometry is re-evaluated at the command edge
+        // and no presenter ever creates material in the source bottle.
+        public bool TryPhysicalRefillSourceFromReserve(Transform heldReserveBottle,
+            ResearchStockAspirateTarget physicalSource)
+        {
+            var actualReserve = driver != null ? driver.transform.root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == "reserve-stock") : null;
+            var actualSource = driver != null ? driver.transform.root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == "source") : null;
+            var owned = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root.GetComponentInChildren<DesktopInputAdapter>(true);
+                owned = desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == heldReserveBottle &&
+                    desktop.HasFreshPhysicalGestureSinceRestore;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var xr = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+                owned = xr != null && xr.HasFreshGripSinceRestore &&
+                    xr.IsReserveBottleDirectlyGripped(heldReserveBottle);
+            }
+            if (router?.Current?.ScreenId != ScreenId.Lab ||
+                driver?.Session == null || !driver.Session.IsOpen ||
+                driver.IsNativePaused || driver.IsTimeHeld ||
+                driver.SourceNeedsPreparation || !driver.ReserveStockPrepared ||
+                !owned || heldReserveBottle == null ||
+                actualReserve == null || actualReserve.transform != heldReserveBottle ||
+                physicalSource == null || physicalSource != actualSource ||
+                !physicalSource.AdmitsReservePour(heldReserveBottle, true))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Refill refused: grip the prepared reserve bottle and hold " +
+                    "its inverted outlet over the upright, stationary source mouth.";
+                return false;
+            }
+            return TryBottleRefillFromReserve();
+        }
+
         public bool TryBottleRefillFromReserve() => TryResearchCommand("Bottle refill 0.01 ml",
             () => ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
 
