@@ -6,6 +6,13 @@ using System.Text;
 
 namespace PharmaLabVR.Session
 {
+    public enum RecordedNotebookScope { Unavailable, Live, RecordedOnly }
+
+    // A confirmed saved Native Review takes precedence over the current live
+    // branch, even when a replayed/foreign Native session shares its string ID.
+    // No recorded-only content may be used for live solver admission.
+    // The caller must establish recordedOnlyValidated from the exact saved
+    // review reference returned by OpenRecoverable.
     // Durable learner annotations are separate from authoritative Native chemistry.
     public static class ResearchLearningReview
     {
@@ -41,7 +48,20 @@ namespace PharmaLabVR.Session
             }
         }
 
-        // Only the caller holding a validated RecordedSessionReview may use
+        public static RecordedNotebookScope SelectNotebookScope(
+            string recordedBranchId, string activeBranchId, bool liveNativeOpen,
+            bool recordedOnlyValidated)
+        {
+            if (string.IsNullOrWhiteSpace(recordedBranchId))
+                return RecordedNotebookScope.Unavailable;
+            if (recordedOnlyValidated)
+                return RecordedNotebookScope.RecordedOnly;
+            return liveNativeOpen &&
+                string.Equals(recordedBranchId, activeBranchId, StringComparison.Ordinal) ?
+                RecordedNotebookScope.Live : RecordedNotebookScope.Unavailable;
+        }
+
+                // Only the caller holding a validated RecordedSessionReview may use
         // this when live Native import failed for an unavailable scientific
         // model. A sidecar from another saved session is never acceptable,
         // and the result is explicitly learner annotation, not Native proof.
@@ -84,7 +104,7 @@ namespace PharmaLabVR.Session
             }
         }
 
-                // Live Notebook must distinguish genuinely absent observations from
+        // Live Notebook must distinguish genuinely absent observations from
         // an unreadable checksum-protected journal. Both its latest entry
         // and pH history are scoped to the current Native event ceiling.
         public static string ReadActiveNotebookSummary(NotebookService journal,

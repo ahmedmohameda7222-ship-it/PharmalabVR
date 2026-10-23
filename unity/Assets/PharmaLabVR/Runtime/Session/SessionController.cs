@@ -462,18 +462,26 @@ namespace PharmaLabVR.Session
             if (recorded == null) return "Recorded study review unavailable.";
             if (!ReferenceEquals(recorded, cachedLearningReviewSource))
             {
-                // A recoverable saved branch never borrows the live branch's notes.
-                if (driver?.Session == null || !driver.Session.IsOpen ||
-                    recorded.BranchId != driver.Session.BranchId)
+                // The explicit model-unavailable saved Native source must
+                // win even if its branch string equals the active Native branch.
+                // An unconfirmed saved source may never claim either journal.
+                var scope = ResearchLearningReview.SelectNotebookScope(
+                    recorded.BranchId, driver?.Session?.BranchId,
+                    driver?.Session?.IsOpen == true,
+                    ReferenceEquals(recorded, recordedOnlyReviewSource) &&
+                    !string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath));
+                if (scope == RecordedNotebookScope.RecordedOnly)
                 {
-                    // A model mismatch can still yield a recorded-only,
-                    // validated saved Native review, with its exact sidecar
-                    // annotations shown as *unverified learner notes*.
-                    // This must not read the active session's journal.
                     cachedLearningReviewFull =
                         ReadRecordedOnlySavedAnnotations(recorded, false);
                     cachedLearningReviewCompact =
                         ReadRecordedOnlySavedAnnotations(recorded, true);
+                }
+                else if (scope == RecordedNotebookScope.Unavailable)
+                {
+                    cachedLearningReviewFull =
+                        "Local student notebook unavailable for this recorded branch.";
+                    cachedLearningReviewCompact = cachedLearningReviewFull;
                 }
                 else
                 {
