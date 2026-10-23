@@ -48,7 +48,24 @@ internal static class Program
             Require(File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
                     File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
                 "Paired scientific/student CSV output failed to publish both files.");
-            File.Delete(scientificCsvPath);
+            // A concurrent Desktop/Review export must not interleave
+            // scientific results from one revision with another note CSV.
+            var parallelDenied = false;
+            using (var writerLease = new FileStream(scientificCsvPath + ".pair.lock",
+                FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            {
+                try
+                {
+                    RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                        "CONCURRENT_SCIENCE", learnerCsvPath, "CONCURRENT_STUDENT");
+                }
+                catch (IOException) { parallelDenied = true; }
+                Require(parallelDenied &&
+                        File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                        File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                    "A second CSV writer bypassed the held export lease.");
+            }
+                        File.Delete(scientificCsvPath);
             File.Delete(learnerCsvPath);
             Directory.CreateDirectory(learnerCsvPath);
             pairRefused = false;
