@@ -630,7 +630,23 @@ internal static class Program
             // learner annotations from the matching offline sidecar.
             var recordedNativePath = System.IO.Path.Combine(
                 learningDirectory, "study.plv.json");
-            var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
+            Check(ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "student-branch", true, true) ==
+                    RecordedNotebookScope.RecordedOnly &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "other-live-branch", true, true) ==
+                    RecordedNotebookScope.RecordedOnly &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "student-branch", true, false) ==
+                    RecordedNotebookScope.Live &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "other-live-branch", true, false) ==
+                    RecordedNotebookScope.Unavailable &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", null, false, false) ==
+                    RecordedNotebookScope.Unavailable,
+                "A confirmed recorded-only source must win even when active and saved Native branches share an ID.");
+                        var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
                 researchNotes, recordedNativePath, learningPath,
                 "student-branch", "7", false);
             Check(recordedOnlyAtSeven.Contains("Recorded-only", StringComparison.Ordinal) &&
