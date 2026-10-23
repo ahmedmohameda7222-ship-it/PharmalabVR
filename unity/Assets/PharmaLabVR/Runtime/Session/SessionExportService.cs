@@ -231,6 +231,11 @@ namespace PharmaLabVR.Session
             RestoreVerified(pair.Scientific, scienceBackup, scienceExisted);
             RestoreVerified(pair.Learner, learnerBackup, learnerExisted);
             File.Delete(pair.Pending);
+            // An actual killed writer never runs its finally block.
+            // Only discard staging artifacts authenticated by THIS journal's
+            // validated random token, after both preimages are restored.
+            Cleanup(Artifact(pair.Scientific, record[1], ".stage"));
+            Cleanup(Artifact(pair.Learner, record[1], ".stage"));
             Cleanup(scienceBackup);
             Cleanup(learnerBackup);
             return true;
