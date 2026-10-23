@@ -116,21 +116,14 @@ namespace PharmaLabVR.Session
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
             var fullPath = Path.GetFullPath(path);
-            List<NotebookEntry> all;
-            try
-            {
-                if (!File.Exists(fullPath) && !File.Exists(fullPath + ".bak"))
-                    return Array.Empty<NotebookEntry>();
-                all = ReadStrict(fullPath);
-                if (!File.Exists(fullPath))
-                    all = ReadStrict(fullPath + ".bak");
-            }
-            catch (Exception error) when (error is InvalidDataException ||
-                                         error is IOException || error is DecoderFallbackException)
-            {
-                if (!File.Exists(fullPath + ".bak")) throw;
-                all = ReadStrict(fullPath + ".bak");
-            }
+            // A .bak is a confirmed *older* state, not proof that a damaged
+            // current journal was empty or valid. Only read it if the primary
+            // is genuinely absent (interrupted publication). When the
+            // primary exists but fails integrity, fail closed: the UI must
+            // display unavailable rather than silently present stale notes.
+            var all = File.Exists(fullPath) ? ReadStrict(fullPath) :
+                File.Exists(fullPath + ".bak") ? ReadStrict(fullPath + ".bak") :
+                new List<NotebookEntry>();
             var result = new List<NotebookEntry>();
             foreach (var item in all)
                 if (item.BranchId == branchId) result.Add(item);
