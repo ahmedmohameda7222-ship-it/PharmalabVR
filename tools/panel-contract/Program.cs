@@ -1248,7 +1248,47 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
-        // XR empty-hand fingertip/trigger can select a real receiver for its
+        // M2 physical bottle inspection: no invented pH or source switching.
+        // Two close candidates cannot be resolved by collider traversal order.
+        Check(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .025, double.PositiveInfinity, double.PositiveInfinity) == "receiver" &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .025, double.PositiveInfinity) == "source" &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .20, .025) == "reserve-stock",
+            "XR empty-hand touch must select the exact Native vessel represented by physical geometry.");
+        Check(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .025, .025, double.PositiveInfinity) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, double.NaN, .025, .025) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .20, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, false, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                false, true, true, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, false, true, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, true, .20, .025, .20) == null,
+            "Overlapping, unknown, untracked, paused, held or UI-owned XR touches must fail closed.");
+        Check(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, true, true) == "source" &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "reserve-stock", true, true, true, true) == "reserve-stock" &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "rinse-water", true, true, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, false, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", false, true, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, false, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, true, false) == null,
+            "Alt-click must inspect only a prepared real bottle, never pick or transfer on stale gestures.");
+
+                // XR empty-hand fingertip/trigger can select a real receiver for its
         // existing Native pH panel, but cannot read when a tool/GUI owns
         // the trigger, tracking is stale, or the receiver is out of touch.
         Check(ResearchXRReceiverInspectionAdmission.MayInspect(
