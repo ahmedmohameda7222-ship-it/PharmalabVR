@@ -646,6 +646,26 @@ internal static class Program
                 "student-branch", null, false, false) ==
                     RecordedNotebookScope.Unavailable,
                 "A confirmed recorded-only source must win even when active and saved Native branches share an ID.");
+                        // Saved Review may have a different filename from the currently
+            // active UI saveName. The authoritative sidecar must be resolved
+            // from the file that actually supplied RecordedSessionReview.
+            Check(ResearchLearningReview.SidecarForSavedNative(recordedNativePath) ==
+                    learningPath &&
+                  ResearchLearningReview.ReadRecordedOnlyJournal(
+                    researchNotes, recordedNativePath,
+                    ResearchLearningReview.SidecarForSavedNative(recordedNativePath),
+                    "student-branch", "7", false)
+                    .Contains("Student hypothesis", StringComparison.Ordinal),
+                "Model-unavailable Review did not resolve its annotations from the saved file.");
+            var invalidSavedReviewPathRejected = false;
+            try
+            {
+                ResearchLearningReview.SidecarForSavedNative(
+                    System.IO.Path.Combine(learningDirectory, "active-other-session.plv-notes"));
+            }
+            catch (System.IO.InvalidDataException) { invalidSavedReviewPathRejected = true; }
+            Check(invalidSavedReviewPathRejected,
+                "A non-Native filename became a recorded-only learner sidecar.");
                         var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
                 researchNotes, recordedNativePath, learningPath,
                 "student-branch", "7", false);
