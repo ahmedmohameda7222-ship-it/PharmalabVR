@@ -1248,7 +1248,31 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
-        // M2 physical bottle inspection: no invented pH or source switching.
+        // M3: a SECOND deliberate physical receiver contact on Measure must
+        // persist only the current Native observation, never replay the first
+        // Lab inspection gesture or create synthetic notebook evidence.
+        Check(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, true),
+            "A fresh physically repeated receiver gesture must offer current Native pH recording.");
+        Check(!ResearchPhysicalMeasurementRecording.CanRecord(
+                "Lab", "receiver", true, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "source", true, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", false, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, false, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, false, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, false, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, false, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, false),
+            "No stale, duplicate, source, held-hand, UI-owned, paused or first-touch pH may be recorded.");
+
+                // M2 physical bottle inspection: no invented pH or source switching.
         // Two close candidates cannot be resolved by collider traversal order.
         Check(ResearchPhysicalInspectionSelection.XrUniqueInventory(
                 true, true, true, false, .025, double.PositiveInfinity, double.PositiveInfinity) == "receiver" &&
