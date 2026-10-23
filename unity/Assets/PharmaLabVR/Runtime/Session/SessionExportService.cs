@@ -220,8 +220,13 @@ namespace PharmaLabVR.Session
                  DigestFile(learnerBackup) != record[5])))
                 throw new InvalidDataException(
                     "Paired CSV recovery snapshot is missing or altered.");
-            if (Directory.Exists(pair.Scientific) || Directory.Exists(pair.Learner))
-                throw new IOException("CSV recovery destination is a directory.");
+            // A pre-existing directory at a NEW-file destination is the
+            // expected filesystem blocker in the second-publish failure
+            // test. It is not ours to remove. Only a destination whose
+            // confirmed preimage was a FILE must be writable as a file.
+            if ((scienceExisted && Directory.Exists(pair.Scientific)) ||
+                (learnerExisted && Directory.Exists(pair.Learner)))
+                throw new IOException("An existing CSV's recovery destination is a directory.");
 
             RestoreVerified(pair.Scientific, scienceBackup, scienceExisted);
             RestoreVerified(pair.Learner, learnerBackup, learnerExisted);

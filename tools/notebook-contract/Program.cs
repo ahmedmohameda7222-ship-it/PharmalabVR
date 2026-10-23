@@ -123,9 +123,13 @@ internal static class Program
             Require(rollbackFailed && recoverySnapshots.Length == 1 &&
                     File.ReadAllText(recoverySnapshots[0]) == "CONFIRMED_SCIENCE",
                 "Failed rollback destroyed the last confirmed scientific CSV recovery copy.");
-            File.Copy(recoverySnapshots[0], scientificCsvPath, true);
-            File.Delete(recoverySnapshots[0]);
             Directory.Delete(learnerCsvPath);
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending") &&
+                    !Directory.GetFiles(pairRoot, "*.rollback").Any(),
+                "Retry after double-fault did not restore the confirmed science CSV.");
             File.WriteAllText(learnerCsvPath, "CONFIRMED_STUDENT");
                         File.Delete(scientificCsvPath);
             File.Delete(learnerCsvPath);
