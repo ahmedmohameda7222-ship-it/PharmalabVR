@@ -317,7 +317,19 @@ namespace PharmaLabVR.Session
         public bool TryBottleMeasuredPour() { MeteredCalls++; return true; }
         public bool TryFillBuretteFromBottle() { MeteredCalls++; return true; }
         public bool TryBottleWaterRinse() { MeteredCalls++; return true; }
-        public bool TryPipetteSwitchReserve() { MeteredCalls++; return true; }
+        public string ActivePipetteStockInventoryId { get; private set; } = "source";
+        public bool TryPipetteSwitchPrimary()
+        {
+            ActivePipetteStockInventoryId = "source";
+            MeteredCalls++;
+            return true;
+        }
+        public bool TryPipetteSwitchReserve()
+        {
+            ActivePipetteStockInventoryId = "reserve-stock";
+            MeteredCalls++;
+            return true;
+        }
         public bool TryBottleRefillFromReserve() { MeteredCalls++; return true; }
         public bool TryPrepareResearchReserveStock(string stockId, double concentration)
         {

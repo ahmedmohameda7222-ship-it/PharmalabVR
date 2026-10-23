@@ -404,6 +404,20 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(actions.PipetteTipVolumeM3, Is.EqualTo(beforeTip).Within(1e-12));
                 Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
                     Is.False, "Re-pressing against the already selected stock cannot switch again.");
+                // Accessibility route must allow a student to return to the
+                // original prepared Native source before aspirating, without
+                // manufacturing material or losing the tracked pipette.
+                Assert.That(actions.Request(PanelAction.PipetteSwitchPrimary),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ActivePipetteStockInventoryId, Is.EqualTo("source"));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.False);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3, Is.EqualTo(before).Within(1e-11));
+                Assert.That(actions.Request(PanelAction.PipetteSwitchReserve),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ActivePipetteStockInventoryId, Is.EqualTo("reserve-stock"));
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
                 Assert.That(actions.Request(PanelAction.PipetteAspirate),
                     Is.True, actions.LastError);
                 Assert.That(driver.CurrentLabView.Vessels.Single(v =>
