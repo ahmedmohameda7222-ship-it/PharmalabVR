@@ -1,6 +1,21 @@
 namespace PharmaLabVR.Input
 {
     public enum DesktopPointerAction { None, Valve, ToolDrag }
+    public enum DesktopReceiverAction { None, Inspect, Pick }
+
+    // Never interpret a measurement click as a receiver grab. The physical
+    // receiver must be targeted deliberately with F before any translation.
+    public static class DesktopReceiverRouting
+    {
+        public static DesktopReceiverAction Resolve(bool exactReceiver,
+            bool pointerClick, bool fPick)
+        {
+            if (!exactReceiver || pointerClick == fPick)
+                return DesktopReceiverAction.None;
+            return pointerClick ? DesktopReceiverAction.Inspect :
+                DesktopReceiverAction.Pick;
+        }
+    }
 
     // Exclusive input authority: GUI, disabled Desktop adapter and empty-hand
     // gestures must never be converted to a chemical valve or object movement.

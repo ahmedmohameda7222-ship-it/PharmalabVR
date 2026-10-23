@@ -32,6 +32,36 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_DesktopReceiverClickInspectsButFAlonePicks()
+        {
+            Assert.That(DesktopReceiverRouting.Resolve(true, true, false),
+                Is.EqualTo(DesktopReceiverAction.Inspect));
+            Assert.That(DesktopReceiverRouting.Resolve(true, false, true),
+                Is.EqualTo(DesktopReceiverAction.Pick));
+            Assert.That(DesktopReceiverRouting.Resolve(false, false, true),
+                Is.EqualTo(DesktopReceiverAction.None));
+            Assert.That(DesktopReceiverRouting.Resolve(true, true, true),
+                Is.EqualTo(DesktopReceiverAction.None));
+            Assert.That(DesktopReceiverRouting.Resolve(true, false, false),
+                Is.EqualTo(DesktopReceiverAction.None));
+        }
+
+        [Test]
+        public void M2_ReceiverFootNotCenterMustClearPhysicalBenchAtFPlace()
+        {
+            Assert.That(DesktopPlacementAdmission.CanPlaceReceiver(
+                0.045, 0.04, 1.0, true, false), Is.True);
+            Assert.That(DesktopPlacementAdmission.CanPlaceReceiver(
+                0.035, 0.04, 1.0, true, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlaceReceiver(
+                0.35, 0.04, 1.0, true, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlaceReceiver(
+                0.045, 0.04, 0.1, true, false), Is.False);
+            Assert.That(DesktopPlacementAdmission.CanPlaceReceiver(
+                0.045, double.NaN, 1.0, true, false), Is.False);
+        }
+
+        [Test]
         public void P10_01_ClickedColliderRatherThanViewCenterIsPicked()
         {
             var cameraOwner = new GameObject("ClickSelectionCamera");

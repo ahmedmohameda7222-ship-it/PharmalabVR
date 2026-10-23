@@ -564,15 +564,28 @@ namespace PharmaLabVR.Input
                 pending == "desktop-pointer-pick");
             if (!Physics.Raycast(ray, out var hit, 3f, Physics.DefaultRaycastLayers,
                     QueryTriggerInteraction.Ignore)) return;
-            var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
-            if (grabbable == null)
+            var receiver = hit.collider.GetComponentInParent<LabCaptureTarget>();
+            if (receiver != null)
             {
-                // Clicking the receiver opens its real Native observation.
-                // This cannot move material, perform a solver command or fake pH.
-                var receiver = hit.collider.GetComponentInParent<LabCaptureTarget>();
-                if (receiver != null) TryInspectReceiver(receiver);
-                return;
+                var receiverAction = DesktopReceiverRouting.Resolve(
+                    receiver == captureTarget,
+                    pending == "desktop-pointer-pick",
+                    pending == "desktop-pick-or-place");
+                if (receiverAction == DesktopReceiverAction.Inspect)
+                {
+                    // A click remains a Native observation, not a pick.
+                    TryInspectReceiver(receiver);
+                }
+                else if (receiverAction == DesktopReceiverAction.Pick &&
+                    receiver.TryGetComponent<DesktopGrabbable>(out var vesselGrip))
+                {
+                    LastPhysicalInspectionFeedback = null;
+                    BeginHold(vesselGrip.transform);
+                }
+                return; // Foreign or ambiguous capture cannot become a generic pick.
             }
+            var grabbable = hit.collider.GetComponentInParent<DesktopGrabbable>();
+            if (grabbable == null) return;
             LastPhysicalInspectionFeedback = null;
             BeginHold(grabbable.transform);
             if (IsHoldingNativeTool) heldToolId = grabbable.ToolId;
@@ -622,14 +635,36 @@ namespace PharmaLabVR.Input
             var hitsBench = nearest.collider != null &&
                 nearest.collider.name == "BenchSurface" &&
                 nearest.collider.transform.IsChildOf(labFrame);
-            var height = hitsBench ? Vector3.Dot(heldTool.position - nearest.point, up) :
+            var rootHeight = hitsBench ? Vector3.Dot(heldTool.position - nearest.point, up) :
                 double.PositiveInfinity;
             var uprightDot = Vector3.Dot(heldTool.up, up);
-            if (!DesktopPlacementAdmission.CanPlace(height, uprightDot, hitsBench, false))
-                return false;
-            // Root is a tool-foot landmark; snap only a nearby, properly
-            // aligned root to the actual collider surface, not arbitrary y.
-            heldTool.position = nearest.point + up * 0.005f;
+            var isReceiver = captureTarget != null &&
+                heldTool == captureTarget.transform;
+            var rootToBottom = 0f;
+            if (isReceiver)
+            {
+                var vesselCollider = heldTool.GetComponent<Collider>();
+                if (vesselCollider == null || !vesselCollider.enabled) return false;
+                var bounds = vesselCollider.bounds;
+                // AABB projected onto the bench normal is conservative,
+                // including slightly rotated bodies; never use the root center.
+                var halfExtent = Mathf.Abs(up.x) * bounds.extents.x +
+                    Mathf.Abs(up.y) * bounds.extents.y +
+                    Mathf.Abs(up.z) * bounds.extents.z;
+                rootToBottom = Vector3.Dot(heldTool.position - bounds.center, up) +
+                    halfExtent;
+                if (!float.IsFinite(rootToBottom) || rootToBottom <= 0f)
+                    return false;
+            }
+            var admitted = isReceiver ?
+                DesktopPlacementAdmission.CanPlaceReceiver(rootHeight,
+                    rootToBottom, uprightDot, hitsBench, false) :
+                DesktopPlacementAdmission.CanPlace(rootHeight, uprightDot,
+                    hitsBench, false);
+            if (!admitted) return false;
+            // Leave the beaker foot clear of the actual bench. Other
+            // instrument roots retain their existing authored dock landmark.
+            heldTool.position = nearest.point + up * (0.005f + rootToBottom);
             if (heldTool.TryGetComponent<Rigidbody>(out var heldBody))
                 heldBody.isKinematic = heldToolOriginalKinematic;
             heldTool = null;

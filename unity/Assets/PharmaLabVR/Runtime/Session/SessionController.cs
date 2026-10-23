@@ -1195,7 +1195,7 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
                     "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. G with pipette tip immersed downward in the open prepared-water cup rinses 0.01 ml through Native waste. " +
-                    "Click receiver = inspect current Native pH; wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
+                    "Left-click receiver = inspect current Native pH; point view center at receiver and F = pick receiver, drag/arrow reposition, F upright near bench to put its foot down. Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
                 GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");

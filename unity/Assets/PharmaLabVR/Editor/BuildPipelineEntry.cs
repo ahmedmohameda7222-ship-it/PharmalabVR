@@ -312,6 +312,10 @@ namespace PharmaLabVR.Editor
             receiverGrab.forceGravityOnDetach = false;
             var captureTarget = receiver.AddComponent<LabCaptureTarget>();
             captureTarget.Configure("receiver", 0.05f, 0.04f);
+            // F from the Desktop center ray deliberately picks the same
+            // physical receiver which XR already exposes as a grabbable.
+            // Ordinary pointer click continues to select Native pH instead.
+            receiver.AddComponent<DesktopGrabbable>().Configure("research-receiver-visual");
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
                 researchTool.transform, captureTarget, "burette-50ml-research-v1", coreDriver);
             xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,

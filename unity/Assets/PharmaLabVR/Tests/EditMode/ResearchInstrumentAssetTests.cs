@@ -66,6 +66,35 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_DesktopCanDeliberatelyRelocatePhysicalReceiverWithoutLosingXrGrip()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                var grip = receiver.GetComponent<DesktopGrabbable>();
+                Assert.That(grip, Is.Not.Null,
+                    "Desktop F must target an actual receiver, not a UI proxy.");
+                Assert.That(grip.ToolId, Is.EqualTo("research-receiver-visual"));
+                Assert.That(receiver.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+                Assert.That(receiver.GetComponent<Rigidbody>(), Is.Not.Null);
+                var collider = receiver.GetComponent<Collider>();
+                Assert.That(collider, Is.Not.Null);
+                Assert.That(collider.enabled, Is.True);
+                Assert.That(collider.bounds.extents.y, Is.GreaterThan(0f));
+                Assert.That(DesktopReceiverRouting.Resolve(true, true, false),
+                    Is.EqualTo(DesktopReceiverAction.Inspect),
+                    "A left click must remain Native measurement inspection.");
+                Assert.That(DesktopReceiverRouting.Resolve(true, false, true),
+                    Is.EqualTo(DesktopReceiverAction.Pick));
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
         public void M2_GeneratedStockBottleExposesSourceImmersionToBothPhysicalInputRoutes()
         {
             var bottle = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -142,7 +171,7 @@ namespace PharmaLabVR.Tests
                 var target = station.GetComponent<ResearchRinseWaterTarget>();
                 var tip = pipette.transform.Find("OutletExit");
                 pipette.transform.position = station.transform.Find("Opening").position -
-                    tip.localPosition + Vector3.down * 0.038f;
+                    tip.localPosition + Vector3.down * 0.042f;
                 Assert.That(target.IsImmersed(pipette.transform), Is.False,
                     "Unprepared Native water is not an authorized rinse.");
                 var visual = station.GetComponent<NativeMeteredInstrumentVisual>();
