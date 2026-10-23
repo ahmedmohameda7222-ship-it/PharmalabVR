@@ -24,6 +24,97 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Same scientific branch, separate durable local file and Notebook.
+        // The student can preserve the first confirmed checkpoint, continue
+        // the experiment in its own namespace, and choose either one later.
+        [UnityTest]
+        public IEnumerator M3_SaveAsNewLocalCopyPreservesPreviousScientificAndNotebookFiles()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var previous = "original-study-" + System.Guid.NewGuid().ToString("N");
+            string copiedName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, previous);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Confirmed first-run evidence"), Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                var oldNativePath = Path.Combine(folder, previous + ".plv.json");
+                var oldNotebookPath = Path.Combine(folder, previous + ".plv-notes");
+                var oldNativeBytes = File.ReadAllBytes(oldNativePath);
+                var oldNotebookBytes = File.ReadAllBytes(oldNotebookPath);
+                var initialEvent = driver.CurrentLabView.EventSequence;
+                var branch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                var beforeSession = driver.Session;
+                Assert.That(panels.Request(PanelAction.SaveCopy), Is.True,
+                    controller.LastError);
+                copiedName = controller.ActiveLocalSessionName;
+                Assert.That(copiedName, Is.Not.EqualTo(previous));
+                Assert.That(copiedName, Does.StartWith("study-"));
+                Assert.That(driver.Session, Is.SameAs(beforeSession),
+                    "SaveCopy cannot manufacture a Native session fork.");
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(initialEvent));
+                Assert.That(File.ReadAllBytes(oldNativePath), Is.EqualTo(oldNativeBytes));
+                Assert.That(File.ReadAllBytes(oldNotebookPath), Is.EqualTo(oldNotebookBytes));
+                Assert.That(File.Exists(Path.Combine(folder, copiedName + ".plv.json")),
+                    Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, copiedName + ".plv-notes")),
+                    Is.True);
+                Assert.That(controller.ReadNotebookEntries().Count, Is.EqualTo(1));
+                Assert.That(controller.ReadNotebookEntries()[0].Text,
+                    Is.EqualTo("Confirmed first-run evidence."));
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True,
+                    controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Only the copied experiment records this later choice."),
+                    Is.True, controller.LastError);
+                Assert.That(controller.ReadNotebookEntries().Count, Is.EqualTo(2));
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                Assert.That(File.ReadAllBytes(oldNativePath), Is.EqualTo(oldNativeBytes));
+                Assert.That(File.ReadAllBytes(oldNotebookPath), Is.EqualTo(oldNotebookBytes));
+            }
+            finally
+            {
+                foreach (var name in new[] { previous, copiedName })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var suffix in new[] {
+                        ".plv.json", ".plv.json.bak", ".plv.json.tmp",
+                        ".plv-notes", ".plv-notes.bak", ".plv-notes.lock" })
+                    {
+                        var file = Path.Combine(folder, name + suffix);
+                        if (File.Exists(file)) File.Delete(file);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Two real local saves, separate note namespaces, and a corrupt
         // selected file. Native cannot change during browse or failed import;
         // successful import must restore the chosen Notebook event ceiling.

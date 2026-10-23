@@ -240,6 +240,15 @@ namespace PharmaLabVR.Session
             return true;
         }
         public bool CanLoadSavedSession => LoadPermitted;
+        public bool SaveNewCopyPermitted { get; set; } = true;
+        public bool CanSaveNewLocalCopy => SaveNewCopyPermitted;
+        public int SaveCopyCalls { get; private set; }
+        public bool SaveAsNewLocalCopy()
+        {
+            if (!SaveNewCopyPermitted) return false;
+            SaveCopyCalls++;
+            return true;
+        }
         public bool CanChooseLocalNativeSave => true;
         public bool NativeSelectedLoadPermitted { get; set; } = true;
         public bool CanLoadSelectedLocalNativeSave => NativeSelectedLoadPermitted;

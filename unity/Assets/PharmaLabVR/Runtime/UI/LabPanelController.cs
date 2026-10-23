@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -18,6 +18,7 @@ namespace PharmaLabVR.UI
         public bool CanReleaseTool => sessions?.CanReleaseTool == true;
         public bool CanParkTool => sessions?.CanParkTool == true;
         public bool CanLoadSavedSession => sessions?.CanLoadSavedSession == true;
+        public bool CanSaveNewLocalCopy => sessions?.CanSaveNewLocalCopy == true;
         public bool CanChooseLocalNativeSave =>
             sessions?.CanChooseLocalNativeSave == true;
         public bool CanLoadSelectedLocalNativeSave =>
@@ -173,6 +174,8 @@ namespace PharmaLabVR.UI
                     return router.ReturnFromSettings();
                 case PanelAction.Save:
                     return sessions.Save();
+                case PanelAction.SaveCopy:
+                    return sessions.SaveAsNewLocalCopy();
                 case PanelAction.ExportPortable:
                     return sessions.ExportPortableSession();
                 case PanelAction.ExportCsv:

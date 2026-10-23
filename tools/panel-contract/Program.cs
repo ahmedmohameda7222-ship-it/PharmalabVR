@@ -1698,6 +1698,15 @@ internal static class Program
         }
         finally { System.IO.Directory.Delete(chooserFolder, true); }
 
+        var saveCopySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(saveCopySource.Contains("public bool SaveAsNewLocalCopy()") &&
+              saveCopySource.Contains("NotebookService.InstallPortableSnapshot(") &&
+              saveCopySource.Contains("var verifiedFreshName = false;") &&
+              saveCopySource.Contains("saveName = name;") &&
+              saveCopySource.Contains("if (verifiedFreshName)"),
+            "Local SaveCopy lost its independent source journal, guarded file namespace or no-delete-on-collision rule.");
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.
@@ -2552,6 +2561,7 @@ internal static class Program
             Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0 &&
                   !panels.Request(PanelAction.ChooseLocalSave) &&
                   !panels.Request(PanelAction.LoadSelectedSave) &&
+                  !panels.Request(PanelAction.SaveCopy) &&
                   session.LocalNativeLoadCalls == 0 &&
                   !panels.Request(PanelAction.RestorePortable) &&
                   session.PortableRestoreCalls == 0,
@@ -2572,6 +2582,17 @@ internal static class Program
             Check(panels.Request(PanelAction.LoadSelectedSave) &&
                   session.LocalNativeLoadCalls == 1 && driver.IsNativePaused,
                 "Selected Native save did not route through Pause without unpausing.");
+            Check(router.Current.SupportedActions.Contains("SaveCopy"),
+                "Pause does not expose non-overwriting Native/Notebook SaveCopy.");
+            session.SaveNewCopyPermitted = false;
+            Check(!panels.Request(PanelAction.SaveCopy) &&
+                  session.SaveCopyCalls == 0,
+                "Unavailable SaveCopy must not mutate the active study.");
+            session.SaveNewCopyPermitted = true;
+            Check(panels.Request(PanelAction.SaveCopy) &&
+                  session.SaveCopyCalls == 1 && session.SaveCalls == 0 &&
+                  driver.IsNativePaused,
+                "New local checkpoint copy was not distinct from Native Save/Continue.");
             Check(router.Current.SupportedActions.Contains("RestorePortable") &&
                   router.Current.SupportedActions.Contains("ChoosePortableArchive") &&
                   panels.Request(PanelAction.ChoosePortableArchive),

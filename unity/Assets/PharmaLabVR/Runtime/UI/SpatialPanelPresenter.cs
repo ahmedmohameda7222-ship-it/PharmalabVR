@@ -194,6 +194,8 @@ namespace PharmaLabVR.UI
                 if (panels?.Request(PanelAction.LoadSelectedSave) == true)
                     portableRecoveryPage = false;
             });
+            AddInstrumentButton("Save new local copy", -250f,
+                () => panels?.Request(PanelAction.SaveCopy));
             AddInstrumentButton("Back to pause/hold", -306f,
                 () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
@@ -616,6 +618,7 @@ namespace PharmaLabVR.UI
             SetButton("Export portable study", false);
             SetButton("Choose Native save", false);
             SetButton("Load chosen Native save", false);
+            SetButton("Save new local copy", false);
             SetButton("Back to pause/hold", false);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
@@ -774,10 +777,15 @@ namespace PharmaLabVR.UI
                 SetButton("Load chosen Native save",
                     state.SupportedActions.Contains("LoadSelectedSave") &&
                     panels != null && panels.CanLoadSelectedLocalNativeSave);
+                SetButton("Save new local copy",
+                    state.SupportedActions.Contains("SaveCopy") &&
+                    panels != null && panels.CanSaveNewLocalCopy);
                 SetButton("Back to pause/hold", true);
                 detail.text = "OFFLINE SESSION RECOVERY · NOT ATTESTED / NOT GRADED\n" +
                     "Native saves: choose an existing .plv.json session, then load it. " +
                     "Its own local Notebook is read at the restored Native event ceiling.\n" +
+                    "Save new local copy keeps the SAME Native branch but protects " +
+                    "the previous .plv.json and Notebook under a separate name.\n" +
                     "Current: " + (panels?.ActiveLocalSessionName ?? "none") +
                     " · Selected Native save: " +
                     (panels?.SelectedLocalNativeSaveName ?? "none") +

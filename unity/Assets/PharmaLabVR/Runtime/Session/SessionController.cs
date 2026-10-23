@@ -1123,6 +1123,10 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Continue", GUILayout.Height(44f))) panels?.Request(PanelAction.Continue);
                 GUI.enabled = true;
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanSaveNewLocalCopy;
+                if (GUILayout.Button("Save separate local copy (same Native branch)",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.SaveCopy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
                 GUI.enabled = CanChooseLocalNativeSave;
@@ -1158,6 +1162,10 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Session paused. Material and simulation time are frozen.");
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanSaveNewLocalCopy;
+                if (GUILayout.Button("Save separate local copy (same Native branch)",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.SaveCopy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
                 GUI.enabled = CanChooseLocalNativeSave;
@@ -2174,6 +2182,87 @@ namespace PharmaLabVR.Session
             catch (Exception exception)
             {
                 LastError = "Portable export failed: " + exception.Message;
+                return false;
+            }
+        }
+
+        public bool CanSaveNewLocalCopy
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                return (screen == ScreenId.Pause || screen == ScreenId.Hold) &&
+                    driver?.Session != null && driver.Session.IsOpen &&
+                    driver.CurrentLabView != null;
+            }
+        }
+
+        // Keep the previously confirmed Native checkpoint and learner notes
+        // untouched. A new file namespace copies the SAME Native branch and
+        // only its current-event local annotations; it is not a scientific
+        // fork, verified assessment, or regenerated chemistry.
+        public bool SaveAsNewLocalCopy()
+        {
+            string targetNotes = null;
+            string targetNative = null;
+            var verifiedFreshName = false;
+            try
+            {
+                if (!CanSaveNewLocalCopy)
+                    throw new InvalidOperationException(
+                        "Save a separate local copy only in paused or held Lab.");
+                var revision = driver.CurrentLabView.EventSequence;
+                if (revision != router.Current.NativeRevision)
+                    throw new InvalidOperationException(
+                        "Native revision changed while preparing a separate local copy.");
+                var branch = driver.Session.BranchId;
+                var journal = notebook.ExportBranch(NotebookFilePath(), branch, revision);
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                var name = "study-" + Guid.NewGuid().ToString("N");
+                targetNotes = Path.Combine(root, name + ".plv-notes");
+                targetNative = Path.Combine(root, name + ".plv.json");
+                if (File.Exists(targetNotes) || File.Exists(targetNotes + ".bak") ||
+                    File.Exists(targetNative) || File.Exists(targetNative + ".bak") ||
+                    File.Exists(targetNative + ".tmp"))
+                    throw new IOException("The new offline checkpoint name is already in use.");
+                verifiedFreshName = true;
+
+                // New Notes commit first; Native Save only becomes discoverable
+                // if both have published. A failed second write never changes
+                // the current save identity and best-effort cleans staged files.
+                NotebookService.InstallPortableSnapshot(targetNotes, journal, branch, revision);
+                var written = saves.Save(driver.Session, root, name);
+                if (!string.Equals(written, targetNative, StringComparison.Ordinal) ||
+                    driver.CurrentLabView.EventSequence != revision ||
+                    driver.Session.BranchId != branch)
+                    throw new InvalidOperationException(
+                        "Native session identity changed while saving the new copy.");
+
+                saveName = name;
+                selectedLocalNativeSaveName = name;
+                LastDurableSavePath = written;
+                LastPortableArchivePath = null;
+                LastCsvExportPath = null;
+                LastLearnerCsvExportPath = null;
+                selectedArchiveFileName = null;
+                RecordedReview = null;
+                CurrentComparison = null;
+                InvalidateLearningReview();
+                recordedCache.InvalidateComparison();
+                LastError = null;
+                router.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                if (verifiedFreshName)
+                    foreach (var file in new[] { targetNative, targetNative + ".tmp",
+                        targetNotes })
+                        if (!string.IsNullOrEmpty(file))
+                            try { if (File.Exists(file)) File.Delete(file); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                LastError = "New offline save copy refused: " + error.Message;
                 return false;
             }
         }
