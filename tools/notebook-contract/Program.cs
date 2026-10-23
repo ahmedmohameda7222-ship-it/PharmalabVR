@@ -538,6 +538,19 @@ internal static class Program
                 noObservationLines[1].Contains(",recorded-no-observations,") &&
                 noObservationLines[1].EndsWith(",student-first"),
                 "Empty comparison CSV lost Native baseline identity or invented measured results.");
+            var metadataColumns = noObservationLines[1].Split(',');
+            Require(metadataColumns.Length == 24 &&
+                metadataColumns[13] == "" &&
+                metadataColumns[14] == "" &&
+                metadataColumns[15] == "" &&
+                metadataColumns[16] == "Absent" &&
+                metadataColumns[17] == "Absent" &&
+                metadataColumns[18] == "" &&
+                metadataColumns[19] == "" &&
+                metadataColumns[20] == "false" &&
+                metadataColumns[21] == "" &&
+                metadataColumns[23] == "student-first",
+                "No-observation Native comparison metadata invented an observation, pH or delta.");
             var invalidNameRefused = false;
             try { RecordedRunComparisonCsv.RenderCsv(compared, "=HYPERLINK(1)"); }
             catch (InvalidDataException) { invalidNameRefused = true; }

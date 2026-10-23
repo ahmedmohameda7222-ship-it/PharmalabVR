@@ -223,6 +223,21 @@ namespace PharmaLabVR.Session
             output.Append("candidateProviderModelId,candidateDatabaseIdentity,vesselId,observableId,");
             output.Append("unit,baselineStatus,candidateStatus,baselineRawPH,candidateRawPH,");
             output.Append("deltaAvailable,deltaPH,deltaReason,baselineLocalSaveName\n");
+            if (recorded.Rows.Count == 0)
+            {
+                // A valid Native save may precede the first pH observation.
+                // Retain the local source and Native identities in an explicit
+                // metadata-only record, never an invented value or delta.
+                AppendRow(output, "2", "recorded-no-observations",
+                    recorded.BaselineBranchId, recorded.CandidateBranchId,
+                    recorded.BaselineEventSequence, recorded.CandidateEventSequence,
+                    recorded.LineageSummary,
+                    recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
+                    "", "", "", "", "", "", "",
+                    "Absent", "Absent", "", "", "false", "",
+                    "No recorded Native observations are available for comparison.",
+                    localName);
+            }
             foreach (var row in recorded.Rows)
             {
                 AppendRow(output, "2", "recorded-only-not-attested",
