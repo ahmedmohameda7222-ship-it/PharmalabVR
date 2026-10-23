@@ -58,14 +58,13 @@ namespace PharmaLabVR.Session
             var root = Path.Combine(Application.persistentDataPath, "sessions");
             if (!Directory.Exists(root)) return Array.Empty<string>();
             // Bounded, top-level only; never list outside the app's offline folder.
-            var candidates = Directory.EnumerateFiles(root, "*.plvpack",
-                    SearchOption.TopDirectoryOnly).Take(128).Where(file =>
-            {
-                try { return (File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0; }
-                catch (IOException) { return false; }
-                catch (UnauthorizedAccessException) { return false; }
-            });
-            return OfflineArchivePicker.Names(root, candidates, 64);
+            // New immutable student exports must remain selectable even if
+            // older research packages exceed the 64-item XR display limit.
+            // The picker validates actual files, forbids symlinks/traversal,
+            // and orders by durable local modification time, newest first.
+            return OfflineArchivePicker.NamesNewest(root,
+                Directory.EnumerateFiles(root, "*.plvpack",
+                    SearchOption.TopDirectoryOnly), 64);
         }
 
         public bool CanChooseLocalPortableArchive

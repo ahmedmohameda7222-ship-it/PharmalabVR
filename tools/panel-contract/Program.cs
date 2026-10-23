@@ -829,6 +829,31 @@ internal static class Program
         // Each student export must be an independently selectable,
         // bounded archive. Exporting new Notebook evidence at the same Native
         // material event cannot silently replace the original student pack.
+        // Newly exported evidence must remain selectable even after the
+        // app has accumulated more research bundles than its 64-card picker
+        // limit; sort by local file recency, never arbitrary directory order.
+        var recentFolder = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(), "plv-recent-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(recentFolder);
+        try
+        {
+            var oldPack = System.IO.Path.Combine(recentFolder, "older.plvpack");
+            var midPack = System.IO.Path.Combine(recentFolder, "middle.plvpack");
+            var newPack = System.IO.Path.Combine(recentFolder, "newest.plvpack");
+            foreach (var file in new[] { oldPack, midPack, newPack })
+                System.IO.File.WriteAllText(file, "test-pack");
+            var t = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+            System.IO.File.SetLastWriteTimeUtc(oldPack, t.AddMinutes(-5));
+            System.IO.File.SetLastWriteTimeUtc(midPack, t.AddMinutes(-2));
+            System.IO.File.SetLastWriteTimeUtc(newPack, t);
+            var result = OfflineArchivePicker.NamesNewest(recentFolder,
+                new[] { oldPack, newPack, midPack, oldPack,
+                    System.IO.Path.Combine(recentFolder, "..", "outside.plvpack") }, 2);
+            Check(result.Count == 2 && result[0] == "newest.plvpack" &&
+                  result[1] == "middle.plvpack",
+                "Recent exported Native/Notebook packs are hidden behind older alphabetical bundles.");
+        }
+        finally { System.IO.Directory.Delete(recentFolder, recursive: true); }
         var firstName = OfflineArchivePicker.NewStudentExportName(
             "student-research", "8", "0123456789abcdef0123456789abcdef");
         var secondName = OfflineArchivePicker.NewStudentExportName(

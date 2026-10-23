@@ -50,6 +50,47 @@ namespace PharmaLabVR.Session
         // An export is immutable learner evidence, not a mutable "latest"
         // record: new Notebook annotations at the same Native event still
         // warrant a separately selectable .plvpack. No paths from labels.
+        // Live local chooser: select most recently written immutable
+        // packages first, even when a long research session has accumulated
+        // more than the limited number of displayable archives.
+        public static IReadOnlyList<string> NamesNewest(string sessionFolder,
+            IEnumerable<string> candidatePaths, int limit = 64)
+        {
+            if (string.IsNullOrWhiteSpace(sessionFolder) ||
+                candidatePaths == null || limit < 1 || limit > 64)
+                throw new ArgumentException(
+                    "A bounded local session directory and file list are required.");
+            var directory = Path.GetFullPath(sessionFolder);
+            var comparison = Path.DirectorySeparatorChar == '\\' ?
+                StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var latest = new Dictionary<string, DateTime>(StringComparer.Ordinal);
+            foreach (var candidate in candidatePaths)
+            {
+                if (string.IsNullOrWhiteSpace(candidate)) continue;
+                try
+                {
+                    var file = Path.GetFullPath(candidate);
+                    if (!string.Equals(Path.GetDirectoryName(file),
+                            directory, comparison))
+                        continue;
+                    var name = Path.GetFileName(file);
+                    if (!SafeFileName.IsMatch(name) || !File.Exists(file) ||
+                        (File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+                        continue;
+                    var changed = File.GetLastWriteTimeUtc(file);
+                    if (!latest.TryGetValue(name, out var older) || changed > older)
+                        latest[name] = changed;
+                }
+                catch (ArgumentException) { }
+                catch (NotSupportedException) { }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+            return latest.OrderByDescending(item => item.Value)
+                .ThenBy(item => item.Key, StringComparer.Ordinal)
+                .Take(limit).Select(item => item.Key).ToArray();
+        }
+
         public static string NewStudentExportName(string label,
             string nativeEventSequence, string uniqueHex)
         {
