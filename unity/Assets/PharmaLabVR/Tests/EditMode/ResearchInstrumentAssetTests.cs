@@ -179,7 +179,10 @@ namespace PharmaLabVR.Tests
                     "{\"vessels\":[{\"id\":\"rinse-water\",\"inventory\":{\"researchAdditiveVolumeM3\":0.000001}}]}");
                 Assert.That(target.IsImmersed(pipette.transform), Is.True,
                     "Aligned pipette must reach real represented Native water.");
-                pipette.transform.position += Vector3.right * 0.1f;
+                pipette.transform.position += Vector3.right * 0.007f;
+                Assert.That(target.IsImmersed(pipette.transform), Is.False,
+                    "Inside the cup opening but outside actual Native water must be dry.");
+                pipette.transform.position += Vector3.right * 0.093f;
                 Assert.That(target.IsImmersed(pipette.transform), Is.False,
                     "A tip outside the open station must be refused.");
                 visual.ApplySnapshot("{\"vessels\":[]}");

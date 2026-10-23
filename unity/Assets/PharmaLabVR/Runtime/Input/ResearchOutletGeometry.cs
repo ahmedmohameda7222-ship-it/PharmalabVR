@@ -19,6 +19,30 @@ namespace PharmaLabVR.Input
         }
     }
 
+    // The measured 1 mL rinse-water pool can be smaller than its open
+    // container. A tip inside the cup but outside real represented water
+    // must never gain permission for a Native cleaning command.
+    public static class ResearchRinseApertureAdmission
+    {
+        public static double EffectiveRadiusMeters(double mouthRadius,
+            double meshRadialExtentX, double worldScaleX,
+            double meshRadialExtentZ, double worldScaleZ)
+        {
+            if (!Finite(mouthRadius) || !Finite(meshRadialExtentX) ||
+                !Finite(meshRadialExtentZ) || !Finite(worldScaleX) ||
+                !Finite(worldScaleZ) || mouthRadius <= 0d ||
+                meshRadialExtentX <= 0d || meshRadialExtentZ <= 0d ||
+                worldScaleX == 0d || worldScaleZ == 0d)
+                return 0d;
+            var radiusX = meshRadialExtentX * Math.Abs(worldScaleX);
+            var radiusZ = meshRadialExtentZ * Math.Abs(worldScaleZ);
+            if (!Finite(radiusX) || !Finite(radiusZ)) return 0d;
+            return Math.Min(mouthRadius, Math.Min(radiusX, radiusZ));
+        }
+
+        private static bool Finite(double x) => !double.IsNaN(x) && !double.IsInfinity(x);
+    }
+
     // Native-rendered liquid level is read by the scene target; this admission
     // only checks geometric immersion and stationary upright stock access.
     public static class ResearchSourceImmersionAdmission

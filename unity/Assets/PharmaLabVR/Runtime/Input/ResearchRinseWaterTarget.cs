@@ -34,12 +34,19 @@ namespace PharmaLabVR.Input
             var speed = motion.Observe(Time.frameCount,
                 Time.realtimeSinceStartupAsDouble,
                 transform.position.x, transform.position.y, transform.position.z);
+            // The visible cup rim is NOT the whole wetted region.
+            // Always read the radial width of the actual Native-driven fill
+            // mesh before admitting the physical cleaning gesture.
+            var effectiveRadius = ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+                openMouthRadiusMetres,
+                mesh.sharedMesh.bounds.extents.x, fill.lossyScale.x,
+                mesh.sharedMesh.bounds.extents.z, fill.lossyScale.z);
             return ResearchSourceImmersionAdmission.MayAspirate(
                 Vector3.Dot(up, Vector3.up),
                 Vector3.Dot(tip.TransformDirection(Vector3.down), -up),
                 depth, Vector3.Dot(mouth.position - surface, up),
                 Vector3.Dot(mouth.position - bottom, up),
-                lateral.sqrMagnitude, openMouthRadiusMetres, speed);
+                lateral.sqrMagnitude, effectiveRadius, speed);
         }
 
         private void OnEnable() => motion = new ReceiverMotionTracker();
