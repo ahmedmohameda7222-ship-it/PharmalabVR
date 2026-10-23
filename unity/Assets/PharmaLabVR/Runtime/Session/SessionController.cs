@@ -1235,7 +1235,14 @@ namespace PharmaLabVR.Session
                     TryBottleMeasuredPour();
                 if (driver.ReserveStockPrepared)
                 {
-                    if (GUILayout.Button("Pipette: switch to prepared reserve", GUILayout.Height(32f)))
+                    GUILayout.Label("Pipette Native source: " +
+                        (ActivePipetteStockInventoryId ?? "unavailable"));
+                    if (ActivePipetteStockInventoryId == "reserve-stock")
+                    {
+                        if (GUILayout.Button("Pipette: switch to prepared source", GUILayout.Height(32f)))
+                            TryPipetteSwitchPrimary();
+                    }
+                    else if (GUILayout.Button("Pipette: switch to prepared reserve", GUILayout.Height(32f)))
                         TryPipetteSwitchReserve();
                     if (GUILayout.Button("Bottle: refill from prepared reserve 0.01 ml", GUILayout.Height(32f)))
                         TryBottleRefillFromReserve();
@@ -1495,6 +1502,23 @@ namespace PharmaLabVR.Session
             () => ResearchPipette.Rinse(1e-8));
         public bool TryBottleWaterRinse() => TryResearchCommand("Bottle rinse 0.01 ml",
             () => ResearchBottle.Rinse(1e-8));
+        public string ActivePipetteStockInventoryId
+        {
+            get
+            {
+                if (driver?.Session == null || !driver.Session.IsOpen) return null;
+                var pipette = driver.transform.root.GetComponentInChildren<PipetteActuator>(true);
+                if (pipette == null) return null;
+                foreach (var target in driver.transform.root
+                    .GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    if (target.NativeSourceMatches(driver.Session, pipette))
+                        return target.NativeInventoryId;
+                return null;
+            }
+        }
+
+        public bool TryPipetteSwitchPrimary() => TryResearchCommand("Pipette switch to source",
+            () => ResearchPipette.SwitchPreparedSource("source"));
         public bool TryPipetteSwitchReserve() => TryResearchCommand("Pipette switch to reserve",
             () => ResearchPipette.SwitchPreparedSource("reserve-stock"));
         public bool TryBottleRefillFromReserve() => TryResearchCommand("Bottle refill 0.01 ml",

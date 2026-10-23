@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
+    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -32,6 +32,8 @@ namespace PharmaLabVR.UI
         public bool CanRestoreLocalPortableSession =>
             sessions?.CanRestoreLocalPortableSession == true;
         public string LastPortableImportSummary => sessions?.LastPortableImportSummary;
+        public bool PipetteUsingReserve =>
+            sessions?.ActivePipetteStockInventoryId == "reserve-stock";
         public string LastPortableArchiveFileName =>
             string.IsNullOrEmpty(sessions?.LastPortableArchivePath) ? null :
             System.IO.Path.GetFileName(sessions.LastPortableArchivePath);
@@ -103,6 +105,8 @@ namespace PharmaLabVR.UI
                             concentrationMolPerL ?? 0.1);
                 case PanelAction.PipetteSwitchReserve:
                     return sessions.TryPipetteSwitchReserve();
+                case PanelAction.PipetteSwitchPrimary:
+                    return sessions.TryPipetteSwitchPrimary();
                 case PanelAction.BottleRefill:
                     return sessions.TryBottleRefillFromReserve();
                 case PanelAction.PrepareRinseWater:

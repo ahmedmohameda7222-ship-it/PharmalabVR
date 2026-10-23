@@ -804,6 +804,18 @@ internal static class Program
               readyExtra.Any(item => item.Name == "Prime burette 0.05 ml") &&
               !readyExtra.Any(item => item.Name == "Prepare reserve stock"),
             "Native-ready reserve/burette operations must not conflict with setup-only actions.");
+        var returnToPrimary = ResearchInstrumentMenuLayout.Visible(
+            4, false, true, true, true, false, true, true, false, true);
+        Check(returnToPrimary.Any(item => item.Name == "Switch pipette to source" && item.Row == 0) &&
+              !returnToPrimary.Any(item => item.Name == "Switch pipette to reserve") &&
+              returnToPrimary.Select(item => item.Row).Distinct().Count() == returnToPrimary.Count,
+            "XR must offer accessible Native source return after reserve without overlapping page controls.");
+        var physicalReturnSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(physicalReturnSource.Contains("ActivePipetteStockInventoryId") &&
+              physicalReturnSource.Contains("TryPipetteSwitchPrimary"),
+            "Desktop and XR must expose current Native pipette source and an explicit way back.");
+
         var notebookChoice = ResearchInstrumentMenuLayout.Visible(
             3, false, true, false, false, true, false, false, true);
         Check(notebookChoice.Any(item => item.Name == "Open notebook" && item.Row == 2) &&

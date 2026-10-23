@@ -244,6 +244,8 @@ namespace PharmaLabVR.UI
             });
             AddInstrumentButton("Switch pipette to reserve", 30f,
                 () => panels?.Request(PanelAction.PipetteSwitchReserve));
+            AddInstrumentButton("Switch pipette to source", 30f,
+                () => panels?.Request(PanelAction.PipetteSwitchPrimary));
             AddInstrumentButton("Refill bottle 0.01 ml", -26f,
                 () => panels?.Request(PanelAction.BottleRefill));
             AddInstrumentButton("Prime burette 0.05 ml", -82f,
@@ -669,7 +671,8 @@ namespace PharmaLabVR.UI
                     driver.ReserveStockPrepared, panels != null && panels.CanFillBurette,
                     panels != null && panels.CanRecordResearchPrediction,
                     panels != null && panels.CanPipetteDispense, driver.RinseWaterPrepared,
-                    state.SupportedActions.Contains("Notebook"));
+                    state.SupportedActions.Contains("Notebook"),
+                    panels?.PipetteUsingReserve == true);
                 foreach (var name in ResearchInstrumentMenuLayout.AllNames)
                     SetButton(name, false);
                 foreach (var item in visible)
