@@ -1945,16 +1945,22 @@ namespace PharmaLabVR.Session
                         notebook, recordedOnlyReviewSavePath, notesPath,
                         review.BranchId, review.EventSequence);
                 }
-                SessionExportService.WriteCsv(target, review);
-                LastCsvExportPath = target;
-                // Scientific output and student annotations are distinct.
-                // Do not silently export an older recovered backup as current.
+                // Two-file writes may fail at either target. Stage and publish
+                // together with rollback before reporting any export path.
                 if (localNotes != null)
                 {
                     var learnerTarget = Path.Combine(Path.GetDirectoryName(notesPath),
                         saveName + ".plv-student-annotations.csv");
-                    ResearchLearningReview.WriteCsv(learnerTarget, localNotes, review.BranchId);
+                    RecordedCsvPairWriter.WritePair(target,
+                        SessionExportService.RenderCsv(review), learnerTarget,
+                        ResearchLearningReview.RenderCsv(localNotes, review.BranchId));
+                    LastCsvExportPath = target;
                     LastLearnerCsvExportPath = learnerTarget;
+                }
+                else
+                {
+                    SessionExportService.WriteCsv(target, review);
+                    LastCsvExportPath = target;
                 }
                 LastError = null;
                 router.Show(ScreenId.Review);
