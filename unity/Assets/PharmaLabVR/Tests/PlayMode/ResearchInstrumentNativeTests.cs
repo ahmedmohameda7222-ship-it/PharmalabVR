@@ -68,6 +68,49 @@ namespace PharmaLabVR.Tests.PlayMode
             finally { UnityEngine.Object.DestroyImmediate(root); }
         }
 
+        [Test]
+        public void M2_BothCleanResearchToolsMayUseRealNativeRinseAsFirstAction()
+        {
+            var root = new GameObject("Cold-start Native rinse instruments");
+            using var session = new CoreSession("first-use-cleaning", "Desktop", "", "", "Bulk");
+            try
+            {
+                void Accepted(string command, string payload, string revisions = "{}")
+                {
+                    var receipt = session.SubmitOrdered(command, payload, revisions);
+                    StringAssert.Contains("\"accepted\":true", receipt, command);
+                }
+                Accepted("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.0001}");
+                Accepted("CreateVessel", "{\"id\":\"rinse-water\",\"capacityM3\":0.00005}");
+                Accepted("CreateSink", "{\"id\":\"spill\"}");
+                Accepted("CreateSink", "{\"id\":\"waste\"}");
+                Accepted("PrepareStock", "{\"vesselId\":\"rinse-water\",\"stockKind\":\"Water\",\"concentrationMolPerL\":0.0,\"referenceVolumeM3\":0.000001}",
+                    "{\"rinse-water\":\"0\"}");
+                Accepted("PrepareStock", "{\"vesselId\":\"source\",\"stockKind\":\"SodiumChloride\",\"concentrationMolPerL\":0.1,\"referenceVolumeM3\":0.000005}",
+                    "{\"source\":\"0\"}");
+                var before = JsonUtility.FromJson<LedgerSnapshot>(session.ReadSnapshot());
+                var pipette = root.AddComponent<PipetteActuator>();
+                var bottle = root.AddComponent<BottlePourActuator>();
+                pipette.Configure(session);
+                bottle.Configure(session);
+                // Neither tool has executed an earlier Pour/Aspirate/Place
+                // from Unity. The first wash itself must register the tool.
+                var pipetteWash = pipette.Rinse(1e-8);
+                Assert.That(pipetteWash.Accepted, Is.True, pipetteWash.Code);
+                var bottleWash = bottle.Rinse(1e-8);
+                Assert.That(bottleWash.Accepted, Is.True, bottleWash.Code);
+                var after = JsonUtility.FromJson<LedgerSnapshot>(session.ReadSnapshot());
+                Assert.That(after.vessels.Single(v => v.id == "rinse-water")
+                    .inventory.researchAdditiveVolumeM3,
+                    Is.LessThan(before.vessels.Single(v => v.id == "rinse-water")
+                        .inventory.researchAdditiveVolumeM3));
+                Assert.That(after.materialLedger.researchAdditiveVolumeM3,
+                    Is.EqualTo(before.materialLedger.researchAdditiveVolumeM3).Within(1e-12),
+                    "Two Native rinse receipts must conserve total material inventory.");
+            }
+            finally { UnityEngine.Object.DestroyImmediate(root); }
+        }
+
         [Serializable] private sealed class LedgerSnapshot
         {
             public Vessel[] vessels;
