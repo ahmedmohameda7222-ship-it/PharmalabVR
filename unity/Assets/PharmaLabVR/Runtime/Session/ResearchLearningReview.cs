@@ -11,6 +11,36 @@ namespace PharmaLabVR.Session
     {
         private const int MaxExportBytes = 8 * 1024 * 1024;
 
+        // Replay learner findings from a real checksum-validated offline
+        // journal, at or before the Native checkpoint being reviewed.
+        // A corrupt/missing journal may not crash Review or fabricate evidence.
+        // Source branch identity must match the currently loaded Native branch.
+        public static string ReadRecordedJournal(NotebookService journal,
+            string filePath, string activeNativeBranchId, string recordedBranchId,
+            string recordedEventSequence, bool compact)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(filePath) ||
+                string.IsNullOrWhiteSpace(activeNativeBranchId) ||
+                !string.Equals(activeNativeBranchId, recordedBranchId,
+                    StringComparison.Ordinal))
+                return "Local student notebook unavailable for this recorded branch.";
+            try
+            {
+                var notes = journal.Read(filePath, recordedBranchId,
+                    recordedEventSequence);
+                return Render(notes, recordedBranchId, compact);
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                         error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException)
+            {
+                // Do not leak unvalidated note text, paths, backup identities
+                // or partial results into student/instructor Review.
+                return "Local notebook unavailable: offline journal could not be verified.";
+            }
+        }
+
         // Student CSV has its own schema; not certified Native results.
         public static string RenderCsv(IReadOnlyList<NotebookEntry> notes, string reviewBranchId)
         {

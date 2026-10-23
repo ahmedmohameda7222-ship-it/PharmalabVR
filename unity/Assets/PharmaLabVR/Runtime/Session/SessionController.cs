@@ -466,20 +466,28 @@ namespace PharmaLabVR.Session
                 {
                     try
                     {
-                        var notes = notebook.Read(NotebookFilePath(), recorded.BranchId,
-                            recorded.EventSequence);
+                        var path = NotebookFilePath();
+                        // Both variants read branch- and event-bounded,
+                        // checksummed annotations from the exact session file.
                         cachedLearningReviewFull =
-                            ResearchLearningReview.Render(notes, recorded.BranchId, false);
+                            ResearchLearningReview.ReadRecordedJournal(
+                                notebook, path, driver.Session.BranchId,
+                                recorded.BranchId, recorded.EventSequence, false);
                         cachedLearningReviewCompact =
-                            ResearchLearningReview.Render(notes, recorded.BranchId, true);
+                            ResearchLearningReview.ReadRecordedJournal(
+                                notebook, path, driver.Session.BranchId,
+                                recorded.BranchId, recorded.EventSequence, true);
                     }
                     catch (Exception error) when (error is IOException ||
-                           error is UnauthorizedAccessException ||
-                           error is ArgumentException)
+                            error is UnauthorizedAccessException ||
+                            error is ArgumentException ||
+                            error is InvalidOperationException)
                     {
+                        // Invalid paths cannot crash an otherwise valid
+                        // recorded Native Review or reveal journal bytes.
                         cachedLearningReviewFull =
-                            "Local notebook unavailable: " + error.Message;
-                        cachedLearningReviewCompact = "Local notebook unavailable.";
+                            "Local notebook unavailable: offline journal could not be verified.";
+                        cachedLearningReviewCompact = cachedLearningReviewFull;
                     }
                 }
                 cachedLearningReviewSource = recorded;
@@ -643,6 +651,9 @@ namespace PharmaLabVR.Session
                 // A different saved-file identity cannot reuse an old
                 // baseline comparison, even with the same Native driver.
                 recordedCache.InvalidateComparison();
+                // Reusing a Native driver does not authorize notes cached
+                // under the previous session filename.
+                InvalidateLearningReview();
                 LastInstructorPortableReview = null;
                 LastPortableArchivePath = null;
                 selectedArchiveFileName = null;
