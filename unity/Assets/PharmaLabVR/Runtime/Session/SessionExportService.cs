@@ -12,7 +12,14 @@ namespace PharmaLabVR.Session
         private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
 
         public static void WritePair(string scientificPath, string scientificCsv,
-            string learnerPath, string learnerCsv)
+            string learnerPath, string learnerCsv) =>
+            WritePair(scientificPath, scientificCsv, learnerPath, learnerCsv, null);
+
+        // Internal fault hook exercises the otherwise difficult rollback I/O
+        // failure path in the headless filesystem contract. Production
+        // callers always use the four-argument overload.
+        internal static void WritePair(string scientificPath, string scientificCsv,
+            string learnerPath, string learnerCsv, Action beforeRollback)
         {
             if (string.IsNullOrWhiteSpace(scientificPath) ||
                 string.IsNullOrWhiteSpace(learnerPath) ||
@@ -47,6 +54,7 @@ namespace PharmaLabVR.Session
             var learnerExisted = File.Exists(learner);
             var touchedScience = false;
             var touchedLearner = false;
+            var preserveRecoveryCopies = false;
             try
             {
                 Stage(scienceStage, scienceBytes);
@@ -64,6 +72,7 @@ namespace PharmaLabVR.Session
                 Exception rollbackError = null;
                 try
                 {
+                    beforeRollback?.Invoke();
                     if (touchedLearner) Restore(learner, learnerBackup, learnerExisted);
                     if (touchedScience) Restore(science, scienceBackup, scienceExisted);
                 }
@@ -71,6 +80,9 @@ namespace PharmaLabVR.Session
                                                failure is UnauthorizedAccessException)
                 {
                     rollbackError = failure;
+                    // Retain the verified original snapshots for manual
+                    // recovery instead of discarding the only confirmed data.
+                    preserveRecoveryCopies = true;
                 }
                 if (rollbackError != null)
                     throw new IOException("Paired CSV publish and rollback both failed.",
@@ -81,8 +93,11 @@ namespace PharmaLabVR.Session
             {
                 Cleanup(scienceStage);
                 Cleanup(learnerStage);
-                Cleanup(scienceBackup);
-                Cleanup(learnerBackup);
+                if (!preserveRecoveryCopies)
+                {
+                    Cleanup(scienceBackup);
+                    Cleanup(learnerBackup);
+                }
             }
         }
 
