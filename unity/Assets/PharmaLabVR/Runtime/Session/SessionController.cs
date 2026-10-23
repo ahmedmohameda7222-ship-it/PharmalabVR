@@ -1194,7 +1194,7 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
                 GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
-                    "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. " +
+                    "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. G with pipette tip immersed downward in the open prepared-water cup rinses 0.01 ml through Native waste. " +
                     "Click receiver = inspect current Native pH; wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
@@ -1249,6 +1249,7 @@ namespace PharmaLabVR.Session
                 }
                 if (driver.RinseWaterPrepared)
                 {
+                    GUILayout.Label("Physical rinse: hold pipette, dip its outlet into the open Native-water cup, press G. No physical water means no rinse.");
                     if (GUILayout.Button("Pipette: water rinse 0.01 ml", GUILayout.Height(32f)))
                         TryPipetteWaterRinse();
                     if (GUILayout.Button("Bottle: water rinse 0.01 ml", GUILayout.Height(32f)))

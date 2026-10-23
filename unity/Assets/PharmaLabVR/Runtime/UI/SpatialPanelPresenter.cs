@@ -298,7 +298,7 @@ namespace PharmaLabVR.UI
             if (string.Equals(lastPhysicalFeedback, current, StringComparison.Ordinal)) return;
             lastPhysicalFeedback = current;
             detail.text = string.IsNullOrEmpty(current) ? baselineDetail :
-                "Physical delivery: " + current + "\n" + baselineDetail;
+                "Physical tool action: " + current + "\n" + baselineDetail;
             if (detailScroller != null) detailScroller.verticalNormalizedPosition = 1f;
         }
 
@@ -708,7 +708,7 @@ namespace PharmaLabVR.UI
                     "Immerse the pipette in the other prepared bottle: first trigger changes its Native source, second trigger aspirates. " +
                     "The Native selected source, real liquid level, and tracked grip must agree. " +
                     "To prime a docked burette, invert source bottle over its upper inlet and trigger. " +
-                    "To refill source, grip prepared reserve bottle, invert its outlet over the source neck and trigger for one Native 0.01 ml transfer.";
+                    "To refill source, grip prepared reserve bottle, invert its outlet over the source neck and trigger for one Native 0.01 ml transfer. To rinse, dip the directly gripped pipette tip down into the open prepared Native-water cup and trigger; only Native may remove 0.01 ml of water into waste.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))

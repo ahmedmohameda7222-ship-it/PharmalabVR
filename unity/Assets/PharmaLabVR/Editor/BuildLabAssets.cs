@@ -352,10 +352,10 @@ namespace PharmaLabVR.Editor
                 mouth.localPosition = new Vector3(0f, 0.065f, 0f);
                 var fill = Part(root.transform, "NativeRinseWaterLiquid",
                     PrimitiveType.Cylinder, Vector3.zero,
-                    new Vector3(0.011f, 0f, 0.011f), water);
+                    new Vector3(0.008f, 0f, 0.008f), water);
                 root.AddComponent<NativeMeteredInstrumentVisual>()
                     .ConfigureRepresentation(fill.transform, "rinse-water",
-                        false, 1e-6, 0.025f, 0.009f);
+                        false, 1e-6, 0.020f, 0.009f);
                 root.AddComponent<PharmaLabVR.Input.ResearchRinseWaterTarget>();
                 var title = new GameObject("RinseWaterLabel");
                 title.transform.SetParent(root.transform, false);
