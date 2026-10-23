@@ -509,6 +509,9 @@ internal static class Program
                 Math.Abs(compared.Rows[0].Delta - (-0.4)) < 1e-10,
                 "Two authentic supported Native observations did not compare correctly.");
             var exportedComparison = RecordedRunComparisonCsv.RenderCsv(compared);
+            Require(exportedComparison.Split('\n')[0].EndsWith(",baselineLocalSaveName") &&
+                exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',').Length == 24,
+                "Recorded CSV omits the selected baseline Native file identity column.");
             var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
             Require(comparisonColumns.Length == 23 &&
                 comparisonColumns[1] == "recorded-only-not-attested" &&
