@@ -111,19 +111,59 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Recovery-oriented reads preserve the last confirmed, checksummed
+        // backup when a primary was damaged. This is NOT proof that the
+        // backup represents the current Native event.
         public IReadOnlyList<NotebookEntry> Read(string path, string branchId)
+        {
+            return ReadInternal(path, branchId, allowDamagedPrimaryRecovery: true);
+        }
+
+        // UI/Review reads may NOT silently present older backup annotations
+        // as the active student's current evidence when the primary exists
+        // but is corrupt. Missing primary still supports committed backup
+        // recovery; a damaged primary is explicitly unavailable.
+        public IReadOnlyList<NotebookEntry> ReadCurrent(string path,
+            string branchId, string maxEventSequence)
+        {
+            ValidateRevision(maxEventSequence);
+            var ceiling = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var all = ReadInternal(path, branchId,
+                allowDamagedPrimaryRecovery: false);
+            var visible = new List<NotebookEntry>();
+            foreach (var entry in all)
+                if (ulong.Parse(entry.EventSequence, CultureInfo.InvariantCulture) <= ceiling)
+                    visible.Add(entry);
+            return visible.AsReadOnly();
+        }
+
+        private static IReadOnlyList<NotebookEntry> ReadInternal(string path,
+            string branchId, bool allowDamagedPrimaryRecovery)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
             var fullPath = Path.GetFullPath(path);
-            // A .bak is a confirmed *older* state, not proof that a damaged
-            // current journal was empty or valid. Only read it if the primary
-            // is genuinely absent (interrupted publication). When the
-            // primary exists but fails integrity, fail closed: the UI must
-            // display unavailable rather than silently present stale notes.
-            var all = File.Exists(fullPath) ? ReadStrict(fullPath) :
-                File.Exists(fullPath + ".bak") ? ReadStrict(fullPath + ".bak") :
-                new List<NotebookEntry>();
+            List<NotebookEntry> all;
+            if (!File.Exists(fullPath))
+            {
+                all = File.Exists(fullPath + ".bak") ?
+                    ReadStrict(fullPath + ".bak") : new List<NotebookEntry>();
+            }
+            else if (!allowDamagedPrimaryRecovery)
+            {
+                all = ReadStrict(fullPath);
+            }
+            else
+            {
+                try { all = ReadStrict(fullPath); }
+                catch (Exception error) when (error is InvalidDataException ||
+                                               error is IOException ||
+                                               error is DecoderFallbackException)
+                {
+                    if (!File.Exists(fullPath + ".bak")) throw;
+                    all = ReadStrict(fullPath + ".bak");
+                }
+            }
             var result = new List<NotebookEntry>();
             foreach (var item in all)
                 if (item.BranchId == branchId) result.Add(item);

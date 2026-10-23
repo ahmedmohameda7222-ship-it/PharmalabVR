@@ -26,7 +26,7 @@ namespace PharmaLabVR.Session
                 return "Local student notebook unavailable for this recorded branch.";
             try
             {
-                var notes = journal.Read(filePath, recordedBranchId,
+                var notes = journal.ReadCurrent(filePath, recordedBranchId,
                     recordedEventSequence);
                 return Render(notes, recordedBranchId, compact);
             }
@@ -52,7 +52,7 @@ namespace PharmaLabVR.Session
                 return "Research notebook unavailable: no active Native journal.";
             try
             {
-                var entries = journal.Read(filePath, activeBranchId,
+                var entries = journal.ReadCurrent(filePath, activeBranchId,
                     activeEventSequence);
                 if (entries.Count == 0)
                     return "Research notebook: no recorded annotations.";
