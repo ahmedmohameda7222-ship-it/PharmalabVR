@@ -48,7 +48,49 @@ internal static class Program
             Require(File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
                     File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
                 "Paired scientific/student CSV output failed to publish both files.");
-            // A concurrent Desktop/Review export must not interleave
+            // Simulated abrupt process exit *after the first published CSV*
+            // must leave a durable recovery record. A later Player launch
+            // restores the previous complete pair rather than claiming the
+            // science export belongs with mismatched learner annotations.
+            var interrupted = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "INTERRUPTED_SCIENCE", learnerCsvPath, "INTERRUPTED_STUDENT",
+                    null, () => throw new InvalidOperationException(
+                        "Injected abrupt termination after first publish"));
+            }
+            catch (InvalidOperationException) { interrupted = true; }
+            Require(interrupted &&
+                    File.ReadAllText(scientificCsvPath) == "INTERRUPTED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    File.Exists(scientificCsvPath + ".pair.pending"),
+                "Interrupted paired export has no persisted recovery marker.");
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending") &&
+                    !RecordedCsvPairWriter.RecoverInterruptedPair(
+                        scientificCsvPath, learnerCsvPath),
+                "Restart did not restore exactly the previous confirmed paired CSV.");
+            // A malformed on-disk marker may not authorize overwriting the
+            // learner's prior confirmed exports.
+            File.WriteAllText(scientificCsvPath + ".pair.pending",
+                "untrusted-marker");
+            var malformedRecoveryRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath);
+            }
+            catch (InvalidDataException) { malformedRecoveryRefused = true; }
+            Require(malformedRecoveryRefused &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Invalid recovery metadata modified confirmed student evidence.");
+            File.Delete(scientificCsvPath + ".pair.pending");
+                        // A concurrent Desktop/Review export must not interleave
             // scientific results from one revision with another note CSV.
             var parallelDenied = false;
             using (var writerLease = new FileStream(scientificCsvPath + ".pair.lock",
