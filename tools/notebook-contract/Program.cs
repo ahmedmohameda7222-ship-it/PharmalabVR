@@ -1,6 +1,7 @@
 // Headless tests link the real NotebookService production file; no Unity,
  // Native chemistry or Editor/Player execution is inferred from these checks.
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using PharmaLabVR.Session;
@@ -14,8 +15,18 @@ internal static class Program
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private static void Main()
+    private static void Main(string[] args)
     {
+        // A dedicated child PROCESS dies abruptly while holding the file
+        // lease immediately after the scientific CSV was published.
+        if (args.Length == 3 && args[0] == "--kill-after-first-csv")
+        {
+            RecordedCsvPairWriter.WritePair(args[1], "KILLED_CHILD_SCIENCE",
+                args[2], "KILLED_CHILD_NOTES", null,
+                () => Process.GetCurrentProcess().Kill());
+            throw new InvalidOperationException(
+                "Child process survived the intended immediate termination.");
+        }
         var root = Path.Combine(Path.GetTempPath(), "plv-p11-notebook-" + Guid.NewGuid().ToString("N"));
         var path = Path.Combine(root, "session.plv-notes");
         var notes = new NotebookService();
@@ -48,7 +59,40 @@ internal static class Program
             Require(File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
                     File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
                 "Paired scientific/student CSV output failed to publish both files.");
-            // Simulated abrupt process exit *after the first published CSV*
+            // Actual child-process kill, not only a caught exception. A new
+            // process cannot inherit either the old writer lease or its
+            // transient state; the durable journal must restore prior data.
+            var childStart = new ProcessStartInfo("dotnet")
+            {
+                UseShellExecute = false
+            };
+            childStart.ArgumentList.Add(typeof(Program).Assembly.Location);
+            childStart.ArgumentList.Add("--kill-after-first-csv");
+            childStart.ArgumentList.Add(scientificCsvPath);
+            childStart.ArgumentList.Add(learnerCsvPath);
+            using (var terminatedChild = Process.Start(childStart))
+            {
+                Require(terminatedChild != null,
+                    "Could not launch the independent CSV crash worker.");
+                var terminated = terminatedChild.WaitForExit(20000);
+                if (!terminated)
+                {
+                    terminatedChild.Kill();
+                    terminatedChild.WaitForExit();
+                }
+                Require(terminated && terminatedChild.ExitCode != 0 &&
+                        File.ReadAllText(scientificCsvPath) == "KILLED_CHILD_SCIENCE" &&
+                        File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                        File.Exists(scientificCsvPath + ".pair.pending"),
+                    "Real child-process termination did not leave recoverable interrupted CSV output.");
+            }
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending"),
+                "Restart after a killed CSV writer did not restore last confirmed pair.");
+                        // Simulated abrupt process exit *after the first published CSV*
             // must leave a durable recovery record. A later Player launch
             // restores the previous complete pair rather than claiming the
             // science export belongs with mismatched learner annotations.
