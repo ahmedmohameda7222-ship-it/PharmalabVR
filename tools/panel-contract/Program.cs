@@ -1288,12 +1288,34 @@ internal static class Program
             "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
         var xrPhysicalSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(desktopPhysicalSource.Contains("screenGestureGate.RequireFreshNeutralInput()") &&
+              desktopPhysicalSource.Contains("screenGestureGate.ObserveNeutral(") &&
+              desktopPhysicalSource.Contains("!screenGestureGate.IsArmed") &&
+              xrPhysicalSource.Contains("screenGestureGate.RequireFreshNeutralInput()") &&
+              xrPhysicalSource.Contains("screenGestureGate.ObserveNeutral(") &&
+              xrPhysicalSource.Contains("!screenGestureGate.IsArmed"),
+            "Returning from Notebook/Review may reuse an XR trigger or Desktop G/valve gesture.");
         Check(desktopPhysicalSource.Contains("if (!IsOperatingLabScreen())") &&
               desktopPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate(") &&
               xrPhysicalSource.Contains("!IsOperatingLabScreen()") &&
               xrPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate("),
             "Physical Desktop/XR Native gestures lost Notebook/Review lab-screen isolation.");
 
+        // Leaving Lab disowns a pending trigger without requiring the
+        // student to destroy physical ownership of a held Desktop tool.
+        // Returning to Lab while G/trigger is still down must not fire; a
+        // new neutral frame is observed before any later deliberate press.
+        var screenGesture = new ResearchRestorationGestureGate();
+        screenGesture.RequireFreshNeutralInput();
+        Check(!screenGesture.ObserveNeutral(true, false, true) &&
+              !screenGesture.ObserveNeutral(true, true, false) &&
+              screenGesture.ObserveNeutral(true, true, true),
+            "Screen navigation accepted a carried press or untracked neutral baseline.");
+        screenGesture.RequireFreshNeutralInput();
+        Check(!screenGesture.IsArmed &&
+              !screenGesture.ObserveNeutral(true, false, true) &&
+              screenGesture.IsArmed == false,
+            "A second Notebook/Review transition reused the previous button release.");
         // Physical material gestures must be admitted only from active Lab,
         // never while the student records a branch-bound Notebook note,
         // reviews recorded evidence, or navigates a paused/held screen.

@@ -34,6 +34,8 @@ namespace PharmaLabVR.Input
         private ulong sequence;
         private bool inputEnabled;
         private readonly ResearchRestorationGestureGate restorationGestureGate = new();
+        private readonly ResearchRestorationGestureGate screenGestureGate = new();
+        public bool HasFreshLabScreenGesture => screenGestureGate.IsArmed;
         public bool HasFreshGripSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
         [SerializeField] private ResearchStockAspirateTarget stockAspirateTarget;
@@ -188,12 +190,42 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return; // Ignore the first fresh neutral frame.
             }
+            if (!IsOperatingLabScreen())
+            {
+                screenGestureGate.RequireFreshNeutralInput();
+                ClearDeliveryPress();
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return;
+            }
+            if (!screenGestureGate.IsArmed)
+            {
+                // Returning from Notebook/Review must not reuse a held UI
+                // trigger or XR select grip as a fresh chemical operation.
+                var headForRelease = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(
+                    UnityEngine.XR.XRNode.Head);
+                var headReleased = headForRelease.isValid &&
+                    headForRelease.TryGetFeatureValue(
+                        UnityEngine.XR.CommonUsages.isTracked,
+                        out var trackedHead) && trackedHead;
+                var noSelections =
+                    (grabInteractable == null || !grabInteractable.isSelected) &&
+                    (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
+                    (researchBottleGrab == null || !researchBottleGrab.isSelected) &&
+                    (reserveStockGrip == null || !reserveStockGrip.isSelected);
+                var controlsNeutral = ControllerNeutral(leftActionController) &&
+                    ControllerNeutral(rightActionController);
+                var tracked = inputEnabled && coreDriver != null &&
+                    XRTrackingAdmission.HasFreshTracking(headReleased,
+                        Tracked(leftActionController), Tracked(rightActionController));
+                screenGestureGate.ObserveNeutral(noSelections, controlsNeutral, tracked);
+                ClearDeliveryPress();
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return; // A release frame cannot also trigger material work.
+            }
             if (!inputEnabled || coreDriver == null ||
                 coreDriver.IsNativePaused || coreDriver.IsTimeHeld ||
-                coreDriver.SourceNeedsPreparation || !IsOperatingLabScreen())
+                coreDriver.SourceNeedsPreparation)
             {
-                // XR equipment may still move visually on an alternate page,
-                // but only Lab may authorize a Native material gesture.
                 ClearDeliveryPress();
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return;
@@ -272,7 +304,7 @@ namespace PharmaLabVR.Input
                         collider.ClosestPoint(hand.transform.position)));
                 }
                 var ready = inputEnabled && restorationGestureGate.IsArmed &&
-                    !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
+                    screenGestureGate.IsArmed && !coreDriver.SourceNeedsPreparation && !coreDriver.IsTimeHeld &&
                     !coreDriver.IsNativePaused;
                 if (!ResearchXRReceiverInspectionAdmission.MayInspect(
                         ready, true, noInstrumentsHeld, overUi, distance))
@@ -301,7 +333,7 @@ namespace PharmaLabVR.Input
             var owner = selected ? SelectingController() : null;
             var directBodyGrip = selected && grabInteractable.firstInteractorSelecting is XRDirectInteractor;
             var blocked = !restorationGestureGate.IsArmed ||
-                !IsOperatingLabScreen() ||
+                !screenGestureGate.IsArmed || !IsOperatingLabScreen() ||
                 (coreDriver != null &&
                  (coreDriver.IsTimeHeld || coreDriver.IsNativePaused));
             var actuator = selected && !blocked ? Actuator(owner, directBodyGrip) : 0f;
@@ -478,6 +510,7 @@ namespace PharmaLabVR.Input
             LastPhysicalDeliveryFeedback = null;
             LastPhysicalInspectionFeedback = null;
             restorationGestureGate.RequireFreshNeutralInput();
+            screenGestureGate.RequireFreshNeutralInput();
         }
 
         public void ResetBaselines()

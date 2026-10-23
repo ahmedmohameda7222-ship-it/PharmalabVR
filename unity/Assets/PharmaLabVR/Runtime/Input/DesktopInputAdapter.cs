@@ -31,6 +31,10 @@ namespace PharmaLabVR.Input
         private Vector3 initialDragOffset;
         private bool heldToolOriginalKinematic;
         private readonly ResearchRestorationGestureGate restorationGestureGate = new();
+        // Navigating to Notebook/Review must consume prior pointer/G presses
+        // without requiring the student to discard the physically held tool.
+        private readonly ResearchRestorationGestureGate screenGestureGate = new();
+        public bool HasFreshLabScreenGesture => screenGestureGate.IsArmed;
         public bool HasFreshPhysicalGestureSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
@@ -152,6 +156,35 @@ namespace PharmaLabVR.Input
                 ClearDeliveryPress();
                 return;
             }
+            if (!IsOperatingLabScreen())
+            {
+                // UI buttons, not old instrument presses, own this screen.
+                screenGestureGate.RequireFreshNeutralInput();
+                pickPress.Clear();
+                ClearDeliveryPress();
+                actuator = 0f;
+                pointerDragActive = false;
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return;
+            }
+            if (!screenGestureGate.IsArmed)
+            {
+                // Unlike SessionLoad, a Notebook return does not require
+                // releasing the tool itself. It DOES require released keys
+                // and pointer buttons before any new laboratory gesture.
+                var pointerNeutral = Mouse.current == null ||
+                    (!Mouse.current.leftButton.isPressed &&
+                     !Mouse.current.rightButton.isPressed &&
+                     !Mouse.current.middleButton.isPressed);
+                var controlsNeutral = pointerNeutral &&
+                    Keyboard.current != null && !Keyboard.current.anyKey.isPressed;
+                screenGestureGate.ObserveNeutral(true, controlsNeutral, inputEnabled);
+                pickPress.Clear();
+                ClearDeliveryPress();
+                actuator = 0f;
+                instrumentPresenter?.PresentActuatorInput(0f);
+                return; // Neutral re-arm frame never becomes an action.
+            }
             if (Keyboard.current.escapeKey.wasPressedThisFrame)
             {
                 pickPress.Clear();
@@ -162,18 +195,7 @@ namespace PharmaLabVR.Input
                     ?.RequestDesktopPause();
                 return;
             }
-            if (!IsOperatingLabScreen())
-            {
-                // Escape remains available above this branch. Notebook,
-                // recorded Review, and measuring pages cannot pick, drag,
-                // open a valve or queue old G commands in the background.
-                pickPress.Clear();
-                ClearDeliveryPress();
-                actuator = 0f;
-                pointerDragActive = false;
-                instrumentPresenter?.PresentActuatorInput(0f);
-                return;
-            }
+
             if (Mouse.current == null || !Mouse.current.leftButton.isPressed)
                 pointerSelectionActive = false;
             var uiCapture = (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) ||
@@ -298,8 +320,9 @@ namespace PharmaLabVR.Input
                 ClearDeliveryPress();
                 return System.Array.Empty<LabInputSample>();
             }
-            if (!IsOperatingLabScreen())
+            if (!IsOperatingLabScreen() || !screenGestureGate.IsArmed)
             {
+                if (!IsOperatingLabScreen()) screenGestureGate.RequireFreshNeutralInput();
                 actuator = 0f;
                 pointerDragActive = false;
                 pickPress.Clear();
@@ -360,6 +383,7 @@ namespace PharmaLabVR.Input
             LastPhysicalInspectionFeedback = null;
             instrumentPresenter?.PresentActuatorInput(0f);
             restorationGestureGate.RequireFreshNeutralInput();
+            screenGestureGate.RequireFreshNeutralInput();
         }
 
         public void ResetBaselines()

@@ -60,6 +60,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
                 Assert.That(notebookSample.Length, Is.EqualTo(1));
                 Assert.That(notebookSample[0].actuator01, Is.EqualTo(0f));
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "Notebook must disown prior held mouse/G input until release.");
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision));
                 Assert.That(panels.Request(PanelAction.Review), Is.True);
                 var reviewSample = desktop.SampleInputs(
@@ -69,6 +71,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision),
                     "Recorded Review must not actuate Native lab material in the background.");
                 Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "A Notebook-to-Lab navigation must not itself re-arm a prior material press.");
+                var resumed = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(resumed.Length, Is.EqualTo(1));
+                Assert.That(resumed[0].actuator01, Is.EqualTo(0f));
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "Native-sample-only reconciliation must not fabricate a fresh key release.");
                 Assert.That(ResearchLabScreenAdmission.MayActuate(
                     router.Current.ScreenId.ToString(), true), Is.True);
             }
