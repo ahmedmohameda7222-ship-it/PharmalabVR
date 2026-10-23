@@ -47,6 +47,18 @@ internal static class Program
             File.WriteAllText(path, file.Replace("PLV-NOTEBOOK-V1", "PLV-NOTEBOOK-X1"));
             Require(notes.Read(path, "research-branch").Count == 1,
                 "Corrupt primary did not open the previous confirmed notebook backup.");
+            var currentPrimaryRefused = false;
+            try { notes.ReadCurrent(path, "research-branch", "8"); }
+            catch (InvalidDataException) { currentPrimaryRefused = true; }
+            Require(currentPrimaryRefused,
+                "Live student evidence silently inherited stale .bak after a damaged primary.");
+            // Only an absent (not corrupt) primary may recover a last
+            // confirmed backup without pretending to validate current bytes.
+            File.Delete(path);
+            Require(notes.ReadCurrent(path, "research-branch", "8").Count == 1,
+                "Interrupted journal publication lost the last confirmed backup.");
+            File.WriteAllText(path, file.Replace(
+                "PLV-NOTEBOOK-V1", "PLV-NOTEBOOK-X1"));
             var rejectedUnsafeOverwrite = false;
             try { notes.Append(path, "research-branch", "9", "receiver", "Do not overwrite backup"); }
             catch (InvalidDataException) { rejectedUnsafeOverwrite = true; }
