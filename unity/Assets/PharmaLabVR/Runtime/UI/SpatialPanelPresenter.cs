@@ -789,6 +789,8 @@ namespace PharmaLabVR.UI
                     "Current: " + (panels?.ActiveLocalSessionName ?? "none") +
                     " · Selected Native save: " +
                     (panels?.SelectedLocalNativeSaveName ?? "none") +
+                    "\n" + (panels?.SelectedLocalNativeSavePreview ??
+                        "No local Native save selected.") +
                     "\nStudy packages: .plvpack also carries a portable Notebook snapshot. " +
                     "A package is imported to a new isolated session after validation.\n" +
                     "Selected .plvpack: " + (panels?.SelectedArchiveFileName ?? "none") +

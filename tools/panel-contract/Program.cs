@@ -1707,6 +1707,19 @@ internal static class Program
               saveCopySource.Contains("if (verifiedFreshName)"),
             "Local SaveCopy lost its independent source journal, guarded file namespace or no-delete-on-collision rule.");
 
+        // Selected saved-recording preview must be visible in both recovery
+        // panels; the matching Native-backed Unity PlayMode test is NOT_RUN.
+        var previewSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var xrRecoverySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(previewSource.Contains("RecordedSessionReview.OpenRecoverable(path)") &&
+              previewSource.Contains("PreviewRecordedLocalNativeSave(") &&
+              previewSource.Contains("selectedLocalNativeSavePreview = null;") &&
+              previewSource.Contains("GUILayout.Label(SelectedLocalNativeSavePreview)") &&
+              xrRecoverySource.Contains("panels?.SelectedLocalNativeSavePreview"),
+            "Read-only Native-save preview lost Desktop or XR recovery integration.");
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.

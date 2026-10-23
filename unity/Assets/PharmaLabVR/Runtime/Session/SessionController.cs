@@ -17,8 +17,13 @@ namespace PharmaLabVR.Session
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string saveName = "autosave";
         private string selectedLocalNativeSaveName;
+        private string selectedLocalNativeSavePreview;
         public string ActiveLocalSessionName => saveName;
         public string SelectedLocalNativeSaveName => selectedLocalNativeSaveName;
+        // Recorded-only presentation data: never a live Native science result.
+        public string SelectedLocalNativeSavePreview =>
+            selectedLocalNativeSavePreview ??
+            "Choose a local Native save to inspect its recorded file before Load.";
         [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
         public string LastPortableArchivePath { get; private set; }
@@ -679,6 +684,7 @@ namespace PharmaLabVR.Session
             if (!ReferenceEquals(driver, coreDriver))
             {
                 DetachNativeRestoration();
+                selectedLocalNativeSavePreview = null;
                 selectedResearchLesson = null;
                 selectedResearchPrediction = null;
                 pendingLessonRecoveryEpoch = null;
@@ -710,6 +716,7 @@ namespace PharmaLabVR.Session
                 instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
                 selectedLocalNativeSaveName = null;
+                selectedLocalNativeSavePreview = null;
                 selectedResearchLesson = null;
                 selectedResearchPrediction = null;
                 pendingLessonRecoveryEpoch = null;
@@ -754,6 +761,7 @@ namespace PharmaLabVR.Session
             recordedOnlyReviewSavePath = null;
             LastInstrumentReceipt = null;
             LastPortableImportSummary = null;
+            selectedLocalNativeSavePreview = null;
             LastDurableSavePath = null;
             LastPortableArchivePath = null;
             LastCsvExportPath = null;
@@ -926,6 +934,59 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Display saved-file metadata prior to a destructive Native SessionLoad.
+        // Reading this recording NEVER imports chemistry or learner Notebook.
+        private static string PreviewRecordedLocalNativeSave(string directory, string name)
+        {
+            const string unavailable =
+                "Preview unavailable: selected saved Native file is unreadable or invalid. " +
+                "Load still requires separate Native scientific validation.";
+            if (!OfflineArchivePicker.ValidNativeSaveName(name)) return unavailable;
+            var path = Path.Combine(directory, name + ".plv.json");
+            try
+            {
+                // Both primary and read-only fallback must be ordinary local files.
+                foreach (var candidate in new[] { path, path + ".bak" })
+                    if (File.Exists(candidate) &&
+                        (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                        return unavailable;
+                var saved = RecordedSessionReview.OpenRecoverable(path);
+                var validEvent = ulong.TryParse(saved.EventSequence,
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out var sequence) &&
+                    sequence.ToString(System.Globalization.CultureInfo.InvariantCulture) ==
+                    saved.EventSequence;
+                var receiver = saved.Observations.FirstOrDefault(observation =>
+                    observation != null && observation.vesselId == "receiver" &&
+                    observation.observableId == "pH");
+                return "Recorded-only saved file preview (NOT live Native science).\n" +
+                    "Branch: " + BoundedPreviewIdentity(saved.BranchId) +
+                    " · Event: " + (validEvent ? saved.EventSequence : "unavailable") +
+                    " · Model: " + BoundedPreviewIdentity(saved.ModelIdentity) +
+                    "\nReceiver pH: " + (receiver?.DisplayValue ?? "--") +
+                    " (saved recording only; Load revalidates the Native model).";
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                          error is IOException ||
+                                          error is UnauthorizedAccessException ||
+                                          error is ArgumentException ||
+                                          error is InvalidOperationException)
+            {
+                return unavailable;
+            }
+        }
+
+        private static string BoundedPreviewIdentity(string identity)
+        {
+            if (string.IsNullOrWhiteSpace(identity)) return "unavailable";
+            var safe = new string(identity.Where(c =>
+                (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '-' || c == '_' ||
+                c == '.' || c == ':').Take(48).ToArray());
+            return safe.Length == 0 ? "unavailable" :
+                safe + (identity.Length > 48 ? "..." : string.Empty);
+        }
+
         // List/select never touches Native material, observation or Notebook.
         public bool ChooseNextLocalNativeSave()
         {
@@ -939,6 +1000,9 @@ namespace PharmaLabVR.Session
                     throw new InvalidDataException("There are no local Native saves to select.");
                 selectedLocalNativeSaveName =
                     OfflineArchivePicker.NextName(names, selectedLocalNativeSaveName);
+                selectedLocalNativeSavePreview = PreviewRecordedLocalNativeSave(
+                    Path.Combine(Application.persistentDataPath, "sessions"),
+                    selectedLocalNativeSaveName);
                 LastError = null;
                 router.Show(router.Current.ScreenId);
                 return true;
@@ -1139,6 +1203,7 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Current save: " + saveName +
                     " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
                     ". A restored run will enter Native SessionLoad Hold.");
+                GUILayout.Label(SelectedLocalNativeSavePreview);
                 GUI.enabled = CanChooseLocalPortableArchive;
                 if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
                     panels?.Request(PanelAction.ChoosePortableArchive);
@@ -1178,6 +1243,7 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Current save: " + saveName +
                     " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
                     ". A restored run will enter Native SessionLoad Hold.");
+                GUILayout.Label(SelectedLocalNativeSavePreview);
                 GUI.enabled = CanChooseLocalPortableArchive;
                 if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
                     panels?.Request(PanelAction.ChoosePortableArchive);
@@ -2240,6 +2306,7 @@ namespace PharmaLabVR.Session
 
                 saveName = name;
                 selectedLocalNativeSaveName = name;
+                selectedLocalNativeSavePreview = null;
                 LastDurableSavePath = written;
                 LastPortableArchivePath = null;
                 LastCsvExportPath = null;

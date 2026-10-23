@@ -174,6 +174,9 @@ namespace PharmaLabVR.Tests.PlayMode
                     Assert.That(panel.Request(PanelAction.ChooseLocalSave),
                         Is.True, session.LastError);
                 Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(corrupt));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Preview unavailable"),
+                    "Corrupt saved file cannot present invented Native observations.");
                 Assert.That(panel.Request(PanelAction.LoadSelectedSave), Is.False,
                     "Malformed Native save cannot replace a real session.");
                 Assert.That(driver.Session, Is.SameAs(laterNative));
@@ -185,6 +188,15 @@ namespace PharmaLabVR.Tests.PlayMode
                     Assert.That(panel.Request(PanelAction.ChooseLocalSave),
                         Is.True, session.LastError);
                 Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(first));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Recorded-only saved file preview"));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Event: " + firstEvent));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Native model"),
+                    "Read-only file preview cannot claim scientific model validation.");
+                Assert.That(driver.Session, Is.SameAs(laterNative),
+                    "Browsing a file cannot replace live Native science.");
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent),
                     "Browsing saved runs cannot change Native chemistry.");
                 Assert.That(panel.Request(PanelAction.LoadSelectedSave),
