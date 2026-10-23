@@ -826,6 +826,30 @@ internal static class Program
         });
         Check(choices.Count == 2 && choices[0] == "A.plvpack" && choices[1] == "B.plvpack",
             "Offline teaching picker did not restrict itself to distinct canonical session filenames.");
+        // Each student export must be an independently selectable,
+        // bounded archive. Exporting new Notebook evidence at the same Native
+        // material event cannot silently replace the original student pack.
+        var firstName = OfflineArchivePicker.NewStudentExportName(
+            "student-research", "8", "0123456789abcdef0123456789abcdef");
+        var secondName = OfflineArchivePicker.NewStudentExportName(
+            "student-research", "8", "fedcba9876543210fedcba9876543210");
+        Check(firstName != secondName &&
+              OfflineArchivePicker.ValidName(firstName) &&
+              OfflineArchivePicker.ValidName(secondName) &&
+              firstName.Contains("-e8-", StringComparison.Ordinal) &&
+              !firstName.Contains("/", StringComparison.Ordinal),
+            "Portable student export may overwrite previous event-bounded evidence.");
+        Check(OfflineArchivePicker.ValidName(
+            OfflineArchivePicker.NewStudentExportName(
+                "overlong-study-" + new string('x', 120), "18446744073709551615",
+                "0123456789abcdef0123456789abcdef")),
+            "Long student labels must never produce an invalid/non-discoverable archive.");
+        var unsafeRevision = false;
+        try { OfflineArchivePicker.NewStudentExportName(
+            "study", "../8", "0123456789abcdef0123456789abcdef"); }
+        catch (ArgumentException) { unsafeRevision = true; }
+        Check(unsafeRevision, "Unsafe Native event identities must be rejected for portable export.");
+
         Check(OfflineArchivePicker.NextName(choices, "A.plvpack") == "B.plvpack" &&
               OfflineArchivePicker.NextName(choices, "B.plvpack") == "A.plvpack" &&
               OfflineArchivePicker.NextName(choices, "missing.plvpack") == "A.plvpack",
@@ -2005,7 +2029,9 @@ internal static class Program
                 "Offline student package selection missing from Pause.");
             Check(router.Current.SupportedActions.Contains("ExportPortable") &&
                   panels.Request(PanelAction.ExportPortable) &&
-                  panels.LastPortableArchiveFileName == "student.plvpack",
+                  panels.LastPortableArchiveFileName == "student.plvpack" &&
+                  session.PortableExportCalls == 2 &&
+                  session.SaveCalls == 0,
                 "Paused XR package page must expose a real branch-local export with visible filename.");
             session.PortableRestorePermitted = false;
             Check(!panels.Request(PanelAction.RestorePortable) &&
@@ -2020,7 +2046,7 @@ internal static class Program
                 "Native Pause does not expose portable Export.");
             Check(panels.Request(PanelAction.ExportPortable),
                 "Native Pause refused its explicit research archive Export.");
-            Check(session.PortableExportCalls == 2 && session.SaveCalls == 0,
+            Check(session.PortableExportCalls == 3 && session.SaveCalls == 0,
                 "Portable Export caused an unintended Native Save or duplicate command.");
             driver.CurrentMode = "VR";
             router.Configure(driver);

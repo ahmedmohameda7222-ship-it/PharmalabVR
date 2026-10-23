@@ -82,6 +82,48 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Student evidence export is append-only. Unlike Write (the existing
+        // atomic replace-with-backup API), WriteNew must refuse any existing
+        // learner bundle even if another process creates it during staging.
+        public static void WriteNew(string path, string nativeJson,
+            string notebookSnapshot, string branchId, string eventSequence)
+        {
+            var data = Validate(nativeJson, notebookSnapshot, branchId, eventSequence);
+            var body = Magic + "\n" + branchId + "\n" + eventSequence + "\n" +
+                Convert.ToBase64String(Utf8.GetBytes(data.NativeJson)) + "\n" +
+                Convert.ToBase64String(Utf8.GetBytes(data.NotebookSnapshot)) + "\n";
+            var bytes = Utf8.GetBytes(body + Sha256(body) + "\n");
+            if (bytes.Length > MaxArchiveBytes)
+                throw new InvalidDataException("Portable archive exceeds its size bound.");
+            if (string.IsNullOrWhiteSpace(path))
+                throw new ArgumentException("Archive path required.", nameof(path));
+            var target = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(target);
+            if (string.IsNullOrEmpty(directory))
+                throw new InvalidDataException("Archive has no parent directory.");
+            Directory.CreateDirectory(directory);
+            if (File.Exists(target) || File.Exists(target + ".bak"))
+                throw new IOException("An earlier student archive cannot be replaced.");
+            var temporary = target + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                File.Move(temporary, target); // no overwrite (including concurrent creation)
+            }
+            catch
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
         public static PortableSessionData Read(string path)
         {
             if (string.IsNullOrWhiteSpace(path)) throw new ArgumentException("Archive path required.", nameof(path));

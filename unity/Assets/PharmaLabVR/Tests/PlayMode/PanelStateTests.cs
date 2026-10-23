@@ -1584,6 +1584,7 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             string notesPath = null;
+            string exportedPackage = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -1609,7 +1610,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries[0].BranchId, Is.EqualTo(driver.Session.BranchId));
                 Assert.That(actions.Request(PanelAction.ExportPortable), Is.True, session.LastError);
                 Assert.That(session.LastPortableArchivePath, Is.Not.Null.And.Not.Empty);
-                var archive = PortableSessionArchive.Read(session.LastPortableArchivePath);
+                exportedPackage = session.LastPortableArchivePath;
+                Assert.That(OfflineArchivePicker.ValidName(Path.GetFileName(exportedPackage)),
+                    Is.True, "Student export must be discoverable in the offline package chooser.");
+                var archive = PortableSessionArchive.Read(exportedPackage);
                 Assert.That(archive.BranchId, Is.EqualTo(driver.Session.BranchId));
                 Assert.That(archive.EventSequence, Is.EqualTo(revision));
                 Assert.That(archive.NotebookSnapshot, Does.Contain("PLV-NOTEBOOK-V1"));
@@ -1648,10 +1652,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 if (notesPath != null && File.Exists(notesPath + ".bak")) File.Delete(notesPath + ".bak");
                 if (notesPath != null)
                 {
-                    var archivePath = Path.Combine(Path.GetDirectoryName(notesPath),
-                        Path.GetFileNameWithoutExtension(notesPath) + ".plvpack");
-                    if (File.Exists(archivePath)) File.Delete(archivePath);
-                    if (File.Exists(archivePath + ".bak")) File.Delete(archivePath + ".bak");
+                    if (!string.IsNullOrEmpty(exportedPackage) && File.Exists(exportedPackage))
+                        File.Delete(exportedPackage);
+                    if (!string.IsNullOrEmpty(exportedPackage) && File.Exists(exportedPackage + ".bak"))
+                        File.Delete(exportedPackage + ".bak");
                     var checkpoint = Path.Combine(Path.GetDirectoryName(notesPath),
                         Path.GetFileNameWithoutExtension(notesPath) + ".plv.json");
                     if (File.Exists(checkpoint)) File.Delete(checkpoint);

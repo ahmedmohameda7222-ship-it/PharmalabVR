@@ -37,6 +37,7 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             string exported = null;
+            string secondExport = null;
             string notesPath = null;
             try
             {
@@ -89,6 +90,15 @@ namespace PharmaLabVR.Tests.PlayMode
                     "I will recheck the Native receiver pH before deciding."));
                 Assert.That(panels.LastPortableArchiveFileName,
                     Is.EqualTo(Path.GetFileName(exported)));
+                var firstArchiveBytes = File.ReadAllBytes(exported);
+                buttons["Export portable study"].onClick.Invoke();
+                secondExport = sessions.LastPortableArchivePath;
+                Assert.That(secondExport, Is.Not.Null.And.Not.EqualTo(exported),
+                    "Second export must preserve the first student research artifact.");
+                Assert.That(File.Exists(secondExport), Is.True);
+                Assert.That(File.ReadAllBytes(exported), Is.EqualTo(firstArchiveBytes));
+                Assert.That(PortableSessionArchive.Read(secondExport).BranchId,
+                    Is.EqualTo(recordedBranch));
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(recordedRevision),
                     "XR package export cannot issue an unauthorized material command.");
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
@@ -98,6 +108,7 @@ namespace PharmaLabVR.Tests.PlayMode
             {
                 foreach (var candidate in new[] {
                     exported, exported == null ? null : exported + ".bak",
+                    secondExport, secondExport == null ? null : secondExport + ".bak",
                     notesPath, notesPath == null ? null : notesPath + ".bak" })
                     if (!string.IsNullOrEmpty(candidate) && File.Exists(candidate))
                         File.Delete(candidate);
@@ -751,6 +762,7 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             string notes = null;
+            string portableExport = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -772,7 +784,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     "I would repeat the experiment to check the research observation."),
                     Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.ExportPortable), Is.True, sessions.LastError);
-                var portable = sessions.LastPortableArchivePath;
+                portableExport = sessions.LastPortableArchivePath;
+                var portable = portableExport;
                 Assert.That(File.Exists(portable), Is.True);
                 Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
@@ -817,13 +830,19 @@ namespace PharmaLabVR.Tests.PlayMode
                     var basePath = Path.Combine(folder,
                         Path.GetFileName(notes).Replace(".plv-notes", ""));
                     foreach (var extension in new[] {
-                        ".plv-notes", ".plv.json", ".plvpack",
-                        ".plv-notes.bak", ".plv.json.bak", ".plvpack.bak",
-                        ".plv-notes.tmp", ".plv.json.tmp", ".plvpack.tmp" })
+                        ".plv-notes", ".plv.json",
+                        ".plv-notes.bak", ".plv.json.bak",
+                        ".plv-notes.tmp", ".plv.json.tmp" })
                     {
                         var target = basePath + extension;
                         if (File.Exists(target)) File.Delete(target);
                     }
+                }
+                if (!string.IsNullOrEmpty(portableExport))
+                {
+                    if (File.Exists(portableExport)) File.Delete(portableExport);
+                    if (File.Exists(portableExport + ".bak"))
+                        File.Delete(portableExport + ".bak");
                 }
                 SceneManager.UnloadSceneAsync(scene);
             }

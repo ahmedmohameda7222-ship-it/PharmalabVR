@@ -1665,8 +1665,13 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("Native revision changed before archive export.");
                 var notesPath = NotebookFilePath();
                 var notes = notebook.ExportBranch(notesPath, branch, revision);
-                var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plvpack");
-                PortableSessionArchive.Write(target, driver.Session.ExportSession(),
+                var fileName = OfflineArchivePicker.NewStudentExportName(
+                    saveName, revision, Guid.NewGuid().ToString("N"));
+                var target = Path.Combine(Path.GetDirectoryName(notesPath), fileName);
+                // A new immutable package for every explicit student export;
+                // additional Notebook evidence must never erase an earlier
+                // event-bounded research artifact at the same Native revision.
+                PortableSessionArchive.WriteNew(target, driver.Session.ExportSession(),
                     notes, branch, revision);
                 LastPortableArchivePath = target;
                 LastError = null;

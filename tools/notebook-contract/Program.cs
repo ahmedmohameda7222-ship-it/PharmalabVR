@@ -2,6 +2,7 @@
  // Native chemistry or Editor/Player execution is inferred from these checks.
 using System;
 using System.IO;
+using System.Linq;
 using PharmaLabVR.Session;
 
 internal static class Program
@@ -97,9 +98,34 @@ internal static class Program
             catch (InvalidDataException) { futureRefused = true; }
             Require(futureRefused && !File.Exists(foreignTarget),
                 "Future event evidence was installed ahead of the Native checkpoint.");
+            // Two student exports at the same Native material revision but
+            // different authenticated Notebook evidence must remain separate.
+            var firstImmutable = Path.Combine(root, "immutable-first.plvpack");
+            var secondImmutable = Path.Combine(root, "immutable-second.plvpack");
+            PortableSessionArchive.WriteNew(firstImmutable,
+                native, notesForEight, "research-branch", "8");
+            var firstBytes = File.ReadAllBytes(firstImmutable);
+            notes.Append(localImport, "research-branch", "8", "receiver",
+                "Additional student reflection at unchanged Native event 8.");
+            var nextNotes = notes.ExportBranch(localImport, "research-branch", "8");
+            PortableSessionArchive.WriteNew(secondImmutable,
+                native, nextNotes, "research-branch", "8");
+            Require(PortableSessionArchive.Read(firstImmutable).NotebookSnapshot ==
+                    notesForEight &&
+                    PortableSessionArchive.Read(secondImmutable).NotebookSnapshot ==
+                    nextNotes &&
+                    File.ReadAllBytes(firstImmutable).SequenceEqual(firstBytes),
+                "Second student export modified or lost previous Native/Notebook evidence.");
+            var immutableOverwriteRefused = false;
+            try { PortableSessionArchive.WriteNew(firstImmutable,
+                native, nextNotes, "research-branch", "8"); }
+            catch (IOException) { immutableOverwriteRefused = true; }
+            Require(immutableOverwriteRefused &&
+                    File.ReadAllBytes(firstImmutable).SequenceEqual(firstBytes),
+                "Create-new student export overwrote a valid previous research archive.");
             notes.Append(localImport, "research-branch", "9", "receiver",
                 "New local reflection after verified portable import.");
-            Require(notes.Read(localImport, "research-branch").Count == 3,
+            Require(notes.Read(localImport, "research-branch").Count == 4,
                 "Restored Notebook did not support subsequent local learner work.");
 
             var bytes = File.ReadAllBytes(packed);
