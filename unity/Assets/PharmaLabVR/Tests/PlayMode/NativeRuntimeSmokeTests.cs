@@ -79,6 +79,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 reserve.transform.position +=
                     mouth.position + stock.transform.up * .07f - outlet.position;
                 Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.True);
+                reserve.transform.position += stock.transform.right * .027f;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.False,
+                    "Outside the real source glass neck is not a physical refill.");
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.False, "Off-mouth reserve bottle cannot create a Native material event.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventBefore));
+                reserve.transform.position -= stock.transform.right * .027f;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.True);
                 Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
                     Is.True, sessions.LastError);
                 Assert.That(driver.CurrentLabView.Vessels.Single(v =>

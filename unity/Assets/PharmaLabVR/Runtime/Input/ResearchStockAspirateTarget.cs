@@ -78,7 +78,17 @@ namespace PharmaLabVR.Input
                 return false;
             var outlet = reserveBottle.Find("OutletExit");
             var mouth = transform.Find("OutletExit");
-            if (outlet == null || mouth == null) return false;
+            var neck = transform.Find("NarrowNeck");
+            var mesh = neck != null ? neck.GetComponent<MeshFilter>() : null;
+            if (outlet == null || mouth == null || mesh == null ||
+                mesh.sharedMesh == null) return false;
+            // The refill aperture must be no wider than its actual rendered
+            // cylindrical neck; the pipette intake tolerance alone is not a
+            // permit to pour outside that rim.
+            var realMouthRadius = Mathf.Min(mouthRadiusMetres,
+                mesh.sharedMesh.bounds.extents.x *
+                    Mathf.Abs(neck.lossyScale.x));
+            if (realMouthRadius <= 0f) return false;
             var up = transform.up;
             var delta = outlet.position - mouth.position;
             var height = Vector3.Dot(delta, up);
@@ -89,7 +99,7 @@ namespace PharmaLabVR.Input
             return ResearchReserveBottleRefillAdmission.MayRefill(
                 Vector3.Dot(up, Vector3.up),
                 Vector3.Dot(outlet.TransformDirection(Vector3.down), -up),
-                height, lateral.sqrMagnitude, mouthRadiusMetres, speed,
+                height, lateral.sqrMagnitude, realMouthRadius, speed,
                 nativeReservePrepared);
         }
 
