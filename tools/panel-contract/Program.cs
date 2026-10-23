@@ -1423,7 +1423,18 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
-        // Verify the gesture is actually routed by both input adapters,
+        // M3: crash recovery must be wired to Unity's session lifecycle
+        // as well as the next export, not exist only as a detached helper.
+        var exportControllerSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(exportControllerSource.Contains(
+                "private void RecoverInterruptedCsvForCurrentSession(", StringComparison.Ordinal) &&
+              exportControllerSource.Contains(
+                "RecordedCsvPairWriter.RecoverInterruptedPair(", StringComparison.Ordinal) &&
+              exportControllerSource.Split(
+                "RecoverInterruptedCsvForCurrentSession();").Length >= 4,
+            "Unity session initialization and CSV export do not reconcile interrupted paired outputs.");
+                // Verify the gesture is actually routed by both input adapters,
         // not merely accepted by a detached presentation-only helper.
         var noteDesktopSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
