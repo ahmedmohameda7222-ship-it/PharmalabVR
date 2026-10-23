@@ -625,6 +625,31 @@ internal static class Program
             Check(damagedReview.Contains("Local notebook unavailable", StringComparison.Ordinal) &&
                   !damagedReview.Contains("Private unverified", StringComparison.Ordinal),
                 "Damaged Notebook interrupted offline Review or leaked unverified notes.");
+                        // When the pinned scientific model is unavailable, the confirmed
+            // saved Native review still permits bounded, explicitly UNVERIFIED
+            // learner annotations from the matching offline sidecar.
+            var recordedNativePath = System.IO.Path.Combine(
+                learningDirectory, "study.plv.json");
+            var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "7", false);
+            Check(recordedOnlyAtSeven.Contains("recorded-only", StringComparison.Ordinal) &&
+                  recordedOnlyAtSeven.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !recordedOnlyAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !recordedOnlyAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
+                "Saved model-unavailable Review lost bounded student notes or leaked future evidence.");
+            var mismatchedSidecar = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath,
+                System.IO.Path.Combine(learningDirectory, "other.plv-notes"),
+                "student-branch", "11", false);
+            Check(mismatchedSidecar.Contains("unavailable", StringComparison.Ordinal) &&
+                  !mismatchedSidecar.Contains("Native pH 6.20", StringComparison.Ordinal),
+                "Recorded-only fallback attached a different student's notebook path.");
+            var invalidRecordedCeiling = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "011", false);
+            Check(invalidRecordedCeiling.Contains("unavailable", StringComparison.Ordinal),
+                "Recorded-only fallback accepted an invalid saved Native event identity.");
                         var historical = researchNotes.Read(learningPath, "student-branch", "7");
             Check(historical.Count == 1 && historical[0].EventSequence == "7" &&
                   !historical[0].Text.Contains("Native pH 6.20"),
