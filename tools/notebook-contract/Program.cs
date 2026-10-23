@@ -512,8 +512,27 @@ internal static class Program
             Require(exportedComparison.Split('\n')[0].EndsWith(",baselineLocalSaveName") &&
                 exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',').Length == 24,
                 "Recorded CSV omits the selected baseline Native file identity column.");
+            var namedComparisonCsv = RecordedRunComparisonCsv.RenderCsv(compared,
+                "student-first");
+            var namedColumns = namedComparisonCsv.TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(namedColumns.Length == 24 && namedColumns[0] == "2" &&
+                namedColumns[23] == "student-first" &&
+                exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',')[23] ==
+                    "unavailable",
+                "Recorded comparison export lost exact selected baseline name or anonymous source label.");
+            var invalidNameRefused = false;
+            try { RecordedRunComparisonCsv.RenderCsv(compared, "=HYPERLINK(1)"); }
+            catch (InvalidDataException) { invalidNameRefused = true; }
+            Require(invalidNameRefused,
+                "Untrusted comparison baseline label reached scientific CSV metadata.");
+            invalidNameRefused = false;
+            try { RecordedRunComparisonCsv.RenderCsv(compared, "../other-study"); }
+            catch (InvalidDataException) { invalidNameRefused = true; }
+            Require(invalidNameRefused,
+                "Traversal text was admitted as a local Native comparison baseline.");
             var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
-            Require(comparisonColumns.Length == 23 &&
+            Require(comparisonColumns.Length == 24 &&
+                comparisonColumns[0] == "2" &&
                 comparisonColumns[1] == "recorded-only-not-attested" &&
                 comparisonColumns[4] == "4" &&
                 comparisonColumns[5] == "7" &&
@@ -532,10 +551,11 @@ internal static class Program
                 "Recorded comparison CSV did not preserve original Native precision and delta provenance.");
             var comparisonPathA = RecordedRunComparisonCsv.WriteNew(root, compared);
             var originalComparisonBytes = File.ReadAllBytes(comparisonPathA);
-            var comparisonPathB = RecordedRunComparisonCsv.WriteNew(root, compared);
+            var comparisonPathB = RecordedRunComparisonCsv.WriteNew(root, compared,
+                "student-first");
             Require(comparisonPathB != comparisonPathA &&
                 File.ReadAllBytes(comparisonPathA).SequenceEqual(originalComparisonBytes) &&
-                File.ReadAllText(comparisonPathB) == exportedComparison &&
+                File.ReadAllText(comparisonPathB) == namedComparisonCsv &&
                 !File.Exists(comparisonPathA + ".stage") &&
                 !File.Exists(comparisonPathB + ".stage"),
                 "Repeated comparison exports must publish distinct immutable files.");

@@ -206,9 +206,13 @@ namespace PharmaLabVR.Session
         private const int MaxBytes = 2 * 1024 * 1024;
         private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
 
-        public static string RenderCsv(RecordedRunComparison recorded)
+        public static string RenderCsv(RecordedRunComparison recorded,
+            string baselineLocalSaveName = null)
         {
             if (recorded == null) throw new ArgumentNullException(nameof(recorded));
+            // A locally chosen filename is an unsigned selection hint, not
+            // Native provenance, a content digest or institutional identity.
+            var localName = ValidateLocalSaveName(baselineLocalSaveName);
             if (recorded.Rows.Count > 32)
                 throw new InvalidDataException("Recorded comparison exceeds two Native vessel collections.");
             var output = new StringBuilder();
@@ -218,10 +222,10 @@ namespace PharmaLabVR.Session
             output.Append("baselineProviderModelId,baselineDatabaseIdentity,");
             output.Append("candidateProviderModelId,candidateDatabaseIdentity,vesselId,observableId,");
             output.Append("unit,baselineStatus,candidateStatus,baselineRawPH,candidateRawPH,");
-            output.Append("deltaAvailable,deltaPH,deltaReason\n");
+            output.Append("deltaAvailable,deltaPH,deltaReason,baselineLocalSaveName\n");
             foreach (var row in recorded.Rows)
             {
-                AppendRow(output, "1", "recorded-only-not-attested",
+                AppendRow(output, "2", "recorded-only-not-attested",
                     recorded.BaselineBranchId, recorded.CandidateBranchId,
                     recorded.BaselineEventSequence, recorded.CandidateEventSequence,
                     recorded.LineageSummary,
@@ -237,7 +241,7 @@ namespace PharmaLabVR.Session
                     row.DeltaAvailable ? "true" : "false",
                     row.DeltaAvailable ?
                         row.Delta.ToString("R", CultureInfo.InvariantCulture) : "",
-                    row.DeltaReason);
+                    row.DeltaReason, localName);
             }
             var text = output.ToString();
             if (Utf8.GetByteCount(text) > MaxBytes)
@@ -247,11 +251,12 @@ namespace PharmaLabVR.Session
 
         // Every student export receives a new name. Neither an existing CSV
         // nor a prior Native/Notebook checkpoint is overwritten.
-        public static string WriteNew(string directory, RecordedRunComparison recorded)
+        public static string WriteNew(string directory, RecordedRunComparison recorded,
+            string baselineLocalSaveName = null)
         {
             if (string.IsNullOrWhiteSpace(directory))
                 throw new ArgumentException("Offline CSV directory is required.", nameof(directory));
-            var bytes = Utf8.GetBytes(RenderCsv(recorded));
+            var bytes = Utf8.GetBytes(RenderCsv(recorded, baselineLocalSaveName));
             directory = Path.GetFullPath(directory);
             Directory.CreateDirectory(directory);
             var target = Path.Combine(directory,
@@ -279,9 +284,23 @@ namespace PharmaLabVR.Session
             }
         }
 
+        private static string ValidateLocalSaveName(string name)
+        {
+            if (name == null) return "unavailable";
+            if (name.Length < 1 || name.Length > 96)
+                throw new InvalidDataException("Comparison baseline save name is invalid.");
+            foreach (var c in name)
+                if (!((c >= 'a' && c <= 'z') ||
+                      (c >= 'A' && c <= 'Z') ||
+                      (c >= '0' && c <= '9') || c == '_' || c == '-'))
+                    throw new InvalidDataException(
+                        "Comparison baseline save name contains forbidden characters.");
+            return name;
+        }
+
         private static void AppendRow(StringBuilder output, params string[] columns)
         {
-            if (columns.Length != 23)
+            if (columns.Length != 24)
                 throw new InvalidOperationException("Recorded comparison CSV column count changed.");
             for (var index = 0; index < columns.Length; index++)
             {

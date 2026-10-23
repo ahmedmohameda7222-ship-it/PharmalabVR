@@ -227,6 +227,12 @@ namespace PharmaLabVR.Tests.PlayMode
                 recordedComparisonCsv = session.LastComparisonCsvExportPath;
                 Assert.That(File.Exists(recordedComparisonCsv), Is.True);
                 Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("baselineLocalSaveName"),
+                    "Comparison CSV must identify the selected offline Native save.");
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("," + first + "\n"),
+                    "Recorded export must preserve the actually selected baseline save name.");
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
                     Does.StartWith("schemaVersion,recordKind,baselineBranchId"));
                 Assert.That(File.ReadAllText(recordedComparisonCsv),
                     Does.Contain("recorded-only-not-attested"));

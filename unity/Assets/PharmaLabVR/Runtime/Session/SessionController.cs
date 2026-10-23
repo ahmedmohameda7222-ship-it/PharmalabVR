@@ -2508,7 +2508,8 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException(
                         "Export requires an open comparison of two recorded Native studies.");
                 var directory = Path.Combine(Application.persistentDataPath, "sessions");
-                var csv = RecordedRunComparisonCsv.WriteNew(directory, CurrentComparison);
+                var csv = RecordedRunComparisonCsv.WriteNew(directory, CurrentComparison,
+                    validatedComparisonBaselineName);
                 LastComparisonCsvExportPath = csv;
                 LastError = null;
                 router.Show(ScreenId.Compare); // refresh XR saved-file confirmation
