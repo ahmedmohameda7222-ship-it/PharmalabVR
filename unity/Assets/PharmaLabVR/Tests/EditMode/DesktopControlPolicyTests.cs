@@ -62,6 +62,24 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M2_PhysicalStockBottleMouthRinseRejectsDoubleDestinationAndDryWater()
+        {
+            ResearchAuxiliaryDeliveryIntent Resolve(bool dipped, bool receiver = false,
+                bool inlet = false, bool prepared = true, bool ready = true,
+                bool held = true) =>
+                ResearchPhysicalBottleRinseSelection.Resolve(
+                    "research-stock-bottle-visual", held, true, receiver, inlet,
+                    dipped, prepared, ready);
+            Assert.That(Resolve(true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.BottleRinse));
+            Assert.That(Resolve(false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, receiver: true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, inlet: true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, prepared: false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, ready: false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, held: false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+        }
+
+        [Test]
         public void M2_PipettePhysicalSourceSelectionRequiresRealImmersionAndFreshOwnership()
         {
             Assert.That(ResearchPhysicalPipetteSelectionAdmission.MaySelect(

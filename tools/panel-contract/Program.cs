@@ -1277,6 +1277,38 @@ internal static class Program
                 .Contains("!PhysicallyOwnsPipette(physicalPipette)", StringComparison.Ordinal),
             "A public rinse endpoint must not consume Native water without physical pipette ownership.");
 
+        // A held stock-bottle mouth dipped into real Native rinse water
+        // requests cleaning only when no receiver/inlet owns its outlet.
+        Check(ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.BottleRinse,
+            "Physical bottle-mouth immersion did not admit the Native rinse intent.");
+        Check(ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-reserve-stock-bottle-visual", true, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", false, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, false, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, true, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, true,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              false, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, false, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, true, false) == ResearchAuxiliaryDeliveryIntent.None,
+            "Stock-bottle cleaning must refuse ambiguous, unprepared or unattended physical gestures.");
+
         // M2 first-use cleaning: RinseTool requires a Native tool
         // registration. Neither instrument may depend on a prior pour
         // or aspiration to establish its actual PlaceTool revision.
