@@ -1432,7 +1432,10 @@ internal static class Program
               exportControllerSource.Contains(
                 "RecordedCsvPairWriter.RecoverInterruptedPair(", StringComparison.Ordinal) &&
               exportControllerSource.Split(
-                "RecoverInterruptedCsvForCurrentSession();").Length >= 4,
+                "RecoverInterruptedCsvForCurrentSession();").Length >= 3 &&
+              exportControllerSource.Contains(
+                "if (!RecoverInterruptedCsvForCurrentSession())",
+                StringComparison.Ordinal),
             "Unity session initialization and CSV export do not reconcile interrupted paired outputs.");
                 // Verify the gesture is actually routed by both input adapters,
         // not merely accepted by a detached presentation-only helper.
