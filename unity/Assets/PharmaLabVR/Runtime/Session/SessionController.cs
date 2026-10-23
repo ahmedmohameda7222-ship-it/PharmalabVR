@@ -29,6 +29,7 @@ namespace PharmaLabVR.Session
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
         public string LastLearnerCsvExportPath { get; private set; }
+        public string LastComparisonCsvExportPath { get; private set; }
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
             LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
@@ -766,6 +767,7 @@ namespace PharmaLabVR.Session
             LastPortableArchivePath = null;
             LastCsvExportPath = null;
             LastLearnerCsvExportPath = null;
+            LastComparisonCsvExportPath = null;
             // A restored session must not inherit unsaved in-memory guidance.
             // Rebuild only after the authoritative replacement Native snapshot.
             selectedResearchLesson = null;
@@ -1009,6 +1011,7 @@ namespace PharmaLabVR.Session
                     Path.Combine(Application.persistentDataPath, "sessions"),
                     selectedLocalNativeSaveName);
                 recordedCache.InvalidateComparison(); // selection changes saved baseline
+                LastComparisonCsvExportPath = null;
                 LastError = null;
                 router.Show(router.Current.ScreenId);
                 return true;
@@ -1367,6 +1370,13 @@ namespace PharmaLabVR.Session
                             difference + "\n" + row.DeltaReason);
                     }
                 }
+                GUI.enabled = CanExportRecordedComparison;
+                if (GUILayout.Button("Export recorded comparison CSV", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportComparisonCsv);
+                GUI.enabled = true;
+                if (!string.IsNullOrEmpty(LastComparisonCsvExportPath))
+                    GUILayout.Label("Recorded-only comparison CSV saved: " +
+                        LastComparisonCsvExportPath);
                 if (GUILayout.Button("Back to recorded review", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
@@ -2454,6 +2464,7 @@ namespace PharmaLabVR.Session
         {
             CurrentComparison = null;
             validatedComparisonBaselineName = null;
+            LastComparisonCsvExportPath = null;
             try
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
@@ -2473,6 +2484,33 @@ namespace PharmaLabVR.Session
             catch (Exception error)
             {
                 LastError = "Saved recorded comparison unavailable: " + error.Message;
+                return false;
+            }
+        }
+
+        public bool CanExportRecordedComparison =>
+            router?.Current?.ScreenId == ScreenId.Compare &&
+            CurrentComparison != null &&
+            !string.IsNullOrEmpty(validatedComparisonBaselineName);
+
+        public bool ExportCurrentComparisonCsv()
+        {
+            LastComparisonCsvExportPath = null;
+            try
+            {
+                if (!CanExportRecordedComparison)
+                    throw new InvalidOperationException(
+                        "Export requires an open comparison of two recorded Native studies.");
+                var directory = Path.Combine(Application.persistentDataPath, "sessions");
+                var csv = RecordedRunComparisonCsv.WriteNew(directory, CurrentComparison);
+                LastComparisonCsvExportPath = csv;
+                LastError = null;
+                router.Show(ScreenId.Compare); // refresh XR saved-file confirmation
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Recorded comparison CSV export refused: " + error.Message;
                 return false;
             }
         }

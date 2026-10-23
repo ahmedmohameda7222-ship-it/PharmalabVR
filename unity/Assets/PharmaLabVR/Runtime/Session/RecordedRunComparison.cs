@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Globalization;
+using System.Text;
 
 namespace PharmaLabVR.Session
 {
@@ -43,6 +45,11 @@ namespace PharmaLabVR.Session
             public bool DeltaAvailable { get; }
             public double Delta { get; }
             public string DeltaReason { get; }
+            // Exact recorded numbers: do not export rounded UI labels.
+            public bool BaselineRawAvailable { get; }
+            public bool CandidateRawAvailable { get; }
+            public double BaselineRawPH { get; }
+            public double CandidateRawPH { get; }
 
             internal ComparisonRow(string vessel, string observable,
                 RecordedSessionReview baselineRun, RecordedSessionReview candidateRun,
@@ -53,6 +60,10 @@ namespace PharmaLabVR.Session
                 ObservableId = observable;
                 BaselineStatus = Availability(a);
                 CandidateStatus = Availability(b);
+                BaselineRawAvailable = BaselineStatus == "Current" && a != null;
+                CandidateRawAvailable = CandidateStatus == "Current" && b != null;
+                BaselineRawPH = BaselineRawAvailable ? a.value : 0.0;
+                CandidateRawPH = CandidateRawAvailable ? b.value : 0.0;
                 BaselineDisplay = BaselineStatus == "Current" ? a.DisplayValue : "--";
                 CandidateDisplay = CandidateStatus == "Current" ? b.DisplayValue : "--";
                 bool samePackage =
@@ -149,4 +160,106 @@ namespace PharmaLabVR.Session
             }
         }
     }
+
+    // Immutable, recorded-only comparison export. Input rows originate from
+    // two separately validated saved Native snapshots. This never runs a
+    // scientific solver, invents unavailable pH or yields a grade.
+    public static class RecordedRunComparisonCsv
+    {
+        private const int MaxBytes = 2 * 1024 * 1024;
+        private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
+
+        public static string RenderCsv(RecordedRunComparison recorded)
+        {
+            if (recorded == null) throw new ArgumentNullException(nameof(recorded));
+            if (recorded.Rows.Count > 32)
+                throw new InvalidDataException("Recorded comparison exceeds two Native vessel collections.");
+            var output = new StringBuilder();
+            output.Append("schemaVersion,recordKind,baselineBranchId,candidateBranchId,");
+            output.Append("baselineModelIdentity,candidateModelIdentity,vesselId,observableId,");
+            output.Append("unit,baselineStatus,candidateStatus,baselineRawPH,candidateRawPH,");
+            output.Append("deltaAvailable,deltaPH,deltaReason\n");
+            foreach (var row in recorded.Rows)
+            {
+                AppendRow(output, "1", "recorded-only-not-attested",
+                    recorded.BaselineBranchId, recorded.CandidateBranchId,
+                    recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
+                    row.VesselId, row.ObservableId, "pH",
+                    row.BaselineStatus, row.CandidateStatus,
+                    row.BaselineRawAvailable ?
+                        row.BaselineRawPH.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.CandidateRawAvailable ?
+                        row.CandidateRawPH.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.DeltaAvailable ? "true" : "false",
+                    row.DeltaAvailable ?
+                        row.Delta.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.DeltaReason);
+            }
+            var text = output.ToString();
+            if (Utf8.GetByteCount(text) > MaxBytes)
+                throw new InvalidDataException("Recorded comparison CSV exceeds 2 MiB.");
+            return text;
+        }
+
+        // Every student export receives a new name. Neither an existing CSV
+        // nor a prior Native/Notebook checkpoint is overwritten.
+        public static string WriteNew(string directory, RecordedRunComparison recorded)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new ArgumentException("Offline CSV directory is required.", nameof(directory));
+            var bytes = Utf8.GetBytes(RenderCsv(recorded));
+            directory = Path.GetFullPath(directory);
+            Directory.CreateDirectory(directory);
+            var target = Path.Combine(directory,
+                "native-comparison-" + Guid.NewGuid().ToString("N") + ".plv-compare.csv");
+            var stage = target + ".stage";
+            if (File.Exists(target) || File.Exists(stage))
+                throw new IOException("Offline comparison export file already exists.");
+            try
+            {
+                using (var stream = new FileStream(stage, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                File.Move(stage, target); // immutable destination; never Replace
+                return target;
+            }
+            catch
+            {
+                try { if (File.Exists(stage)) File.Delete(stage); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
+        private static void AppendRow(StringBuilder output, params string[] columns)
+        {
+            if (columns.Length != 16)
+                throw new InvalidOperationException("Recorded comparison CSV column count changed.");
+            for (var index = 0; index < columns.Length; index++)
+            {
+                if (index > 0) output.Append(',');
+                // Only finite C# double values emitted using invariant
+                // round-trip format can bypass spreadsheet text escaping.
+                output.Append(index == 11 || index == 12 || index == 14 ?
+                    columns[index] ?? string.Empty : EscapeText(columns[index]));
+            }
+            output.Append('\n');
+        }
+
+        private static string EscapeText(string text)
+        {
+            text ??= string.Empty;
+            if (text.Length > 0 && (text[0] == '=' || text[0] == '+' ||
+                text[0] == '-' || text[0] == '@' || text[0] == '\r' ||
+                text[0] == '\t'))
+                text = "'" + text;
+            return text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0 ?
+                "\"" + text.Replace("\"", "\"\"") + "\"" : text;
+        }
+    }
+
 }

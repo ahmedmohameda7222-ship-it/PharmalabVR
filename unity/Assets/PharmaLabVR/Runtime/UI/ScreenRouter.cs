@@ -499,7 +499,7 @@ namespace PharmaLabVR.UI
                         "CompareSaved", "ChooseLocalSave", "PreviewPortableArchive", "ChoosePortableArchive", "NextInstructorAnnotation" },
                 ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save", "Review",
                     "ExportPortable", "RecordResearchExplanation" },
-                ScreenId.Compare => new[] { "Review", "Lab" },
+                ScreenId.Compare => new[] { "Review", "Lab", "ExportComparisonCsv" },
                 ScreenId.Settings => new[] { "Back", "Save" },
                 _ => Array.Empty<string>()
             };

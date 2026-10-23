@@ -201,6 +201,15 @@ namespace PharmaLabVR.Session
         public int SavedCompareCalls { get; private set; }
         public bool CanCompareSaved => true;
         public string ComparisonSummary => "Recorded Native baseline and candidate.";
+        public bool CanExportRecordedComparison => true;
+        public int ComparisonCsvCalls { get; private set; }
+        public string LastComparisonCsvExportPath { get; private set; }
+        public bool ExportCurrentComparisonCsv()
+        {
+            ComparisonCsvCalls++;
+            LastComparisonCsvExportPath = "/offline/native-comparison.plv-compare.csv";
+            return true;
+        }
         public bool OpenSavedComparison()
         {
             SavedCompareCalls++;

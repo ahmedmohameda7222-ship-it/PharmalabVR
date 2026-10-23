@@ -1739,6 +1739,16 @@ internal static class Program
               xrRecoverySource.Contains("chooser.anchoredPosition = new Vector2(94f, -250f)"),
             "Review baseline chooser or non-overlapping XR hit admission lost.");
 
+        // The new immutable recorded-only CSV producer runs in the real-file
+        // Notebook headless suite, and the same action is exposed in Desktop/XR.
+        var comparisonCsvSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/RecordedRunComparison.cs");
+        Check(comparisonCsvSource.Contains("public static class RecordedRunComparisonCsv") &&
+              comparisonCsvSource.Contains("FileMode.CreateNew") &&
+              previewSource.Contains("public bool ExportCurrentComparisonCsv()") &&
+              xrRecoverySource.Contains("AddButton(\"Export comparison CSV\""),
+            "Native recorded comparison immutable CSV export lost production/Desktop/XR linkage.");
+
         // Source-level safeguard for the Unity compile gate. The original
         // generated reserve-stock smoke test briefly escaped its test class;
         // keep the fixture nested and XR quick-note controls panel-routed.
@@ -2708,6 +2718,14 @@ internal static class Program
             Check(router.Current.ScreenId == ScreenId.Compare &&
                 session.SavedCompareCalls == 1 && session.SaveCalls == 0,
                 "Compare mutated Native chemistry, implicitly saved or missed the Compare route.");
+            Check(router.Current.SupportedActions.Contains("ExportComparisonCsv") &&
+                  panels.CanExportRecordedComparison &&
+                  panels.Request(PanelAction.ExportComparisonCsv) &&
+                  session.ComparisonCsvCalls == 1 &&
+                  panels.LastComparisonCsvFileName == "native-comparison.plv-compare.csv" &&
+                  session.LocalNativeLoadCalls == 1 &&
+                  driver.IsNativePaused && session.SaveCalls == 0,
+                "Recorded comparison CSV must export real selected study without Native import/Save.");
             Check(panels.Request(PanelAction.Review) &&
                 router.Current.ScreenId == ScreenId.Review,
                 "Comparing recorded data lost the original Review navigation.");

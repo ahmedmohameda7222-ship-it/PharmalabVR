@@ -135,6 +135,7 @@ namespace PharmaLabVR.Tests.PlayMode
             var first = "student-first-" + suffix;
             var second = "student-later-" + suffix;
             var corrupt = "student-corrupt-" + suffix;
+            string recordedComparisonCsv = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -217,6 +218,14 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(session.CurrentComparison, Is.Not.Null);
                 Assert.That(session.ComparisonSummary,
                     Does.Contain("Recorded baseline file: " + first));
+                Assert.That(panel.Request(PanelAction.ExportComparisonCsv), Is.True,
+                    session.LastError);
+                recordedComparisonCsv = session.LastComparisonCsvExportPath;
+                Assert.That(File.Exists(recordedComparisonCsv), Is.True);
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.StartWith("schemaVersion,recordKind,baselineBranchId"));
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("recorded-only-not-attested"));
                 Assert.That(driver.Session, Is.SameAs(laterNative),
                     "Comparison of selected earlier file cannot import into Native.");
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
@@ -237,6 +246,9 @@ namespace PharmaLabVR.Tests.PlayMode
             }
             finally
             {
+                if (!string.IsNullOrEmpty(recordedComparisonCsv) &&
+                    File.Exists(recordedComparisonCsv))
+                    File.Delete(recordedComparisonCsv);
                 foreach (var name in new[] { first, second, corrupt })
                     foreach (var suffixPart in new[] {
                         ".plv.json", ".plv.json.bak", ".plv.json.tmp",

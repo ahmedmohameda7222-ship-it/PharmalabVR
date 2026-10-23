@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
+    public enum PanelAction { ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -26,6 +26,11 @@ namespace PharmaLabVR.UI
         public string SelectedLocalNativeSaveName => sessions?.SelectedLocalNativeSaveName;
         public string SelectedLocalNativeSavePreview => sessions?.SelectedLocalNativeSavePreview;
         public string ComparisonBaselineName => sessions?.ComparisonBaselineName ?? "none";
+        public bool CanExportRecordedComparison =>
+            sessions?.CanExportRecordedComparison == true;
+        public string LastComparisonCsvFileName =>
+            string.IsNullOrEmpty(sessions?.LastComparisonCsvExportPath) ? null :
+            System.IO.Path.GetFileName(sessions.LastComparisonCsvExportPath);
         public string ActiveLocalSessionName => sessions?.ActiveLocalSessionName;
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public bool CanFillBurette => sessions?.CanFillBurette == true;
@@ -182,6 +187,8 @@ namespace PharmaLabVR.UI
                     return sessions.ExportPortableSession();
                 case PanelAction.ExportCsv:
                     return sessions.ExportRecordedCsv();
+                case PanelAction.ExportComparisonCsv:
+                    return sessions.ExportCurrentComparisonCsv();
                 case PanelAction.PreviewPortableArchive:
                     return sessions.PreviewLocalPortableArchive(entityId);
                 case PanelAction.ChoosePortableArchive:

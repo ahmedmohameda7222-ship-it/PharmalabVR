@@ -164,6 +164,7 @@ namespace PharmaLabVR.UI
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
+            AddButton("Export comparison CSV", -250f, PanelAction.ExportComparisonCsv);
             AddInstrumentButton("Choose comparison run", -250f,
                 () => panels?.Request(PanelAction.ChooseLocalSave));
             AddButton("Preview portable archive", 30f, PanelAction.PreviewPortableArchive);
@@ -523,6 +524,10 @@ namespace PharmaLabVR.UI
                     "Empty tracked hand: touch receiver and press trigger to inspect its current Native pH. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
+            if (state.ScreenId == ScreenId.Compare &&
+                !string.IsNullOrEmpty(panels?.LastComparisonCsvFileName))
+                detail.text += "\nExported offline recorded-only CSV: " +
+                    panels.LastComparisonCsvFileName;
             if (state.ScreenId == ScreenId.Measure &&
                 state.SelectedEntityId == "receiver")
                 detail.text += "\nRelease the first trigger, then touch the physical receiver with an empty hand and trigger again to record only Current Native pH in the offline Notebook.";
@@ -602,6 +607,9 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
+            SetButton("Export comparison CSV", state.ScreenId == ScreenId.Compare &&
+                state.SupportedActions.Contains("ExportComparisonCsv") &&
+                panels?.CanExportRecordedComparison == true);
             // These peer buttons share an XR ray row only after narrowing
             // both hit surfaces and labels; no invisible CSV/chooser overlap.
             var canChooseComparison = state.ScreenId == ScreenId.Review &&

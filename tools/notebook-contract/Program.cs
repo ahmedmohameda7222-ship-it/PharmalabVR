@@ -486,12 +486,49 @@ internal static class Program
                 compared.Rows[0].DeltaAvailable &&
                 Math.Abs(compared.Rows[0].Delta - (-0.4)) < 1e-10,
                 "Two authentic supported Native observations did not compare correctly.");
+            var exportedComparison = RecordedRunComparisonCsv.RenderCsv(compared);
+            var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(comparisonColumns.Length == 16 &&
+                comparisonColumns[1] == "recorded-only-not-attested" &&
+                comparisonColumns[11] == "7.1" &&
+                comparisonColumns[12] == "6.7" &&
+                comparisonColumns[13] == "true" &&
+                double.TryParse(comparisonColumns[14],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var delta) && Math.Abs(delta + 0.4) < 1e-10,
+                "Recorded comparison CSV did not preserve original Native precision and delta provenance.");
+            var comparisonPathA = RecordedRunComparisonCsv.WriteNew(root, compared);
+            var originalComparisonBytes = File.ReadAllBytes(comparisonPathA);
+            var comparisonPathB = RecordedRunComparisonCsv.WriteNew(root, compared);
+            Require(comparisonPathB != comparisonPathA &&
+                File.ReadAllBytes(comparisonPathA).SequenceEqual(originalComparisonBytes) &&
+                File.ReadAllText(comparisonPathB) == exportedComparison &&
+                !File.Exists(comparisonPathA + ".stage") &&
+                !File.Exists(comparisonPathB + ".stage"),
+                "Repeated comparison exports must publish distinct immutable files.");
+            var injectedBranch = System.Text.Json.Nodes.JsonNode.Parse(sourceRun.ToJsonString());
+            injectedBranch["branchId"] = "=spreadsheet()";
+            injectedBranch["commandReceipts"] = null;
+            var formulaComparison = RecordedRunComparison.Compare(
+                RecordedSessionReview.FromJson(injectedBranch.ToJsonString()), secondRun);
+            Require(RecordedRunComparisonCsv.RenderCsv(formulaComparison)
+                .Contains("'=spreadsheet()") &&
+                !RecordedRunComparisonCsv.RenderCsv(formulaComparison)
+                    .Contains(",=spreadsheet()"),
+                "Recorded comparison export admitted a spreadsheet formula in Native metadata.");
             candidateRun["observations"][0]["freshness"] = "Stale";
             var staleComparison = RecordedRunComparison.Compare(firstRun,
                 RecordedSessionReview.FromJson(candidateRun.ToJsonString()));
             Require(staleComparison.Rows[0].CandidateDisplay == "--" &&
                 !staleComparison.Rows[0].DeltaAvailable,
                 "Stale recorded Native pH was turned into an invented comparison delta.");
+            var staleComparisonColumns = RecordedRunComparisonCsv.RenderCsv(staleComparison)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(staleComparisonColumns[12] == "" &&
+                staleComparisonColumns[13] == "false" &&
+                staleComparisonColumns[14] == "",
+                "Stale Native observations became numeric recorded CSV evidence.");
             candidateRun["observations"][0]["freshness"] = "Current";
             candidateRun["scientificPackage"]["identity"] = "different-model-database";
             var differentPackage = RecordedRunComparison.Compare(firstRun,
@@ -499,6 +536,13 @@ internal static class Program
             Require(!differentPackage.Rows[0].DeltaAvailable &&
                 differentPackage.Rows[0].CandidateDisplay == "6.70",
                 "Different scientific packages generated an unverified cross-model delta.");
+            var incompatibleCsvFields = RecordedRunComparisonCsv.RenderCsv(differentPackage)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(incompatibleCsvFields[11] == "7.1" &&
+                incompatibleCsvFields[12] == "6.7" &&
+                incompatibleCsvFields[13] == "false" &&
+                incompatibleCsvFields[14] == "",
+                "Scientific package mismatch exported an invented numeric pH delta.");
             // Confirmed backup-only recorded comparison must remain usable when
             // the primary checkpoint is malformed, and fail closed otherwise.
             var comparisonFile = Path.Combine(root, "compare.plv.json");
