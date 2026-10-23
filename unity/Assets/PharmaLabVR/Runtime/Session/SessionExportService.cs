@@ -33,6 +33,11 @@ namespace PharmaLabVR.Session
                 throw new InvalidDataException("CSV contents missing or oversized.");
 
             Directory.CreateDirectory(directory);
+            // Serialize all writers targeting this scientific/student pair,
+            // including different Unity instances. Retain the stable lock
+            // filename across runs; unlinking a held lock permits inode races.
+            using var lease = new FileStream(science + ".pair.lock",
+                FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             var token = Guid.NewGuid().ToString("N");
             var scienceStage = science + "." + token + ".stage";
             var learnerStage = learner + "." + token + ".stage";
