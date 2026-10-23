@@ -35,6 +35,9 @@ namespace PharmaLabVR.Input
         // Navigating to Notebook/Review must consume prior pointer/G presses
         // without requiring the student to discard the physically held tool.
         private readonly ResearchRestorationGestureGate screenGestureGate = new();
+        // Separate one-time neutral re-arm for non-chemical Measure -> Notebook.
+        private readonly ResearchRestorationGestureGate measurementGestureGate = new();
+        private bool measurementPageObserved;
         public bool HasFreshLabScreenGesture => screenGestureGate.IsArmed;
         public bool HasFreshPhysicalGestureSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer pickPress = new ResearchPressBuffer();
@@ -181,6 +184,7 @@ namespace PharmaLabVR.Input
             {
                 // UI buttons, not old instrument presses, own this screen.
                 screenGestureGate.RequireFreshNeutralInput();
+                TryRecordPhysicalReceiverPH();
                 pickPress.Clear();
                 ClearDeliveryPress();
                 actuator = 0f;
@@ -188,6 +192,8 @@ namespace PharmaLabVR.Input
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return;
             }
+            measurementPageObserved = false;
+            measurementGestureGate.RequireFreshNeutralInput();
             if (!screenGestureGate.IsArmed)
             {
                 // Unlike SessionLoad, a Notebook return does not require
@@ -615,6 +621,74 @@ namespace PharmaLabVR.Input
             LastPhysicalInspectionFeedback = null;
             BeginHold(grabbable.transform);
             if (IsHoldingNativeTool) heldToolId = grabbable.ToolId;
+        }
+
+        // A second, physically distinct receiver click while on Measure
+        // records the real Current Native pH through the shared Notebook
+        // command. The first click that opened Measure can never be reused.
+        private void TryRecordPhysicalReceiverPH()
+        {
+            var router = coreDriver != null ? coreDriver.transform.root
+                .GetComponentInChildren<ScreenRouter>(true) : null;
+            var measuring = router?.Current?.ScreenId == ScreenId.Measure &&
+                router.Current.SelectedEntityId == "receiver" &&
+                coreDriver.SelectedMeasurementVesselId == "receiver";
+            if (!measuring)
+            {
+                measurementPageObserved = false;
+                measurementGestureGate.RequireFreshNeutralInput();
+                return;
+            }
+            if (!measurementPageObserved)
+            {
+                measurementPageObserved = true;
+                measurementGestureGate.RequireFreshNeutralInput();
+                return; // A navigation frame cannot also record.
+            }
+            if (!measurementGestureGate.IsArmed)
+            {
+                var pointerNeutral = Mouse.current != null &&
+                    !Mouse.current.leftButton.isPressed &&
+                    !Mouse.current.rightButton.isPressed &&
+                    !Mouse.current.middleButton.isPressed;
+                var neutral = pointerNeutral && Keyboard.current != null &&
+                    !Keyboard.current.anyKey.isPressed;
+                measurementGestureGate.ObserveNeutral(heldTool == null,
+                    neutral, inputEnabled && !awaitingFocusContinue &&
+                    coreDriver?.Session?.IsOpen == true &&
+                    !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused);
+                return; // Neutral frame is never a recording gesture.
+            }
+            if (Mouse.current == null ||
+                !Mouse.current.leftButton.wasPressedThisFrame) return;
+            var pointer = Mouse.current.position.ReadValue();
+            var uiClear = (EventSystem.current == null ||
+                !EventSystem.current.IsPointerOverGameObject()) &&
+                !SessionController.PointerOverDesktopHud(pointer);
+            var receiverHit = false;
+            if (uiClear && viewCamera != null &&
+                Physics.Raycast(SelectionRay(viewCamera, pointer, true),
+                    out var hit, 3f, Physics.DefaultRaycastLayers,
+                    QueryTriggerInteraction.Ignore))
+                receiverHit = hit.collider.GetComponentInParent<LabCaptureTarget>() ==
+                    captureTarget && captureTarget != null && captureTarget.isActiveAndEnabled;
+            var session = coreDriver.transform.root
+                .GetComponentInChildren<SessionController>(true);
+            var nativeReady = coreDriver.Session?.IsOpen == true &&
+                !coreDriver.IsTimeHeld && !coreDriver.IsNativePaused &&
+                !coreDriver.SourceNeedsPreparation;
+            if (!ResearchPhysicalMeasurementRecording.CanRecord(
+                    router.Current.ScreenId.ToString(),
+                    coreDriver.SelectedMeasurementVesselId,
+                    session?.CanRecordCurrentNativePH == true,
+                    measurementGestureGate.IsArmed,
+                    receiverHit, heldTool == null, uiClear, nativeReady))
+                return;
+            var panel = coreDriver.transform.root
+                .GetComponentInChildren<LabPanelController>(true);
+            if (panel?.Request(PanelAction.RecordCurrentPH) == true)
+                LastPhysicalInspectionFeedback =
+                    "Current Native receiver pH recorded in the branch-bound Notebook.";
         }
 
         // Alt-click an actual stock body for its Native inventory metadata.

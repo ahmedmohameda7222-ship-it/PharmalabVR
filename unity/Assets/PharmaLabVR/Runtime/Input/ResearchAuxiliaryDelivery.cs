@@ -42,7 +42,21 @@ namespace PharmaLabVR.Input
                 ResearchAuxiliaryDeliveryIntent.None;
     }
 
-    // The physical inspection gesture only selects an existing Native vessel.
+    // The second physical receiver contact is a notebook RECORD request,
+    // not a new scientific solve. Native current pH and immutable branch/
+    // revision-scoped Notebook admission are checked again by SessionController.
+    public static class ResearchPhysicalMeasurementRecording
+    {
+        public static bool CanRecord(string screenId, string vesselId,
+            bool nativeCurrentAndUnrecorded, bool freshGesture,
+            bool touchingReceiver, bool emptyHands, bool uiClear,
+            bool nativeLive) =>
+            screenId == "Measure" && vesselId == "receiver" &&
+            nativeCurrentAndUnrecorded && freshGesture && touchingReceiver &&
+            emptyHands && uiClear && nativeLive;
+    }
+
+        // The physical inspection gesture only selects an existing Native vessel.
     // It cannot change tool ownership, stock, solute or measurement support.
     // Multiple touched vessels are ambiguous, not "closest wins".
     public static class ResearchPhysicalInspectionSelection

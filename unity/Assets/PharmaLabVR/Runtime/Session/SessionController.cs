@@ -1269,6 +1269,8 @@ namespace PharmaLabVR.Session
                 if (measurement != null) GUILayout.Label(measurement.Explanation);
                 if (screen == ScreenId.Inspect && GUILayout.Button("Measure selected vessel", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Measure, router.Current.SelectedEntityId);
+                if (screen == ScreenId.Measure && router.Current.SelectedEntityId == "receiver")
+                    GUILayout.Label("Desktop: release the inspection click, then click the physical receiver again to record only a fresh Native pH in the Notebook.");
                 var wasEnabled = GUI.enabled;
                 GUI.enabled = wasEnabled && CanRecordCurrentNativePH;
                 var recordReading = GUILayout.Button("Record current Native pH in notebook",

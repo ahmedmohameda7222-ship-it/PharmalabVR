@@ -1248,6 +1248,20 @@ internal static class Program
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
 
+        // Verify the gesture is actually routed by both input adapters,
+        // not merely accepted by a detached presentation-only helper.
+        var noteDesktopSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var noteXrSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(noteDesktopSource.Contains("TryRecordPhysicalReceiverPH()", StringComparison.Ordinal) &&
+              noteDesktopSource.Contains("measurementGestureGate.ObserveNeutral(", StringComparison.Ordinal) &&
+              noteDesktopSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal) &&
+              noteXrSource.Contains("TryRecordPhysicalReceiverPH()", StringComparison.Ordinal) &&
+              noteXrSource.Contains("measurementGestureGate.ObserveNeutral(", StringComparison.Ordinal) &&
+              noteXrSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal),
+            "Desktop/XR must use fresh physical receiver gestures for the real Notebook command.");
+
         // M3: a SECOND deliberate physical receiver contact on Measure must
         // persist only the current Native observation, never replay the first
         // Lab inspection gesture or create synthetic notebook evidence.

@@ -512,6 +512,9 @@ namespace PharmaLabVR.UI
                     "Empty tracked hand: touch receiver and press trigger to inspect its current Native pH. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
+            if (state.ScreenId == ScreenId.Measure &&
+                state.SelectedEntityId == "receiver")
+                detail.text += "\nRelease the first trigger, then touch the physical receiver with an empty hand and trigger again to record only Current Native pH in the offline Notebook.";
             if (state.ScreenId == ScreenId.Lab)
                 detail.text = "Native research bench\n" +
                     LabBenchReadout.Compact(driver.CurrentLabView) + "\n" +

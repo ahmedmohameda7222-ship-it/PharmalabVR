@@ -35,6 +35,8 @@ namespace PharmaLabVR.Input
         private bool inputEnabled;
         private readonly ResearchRestorationGestureGate restorationGestureGate = new();
         private readonly ResearchRestorationGestureGate screenGestureGate = new();
+        private readonly ResearchRestorationGestureGate measurementGestureGate = new();
+        private bool measurementPageObserved;
         public bool HasFreshLabScreenGesture => screenGestureGate.IsArmed;
         public bool HasFreshGripSinceRestore => restorationGestureGate.IsArmed;
         private readonly ResearchPressBuffer deliveryPress = new ResearchPressBuffer();
@@ -213,10 +215,13 @@ namespace PharmaLabVR.Input
             if (!IsOperatingLabScreen())
             {
                 screenGestureGate.RequireFreshNeutralInput();
+                TryRecordPhysicalReceiverPH();
                 ClearDeliveryPress();
                 instrumentPresenter?.PresentActuatorInput(0f);
                 return;
             }
+            measurementPageObserved = false;
+            measurementGestureGate.RequireFreshNeutralInput();
             if (!screenGestureGate.IsArmed)
             {
                 // Returning from Notebook/Review must not reuse a held UI
@@ -292,6 +297,87 @@ namespace PharmaLabVR.Input
                 }
             }
             TryInspectPhysicalVesselByTouch();
+        }
+
+        // Second explicit empty-hand receiver trigger on Measure records
+        // only an unrecorded, current Native pH. First Lab inspection trigger
+        // must be released before this separate Notebook intent can arm.
+        private void TryRecordPhysicalReceiverPH()
+        {
+            var router = coreDriver != null ? coreDriver.transform.root
+                .GetComponentInChildren<ScreenRouter>(true) : null;
+            var measuring = router?.Current?.ScreenId == ScreenId.Measure &&
+                router.Current.SelectedEntityId == "receiver" &&
+                coreDriver.SelectedMeasurementVesselId == "receiver";
+            if (!measuring || captureTarget == null || deliveryPanel == null)
+            {
+                measurementPageObserved = false;
+                measurementGestureGate.RequireFreshNeutralInput();
+                return;
+            }
+            if (!measurementPageObserved)
+            {
+                measurementPageObserved = true;
+                measurementGestureGate.RequireFreshNeutralInput();
+                return; // Old inspection trigger may still be depressed.
+            }
+            var receiverGrip = captureTarget.GetComponent<XRGrabInteractable>();
+            var emptyHands =
+                (grabInteractable == null || !grabInteractable.isSelected) &&
+                (researchPipetteGrab == null || !researchPipetteGrab.isSelected) &&
+                (researchBottleGrab == null || !researchBottleGrab.isSelected) &&
+                (reserveStockGrip == null || !reserveStockGrip.isSelected) &&
+                (receiverGrip == null || !receiverGrip.isSelected);
+            var head = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(
+                UnityEngine.XR.XRNode.Head);
+            var headTracked = head.isValid &&
+                head.TryGetFeatureValue(UnityEngine.XR.CommonUsages.isTracked,
+                    out var trackedHead) && trackedHead;
+            var trackingValid = XRTrackingAdmission.HasFreshTracking(headTracked,
+                Tracked(leftActionController), Tracked(rightActionController));
+            var nativeReady = inputEnabled && coreDriver?.Session?.IsOpen == true &&
+                !coreDriver.SourceNeedsPreparation && !coreDriver.IsNativePaused &&
+                !coreDriver.IsTimeHeld;
+            if (!measurementGestureGate.IsArmed)
+            {
+                measurementGestureGate.ObserveNeutral(emptyHands,
+                    ControllerNeutral(leftActionController) &&
+                    ControllerNeutral(rightActionController),
+                    nativeReady && trackingValid);
+                return;
+            }
+            if (!nativeReady || !trackingValid || !emptyHands) return;
+            var session = coreDriver.transform.root
+                .GetComponentInChildren<SessionController>(true);
+            foreach (var hand in new[] { leftActionController, rightActionController })
+            {
+                if (!Tracked(hand)) continue;
+                var trigger = hand.activateAction.action;
+                if (trigger == null || !trigger.enabled || !trigger.WasPressedThisFrame())
+                    continue;
+                var ray = hand.GetComponentInChildren<XRRayInteractor>(true);
+                var uiClear = ray == null || !ray.IsOverUIGameObject();
+                var touched = ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                    true, Tracked(hand), emptyHands, !uiClear,
+                    ClosestInspectionColliderDistance(captureTarget,
+                        hand.transform.position),
+                    ClosestInspectionColliderDistance(StockAspirateTarget,
+                        hand.transform.position),
+                    coreDriver.ReserveStockPrepared ?
+                        ClosestInspectionColliderDistance(reserveStockAspirateTarget,
+                            hand.transform.position) : float.PositiveInfinity) == "receiver";
+                if (!ResearchPhysicalMeasurementRecording.CanRecord(
+                        router.Current.ScreenId.ToString(),
+                        coreDriver.SelectedMeasurementVesselId,
+                        session?.CanRecordCurrentNativePH == true,
+                        measurementGestureGate.IsArmed,
+                        touched, emptyHands, uiClear, nativeReady))
+                    continue;
+                if (deliveryPanel.Request(PanelAction.RecordCurrentPH))
+                    LastPhysicalInspectionFeedback =
+                        "Current Native receiver pH recorded in the branch-bound Notebook.";
+                break; // One tracked hand can record at most one current event.
+            }
         }
 
         // The trigger on a tracked, empty hand touches exactly one actual

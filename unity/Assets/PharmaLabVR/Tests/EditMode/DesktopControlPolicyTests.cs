@@ -62,6 +62,29 @@ namespace PharmaLabVR.Tests.EditMode
         }
 
         [Test]
+        public void M3_PhysicalSecondReceiverContactRecordsOnlyValidCurrentNativePH()
+        {
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, true), Is.True);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Lab", "receiver", true, true, true, true, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", false, true, true, true, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, false, true, true, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "source", true, true, true, true, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, false, true, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, false, true, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, false, true), Is.False);
+            Assert.That(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, false), Is.False);
+        }
+
+        [Test]
         public void M2_PhysicalNativeStockInspectionDemandsExclusiveFreshGesture()
         {
             Assert.That(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
