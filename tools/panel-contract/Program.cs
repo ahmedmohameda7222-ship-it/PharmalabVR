@@ -1428,7 +1428,7 @@ internal static class Program
         var exportControllerSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
         Check(exportControllerSource.Contains(
-                "private void RecoverInterruptedCsvForCurrentSession(", StringComparison.Ordinal) &&
+                "private bool RecoverInterruptedCsvForCurrentSession(", StringComparison.Ordinal) &&
               exportControllerSource.Contains(
                 "RecordedCsvPairWriter.RecoverInterruptedPair(", StringComparison.Ordinal) &&
               exportControllerSource.Split(
