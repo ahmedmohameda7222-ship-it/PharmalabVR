@@ -171,6 +171,7 @@ namespace PharmaLabVR.UI
             AddButton("Choose local archive", -26f, PanelAction.ChoosePortableArchive);
             AddButton("Compare saved", -194f, PanelAction.CompareSaved);
             AddButton("Return to lab", -138f, PanelAction.Lab);
+            AddButton("Return to Hold", -138f, PanelAction.Hold);
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
             AddButton("Continue", -194f, PanelAction.Continue);
@@ -659,6 +660,8 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("CompareSaved") &&
                 panels != null && panels.CanCompareSaved);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
+            SetButton("Return to Hold", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("Hold"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
                 state.ScreenId != ScreenId.Settings && state.ScreenId != ScreenId.Review);

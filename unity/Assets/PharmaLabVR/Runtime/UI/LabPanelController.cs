@@ -168,6 +168,15 @@ namespace PharmaLabVR.UI
                     if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
                     return router.Current.ScreenId == ScreenId.Review;
+                case PanelAction.Hold:
+                    // Reviewing while Native is held must never trap a user
+                    // away from Continue/Save/recovery. This is presentation
+                    // navigation only, never a Native Continue or Save.
+                    if (!driver.IsTimeHeld || router.Current.ScreenId != ScreenId.Review)
+                        return false;
+                    sessions.CloseReview();
+                    router.Show(ScreenId.Hold);
+                    return router.Current.ScreenId == ScreenId.Hold;
                 case PanelAction.Notebook:
                     router.Show(ScreenId.Notebook);
                     return router.Current.ScreenId == ScreenId.Notebook;

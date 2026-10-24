@@ -24,6 +24,76 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // True Native FocusLoss Hold: recorded Review is safe but must not
+        // become an inescapable screen. Check Desktop and actual XR UI button
+        // routing without submitting Continue, Save, or a material command.
+        [UnityTest]
+        public IEnumerator M3_NativeHeldReviewReturnsToRecoveryWithoutChangingScience()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(driver.BeginInputHold("FocusLoss"), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                var branch = driver.Session.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var beforeReview = driver.Session.ExportSession();
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(router.Current.SupportedActions, Does.Contain("Hold"));
+                Assert.That(panels.Request(PanelAction.Lab), Is.False);
+                Assert.That(panels.Request(PanelAction.Hold), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(controller.RecordedReview, Is.Null);
+                Assert.That(panels.Request(PanelAction.Hold), Is.False);
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Return to Hold"].gameObject.activeSelf, Is.True,
+                    "XR recorded Review must expose a genuine recovery escape.");
+                Assert.That(buttons["Return to lab"].gameObject.activeSelf, Is.False,
+                    "Held Review must not display an unsafe Lab return action.");
+                buttons["Return to Hold"].onClick.Invoke();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(beforeReview),
+                    "Read-only Review/Hold navigation cannot mutate Native receipts or chemistry.");
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // A source with materialRevision=0 may also be a CLOSED, already
         // continued experiment. Only Native setupClosed determines whether
         // new stock preparation is still permitted.

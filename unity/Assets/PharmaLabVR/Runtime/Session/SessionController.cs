@@ -1303,7 +1303,13 @@ namespace PharmaLabVR.Session
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
                     GUILayout.Label(LearningReviewSummary);
                 }
-                if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
+                if (driver.IsTimeHeld)
+                {
+                    if (GUILayout.Button("Return to Native Hold / recovery",
+                        GUILayout.Height(44f)))
+                        panels?.Request(PanelAction.Hold);
+                }
+                else if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Lab);
                 if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
                     GUILayout.Button("Open student notebook", GUILayout.Height(38f)))
