@@ -307,12 +307,35 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(File.Exists(Path.Combine(folder, newName + ".plv-notes")), Is.True);
                 Assert.That(panels.Request(PanelAction.NewStudy), Is.False,
                     "Held Native session must not silently start another run.");
-                session.Configure(driver, oldName);
-                Assert.That(panels.Request(PanelAction.Load), Is.True, session.LastError);
+                var freshBranch = driver.Session.BranchId;
+                var freshEvent = driver.CurrentLabView.EventSequence;
+                // Use the actual visible selected-file Load action, not a
+                // test-only Configure mutation of the active save identity.
+                Assert.That(panels.Request(PanelAction.LoadSelectedSave), Is.True,
+                    session.LastError);
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(oldName));
                 Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 Assert.That(session.ReadNotebookEntries().Single().Text,
                     Is.EqualTo("First Native run, not a copied checkpoint."));
+                // The learner may explicitly select the second saved file
+                // again and recover its separate source/Notebook under Hold.
+                for (var browse = 0; browse < 64 &&
+                     session.SelectedLocalNativeSaveName != newName; browse++)
+                    Assert.That(panels.Request(PanelAction.ChooseLocalSave), Is.True,
+                        session.LastError);
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(newName));
+                Assert.That(panels.Request(PanelAction.LoadSelectedSave), Is.True,
+                    session.LastError);
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(newName));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(freshBranch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(freshEvent));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(session.ReadNotebookEntries(), Is.Empty,
+                    "First run student notes must never follow second Native branch.");
             }
             finally
             {
