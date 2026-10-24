@@ -2936,6 +2936,9 @@ internal static class Program
                   interruptedDriver.PauseCalls == 1,
                 "Hold recovery during Settings unpaused or re-paused Native authority");
 
+            var heldReturnPreviousContinue = driver.ContinueCalls;
+            var heldReturnPreviousSaves = session.SaveCalls;
+            var heldReturnPreviousPauses = driver.PauseCalls;
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");
@@ -2950,7 +2953,9 @@ internal static class Program
                   driver.IsTimeHeld && !driver.NativeRecoveryReady &&
                   session.RecordedReview == null,
                 "Return from recorded Review bypassed Native Hold or left stale Review.");
-            Check(session.SaveCalls == 0 && driver.ContinueCalls == 1,
+            Check(session.SaveCalls == heldReturnPreviousSaves &&
+                  driver.ContinueCalls == heldReturnPreviousContinue &&
+                  driver.PauseCalls == heldReturnPreviousPauses,
                 "Review-to-Hold navigation saved/continued/recomputed Native authority.");
             Check(!panels.Request(PanelAction.Hold),
                 "Native recovery return must not be a generic screen escape.");
