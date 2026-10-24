@@ -2939,6 +2939,64 @@ internal static class Program
             var heldReturnPreviousContinue = driver.ContinueCalls;
             var heldReturnPreviousSaves = session.SaveCalls;
             var heldReturnPreviousPauses = driver.PauseCalls;
+            // RED: a held imported checkpoint that was saved under Pause
+            // resumes *running* when Native accepts Continue. Do not display
+            // obsolete Pause while Native time/transport are active.
+            var resumedDriver = new CoreDriver();
+            var resumedRouter = new ScreenRouter();
+            resumedRouter.Configure(resumedDriver);
+            var resumedSession = new SessionController();
+            var resumedPanels = new LabPanelController();
+            resumedPanels.Configure(resumedRouter, resumedDriver, resumedSession);
+            Check(resumedPanels.Request(PanelAction.Pause) &&
+                  resumedRouter.Current.ScreenId == ScreenId.Pause,
+                "Cannot simulate paused original Native checkpoint.");
+            resumedDriver.SetHold(true);
+            Check(resumedRouter.Current.ScreenId == ScreenId.Hold,
+                "Paused checkpoint was not held.");
+            var resumePauses = resumedDriver.PauseCalls;
+            var resumeContinues = resumedDriver.ContinueCalls;
+            resumedDriver.CompleteRecovery(remainsPaused: false, needsPreparation: false);
+            Check(resumedRouter.Current.ScreenId == ScreenId.Lab &&
+                  !resumedDriver.IsNativePaused && !resumedDriver.IsTimeHeld &&
+                  resumedDriver.PauseCalls == resumePauses &&
+                  resumedDriver.ContinueCalls == resumeContinues &&
+                  resumedSession.SaveCalls == 0,
+                "Native Continue released saved Pause but router exposed obsolete Pause UI.");
+            // Settings can obscure Hold while the exact same recovery
+            // finishes. Back must reconcile the CURRENT Native pause flag.
+            var settingsRecoveryDriver = new CoreDriver();
+            var settingsRecoveryRouter = new ScreenRouter();
+            settingsRecoveryRouter.Configure(settingsRecoveryDriver);
+            var settingsRecoverySession = new SessionController();
+            var settingsRecoveryPanels = new LabPanelController();
+            settingsRecoveryPanels.Configure(settingsRecoveryRouter,
+                settingsRecoveryDriver, settingsRecoverySession);
+            Check(settingsRecoveryPanels.Request(PanelAction.Pause),
+                "Settings recovery could not construct paused Native source.");
+            settingsRecoveryDriver.SetHold(true);
+            Check(settingsRecoveryPanels.Request(PanelAction.Settings),
+                "Held Settings admission missing.");
+            settingsRecoveryDriver.CompleteRecovery(remainsPaused: false,
+                needsPreparation: false);
+            Check(settingsRecoveryPanels.Request(PanelAction.Back) &&
+                  settingsRecoveryRouter.Current.ScreenId == ScreenId.Lab &&
+                  settingsRecoveryDriver.ContinueCalls == 0 &&
+                  settingsRecoverySession.SaveCalls == 0,
+                "Settings Back restored stale Pause after Native recovered running.");
+            // ResumeSetup is the sole valid exception: genuinely unprepared,
+            // still Native-paused stock setup should return to the Lab chooser.
+            var setupResumeDriver = new CoreDriver { SourceNeedsPreparation = true };
+            var setupResumeRouter = new ScreenRouter();
+            setupResumeRouter.Configure(setupResumeDriver);
+            setupResumeDriver.SetHold(true);
+            setupResumeDriver.CompleteRecovery(remainsPaused: true,
+                needsPreparation: true);
+            Check(setupResumeRouter.Current.ScreenId == ScreenId.Lab &&
+                  setupResumeDriver.IsNativePaused &&
+                  setupResumeDriver.SourceNeedsPreparation,
+                "Unprepared Native ResumeSetup did not return to stock choice.");
+
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");

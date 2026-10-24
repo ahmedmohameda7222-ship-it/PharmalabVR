@@ -119,6 +119,18 @@ namespace PharmaLabVR.Core
             HoldReason = held ? "FocusLoss" : "";
             HoldChanged?.Invoke(held);
         }
+        // Mirror an *already accepted* Native recovery in the test double.
+        // It changes no Native commands; UI should read the recovered pause
+        // flag, not the stale screen that happened to precede the Hold.
+        public void CompleteRecovery(bool remainsPaused, bool needsPreparation)
+        {
+            if (!IsTimeHeld) throw new InvalidOperationException("No Hold to recover.");
+            IsNativePaused = remainsPaused;
+            SourceNeedsPreparation = needsPreparation;
+            IsTimeHeld = false;
+            HoldReason = "";
+            HoldChanged?.Invoke(false);
+        }
         public void RaiseNativeSessionRestored()
         {
             NativeRestorationEpoch++;
