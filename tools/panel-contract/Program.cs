@@ -1746,7 +1746,7 @@ internal static class Program
               pinnedFirstRunPreview > 0 && pinnedFirstRunPreview < restoredHandoverLine,
             "New Native run lost its explicitly saved previous trial as read-only comparison baseline.");
         Check(independentSessionSource.Contains(
-            "GUILayout.Label(\"Recorded baseline file: \" + validatedComparisonBaselineName)"),
+            "GUILayout.Label(\"Recorded baseline file: \" + validatedComparisonBaselineName"),
             "Desktop recorded comparison omits the actual previous Native file identity.");
 
         // Selected saved-recording preview must be visible in both recovery
