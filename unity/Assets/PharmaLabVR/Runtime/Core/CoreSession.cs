@@ -17,7 +17,8 @@ namespace PharmaLabVR.Core
         public static int PendingRetirements => CoreSafeHandle.PendingRetirements;
 
         public CoreSession(string branchId, string initialMode = "Desktop", string databasePath = "", string databaseIdentity = "",
-            string scienceBudgetMode = "Precision", string automaticCheckpointPath = "")
+            string scienceBudgetMode = "Precision", string automaticCheckpointPath = "",
+            bool stagedResearchBootstrap = false)
         {
             if (initialMode != "Desktop" && initialMode != "VR") throw new ArgumentOutOfRangeException(nameof(initialMode));
             if (scienceBudgetMode != "Precision" && scienceBudgetMode != "Bulk")
@@ -36,7 +37,9 @@ namespace PharmaLabVR.Core
                         nameof(automaticCheckpointPath));
                 checkpointFragment = ",\"checkpointPath\":\"" + Escape(automaticCheckpointPath) + "\"";
             }
-            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"{checkpointFragment}}}");
+            var stageFragment = stagedResearchBootstrap ?
+                ",\"stagedResearchBootstrap\":true" : "";
+            var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"{checkpointFragment}{stageFragment}}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
             this.branchId = branchId;
             nextCommandSequence = 1;

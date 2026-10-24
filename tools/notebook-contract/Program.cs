@@ -1,7 +1,9 @@
 // Headless tests link the real NotebookService production file; no Unity,
  // Native chemistry or Editor/Player execution is inferred from these checks.
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using PharmaLabVR.Session;
 
 internal static class Program
@@ -13,14 +15,240 @@ internal static class Program
         if (!condition) throw new InvalidOperationException(message);
     }
 
-    private static void Main()
+    private static void Main(string[] args)
     {
+        // A dedicated child PROCESS dies abruptly while holding the file
+        // lease immediately after the scientific CSV was published.
+        if (args.Length == 3 && args[0] == "--kill-after-first-csv")
+        {
+            RecordedCsvPairWriter.WritePair(args[1], "KILLED_CHILD_SCIENCE",
+                args[2], "KILLED_CHILD_NOTES", null,
+                () => Process.GetCurrentProcess().Kill());
+            throw new InvalidOperationException(
+                "Child process survived the intended immediate termination.");
+        }
         var root = Path.Combine(Path.GetTempPath(), "plv-p11-notebook-" + Guid.NewGuid().ToString("N"));
         var path = Path.Combine(root, "session.plv-notes");
         var notes = new NotebookService();
         try
         {
-            var first = notes.Append(path, "research-branch", "7", "receiver",
+            // Regression: a two-file CSV request is one reported operation.
+            // A filesystem error at the SECOND destination must restore
+            // any earlier scientific CSV, never leave a misleading partial
+            // success, and never modify the prior student evidence.
+            var pairRoot = Path.Combine(root, "paired-csv");
+            Directory.CreateDirectory(pairRoot);
+            var scientificCsvPath = Path.Combine(pairRoot, "session.plv-results.csv");
+            var learnerCsvPath = Path.Combine(pairRoot,
+                "session.plv-student-annotations.csv");
+            File.WriteAllText(scientificCsvPath, "OLD_CONFIRMED_SCIENCE");
+            Directory.CreateDirectory(learnerCsvPath); // a real mid-commit failure
+            var pairRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "NEW_UNCONFIRMED_SCIENCE", learnerCsvPath, "NEW_LEARNER");
+            }
+            catch (IOException) { pairRefused = true; }
+            Require(pairRefused && File.ReadAllText(scientificCsvPath) ==
+                    "OLD_CONFIRMED_SCIENCE" && Directory.Exists(learnerCsvPath),
+                "Failed second CSV publication destroyed an earlier confirmed result.");
+            Directory.Delete(learnerCsvPath);
+            RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                "CONFIRMED_SCIENCE", learnerCsvPath, "CONFIRMED_STUDENT");
+            Require(File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Paired scientific/student CSV output failed to publish both files.");
+            // Actual child-process kill, not only a caught exception. A new
+            // process cannot inherit either the old writer lease or its
+            // transient state; the durable journal must restore prior data.
+            var childStart = new ProcessStartInfo("dotnet")
+            {
+                UseShellExecute = false
+            };
+            childStart.ArgumentList.Add(typeof(Program).Assembly.Location);
+            childStart.ArgumentList.Add("--kill-after-first-csv");
+            childStart.ArgumentList.Add(scientificCsvPath);
+            childStart.ArgumentList.Add(learnerCsvPath);
+            using (var terminatedChild = Process.Start(childStart))
+            {
+                Require(terminatedChild != null,
+                    "Could not launch the independent CSV crash worker.");
+                var terminated = terminatedChild.WaitForExit(20000);
+                if (!terminated)
+                {
+                    terminatedChild.Kill();
+                    terminatedChild.WaitForExit();
+                }
+                Require(terminated && terminatedChild.ExitCode != 0 &&
+                        File.ReadAllText(scientificCsvPath) == "KILLED_CHILD_SCIENCE" &&
+                        File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                        File.Exists(scientificCsvPath + ".pair.pending"),
+                    "Real child-process termination did not leave recoverable interrupted CSV output.");
+            }
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending"),
+                "Restart after a killed CSV writer did not restore last confirmed pair.");
+                        // Simulated abrupt process exit *after the first published CSV*
+            // must leave a durable recovery record. A later Player launch
+            // restores the previous complete pair rather than claiming the
+            // science export belongs with mismatched learner annotations.
+            var interrupted = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "INTERRUPTED_SCIENCE", learnerCsvPath, "INTERRUPTED_STUDENT",
+                    null, () => throw new InvalidOperationException(
+                        "Injected abrupt termination after first publish"));
+            }
+            catch (InvalidOperationException) { interrupted = true; }
+            Require(interrupted &&
+                    File.ReadAllText(scientificCsvPath) == "INTERRUPTED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    File.Exists(scientificCsvPath + ".pair.pending"),
+                "Interrupted paired export has no persisted recovery marker.");
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending") &&
+                    !RecordedCsvPairWriter.RecoverInterruptedPair(
+                        scientificCsvPath, learnerCsvPath),
+                "Restart did not restore exactly the previous confirmed paired CSV.");
+            // A malformed on-disk marker may not authorize overwriting the
+            // learner's prior confirmed exports.
+            File.WriteAllText(scientificCsvPath + ".pair.pending",
+                "untrusted-marker");
+            var malformedRecoveryRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath);
+            }
+            catch (InvalidDataException) { malformedRecoveryRefused = true; }
+            Require(malformedRecoveryRefused &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Invalid recovery metadata modified confirmed student evidence.");
+            File.Delete(scientificCsvPath + ".pair.pending");
+                        // A tampered confirmed preimage is not a valid rollback source,
+            // even when the durable marker itself still parses correctly.
+            var digestCrashObserved = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "TAMPER_TEST_UNCONFIRMED_SCIENCE", learnerCsvPath,
+                    "TAMPER_TEST_UNCONFIRMED_NOTES", null,
+                    () => throw new InvalidOperationException("Simulated crash"));
+            }
+            catch (InvalidOperationException) { digestCrashObserved = true; }
+            var sciPreimage = Directory.GetFiles(pairRoot,
+                "session.plv-results.csv.*.rollback").Single();
+            File.WriteAllText(sciPreimage, "TAMPERED_BACKUP");
+            var tamperRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath);
+            }
+            catch (InvalidDataException) { tamperRefused = true; }
+            Require(digestCrashObserved && tamperRefused &&
+                    File.ReadAllText(scientificCsvPath) ==
+                        "TAMPER_TEST_UNCONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT" &&
+                    File.Exists(scientificCsvPath + ".pair.pending"),
+                "Tampered recovery copy altered confirmed or interrupted output.");
+            File.WriteAllText(sciPreimage, "CONFIRMED_SCIENCE");
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                "Repaired verified preimages could not complete interrupted recovery.");
+
+                        // A concurrent Desktop/Review export must not interleave
+            // scientific results from one revision with another note CSV.
+            var parallelDenied = false;
+            using (var writerLease = new FileStream(scientificCsvPath + ".pair.lock",
+                FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
+            {
+                try
+                {
+                    RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                        "CONCURRENT_SCIENCE", learnerCsvPath, "CONCURRENT_STUDENT");
+                }
+                catch (IOException) { parallelDenied = true; }
+                Require(parallelDenied &&
+                        File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                        File.ReadAllText(learnerCsvPath) == "CONFIRMED_STUDENT",
+                    "A second CSV writer bypassed the held export lease.");
+            }
+                        // Fault injection: if rollback ITSELF cannot proceed, a
+            // confirmed prior CSV copy must be left for manual recovery.
+            File.Delete(learnerCsvPath);
+            Directory.CreateDirectory(learnerCsvPath);
+            var rollbackFailed = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "SOME_UNCONFIRMED_SCIENCE", learnerCsvPath, "NEW_STUDENT",
+                    () => throw new IOException("Injected rollback disk failure"));
+            }
+            catch (IOException) { rollbackFailed = true; }
+            var recoverySnapshots = Directory.GetFiles(pairRoot, "*.rollback");
+            Require(rollbackFailed && recoverySnapshots.Length == 1 &&
+                    File.ReadAllText(recoverySnapshots[0]) == "CONFIRMED_SCIENCE",
+                "Failed rollback destroyed the last confirmed scientific CSV recovery copy.");
+            Directory.Delete(learnerCsvPath);
+            Require(RecordedCsvPairWriter.RecoverInterruptedPair(
+                    scientificCsvPath, learnerCsvPath) &&
+                    File.ReadAllText(scientificCsvPath) == "CONFIRMED_SCIENCE" &&
+                    !File.Exists(scientificCsvPath + ".pair.pending") &&
+                    !Directory.GetFiles(pairRoot, "*.rollback").Any(),
+                "Retry after double-fault did not restore the confirmed science CSV.");
+            File.WriteAllText(learnerCsvPath, "CONFIRMED_STUDENT");
+                        File.Delete(scientificCsvPath);
+            File.Delete(learnerCsvPath);
+            Directory.CreateDirectory(learnerCsvPath);
+            pairRefused = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "UNCONFIRMED_NEW_SCIENCE", learnerCsvPath, "NEW_LEARNER");
+            }
+            catch (IOException) { pairRefused = true; }
+            Require(pairRefused && !File.Exists(scientificCsvPath),
+                "Failed second CSV publication left a newly introduced scientific file.");
+            Directory.Delete(learnerCsvPath);
+            Require(!Directory.GetFiles(pairRoot).Any(f =>
+                    f.EndsWith(".stage", StringComparison.Ordinal) ||
+                    f.EndsWith(".rollback", StringComparison.Ordinal)),
+                "Aborted paired CSV left staging or rollback debris.");
+
+            // A first-ever export has no preimages. An interrupted publish
+            // must delete the unconfirmed new scientific CSV and keep both
+            // paths absent, not invent an empty student CSV.
+            var newPairInterrupted = false;
+            try
+            {
+                RecordedCsvPairWriter.WritePair(scientificCsvPath,
+                    "UNCONFIRMED_FIRST_SCIENCE", learnerCsvPath,
+                    "UNCONFIRMED_FIRST_STUDENT", null,
+                    () => throw new InvalidOperationException("Simulated first-export crash"));
+            }
+            catch (InvalidOperationException) { newPairInterrupted = true; }
+            Require(newPairInterrupted &&
+                    File.Exists(scientificCsvPath) &&
+                    !File.Exists(learnerCsvPath) &&
+                    RecordedCsvPairWriter.RecoverInterruptedPair(
+                        scientificCsvPath, learnerCsvPath) &&
+                    !File.Exists(scientificCsvPath) &&
+                    !File.Exists(learnerCsvPath) &&
+                    !File.Exists(scientificCsvPath + ".pair.pending"),
+                "Interrupted first-ever CSV pair retained unconfirmed science output.");
+                        var first = notes.Append(path, "research-branch", "7", "receiver",
                 "I predict the pH will decrease after transfer.");
             Require(first.EventSequence == "7" && first.BranchId == "research-branch",
                 "Native event reference was not preserved in the note.");
@@ -46,6 +274,18 @@ internal static class Program
             File.WriteAllText(path, file.Replace("PLV-NOTEBOOK-V1", "PLV-NOTEBOOK-X1"));
             Require(notes.Read(path, "research-branch").Count == 1,
                 "Corrupt primary did not open the previous confirmed notebook backup.");
+            var currentPrimaryRefused = false;
+            try { notes.ReadCurrent(path, "research-branch", "8"); }
+            catch (InvalidDataException) { currentPrimaryRefused = true; }
+            Require(currentPrimaryRefused,
+                "Live student evidence silently inherited stale .bak after a damaged primary.");
+            // Only an absent (not corrupt) primary may recover a last
+            // confirmed backup without pretending to validate current bytes.
+            File.Delete(path);
+            Require(notes.ReadCurrent(path, "research-branch", "8").Count == 1,
+                "Interrupted journal publication lost the last confirmed backup.");
+            File.WriteAllText(path, file.Replace(
+                "PLV-NOTEBOOK-V1", "PLV-NOTEBOOK-X1"));
             var rejectedUnsafeOverwrite = false;
             try { notes.Append(path, "research-branch", "9", "receiver", "Do not overwrite backup"); }
             catch (InvalidDataException) { rejectedUnsafeOverwrite = true; }
@@ -67,6 +307,66 @@ internal static class Program
                 "Portable archive did not round-trip Native bytes and selected notes.");
             Require(recovered.NotebookSnapshot.Contains("PLV-NOTEBOOK-V1"),
                 "Portable archive silently dropped notes.");
+            // The student's portable checkpoint needs an isolated, durable,
+            // already-authenticated local Notebook before Native authority can
+            // be swapped. Never overwrite existing learner records.
+            var localImport = Path.Combine(root, "portable-restored.plv-notes");
+            NotebookService.InstallPortableSnapshot(localImport, recovered.NotebookSnapshot,
+                recovered.BranchId, recovered.EventSequence);
+            Require(notes.Read(localImport, "research-branch", "8").Count == 2,
+                "A portable student Notebook did not become locally readable.");
+            var importedBytes = File.ReadAllBytes(localImport);
+            var overwriteRefused = false;
+            try { NotebookService.InstallPortableSnapshot(localImport, recovered.NotebookSnapshot,
+                recovered.BranchId, recovered.EventSequence); }
+            catch (IOException) { overwriteRefused = true; }
+            Require(overwriteRefused &&
+                    Convert.ToBase64String(importedBytes) ==
+                    Convert.ToBase64String(File.ReadAllBytes(localImport)),
+                "Portable restore overwrote an existing journal.");
+            var foreignRefused = false;
+            var foreignTarget = Path.Combine(root, "foreign-restored.plv-notes");
+            try { NotebookService.InstallPortableSnapshot(foreignTarget, recovered.NotebookSnapshot,
+                "other-branch", recovered.EventSequence); }
+            catch (InvalidDataException) { foreignRefused = true; }
+            Require(foreignRefused && !File.Exists(foreignTarget),
+                "Foreign-branch portable notebook was created before identity rejection.");
+            var futureRefused = false;
+            try { NotebookService.InstallPortableSnapshot(foreignTarget, recovered.NotebookSnapshot,
+                recovered.BranchId, "7"); }
+            catch (InvalidDataException) { futureRefused = true; }
+            Require(futureRefused && !File.Exists(foreignTarget),
+                "Future event evidence was installed ahead of the Native checkpoint.");
+            // Two student exports at the same Native material revision but
+            // different authenticated Notebook evidence must remain separate.
+            var firstImmutable = Path.Combine(root, "immutable-first.plvpack");
+            var secondImmutable = Path.Combine(root, "immutable-second.plvpack");
+            PortableSessionArchive.WriteNew(firstImmutable,
+                native, notesForEight, "research-branch", "8");
+            var firstBytes = File.ReadAllBytes(firstImmutable);
+            notes.Append(localImport, "research-branch", "8", "receiver",
+                "Additional student reflection at unchanged Native event 8.");
+            var nextNotes = notes.ExportBranch(localImport, "research-branch", "8");
+            PortableSessionArchive.WriteNew(secondImmutable,
+                native, nextNotes, "research-branch", "8");
+            Require(PortableSessionArchive.Read(firstImmutable).NotebookSnapshot ==
+                    notesForEight &&
+                    PortableSessionArchive.Read(secondImmutable).NotebookSnapshot ==
+                    nextNotes &&
+                    File.ReadAllBytes(firstImmutable).SequenceEqual(firstBytes),
+                "Second student export modified or lost previous Native/Notebook evidence.");
+            var immutableOverwriteRefused = false;
+            try { PortableSessionArchive.WriteNew(firstImmutable,
+                native, nextNotes, "research-branch", "8"); }
+            catch (IOException) { immutableOverwriteRefused = true; }
+            Require(immutableOverwriteRefused &&
+                    File.ReadAllBytes(firstImmutable).SequenceEqual(firstBytes),
+                "Create-new student export overwrote a valid previous research archive.");
+            notes.Append(localImport, "research-branch", "9", "receiver",
+                "New local reflection after verified portable import.");
+            Require(notes.Read(localImport, "research-branch").Count == 4,
+                "Restored Notebook did not support subsequent local learner work.");
+
             var bytes = File.ReadAllBytes(packed);
             bytes[bytes.Length - 1] ^= 0x01;
             File.WriteAllBytes(packed, bytes);
@@ -173,25 +473,145 @@ internal static class Program
             var sourceRun = System.Text.Json.Nodes.JsonNode.Parse(recorded);
             sourceRun["observations"][0]["modelId"] = "IPhreeqc-research";
             sourceRun["observations"][0]["databaseIdentity"] = "minteq-test";
+            sourceRun["eventSequence"] = "4";
             var candidateRun = System.Text.Json.Nodes.JsonNode.Parse(sourceRun.ToJsonString());
             candidateRun["branchId"] = "second-run";
+            candidateRun["eventSequence"] = "7";
             candidateRun["commandReceipts"] = null;
             candidateRun["observations"][0]["value"] = 6.7;
             var firstRun = RecordedSessionReview.FromJson(sourceRun.ToJsonString());
             var secondRun = RecordedSessionReview.FromJson(candidateRun.ToJsonString());
             var compared = RecordedRunComparison.Compare(firstRun, secondRun);
+            Require(compared.BaselineEventSequence == "4" &&
+                compared.CandidateEventSequence == "7" &&
+                compared.LineageSummary.Contains("Different Native branches"),
+                "Real recorded comparison lost explicit Native event/branch lineage.");
+            var checkpointNode = System.Text.Json.Nodes.JsonNode.Parse(candidateRun.ToJsonString());
+            checkpointNode["branchId"] = "research-branch";
+            var sameBranchProgress = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(checkpointNode.ToJsonString()));
+            Require(sameBranchProgress.LineageSummary.Contains(
+                    "Same Native branch at different recorded events"),
+                "One continuing Native experiment was mislabeled as independent research.");
+            checkpointNode["eventSequence"] = "4";
+            var sameEventCopy = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(checkpointNode.ToJsonString()));
+            Require(sameEventCopy.LineageSummary.Contains("same recorded event"),
+                "A same-event saved copy was mislabeled as another experiment.");
+            var unknownNativeEvent = RecordedRunComparison.Compare(review, review);
+            Require(unknownNativeEvent.BaselineEventSequence == "unavailable" &&
+                unknownNativeEvent.LineageSummary.Contains("Native event unknown"),
+                "Legacy missing Native event metadata was invented during comparison.");
             Require(compared.Rows.Count == 1 &&
                 compared.Rows[0].BaselineDisplay == "7.10" &&
                 compared.Rows[0].CandidateDisplay == "6.70" &&
                 compared.Rows[0].DeltaAvailable &&
                 Math.Abs(compared.Rows[0].Delta - (-0.4)) < 1e-10,
                 "Two authentic supported Native observations did not compare correctly.");
+            var exportedComparison = RecordedRunComparisonCsv.RenderCsv(compared);
+            Require(exportedComparison.Split('\n')[0].EndsWith(",baselineLocalSaveName") &&
+                exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',').Length == 24,
+                "Recorded CSV omits the selected baseline Native file identity column.");
+            var namedComparisonCsv = RecordedRunComparisonCsv.RenderCsv(compared,
+                "student-first");
+            var namedColumns = namedComparisonCsv.TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(namedColumns.Length == 24 && namedColumns[0] == "2" &&
+                namedColumns[23] == "student-first" &&
+                exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',')[23] ==
+                    "unavailable",
+                "Recorded comparison export lost exact selected baseline name or anonymous source label.");
+            // A real Native run can be saved before the first observable pH.
+            // Its independent recorded comparison must still state which file
+            // was selected, without manufacturing an observation or delta.
+            var noObservationDocument = System.Text.Json.Nodes.JsonNode.Parse(
+                sourceRun.ToJsonString());
+            noObservationDocument["observations"] = new System.Text.Json.Nodes.JsonArray();
+            var noObservationReview = RecordedSessionReview.FromJson(
+                noObservationDocument.ToJsonString());
+            var noObservationCompare = RecordedRunComparison.Compare(
+                noObservationReview, noObservationReview);
+            var noObservationCsv = RecordedRunComparisonCsv.RenderCsv(
+                noObservationCompare, "student-first");
+            var noObservationLines = noObservationCsv.TrimEnd('\n').Split('\n');
+            Require(noObservationCompare.Rows.Count == 0 &&
+                noObservationLines.Length == 2 &&
+                noObservationLines[1].Contains(",recorded-no-observations,") &&
+                noObservationLines[1].EndsWith(",student-first"),
+                "Empty comparison CSV lost Native baseline identity or invented measured results.");
+            var metadataColumns = noObservationLines[1].Split(',');
+            Require(metadataColumns.Length == 24 &&
+                metadataColumns[13] == "" &&
+                metadataColumns[14] == "" &&
+                metadataColumns[15] == "" &&
+                metadataColumns[16] == "Absent" &&
+                metadataColumns[17] == "Absent" &&
+                metadataColumns[18] == "" &&
+                metadataColumns[19] == "" &&
+                metadataColumns[20] == "false" &&
+                metadataColumns[21] == "" &&
+                metadataColumns[23] == "student-first",
+                "No-observation Native comparison metadata invented an observation, pH or delta.");
+            var invalidNameRefused = false;
+            try { RecordedRunComparisonCsv.RenderCsv(compared, "=HYPERLINK(1)"); }
+            catch (InvalidDataException) { invalidNameRefused = true; }
+            Require(invalidNameRefused,
+                "Untrusted comparison baseline label reached scientific CSV metadata.");
+            invalidNameRefused = false;
+            try { RecordedRunComparisonCsv.RenderCsv(compared, "../other-study"); }
+            catch (InvalidDataException) { invalidNameRefused = true; }
+            Require(invalidNameRefused,
+                "Traversal text was admitted as a local Native comparison baseline.");
+            var comparisonColumns = exportedComparison.TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(comparisonColumns.Length == 24 &&
+                comparisonColumns[0] == "2" &&
+                comparisonColumns[1] == "recorded-only-not-attested" &&
+                comparisonColumns[4] == "4" &&
+                comparisonColumns[5] == "7" &&
+                comparisonColumns[6].Contains("Different Native branches") &&
+                comparisonColumns[9] == "IPhreeqc-research" &&
+                comparisonColumns[10] == "minteq-test" &&
+                comparisonColumns[11] == "IPhreeqc-research" &&
+                comparisonColumns[12] == "minteq-test" &&
+                comparisonColumns[18] == "7.1" &&
+                comparisonColumns[19] == "6.7" &&
+                comparisonColumns[20] == "true" &&
+                double.TryParse(comparisonColumns[21],
+                    System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    out var delta) && Math.Abs(delta + 0.4) < 1e-10,
+                "Recorded comparison CSV did not preserve original Native precision and delta provenance.");
+            var comparisonPathA = RecordedRunComparisonCsv.WriteNew(root, compared);
+            var originalComparisonBytes = File.ReadAllBytes(comparisonPathA);
+            var comparisonPathB = RecordedRunComparisonCsv.WriteNew(root, compared,
+                "student-first");
+            Require(comparisonPathB != comparisonPathA &&
+                File.ReadAllBytes(comparisonPathA).SequenceEqual(originalComparisonBytes) &&
+                File.ReadAllText(comparisonPathB) == namedComparisonCsv &&
+                !File.Exists(comparisonPathA + ".stage") &&
+                !File.Exists(comparisonPathB + ".stage"),
+                "Repeated comparison exports must publish distinct immutable files.");
+            var injectedBranch = System.Text.Json.Nodes.JsonNode.Parse(sourceRun.ToJsonString());
+            injectedBranch["branchId"] = "=spreadsheet()";
+            injectedBranch["commandReceipts"] = null;
+            var formulaComparison = RecordedRunComparison.Compare(
+                RecordedSessionReview.FromJson(injectedBranch.ToJsonString()), secondRun);
+            Require(RecordedRunComparisonCsv.RenderCsv(formulaComparison)
+                .Contains("'=spreadsheet()") &&
+                !RecordedRunComparisonCsv.RenderCsv(formulaComparison)
+                    .Contains(",=spreadsheet()"),
+                "Recorded comparison export admitted a spreadsheet formula in Native metadata.");
             candidateRun["observations"][0]["freshness"] = "Stale";
             var staleComparison = RecordedRunComparison.Compare(firstRun,
                 RecordedSessionReview.FromJson(candidateRun.ToJsonString()));
             Require(staleComparison.Rows[0].CandidateDisplay == "--" &&
                 !staleComparison.Rows[0].DeltaAvailable,
                 "Stale recorded Native pH was turned into an invented comparison delta.");
+            var staleComparisonColumns = RecordedRunComparisonCsv.RenderCsv(staleComparison)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(staleComparisonColumns[19] == "" &&
+                staleComparisonColumns[20] == "false" &&
+                staleComparisonColumns[21] == "",
+                "Stale Native observations became numeric recorded CSV evidence.");
             candidateRun["observations"][0]["freshness"] = "Current";
             candidateRun["scientificPackage"]["identity"] = "different-model-database";
             var differentPackage = RecordedRunComparison.Compare(firstRun,
@@ -199,6 +619,29 @@ internal static class Program
             Require(!differentPackage.Rows[0].DeltaAvailable &&
                 differentPackage.Rows[0].CandidateDisplay == "6.70",
                 "Different scientific packages generated an unverified cross-model delta.");
+            var incompatibleCsvFields = RecordedRunComparisonCsv.RenderCsv(differentPackage)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(incompatibleCsvFields[18] == "7.1" &&
+                incompatibleCsvFields[19] == "6.7" &&
+                incompatibleCsvFields[20] == "false" &&
+                incompatibleCsvFields[21] == "",
+                "Scientific package mismatch exported an invented numeric pH delta.");
+            // A matching package alone is insufficient: the recorded Native
+            // provider model and database must also agree before ΔpH.
+            var alteredProvider = System.Text.Json.Nodes.JsonNode.Parse(
+                sourceRun.ToJsonString());
+            alteredProvider["branchId"] = "provider-change";
+            alteredProvider["commandReceipts"] = null;
+            alteredProvider["observations"][0]["modelId"] = "another-provider";
+            var providerDifferent = RecordedRunComparison.Compare(firstRun,
+                RecordedSessionReview.FromJson(alteredProvider.ToJsonString()));
+            var providerFields = RecordedRunComparisonCsv.RenderCsv(providerDifferent)
+                .TrimEnd('\n').Split('\n')[1].Split(',');
+            Require(providerFields[9] == "IPhreeqc-research" &&
+                providerFields[11] == "another-provider" &&
+                providerFields[20] == "false" &&
+                providerFields[21] == "",
+                "Provider mismatch exported an unsupported numeric comparison delta.");
             // Confirmed backup-only recorded comparison must remain usable when
             // the primary checkpoint is malformed, and fail closed otherwise.
             var comparisonFile = Path.Combine(root, "compare.plv.json");

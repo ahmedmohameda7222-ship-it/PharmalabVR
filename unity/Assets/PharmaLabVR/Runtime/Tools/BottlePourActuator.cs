@@ -35,7 +35,16 @@ namespace PharmaLabVR.Tools
             return native.RefillBottle(toolId, preparedSourceId, quantityM3);
         }
 
-        public LabCommandReceipt Rinse(double quantityM3) =>
-            Native.Rinse(toolId, ResearchInstrumentPayloads.BottleProfile, waterId, wasteId, quantityM3);
+        public LabCommandReceipt Rinse(double quantityM3)
+        {
+            var native = Native;
+            // RinseTool is revision-gated and cannot target an unregistered
+            // Native tool. A first-use wash places the real empty instrument;
+            // it does not prefill its tip or fabricate solvent in Unity.
+            native.EnsurePlaced(toolId, sourceId, sinkId,
+                ResearchInstrumentPayloads.BottleProfile);
+            return native.Rinse(toolId, ResearchInstrumentPayloads.BottleProfile,
+                waterId, wasteId, quantityM3);
+        }
     }
 }

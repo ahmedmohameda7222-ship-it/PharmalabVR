@@ -111,25 +111,58 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Recovery-oriented reads preserve the last confirmed, checksummed
+        // backup when a primary was damaged. This is NOT proof that the
+        // backup represents the current Native event.
         public IReadOnlyList<NotebookEntry> Read(string path, string branchId)
+        {
+            return ReadInternal(path, branchId, allowDamagedPrimaryRecovery: true);
+        }
+
+        // UI/Review reads may NOT silently present older backup annotations
+        // as the active student's current evidence when the primary exists
+        // but is corrupt. Missing primary still supports committed backup
+        // recovery; a damaged primary is explicitly unavailable.
+        public IReadOnlyList<NotebookEntry> ReadCurrent(string path,
+            string branchId, string maxEventSequence)
+        {
+            ValidateRevision(maxEventSequence);
+            var ceiling = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var all = ReadInternal(path, branchId,
+                allowDamagedPrimaryRecovery: false);
+            var visible = new List<NotebookEntry>();
+            foreach (var entry in all)
+                if (ulong.Parse(entry.EventSequence, CultureInfo.InvariantCulture) <= ceiling)
+                    visible.Add(entry);
+            return visible.AsReadOnly();
+        }
+
+        private static IReadOnlyList<NotebookEntry> ReadInternal(string path,
+            string branchId, bool allowDamagedPrimaryRecovery)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
             var fullPath = Path.GetFullPath(path);
             List<NotebookEntry> all;
-            try
+            if (!File.Exists(fullPath))
             {
-                if (!File.Exists(fullPath) && !File.Exists(fullPath + ".bak"))
-                    return Array.Empty<NotebookEntry>();
-                all = ReadStrict(fullPath);
-                if (!File.Exists(fullPath))
-                    all = ReadStrict(fullPath + ".bak");
+                all = File.Exists(fullPath + ".bak") ?
+                    ReadStrict(fullPath + ".bak") : new List<NotebookEntry>();
             }
-            catch (Exception error) when (error is InvalidDataException ||
-                                         error is IOException || error is DecoderFallbackException)
+            else if (!allowDamagedPrimaryRecovery)
             {
-                if (!File.Exists(fullPath + ".bak")) throw;
-                all = ReadStrict(fullPath + ".bak");
+                all = ReadStrict(fullPath);
+            }
+            else
+            {
+                try { all = ReadStrict(fullPath); }
+                catch (Exception error) when (error is InvalidDataException ||
+                                               error is IOException ||
+                                               error is DecoderFallbackException)
+                {
+                    if (!File.Exists(fullPath + ".bak")) throw;
+                    all = ReadStrict(fullPath + ".bak");
+                }
             }
             var result = new List<NotebookEntry>();
             foreach (var item in all)
@@ -184,6 +217,44 @@ namespace PharmaLabVR.Session
                 if (item.BranchId != branchId ||
                     ulong.Parse(item.EventSequence, CultureInfo.InvariantCulture) > limit)
                     throw new InvalidDataException("Portable notes do not match the Native branch/revision.");
+        }
+
+        // Transactional student restore: stage only a checksum-validated,
+        // branch-scoped local journal in a *new* session namespace. This
+        // must never merge into or replace another student's Notebook.
+        public static void InstallPortableSnapshot(string path, string snapshot,
+            string branchId, string maxEventSequence)
+        {
+            ValidatePath(path);
+            ValidatePortableSnapshot(snapshot, branchId, maxEventSequence);
+            var fullPath = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrEmpty(directory))
+                throw new InvalidDataException("Portable Notebook has no parent directory.");
+            Directory.CreateDirectory(directory);
+            if (File.Exists(fullPath) || File.Exists(fullPath + ".bak"))
+                throw new IOException("Portable restore cannot overwrite an existing Notebook.");
+            var bytes = StrictUtf8.GetBytes(snapshot);
+            var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                // Atomic, no-overwrite publish; the importer chooses a fresh
+                // namespace and swaps its Native session only after success.
+                File.Move(temporary, fullPath);
+            }
+            catch
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
         }
 
         // Used by read-only teaching review of a .plvpack. Parse the

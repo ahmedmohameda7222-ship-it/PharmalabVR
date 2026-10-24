@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, NextInstructorAnnotation, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -18,6 +18,21 @@ namespace PharmaLabVR.UI
         public bool CanReleaseTool => sessions?.CanReleaseTool == true;
         public bool CanParkTool => sessions?.CanParkTool == true;
         public bool CanLoadSavedSession => sessions?.CanLoadSavedSession == true;
+        public bool CanSaveNewLocalCopy => sessions?.CanSaveNewLocalCopy == true;
+        public bool CanStartIndependentStudy => sessions?.CanStartIndependentStudy == true;
+        public bool CanChooseLocalNativeSave =>
+            sessions?.CanChooseLocalNativeSave == true;
+        public bool CanLoadSelectedLocalNativeSave =>
+            sessions?.CanLoadSelectedLocalNativeSave == true;
+        public string SelectedLocalNativeSaveName => sessions?.SelectedLocalNativeSaveName;
+        public string SelectedLocalNativeSavePreview => sessions?.SelectedLocalNativeSavePreview;
+        public string ComparisonBaselineName => sessions?.ComparisonBaselineName ?? "none";
+        public bool CanExportRecordedComparison =>
+            sessions?.CanExportRecordedComparison == true;
+        public string LastComparisonCsvFileName =>
+            string.IsNullOrEmpty(sessions?.LastComparisonCsvExportPath) ? null :
+            System.IO.Path.GetFileName(sessions.LastComparisonCsvExportPath);
+        public string ActiveLocalSessionName => sessions?.ActiveLocalSessionName;
         public bool CanPipetteDispense => sessions?.CanPipetteDispense == true;
         public bool CanFillBurette => sessions?.CanFillBurette == true;
         public double PipetteTipVolumeM3 => sessions?.PipetteTipVolumeM3 ?? 0.0;
@@ -29,6 +44,14 @@ namespace PharmaLabVR.UI
         public bool HasLearnerCsvExport => !string.IsNullOrEmpty(sessions?.LastLearnerCsvExportPath);
         public bool CanPreviewLocalPortableArchive => sessions?.CanPreviewLocalPortableArchive == true;
         public bool CanChooseLocalPortableArchive => sessions?.CanChooseLocalPortableArchive == true;
+        public bool CanRestoreLocalPortableSession =>
+            sessions?.CanRestoreLocalPortableSession == true;
+        public string LastPortableImportSummary => sessions?.LastPortableImportSummary;
+        public bool PipetteUsingReserve =>
+            sessions?.ActivePipetteStockInventoryId == "reserve-stock";
+        public string LastPortableArchiveFileName =>
+            string.IsNullOrEmpty(sessions?.LastPortableArchivePath) ? null :
+            System.IO.Path.GetFileName(sessions.LastPortableArchivePath);
         public string SelectedArchiveFileName => sessions?.SelectedArchiveFileName;
         public string InstructorPortableSummary => sessions?.InstructorPortableSummary ??
             "No offline instructor preview selected.";
@@ -97,6 +120,8 @@ namespace PharmaLabVR.UI
                             concentrationMolPerL ?? 0.1);
                 case PanelAction.PipetteSwitchReserve:
                     return sessions.TryPipetteSwitchReserve();
+                case PanelAction.PipetteSwitchPrimary:
+                    return sessions.TryPipetteSwitchPrimary();
                 case PanelAction.BottleRefill:
                     return sessions.TryBottleRefillFromReserve();
                 case PanelAction.PrepareRinseWater:
@@ -143,6 +168,15 @@ namespace PharmaLabVR.UI
                     if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
                     return router.Current.ScreenId == ScreenId.Review;
+                case PanelAction.Hold:
+                    // Reviewing while Native is held must never trap a user
+                    // away from Continue/Save/recovery. This is presentation
+                    // navigation only, never a Native Continue or Save.
+                    if (!driver.IsTimeHeld || router.Current.ScreenId != ScreenId.Review)
+                        return false;
+                    sessions.CloseReview();
+                    router.Show(ScreenId.Hold);
+                    return router.Current.ScreenId == ScreenId.Hold;
                 case PanelAction.Notebook:
                     router.Show(ScreenId.Notebook);
                     return router.Current.ScreenId == ScreenId.Notebook;
@@ -157,14 +191,22 @@ namespace PharmaLabVR.UI
                     return router.ReturnFromSettings();
                 case PanelAction.Save:
                     return sessions.Save();
+                case PanelAction.SaveCopy:
+                    return sessions.SaveAsNewLocalCopy();
+                case PanelAction.NewStudy:
+                    return sessions.StartIndependentStudy();
                 case PanelAction.ExportPortable:
                     return sessions.ExportPortableSession();
                 case PanelAction.ExportCsv:
                     return sessions.ExportRecordedCsv();
+                case PanelAction.ExportComparisonCsv:
+                    return sessions.ExportCurrentComparisonCsv();
                 case PanelAction.PreviewPortableArchive:
                     return sessions.PreviewLocalPortableArchive(entityId);
                 case PanelAction.ChoosePortableArchive:
                     return sessions.ChooseNextLocalArchive();
+                case PanelAction.RestorePortable:
+                    return sessions.RestoreSelectedLocalPortableSession();
                 case PanelAction.NextInstructorAnnotation:
                     return sessions.NextInstructorAnnotation();
                 case PanelAction.CompareSaved:
@@ -177,6 +219,10 @@ namespace PharmaLabVR.UI
                     return sessions.ParkToolAtDock();
                 case PanelAction.Load:
                     return sessions.LoadSavedSession();
+                case PanelAction.ChooseLocalSave:
+                    return sessions.ChooseNextLocalNativeSave();
+                case PanelAction.LoadSelectedSave:
+                    return sessions.LoadSelectedLocalNativeSave();
                 case PanelAction.Recenter:
                     return sessions.TryRecenterView();
                 case PanelAction.SnapLeft:

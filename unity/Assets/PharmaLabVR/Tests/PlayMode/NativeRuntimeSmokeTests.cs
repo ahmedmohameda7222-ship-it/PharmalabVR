@@ -24,6 +24,1579 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Focus/hand tracking loss or restart during first stock choice
+        // must not irreversibly close setup without the learner selecting
+        // Native research chemistry. UI choice stays on Lab, Native paused.
+        [UnityTest]
+        public IEnumerator M3_UnpreparedStockCanRearmFocusTrackingAndCheckpointHolds()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.CreateCheckpoint("unprepared-m3"), Is.True);
+                var firstBranch = driver.Session.BranchId;
+                foreach (var kind in new[] { "FocusLoss", "TrackingLoss" })
+                {
+                    Assert.That(driver.BeginInputHold(kind), Is.True);
+                    Assert.That(driver.IsTimeHeld, Is.True);
+                    Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                    for (var attempt = 0; !driver.NativeRecoveryReady &&
+                         attempt < 100; attempt++)
+                        yield return new WaitForSecondsRealtime(0.02f);
+                    Assert.That(driver.NativeRecoveryReady, Is.True,
+                        driver.Session.ReadSnapshot());
+                    Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                        controller.LastError);
+                    Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                    Assert.That(driver.IsTimeHeld, Is.False);
+                    Assert.That(driver.IsNativePaused, Is.True);
+                    Assert.That(driver.SourceNeedsPreparation, Is.True);
+                    Assert.That(driver.Session.ExportSession(),
+                        Does.Contain("\"setupClosed\":false"));
+                }
+                Assert.That(driver.RestartCheckpoint("unprepared-m3"), Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("CheckpointRestart"));
+                for (var attempt = 0; !driver.NativeRecoveryReady &&
+                     attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                    controller.LastError);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(firstBranch));
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, controller.LastError);
+                Assert.That(driver.SourceNeedsPreparation, Is.False);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(driver.Session.ExportSession(),
+                    Does.Contain("\"setupClosed\":true"));
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // The real imported Pause becomes a SessionLoad Hold. An accepted
+        // native Continue unpauses it, so presenting the old Pause screen is
+        // a dangerous UI/NATIVE mismatch (including after Settings Back).
+        [UnityTest]
+        public IEnumerator M3_SavedPausedNativeSessionContinuesToRunningLabNotStalePause()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string path = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver,
+                    "resume-checkpoint-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True,
+                    "Entering the Lab should explicitly close initial stock setup.");
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                path = controller.LastDurableSavePath;
+                var branch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Load), Is.True, controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                for (var attempt = 0; !driver.NativeRecoveryReady && attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(driver.NativeRecoveryReady, Is.True, driver.Session.ReadSnapshot());
+                Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                    controller.LastError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab),
+                    "Recovered Native runtime is active, not paused.");
+
+                // Reproduce an accepted recovery while Settings obscures
+                // Native Hold; Back must not resurrect its old Pause snapshot.
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(panels.Request(PanelAction.Settings), Is.True);
+                for (var attempt = 0; !driver.NativeRecoveryReady && attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(controller.ContinueHeldSession(), Is.True,
+                    controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+                Assert.That(panels.Request(PanelAction.Back), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(path))
+                    foreach (var candidate in new[] { path, path + ".bak",
+                        path + ".tmp" })
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // True Native FocusLoss Hold: recorded Review is safe but must not
+        // become an inescapable screen. Check Desktop and actual XR UI button
+        // routing without submitting Continue, Save, or a material command.
+        [UnityTest]
+        public IEnumerator M3_NativeHeldReviewReturnsToRecoveryWithoutChangingScience()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(driver.BeginInputHold("FocusLoss"), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                var branch = driver.Session.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var beforeReview = driver.Session.ExportSession();
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(router.Current.SupportedActions, Does.Contain("Hold"));
+                Assert.That(panels.Request(PanelAction.Lab), Is.False);
+                Assert.That(panels.Request(PanelAction.Hold), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(controller.RecordedReview, Is.Null);
+                Assert.That(panels.Request(PanelAction.Hold), Is.False);
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Return to Hold"].gameObject.activeSelf, Is.True,
+                    "XR recorded Review must expose a genuine recovery escape.");
+                Assert.That(buttons["Return to lab"].gameObject.activeSelf, Is.False,
+                    "Held Review must not display an unsafe Lab return action.");
+                buttons["Return to Hold"].onClick.Invoke();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(beforeReview),
+                    "Read-only Review/Hold navigation cannot mutate Native receipts or chemistry.");
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // A source with materialRevision=0 may also be a CLOSED, already
+        // continued experiment. Only Native setupClosed determines whether
+        // new stock preparation is still permitted.
+        [UnityTest]
+        public IEnumerator M3_ClosedNativeSetupWithEmptyStockCannotReopenPreparation()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.SourceNeedsPreparation, Is.True,
+                    "Fresh untouched Native bench must offer explicit stock setup.");
+                var first = driver.Session.SubmitOrdered("Continue");
+                Assert.That(first, Does.Contain("\"accepted\":true"),
+                    "Native did not accept explicit closing of stock setup.");
+                driver.RefreshAfterInstrumentCommand();
+                Assert.That(driver.SourceNeedsPreparation, Is.False);
+                var paused = driver.Session.SubmitOrdered("Pause");
+                Assert.That(paused, Does.Contain("\"accepted\":true"));
+                driver.RefreshAfterInstrumentCommand();
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.Session.ExportSession(),
+                    Does.Contain("\"setupClosed\":true"));
+                Assert.That(driver.SourceNeedsPreparation, Is.False,
+                    "Empty source must never reopen a closed Native setup.");
+                Assert.That(router.Current.SupportedActions.Contains(
+                    "PrepareResearchStock"), Is.False);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.False);
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // Exercise the actual generated spatial-panel button and its
+        // disjoint touch/ray surfaces; this is NOT an XR device pass.
+        [UnityTest]
+        public IEnumerator M3_SpatialOfflinePageStartsSecondStudyAndPinsFirstRecordedBaseline()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var prior = "xr-first-study-" + System.Guid.NewGuid().ToString("N");
+            string next = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, prior);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                var originalBranch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var controls = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(controls["Portable study restore"].gameObject.activeSelf, Is.True);
+                controls["Portable study restore"].onClick.Invoke();
+                var copied = controls["Save new local copy"];
+                var independent = controls["Start independent study"];
+                Assert.That(copied.gameObject.activeSelf, Is.True);
+                Assert.That(independent.gameObject.activeSelf, Is.True);
+                var copyRect = copied.GetComponent<RectTransform>();
+                var newRect = independent.GetComponent<RectTransform>();
+                Assert.That(copyRect.sizeDelta.x, Is.GreaterThan(100f));
+                Assert.That(newRect.sizeDelta.x, Is.GreaterThan(100f));
+                Assert.That(Mathf.Abs(copyRect.anchoredPosition.x -
+                    newRect.anchoredPosition.x), Is.GreaterThanOrEqualTo(
+                    (copyRect.sizeDelta.x + newRect.sizeDelta.x) / 2f),
+                    "XR SaveCopy and NewStudy ray-hit rectangles overlap.");
+                independent.onClick.Invoke();
+                next = controller.ActiveLocalSessionName;
+                Assert.That(next, Does.StartWith("run-"), controller.LastError);
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(originalBranch));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(controller.ComparisonBaselineName, Is.EqualTo(prior));
+                Assert.That(controller.SelectedLocalNativeSavePreview,
+                    Does.Contain("Branch: " + originalBranch));
+                Assert.That(File.Exists(Path.Combine(folder, prior + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, next + ".plv.json")), Is.True);
+                Assert.That(controller.ReadNotebookEntries(), Is.Empty);
+            }
+            finally
+            {
+                foreach (var name in new[] { prior, next })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var ext in new[] { ".plv.json", ".plv.json.bak",
+                        ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                        ".plv-notes.lock" })
+                    {
+                        var candidate = Path.Combine(folder, name + ext);
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // A damaged learner evidence journal must NEVER be fixed by
+        // silently replacing Native chemistry or starting an empty study.
+        [UnityTest]
+        public IEnumerator M3_CorruptJournalBlocksNewNativeRunWithoutRetiringOriginal()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var oldName = "damaged-study-" + System.Guid.NewGuid().ToString("N");
+            string newName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, oldName);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Original uncorrupted branch-scoped evidence."), Is.True);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                var native = driver.Session;
+                var branch = native.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var saved = Path.Combine(folder, oldName + ".plv.json");
+                var notes = Path.Combine(folder, oldName + ".plv-notes");
+                var confirmedSavedBytes = File.ReadAllBytes(saved);
+                var journal = File.ReadAllBytes(notes);
+                File.WriteAllText(notes, "not a checksummed Native-linked notebook");
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.False);
+                Assert.That(controller.LastError, Does.Contain("Independent study refused"));
+                Assert.That(driver.Session, Is.SameAs(native));
+                Assert.That(driver.Session.IsOpen, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(controller.ActiveLocalSessionName, Is.EqualTo(oldName));
+                Assert.That(File.ReadAllBytes(saved), Is.EqualTo(confirmedSavedBytes),
+                    "Invalid evidence must not overwrite the last confirmed Native checkpoint.");
+                File.WriteAllBytes(notes, journal);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.True,
+                    controller.LastError);
+                newName = controller.ActiveLocalSessionName;
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(branch));
+                Assert.That(controller.ReadNotebookEntries(), Is.Empty);
+            }
+            finally
+            {
+                foreach (var name in new[] { oldName, newName })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var suffix in new[] { ".plv.json", ".plv.json.bak",
+                        ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                        ".plv-notes.lock" })
+                    {
+                        var file = Path.Combine(folder, name + suffix);
+                        if (File.Exists(file)) File.Delete(file);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // One explicit Pause action creates a fresh Native branch and
+        // separate Notebook. Neither SaveCopy nor a synthetic scene event.
+        [UnityTest]
+        public IEnumerator M3_IndependentNativeRunPreservesPreviousStudy()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var oldName = "first-run-" + System.Guid.NewGuid().ToString("N");
+            string newName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                session.Configure(driver, oldName);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True, session.LastError);
+                var first = driver.Session;
+                var branch = first.BranchId;
+                var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "First Native run, not a copied checkpoint."), Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.True, session.LastError);
+                Assert.That(driver.Session?.IsOpen, Is.True,
+                    "Durable staged Native import must produce a live active new session.");
+                newName = session.ActiveLocalSessionName;
+                Assert.That(newName, Does.StartWith("run-"));
+                Assert.That(driver.Session, Is.Not.SameAs(first));
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(branch));
+                Assert.That(session.ComparisonBaselineName, Is.EqualTo(oldName),
+                    "Second Native run must retain the first as recorded baseline.");
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(oldName));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Branch: " + branch));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Recorded-only saved file preview"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(session.ReadNotebookEntries(), Is.Empty);
+                Assert.That(driver.Session.ExportSession(), Does.Contain("\"setupClosed\":false"),
+                    "Independent Native import must retain the unprepared source setup.");
+                Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv-notes")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, newName + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, newName + ".plv-notes")), Is.True);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.False,
+                    "Held Native session must not silently start another run.");
+                var freshBranch = driver.Session.BranchId;
+                var freshEvent = driver.CurrentLabView.EventSequence;
+                // Use the actual visible selected-file Load action, not a
+                // test-only Configure mutation of the active save identity.
+                Assert.That(panels.Request(PanelAction.LoadSelectedSave), Is.True,
+                    session.LastError);
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(oldName));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(session.ReadNotebookEntries().Single().Text,
+                    Is.EqualTo("First Native run, not a copied checkpoint."));
+                // The learner may explicitly select the second saved file
+                // again and recover its separate source/Notebook under Hold.
+                for (var browse = 0; browse < 64 &&
+                     session.SelectedLocalNativeSaveName != newName; browse++)
+                    Assert.That(panels.Request(PanelAction.ChooseLocalSave), Is.True,
+                        session.LastError);
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(newName));
+                Assert.That(panels.Request(PanelAction.LoadSelectedSave), Is.True,
+                    session.LastError);
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(newName));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(freshBranch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(freshEvent));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(session.ReadNotebookEntries(), Is.Empty,
+                    "First run student notes must never follow second Native branch.");
+            }
+            finally
+            {
+                foreach (var name in new[] { oldName, newName })
+                    if (!string.IsNullOrWhiteSpace(name))
+                        foreach (var suffix in new[] { ".plv.json", ".plv.json.bak",
+                            ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                            ".plv-notes.lock" })
+                        {
+                            var file = Path.Combine(folder, name + suffix);
+                            if (File.Exists(file)) File.Delete(file);
+                        }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // Same scientific branch, separate durable local file and Notebook.
+        // The student can preserve the first confirmed checkpoint, continue
+        // the experiment in its own namespace, and choose either one later.
+        [UnityTest]
+        public IEnumerator M3_SaveAsNewLocalCopyPreservesPreviousScientificAndNotebookFiles()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var previous = "original-study-" + System.Guid.NewGuid().ToString("N");
+            string copiedName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, previous);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Confirmed first-run evidence"), Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                var oldNativePath = Path.Combine(folder, previous + ".plv.json");
+                var oldNotebookPath = Path.Combine(folder, previous + ".plv-notes");
+                var oldNativeBytes = File.ReadAllBytes(oldNativePath);
+                var oldNotebookBytes = File.ReadAllBytes(oldNotebookPath);
+                var initialEvent = driver.CurrentLabView.EventSequence;
+                var branch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                var beforeSession = driver.Session;
+                Assert.That(panels.Request(PanelAction.SaveCopy), Is.True,
+                    controller.LastError);
+                copiedName = controller.ActiveLocalSessionName;
+                Assert.That(copiedName, Is.Not.EqualTo(previous));
+                Assert.That(copiedName, Does.StartWith("study-"));
+                Assert.That(driver.Session, Is.SameAs(beforeSession),
+                    "SaveCopy cannot manufacture a Native session fork.");
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(initialEvent));
+                Assert.That(File.ReadAllBytes(oldNativePath), Is.EqualTo(oldNativeBytes));
+                Assert.That(File.ReadAllBytes(oldNotebookPath), Is.EqualTo(oldNotebookBytes));
+                Assert.That(File.Exists(Path.Combine(folder, copiedName + ".plv.json")),
+                    Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, copiedName + ".plv-notes")),
+                    Is.True);
+                Assert.That(controller.ReadNotebookEntries().Count, Is.EqualTo(1));
+                Assert.That(controller.ReadNotebookEntries()[0].Text,
+                    Is.EqualTo("Confirmed first-run evidence."));
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True,
+                    controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Only the copied experiment records this later choice."),
+                    Is.True, controller.LastError);
+                Assert.That(controller.ReadNotebookEntries().Count, Is.EqualTo(2));
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                Assert.That(File.ReadAllBytes(oldNativePath), Is.EqualTo(oldNativeBytes));
+                Assert.That(File.ReadAllBytes(oldNotebookPath), Is.EqualTo(oldNotebookBytes));
+            }
+            finally
+            {
+                foreach (var name in new[] { previous, copiedName })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var suffix in new[] {
+                        ".plv.json", ".plv.json.bak", ".plv.json.tmp",
+                        ".plv-notes", ".plv-notes.bak", ".plv-notes.lock" })
+                    {
+                        var file = Path.Combine(folder, name + suffix);
+                        if (File.Exists(file)) File.Delete(file);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // Two real local saves, separate note namespaces, and a corrupt
+        // selected file. Native cannot change during browse or failed import;
+        // successful import must restore the chosen Notebook event ceiling.
+        [UnityTest]
+        public IEnumerator M3_StudentSelectsEarlierLocalNativeSaveAndItsOwnNotebook()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var suffix = System.Guid.NewGuid().ToString("N");
+            var first = "student-first-" + suffix;
+            var second = "student-later-" + suffix;
+            var corrupt = "student-corrupt-" + suffix;
+            string recordedComparisonCsv = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panel = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                session.Configure(driver, first);
+                Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, session.LastError);
+                var firstEvent = driver.CurrentLabView.EventSequence;
+                Assert.That(panel.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panel.Request(PanelAction.AddNotebookNote,
+                    "First local learner evidence."), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.Save), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.Lab), Is.True);
+                Assert.That(panel.Request(PanelAction.BottlePour), Is.True, session.LastError);
+                session.Configure(driver, second);
+                Assert.That(panel.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panel.Request(PanelAction.AddNotebookNote,
+                    "Later run must not appear in previous Notebook."), Is.True);
+                Assert.That(panel.Request(PanelAction.Save), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.Lab), Is.True);
+                Assert.That(panel.Request(PanelAction.Pause), Is.True);
+                var laterNative = driver.Session;
+                var laterEvent = driver.CurrentLabView.EventSequence;
+                var badPath = Path.Combine(folder, corrupt + ".plv.json");
+                File.WriteAllText(badPath, "not a Native session");
+                Assert.That(session.CanChooseLocalNativeSave, Is.True);
+                for (var i = 0; i < 64 &&
+                     session.SelectedLocalNativeSaveName != corrupt; ++i)
+                    Assert.That(panel.Request(PanelAction.ChooseLocalSave),
+                        Is.True, session.LastError);
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(corrupt));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Preview unavailable"),
+                    "Corrupt saved file cannot present invented Native observations.");
+                Assert.That(panel.Request(PanelAction.LoadSelectedSave), Is.False,
+                    "Malformed Native save cannot replace a real session.");
+                Assert.That(driver.Session, Is.SameAs(laterNative));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(second));
+                File.Delete(badPath);
+                for (var i = 0; i < 64 &&
+                     session.SelectedLocalNativeSaveName != first; ++i)
+                    Assert.That(panel.Request(PanelAction.ChooseLocalSave),
+                        Is.True, session.LastError);
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(first));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Recorded-only saved file preview"));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Event: " + firstEvent));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Native model"),
+                    "Read-only file preview cannot claim scientific model validation.");
+                Assert.That(driver.Session, Is.SameAs(laterNative),
+                    "Browsing a file cannot replace live Native science.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent),
+                    "Browsing saved runs cannot change Native chemistry.");
+                Assert.That(session.ComparisonBaselineName, Is.EqualTo(first));
+                Assert.That(panel.Request(PanelAction.Review), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.ChooseLocalSave), Is.True,
+                    "Recorded Review should let the student browse previous Native runs.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(panel.Request(PanelAction.LoadSelectedSave), Is.False,
+                    "Recorded Review may inspect previous saves but may never import them.");
+                for (var i = 0; i < 64 &&
+                     session.SelectedLocalNativeSaveName != first; ++i)
+                    Assert.That(panel.Request(PanelAction.ChooseLocalSave),
+                        Is.True, session.LastError);
+                Assert.That(session.ComparisonBaselineName, Is.EqualTo(first));
+                Assert.That(driver.Session, Is.SameAs(laterNative));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
+                Assert.That(panel.Request(PanelAction.CompareSaved), Is.True, session.LastError);
+                Assert.That(session.CurrentComparison, Is.Not.Null);
+                Assert.That(session.CurrentComparison.BaselineEventSequence, Is.EqualTo(firstEvent));
+                Assert.That(session.CurrentComparison.CandidateEventSequence, Is.EqualTo(laterEvent));
+                Assert.That(session.CurrentComparison.LineageSummary,
+                    Does.Contain("Same Native branch"));
+                Assert.That(session.ComparisonSummary,
+                    Does.Contain("Recorded baseline file: " + first));
+                Assert.That(panel.Request(PanelAction.ExportComparisonCsv), Is.True,
+                    session.LastError);
+                recordedComparisonCsv = session.LastComparisonCsvExportPath;
+                Assert.That(File.Exists(recordedComparisonCsv), Is.True);
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("baselineLocalSaveName"),
+                    "Comparison CSV must identify the selected offline Native save.");
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("," + first + "\n"),
+                    "Recorded export must preserve the actually selected baseline save name.");
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.StartWith("schemaVersion,recordKind,baselineBranchId"));
+                Assert.That(File.ReadAllText(recordedComparisonCsv),
+                    Does.Contain("recorded-only-not-attested"));
+                Assert.That(driver.Session, Is.SameAs(laterNative),
+                    "Comparison of selected earlier file cannot import into Native.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(laterEvent));
+                Assert.That(panel.Request(PanelAction.Lab), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.Pause), Is.True, session.LastError);
+                Assert.That(panel.Request(PanelAction.LoadSelectedSave),
+                    Is.True, session.LastError);
+                Assert.That(driver.Session, Is.Not.SameAs(laterNative));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(firstEvent));
+                Assert.That(session.ActiveLocalSessionName, Is.EqualTo(first));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                var notes = session.ReadNotebookEntries();
+                Assert.That(notes.Count, Is.EqualTo(1));
+                Assert.That(notes[0].Text, Is.EqualTo("First local learner evidence."));
+                Assert.That(notes[0].EventSequence, Is.EqualTo(firstEvent));
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(recordedComparisonCsv) &&
+                    File.Exists(recordedComparisonCsv))
+                    File.Delete(recordedComparisonCsv);
+                foreach (var name in new[] { first, second, corrupt })
+                    foreach (var suffixPart in new[] {
+                        ".plv.json", ".plv.json.bak", ".plv.json.tmp",
+                        ".plv-notes", ".plv-notes.bak", ".plv-notes.lock" })
+                    {
+                        var file = Path.Combine(folder, name + suffixPart);
+                        if (File.Exists(file)) File.Delete(file);
+                    }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator M2_ActualReserveBottleRefillsSourceOnlyWithNativeMeasuredTransfer()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var stock = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(x => x.NativeInventoryId == "source");
+                var reserve = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(x => x.NativeInventoryId == "reserve-stock");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareReserveStock,
+                    "acetic-acid", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                var hold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(hold, Is.Not.Null);
+                hold.Invoke(desktop, new object[] { reserve.transform });
+                var sourceBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3;
+                var reserveBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3;
+                var eventBefore = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.False, "Unaligned physical reserve bottle cannot refill Native source.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventBefore));
+                reserve.transform.rotation = Quaternion.Euler(180f, 0f, 0f);
+                var outlet = reserve.transform.Find("OutletExit");
+                var mouth = stock.transform.Find("OutletExit");
+                Assert.That(outlet, Is.Not.Null);
+                Assert.That(mouth, Is.Not.Null);
+                reserve.transform.position +=
+                    mouth.position + stock.transform.up * .07f - outlet.position;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.True);
+                reserve.transform.position += stock.transform.right * .027f;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.False,
+                    "Outside the real source glass neck is not a physical refill.");
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.False, "Off-mouth reserve bottle cannot create a Native material event.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventBefore));
+                reserve.transform.position -= stock.transform.right * .027f;
+                Assert.That(stock.AdmitsReservePour(reserve.transform, true), Is.True);
+                Assert.That(sessions.TryPhysicalRefillSourceFromReserve(reserve.transform, stock),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3,
+                    Is.EqualTo(sourceBefore + 1e-8).Within(1e-11));
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3,
+                    Is.EqualTo(reserveBefore - 1e-8).Within(1e-11));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(eventBefore));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
+        public IEnumerator M3_SessionLoadNeverChoosesContradictoryLearnerPrediction()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string save = null;
+            string notes = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var id = "ambiguous-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, id);
+                notes = Path.Combine(Application.persistentDataPath,
+                    "sessions", id + ".plv-notes");
+                Assert.That(panels.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.RecordResearchPrediction,
+                    "below-7"), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+                    "This is a learner prediction, not a Native result or certified endpoint."),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                var branch = driver.Session.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
+                save = sessions.LastDurableSavePath;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(sessions.HasResearchLesson, Is.False,
+                    "Contradictory same-lesson hypotheses cannot restore guidance by list order.");
+                Assert.That(sessions.LastError, Does.Contain("ambiguous"));
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(2),
+                    "Ambiguous student Notebook evidence must remain available for review.");
+            }
+            finally
+            {
+                foreach (var file in new[] {
+                    save, save == null ? null : save + ".bak",
+                    notes, notes == null ? null : notes + ".bak" })
+                    if (!string.IsNullOrEmpty(file) && File.Exists(file))
+                        File.Delete(file);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator M3_XRPortableStudyPageExportsRealLocalNativeBranchFromPause()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string exported = null;
+            string secondExport = null;
+            string notesPath = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var id = "xr-portable-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, id);
+                notesPath = Path.Combine(Application.persistentDataPath,
+                    "sessions", id + ".plv-notes");
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "I will recheck the Native receiver pH before deciding."),
+                    Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                var recordedRevision = driver.CurrentLabView.EventSequence;
+                var recordedBranch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Portable study restore"].gameObject.activeSelf, Is.True);
+                buttons["Portable study restore"].onClick.Invoke();
+                Assert.That(buttons["Export portable study"].gameObject.activeSelf, Is.True,
+                    "The XR Pause package page must expose local Native+Notebook export.");
+                buttons["Export portable study"].onClick.Invoke();
+                exported = sessions.LastPortableArchivePath;
+                Assert.That(exported, Is.Not.Null.And.Not.Empty, sessions.LastError);
+                Assert.That(File.Exists(exported), Is.True);
+                var data = PortableSessionArchive.Read(exported);
+                Assert.That(data.BranchId, Is.EqualTo(recordedBranch));
+                Assert.That(data.EventSequence, Is.EqualTo(recordedRevision));
+                Assert.That(data.NotebookSnapshot, Does.Contain(
+                    "I will recheck the Native receiver pH before deciding."));
+                Assert.That(panels.LastPortableArchiveFileName,
+                    Is.EqualTo(Path.GetFileName(exported)));
+                var firstArchiveBytes = File.ReadAllBytes(exported);
+                buttons["Export portable study"].onClick.Invoke();
+                secondExport = sessions.LastPortableArchivePath;
+                Assert.That(secondExport, Is.Not.Null.And.Not.EqualTo(exported),
+                    "Second export must preserve the first student research artifact.");
+                Assert.That(File.Exists(secondExport), Is.True);
+                Assert.That(File.ReadAllBytes(exported), Is.EqualTo(firstArchiveBytes));
+                Assert.That(PortableSessionArchive.Read(secondExport).BranchId,
+                    Is.EqualTo(recordedBranch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(recordedRevision),
+                    "XR package export cannot issue an unauthorized material command.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "Export should keep Native Pause until explicit student navigation.");
+            }
+            finally
+            {
+                foreach (var candidate in new[] {
+                    exported, exported == null ? null : exported + ".bak",
+                    secondExport, secondExport == null ? null : secondExport + ".bak",
+                    notesPath, notesPath == null ? null : notesPath + ".bak" })
+                    if (!string.IsNullOrEmpty(candidate) && File.Exists(candidate))
+                        File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator M2_DesktopNotebookAndReviewSampleNeutralWithoutNewNativeMaterial()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True);
+                var nativeRevision = driver.CurrentLabView.EventSequence;
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.True);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.False);
+                var notebookSample = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(notebookSample.Length, Is.EqualTo(1));
+                Assert.That(notebookSample[0].actuator01, Is.EqualTo(0f));
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "Notebook must disown prior held mouse/G input until release.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision));
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                var reviewSample = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(reviewSample.Length, Is.EqualTo(1));
+                Assert.That(reviewSample[0].actuator01, Is.EqualTo(0f));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision),
+                    "Recorded Review must not actuate Native lab material in the background.");
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "A Notebook-to-Lab navigation must not itself re-arm a prior material press.");
+                var resumed = desktop.SampleInputs(
+                    (ulong)(Time.realtimeSinceStartupAsDouble * 1000000000.0));
+                Assert.That(resumed.Length, Is.EqualTo(1));
+                Assert.That(resumed[0].actuator01, Is.EqualTo(0f));
+                Assert.That(desktop.HasFreshLabScreenGesture, Is.False,
+                    "Native-sample-only reconciliation must not fabricate a fresh key release.");
+                Assert.That(ResearchLabScreenAdmission.MayActuate(
+                    router.Current.ScreenId.ToString(), true), Is.True);
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        // Simulates actual authored XR UI button events against the live
+        // Native-backed student Notebook; tracked-ray hardware still requires
+        // the final local Player campaign.
+        [UnityTest]
+        public IEnumerator M3_XRStudentQuickReflectionAddsOnlyChosenBranchLinkedNotebookText()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string noteFile = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panel = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "xr-student-notes-" + System.Guid.NewGuid().ToString("N");
+                session.Configure(driver, name);
+                noteFile = Path.Combine(Application.persistentDataPath,
+                    "sessions", name + ".plv-notes");
+                Assert.That(panel.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, session.LastError);
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons["Open notebook"].gameObject.activeSelf, Is.True,
+                    "The normal XR Lab screen must expose its Notebook without lesson-page detour.");
+                var notebookRect = buttons["Open notebook"].GetComponent<RectTransform>();
+                var saveRect = buttons["Save session"].GetComponent<RectTransform>();
+                Assert.That(notebookRect.sizeDelta.x, Is.LessThanOrEqualTo(176f));
+                Assert.That(saveRect.sizeDelta.x, Is.LessThanOrEqualTo(176f));
+                Assert.That(Mathf.Abs(notebookRect.anchoredPosition.x -
+                    saveRect.anchoredPosition.x), Is.GreaterThanOrEqualTo(180f),
+                    "Save and Notebook must be separate XR raycast hit targets.");
+                buttons["Open notebook"].onClick.Invoke();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(buttons["Quick notes"].gameObject.activeSelf, Is.True);
+                var nativeRevision = driver.CurrentLabView.EventSequence;
+                buttons["Quick notes"].onClick.Invoke();
+                Assert.That(buttons["Note: request another pH"].gameObject.activeSelf,
+                    Is.True, "XR reflection must be on its own non-overlapping page.");
+                buttons["Note: request another pH"].onClick.Invoke();
+                Assert.That(session.ReadNotebookEntries().Count, Is.EqualTo(1));
+                var record = session.ReadNotebookEntries().Single();
+                Assert.That(record.Text, Is.EqualTo(
+                    "Student selected reflection: I want another Native pH measurement before reaching a conclusion."));
+                Assert.That(record.BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(record.EventSequence, Is.EqualTo(nativeRevision));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeRevision),
+                    "XR Notebook selection cannot invent an authoritative Native science event.");
+                Assert.That(buttons["Quick notes"].gameObject.activeSelf, Is.True,
+                    "After writing, the XR page must return to the normal Notebook.");
+                Assert.That(File.Exists(noteFile), Is.True);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(noteFile))
+                    foreach (var candidate in new[] { noteFile, noteFile + ".bak",
+                        noteFile + ".lock" })
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // Actual reserve-stock solvent comes from Native inventory. Both
+        // physically distinct bottle apertures must match the currently
+        // registered Native pipette source, never arbitrary proximity.
+        [UnityTest]
+        public IEnumerator M2_PreparedReserveStockIsPhysicalPipetteIntakeWithoutInventedMaterial()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<PipetteActuator>(true)).Single();
+                var targets = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).ToArray();
+                var source = targets.Single(target => target.NativeInventoryId == "source");
+                var reserve = targets.Single(target => target.NativeInventoryId == "reserve-stock");
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(reserve.IsImmersed(pipette.transform), Is.False,
+                    "An unprepared reserve is not an aspiratable liquid.");
+                Assert.That(actions.Request(PanelAction.PrepareReserveStock,
+                    "acetic-acid", 0.05), Is.True);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True);
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var hold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(hold, Is.Not.Null);
+                hold.Invoke(desktop, new object[] { pipette.transform });
+                var before = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3;
+                Assert.That(before, Is.GreaterThan(0d));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.False);
+                var beforeTip = actions.PipetteTipVolumeM3;
+                var beforeSwitchRevision = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.False, "Unimmersed pipette cannot pick a new Native source.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(beforeSwitchRevision),
+                    "Rejected physical source-selection cannot create a Native event.");
+
+                var liquid = reserve.transform.Find("NativeBottleLiquid");
+                var tip = pipette.transform.Find("OutletExit");
+                var surface = liquid.TransformPoint(new Vector3(0f,
+                    liquid.GetComponent<MeshFilter>().sharedMesh.bounds.max.y, 0f));
+                pipette.transform.rotation = reserve.transform.rotation;
+                pipette.transform.position +=
+                    surface - tip.position - reserve.transform.up * .006f;
+                Assert.That(reserve.IsImmersed(pipette.transform), Is.True);
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(beforeSwitchRevision),
+                    "The new physical source must be selected by a real Native command.");
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.False,
+                    "After switching, physical source bottle cannot authorize reserve aspiration.");
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3,
+                    Is.EqualTo(before).Within(1e-11),
+                    "Switching stock must not silently aspirate any liquid.");
+                Assert.That(actions.PipetteTipVolumeM3, Is.EqualTo(beforeTip).Within(1e-12));
+                Assert.That(sessions.TryPhysicalSelectPipetteSource(pipette.transform, reserve),
+                    Is.False, "Re-pressing against the already selected stock cannot switch again.");
+                // Accessibility route must allow a student to return to the
+                // original prepared Native source before aspirating, without
+                // manufacturing material or losing the tracked pipette.
+                Assert.That(actions.Request(PanelAction.PipetteSwitchPrimary),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ActivePipetteStockInventoryId, Is.EqualTo("source"));
+                Assert.That(source.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.False);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3, Is.EqualTo(before).Within(1e-11));
+                Assert.That(actions.Request(PanelAction.PipetteSwitchReserve),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ActivePipetteStockInventoryId, Is.EqualTo("reserve-stock"));
+                Assert.That(reserve.NativeSourceMatches(driver.Session, pipette), Is.True);
+                Assert.That(actions.Request(PanelAction.PipetteAspirate),
+                    Is.True, actions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "reserve-stock").CommittedVolumeM3, Is.LessThan(before));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        [UnityTest]
+        public IEnumerator M2_PhysicalSourceBottlePrimesUpperBuretteViaNativeMaterialOnly()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var adapter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var inlet = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchBuretteInletTarget>(true)).Single();
+                var bottle = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<BottlePourActuator>(true)).Single().transform;
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, sessions.LastError);
+                var beginHold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(beginHold, Is.Not.Null);
+                beginHold.Invoke(adapter, new object[] { bottle });
+                var before = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "burette").CommittedVolumeM3;
+                var stockBefore = driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3;
+                var nativeEvent = driver.CurrentLabView.EventSequence;
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.False, "A parked but unaligned bottle cannot prime the Native burette.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeEvent));
+                bottle.rotation = Quaternion.Euler(180f, 0f, 0f);
+                var outlet = bottle.Find("OutletExit");
+                var marker = inlet.transform.Find("InletEntry");
+                Assert.That(outlet, Is.Not.Null);
+                Assert.That(marker, Is.Not.Null);
+                bottle.position += marker.position + inlet.transform.up * .075f -
+                    outlet.position;
+                Assert.That(inlet.AdmitsBottle(bottle, true, driver.Session), Is.True,
+                    "Native-closed burette and real aligned upper inlet must admit the bottle.");
+                Assert.That(actions.Request(PanelAction.Review), Is.True);
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.False, "Review cannot move Native liquid even with physically aligned equipment.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(nativeEvent));
+                Assert.That(actions.Request(PanelAction.Lab), Is.True);
+                Assert.That(sessions.TryPhysicalFillBuretteFromBottle(bottle, inlet),
+                    Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "burette").CommittedVolumeM3,
+                    Is.EqualTo(before + 5e-8).Within(1e-11),
+                    "Only Native may update the burette volume.");
+                Assert.That(driver.CurrentLabView.Vessels.Single(v =>
+                    v.Id == "source").CommittedVolumeM3,
+                    Is.EqualTo(stockBefore - 5e-8).Within(1e-11),
+                    "Physical prime must debit real Native stock.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(nativeEvent));
+                Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        // A student imports a real offline study pack into a new isolated
+        // local save/Notebook. The old Native session is replaced only after
+        // the archive, model and both durable files have been admitted.
+        [UnityTest]
+        public IEnumerator M3_StudentRestoresPortableNativeExperimentAndLocalNotesWithoutOverwritingOldRun()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string originalNotes = null;
+            string packed = null;
+            string installed = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "portable-student-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, name);
+                originalNotes = Path.Combine(Application.persistentDataPath,
+                    "sessions", name + ".plv-notes");
+                Assert.That(actions.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.RecordResearchPrediction,
+                    "below-7"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                var source = driver.Session;
+                var branch = source.BranchId;
+                var atEvent = driver.CurrentLabView.EventSequence;
+                var originalNotesBytes = File.ReadAllBytes(originalNotes);
+                Assert.That(actions.Request(PanelAction.Pause), Is.True);
+                Assert.That(actions.Request(PanelAction.ExportPortable), Is.True,
+                    sessions.LastError);
+                packed = sessions.LastPortableArchivePath;
+                Assert.That(File.Exists(packed), Is.True);
+                Assert.That(sessions.CanChooseLocalPortableArchive, Is.True);
+                var expectedName = Path.GetFileName(packed);
+                for (var i = 0; i < 64 &&
+                     sessions.SelectedArchiveFileName != expectedName; i++)
+                    Assert.That(actions.Request(PanelAction.ChoosePortableArchive),
+                        Is.True, sessions.LastError);
+                Assert.That(sessions.SelectedArchiveFileName, Is.EqualTo(expectedName));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause),
+                    "Choosing the local study pack cannot navigate away from the only legal restore screen.");
+                Assert.That(sessions.CanRestoreLocalPortableSession, Is.True);
+                // A corrupted package cannot replace the existing Native
+                // session or alter the current branch's durable journal.
+                var savedPackBytes = File.ReadAllBytes(packed);
+                File.AppendAllText(packed, "tampered");
+                Assert.That(actions.Request(PanelAction.RestorePortable), Is.False);
+                Assert.That(driver.Session, Is.SameAs(source));
+                Assert.That(source.IsOpen, Is.True);
+                Assert.That(File.ReadAllBytes(originalNotes),
+                    Is.EqualTo(originalNotesBytes));
+                File.WriteAllBytes(packed, savedPackBytes);
+                Assert.That(actions.Request(PanelAction.RestorePortable),
+                    Is.True, sessions.LastError);
+                installed = sessions.LastDurableSavePath;
+                Assert.That(source.IsOpen, Is.False);
+                Assert.That(driver.Session, Is.Not.SameAs(source));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(atEvent));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(File.Exists(installed), Is.True);
+                Assert.That(installed, Is.Not.EqualTo(Path.Combine(
+                    Application.persistentDataPath, "sessions", name + ".plv.json")));
+                Assert.That(File.ReadAllBytes(originalNotes),
+                    Is.EqualTo(originalNotesBytes),
+                    "Portable student restore overwrote existing learner annotations.");
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(1),
+                    "Restored Notebook must contain only the exported Native branch/event evidence.");
+                Assert.That(sessions.ResearchPredictionSummary, Does.Contain("below 7"));
+                Assert.That(sessions.LastPortableImportSummary,
+                    Does.Contain("not identity").IgnoreCase);
+                Assert.That(sessions.RecordedReview, Is.Null);
+            }
+            finally
+            {
+                if (!string.IsNullOrWhiteSpace(packed))
+                    foreach (var name in new[] { packed, packed + ".bak", packed + ".tmp" })
+                        if (File.Exists(name)) File.Delete(name);
+                if (!string.IsNullOrWhiteSpace(originalNotes))
+                    foreach (var name in new[] { originalNotes, originalNotes + ".bak",
+                        originalNotes + ".lock" })
+                        if (File.Exists(name)) File.Delete(name);
+                if (!string.IsNullOrWhiteSpace(installed))
+                    foreach (var name in new[] { installed, installed + ".bak",
+                        installed.Replace(".plv.json", ".plv-notes"),
+                        installed.Replace(".plv.json", ".plv-notes.bak") })
+                        if (File.Exists(name)) File.Delete(name);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
+        // Native-backed laboratory geometry plus stock->tip->receiver material.
+        // Actual keyboard and tracked-controller presses remain final Player tests.
+        [UnityTest]
+        public IEnumerator M2_ImmersedPipetteUsesNativeStockAndDeliversToRealReceiver()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var source = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(item => item.NativeInventoryId == "source");
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<PipetteActuator>(true)).Single().transform;
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(source.IsImmersed(pipette), Is.False,
+                    "A parked pipette is not inside source liquid.");
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Prepare real Native stock first.");
+                var fill = source.transform.Find("NativeBottleLiquid");
+                var tip = pipette.Find("OutletExit");
+                var surface = fill.TransformPoint(new Vector3(
+                    0f, fill.GetComponent<MeshFilter>().sharedMesh.bounds.max.y, 0f));
+                pipette.rotation = source.transform.rotation;
+                pipette.position += surface - tip.position - source.transform.up * 0.006f;
+                Assert.That(source.IsImmersed(pipette), Is.True,
+                    "Pipette tip must physically reach Native-rendered stock liquid.");
+                Assert.That(source.NativeSourceMatches(driver.Session,
+                    pipette.GetComponent<PipetteActuator>()), Is.True,
+                    "First placed pipette must initially draw from represented source stock.");
+                for (var i = 0; i < 3; i++)
+                    Assert.That(panels.Request(PanelAction.PipetteAspirate), Is.True,
+                        "Three 0.05 mL Native aspirates are needed for the retained-tip budget.");
+                Assert.That(panels.PipetteTipVolumeM3, Is.EqualTo(1.5e-7).Within(1e-10));
+                var outlet = pipette.Find("OutletExit");
+                var aperture = receiver.transform.position + receiver.transform.up * 0.04f;
+                pipette.position += aperture + receiver.transform.up * 0.06f - outlet.position;
+                Assert.That(source.IsImmersed(pipette), Is.False);
+                Assert.That(receiver.Estimate(pipette, Vector3.zero).Length, Is.EqualTo(1));
+                Assert.That(panels.Request(PanelAction.PipetteDispense), Is.True,
+                    "An aligned, sufficiently filled Native pipette must deliver real liquid.");
+                Assert.That(panels.PipetteTipVolumeM3, Is.EqualTo(1e-7).Within(1e-10));
+                Assert.That(driver.CurrentLabView.Vessels.Single(v => v.Id == "receiver")
+                    .CommittedVolumeM3, Is.GreaterThan(0.0));
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
+        // Authored for the final local Unity campaign, NOT_RUN here.
+        // Direct physical receiver selection enters the same shared Native
+        // measurement panel as Desktop/XR UI; no fabricated pH is asserted.
+        [UnityTest]
+        public IEnumerator M2_DesktopReceiverClickSelectsNativeMeasurementOnlyWhenLabIsActive()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var adapter = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var target = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(target.InventoryId, Is.EqualTo("receiver"));
+                Assert.That(target.GetComponent<Collider>(), Is.Not.Null,
+                    "Receiver needs a physical collider for mouse selection.");
+                var before = driver.CurrentLabView.EventSequence;
+                Assert.That(adapter.TryInspectReceiver(target), Is.False,
+                    "Initial Native stock-setup Pause cannot admit a measurement click.");
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(before),
+                    "A refused click must not mutate Native event history.");
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, "Prepare supported Native stock before inspecting.");
+                Assert.That(adapter.TryInspectReceiver(target), Is.True,
+                    adapter.LastPhysicalInspectionFeedback);
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("receiver"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Measure));
+                Assert.That(driver.Measurement, Is.Not.Null);
+                Assert.That(adapter.TryInspectReceiver(null), Is.False,
+                    "A click without the real configured receiver cannot select science.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Verify actual authored outlet geometry and committed Native transfer
         // together. Headless policy tests cannot establish this Unity scene path.
         [UnityTest]
@@ -145,6 +1718,7 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             string notes = null;
+            string portableExport = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -166,7 +1740,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     "I would repeat the experiment to check the research observation."),
                     Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.ExportPortable), Is.True, sessions.LastError);
-                var portable = sessions.LastPortableArchivePath;
+                portableExport = sessions.LastPortableArchivePath;
+                var portable = portableExport;
                 Assert.That(File.Exists(portable), Is.True);
                 Assert.That(panels.Request(PanelAction.Save), Is.True, sessions.LastError);
                 Assert.That(panels.Request(PanelAction.Review), Is.True, sessions.LastError);
@@ -211,13 +1786,19 @@ namespace PharmaLabVR.Tests.PlayMode
                     var basePath = Path.Combine(folder,
                         Path.GetFileName(notes).Replace(".plv-notes", ""));
                     foreach (var extension in new[] {
-                        ".plv-notes", ".plv.json", ".plvpack",
-                        ".plv-notes.bak", ".plv.json.bak", ".plvpack.bak",
-                        ".plv-notes.tmp", ".plv.json.tmp", ".plvpack.tmp" })
+                        ".plv-notes", ".plv.json",
+                        ".plv-notes.bak", ".plv.json.bak",
+                        ".plv-notes.tmp", ".plv.json.tmp" })
                     {
                         var target = basePath + extension;
                         if (File.Exists(target)) File.Delete(target);
                     }
+                }
+                if (!string.IsNullOrEmpty(portableExport))
+                {
+                    if (File.Exists(portableExport)) File.Delete(portableExport);
+                    if (File.Exists(portableExport + ".bak"))
+                        File.Delete(portableExport + ".bak");
                 }
                 SceneManager.UnloadSceneAsync(scene);
             }
@@ -329,6 +1910,51 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
                 Assert.That(sessions.RecordedReview, Is.Not.Null,
                     "Saved notebook observation must be reachable from recorded review.");
+
+                // Full offline learner checkpoint recovery: a *later* note on
+                // the same branch must be excluded when the saved Native event
+                // is loaded again. The authored lesson/prediction should return
+                // without inventing a fresh hypothesis or redoing chemistry.
+                var savedEvent = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
+                Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(savedEvent));
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Later student note beyond the restored checkpoint."), Is.True,
+                    sessions.LastError);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(4));
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(savedEvent));
+                Assert.That(sessions.HasResearchLesson, Is.True,
+                    "Native restoration must recover the selected durable student lesson.");
+                Assert.That(sessions.ResearchPredictionSummary, Does.Contain("below 7"),
+                    "Restored lesson must use the original student hypothesis.");
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(3),
+                    "Future-event annotations cannot be credited after a saved checkpoint load.");
+                Assert.That(sessions.ResearchLessonSummary, Does.Not.Contain(
+                    "Later student note beyond the restored checkpoint."));
+                Assert.That(sessions.RecordedReview, Is.Null,
+                    "SessionLoad must not leak a prior recorded review.");
+                for (var i = 0; i < 200 && !driver.NativeRecoveryReady; i++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(driver.NativeRecoveryReady, Is.True,
+                    "Native SessionLoad must publish fresh neutral recovery before Continue.");
+                Assert.That(panels.Request(PanelAction.Continue), Is.True, sessions.LastError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(sessions.HasResearchLesson, Is.True,
+                    "A recovered Research lesson must survive the explicit Hold release.");
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(sessions.ReadNotebookEntries().Count, Is.EqualTo(3));
+                Assert.That(panels.Request(PanelAction.Review), Is.True);
+                Assert.That(sessions.LearningReviewSummary,
+                    Does.Not.Contain("Later student note beyond the restored checkpoint"));
             }
             finally
             {

@@ -36,4 +36,23 @@ namespace PharmaLabVR.Input
             capturedFrame = 0;
         }
     }
+
+    // A Native SessionLoad/CheckpointRestart changes scientific authority. An
+    // old grip, held tool, trigger or pointer button cannot carry permission
+    // into that session. Re-arm only after observed neutral input, *not*
+    // merely after a successful Native Continue command.
+    public sealed class ResearchRestorationGestureGate
+    {
+        public bool IsArmed { get; private set; } = true;
+
+        public void RequireFreshNeutralInput() => IsArmed = false;
+
+        public bool ObserveNeutral(bool allOldToolsReleased, bool controlsNeutral,
+            bool freshTracking)
+        {
+            if (!IsArmed && allOldToolsReleased && controlsNeutral && freshTracking)
+                IsArmed = true;
+            return IsArmed;
+        }
+    }
 }

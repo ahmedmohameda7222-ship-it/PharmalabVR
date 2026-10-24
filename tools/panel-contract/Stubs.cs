@@ -119,6 +119,18 @@ namespace PharmaLabVR.Core
             HoldReason = held ? "FocusLoss" : "";
             HoldChanged?.Invoke(held);
         }
+        // Mirror an *already accepted* Native recovery in the test double.
+        // It changes no Native commands; UI should read the recovered pause
+        // flag, not the stale screen that happened to precede the Hold.
+        public void CompleteRecovery(bool remainsPaused, bool needsPreparation)
+        {
+            if (!IsTimeHeld) throw new InvalidOperationException("No Hold to recover.");
+            IsNativePaused = remainsPaused;
+            SourceNeedsPreparation = needsPreparation;
+            IsTimeHeld = false;
+            HoldReason = "";
+            HoldChanged?.Invoke(false);
+        }
         public void RaiseNativeSessionRestored()
         {
             NativeRestorationEpoch++;
@@ -166,6 +178,16 @@ namespace PharmaLabVR.Session
         public int PortablePreviewCalls { get; private set; }
         public bool CanPreviewLocalPortableArchive => true;
         public bool CanChooseLocalPortableArchive => true;
+        public bool PortableRestorePermitted { get; set; } = true;
+        public bool CanRestoreLocalPortableSession => PortableRestorePermitted;
+        public string LastPortableImportSummary => "Offline restored student study; not attested.";
+        public int PortableRestoreCalls { get; private set; }
+        public bool RestoreSelectedLocalPortableSession()
+        {
+            if (!PortableRestorePermitted) return false;
+            PortableRestoreCalls++;
+            return true;
+        }
         public string SelectedArchiveFileName => "submitted.plvpack";
         public int PortableChooseCalls { get; private set; }
         public bool ChooseNextLocalArchive()
@@ -191,6 +213,15 @@ namespace PharmaLabVR.Session
         public int SavedCompareCalls { get; private set; }
         public bool CanCompareSaved => true;
         public string ComparisonSummary => "Recorded Native baseline and candidate.";
+        public bool CanExportRecordedComparison => true;
+        public int ComparisonCsvCalls { get; private set; }
+        public string LastComparisonCsvExportPath { get; private set; }
+        public bool ExportCurrentComparisonCsv()
+        {
+            ComparisonCsvCalls++;
+            LastComparisonCsvExportPath = "/offline/native-comparison.plv-compare.csv";
+            return true;
+        }
         public bool OpenSavedComparison()
         {
             SavedCompareCalls++;
@@ -201,9 +232,11 @@ namespace PharmaLabVR.Session
             CsvExportCalls++;
             return true;
         }
+        public string LastPortableArchivePath { get; private set; }
         public bool ExportPortableSession()
         {
             PortableExportCalls++;
+            LastPortableArchivePath = "/offline/student.plvpack";
             return true;
         }
         public string NotebookSummary => "Headless note stub; not a Native observation.";
@@ -228,6 +261,46 @@ namespace PharmaLabVR.Session
             return true;
         }
         public bool CanLoadSavedSession => LoadPermitted;
+        public bool SaveNewCopyPermitted { get; set; } = true;
+        public bool CanSaveNewLocalCopy => SaveNewCopyPermitted;
+        public bool NewStudyPermitted { get; set; } = true;
+        public bool CanStartIndependentStudy => NewStudyPermitted;
+        public int NewStudyCalls { get; private set; }
+        public bool StartIndependentStudy()
+        {
+            if (!NewStudyPermitted) return false;
+            NewStudyCalls++;
+            return true;
+        }
+        public int SaveCopyCalls { get; private set; }
+        public bool SaveAsNewLocalCopy()
+        {
+            if (!SaveNewCopyPermitted) return false;
+            SaveCopyCalls++;
+            return true;
+        }
+        public bool CanChooseLocalNativeSave => true;
+        public bool NativeSelectedLoadPermitted { get; set; } = true;
+        public bool CanLoadSelectedLocalNativeSave => NativeSelectedLoadPermitted;
+        public string ActiveLocalSessionName => "active-study";
+        public string SelectedLocalNativeSaveName => "old-study";
+        // Presentation contract stubs only, never synthetic Native evidence.
+        public string SelectedLocalNativeSavePreview =>
+            "Recorded-only saved file preview (headless stub).";
+        public string ComparisonBaselineName => "old-study";
+        public int LocalNativeChooseCalls { get; private set; }
+        public int LocalNativeLoadCalls { get; private set; }
+        public bool ChooseNextLocalNativeSave()
+        {
+            LocalNativeChooseCalls++;
+            return true;
+        }
+        public bool LoadSelectedLocalNativeSave()
+        {
+            if (!NativeSelectedLoadPermitted) return false;
+            LocalNativeLoadCalls++;
+            return true;
+        }
         public bool DispensePermitted { get; set; } = true;
         public bool CanPipetteDispense => DispensePermitted;
         public bool CanFillBurette => true;
@@ -305,7 +378,19 @@ namespace PharmaLabVR.Session
         public bool TryBottleMeasuredPour() { MeteredCalls++; return true; }
         public bool TryFillBuretteFromBottle() { MeteredCalls++; return true; }
         public bool TryBottleWaterRinse() { MeteredCalls++; return true; }
-        public bool TryPipetteSwitchReserve() { MeteredCalls++; return true; }
+        public string ActivePipetteStockInventoryId { get; private set; } = "source";
+        public bool TryPipetteSwitchPrimary()
+        {
+            ActivePipetteStockInventoryId = "source";
+            MeteredCalls++;
+            return true;
+        }
+        public bool TryPipetteSwitchReserve()
+        {
+            ActivePipetteStockInventoryId = "reserve-stock";
+            MeteredCalls++;
+            return true;
+        }
         public bool TryBottleRefillFromReserve() { MeteredCalls++; return true; }
         public bool TryPrepareResearchReserveStock(string stockId, double concentration)
         {

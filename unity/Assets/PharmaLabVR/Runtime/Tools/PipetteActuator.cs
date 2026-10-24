@@ -123,6 +123,8 @@ namespace PharmaLabVR.Tools
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string toolId = "research-pipette";
         [SerializeField] private string sourceId = "source";
+        public string NativeToolId => toolId;
+        public string ConfiguredSourceInventoryId => sourceId;
         [SerializeField] private string receiverId = "receiver";
         [SerializeField] private string sinkId = "spill";
         [SerializeField] private string waterId = "rinse-water";
@@ -142,9 +144,29 @@ namespace PharmaLabVR.Tools
         }
 
         public LabCommandReceipt Dispense(double quantityM3) => Native.Dispense(toolId, receiverId, quantityM3);
-        public LabCommandReceipt SwitchPreparedSource(string alreadyPreparedId) =>
-            Native.SwitchSource(toolId, alreadyPreparedId);
-        public LabCommandReceipt Rinse(double quantityM3) =>
-            Native.Rinse(toolId, ResearchInstrumentPayloads.PipetteProfile, waterId, wasteId, quantityM3);
+        public LabCommandReceipt SwitchPreparedSource(string alreadyPreparedId)
+        {
+            if (alreadyPreparedId != "source" && alreadyPreparedId != "reserve-stock")
+                throw new ArgumentException(
+                    "Pipette source must be a represented prepared stock.", nameof(alreadyPreparedId));
+            var native = Native;
+            // A first-ever physical immersion can select prepared reserve
+            // without inventing an aspirate. Native PlaceTool only registers
+            // the empty instrument, then SwitchPipetteSource is revision-gated.
+            native.EnsurePlaced(toolId, sourceId, sinkId,
+                ResearchInstrumentPayloads.PipetteProfile);
+            return native.SwitchSource(toolId, alreadyPreparedId);
+        }
+        public LabCommandReceipt Rinse(double quantityM3)
+        {
+            var native = Native;
+            // RinseTool is revision-gated and cannot target an unregistered
+            // Native tool. A first-use wash places the real empty instrument;
+            // it does not prefill its tip or fabricate solvent in Unity.
+            native.EnsurePlaced(toolId, sourceId, sinkId,
+                ResearchInstrumentPayloads.PipetteProfile);
+            return native.Rinse(toolId, ResearchInstrumentPayloads.PipetteProfile,
+                waterId, wasteId, quantityM3);
+        }
     }
 }

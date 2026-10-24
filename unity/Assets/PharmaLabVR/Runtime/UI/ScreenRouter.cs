@@ -283,8 +283,16 @@ namespace PharmaLabVR.UI
                 // A recovered Hold must not revive obsolete Hold/Settings,
                 // and a still-paused Native session must remain in Pause.
                 if (destination == ScreenId.Settings || destination == ScreenId.Hold)
-                    destination = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                    destination = driver.IsNativePaused && !driver.SourceNeedsPreparation ?
+                        ScreenId.Pause : ScreenId.Lab;
             }
+            // Settings opened over a saved Native Pause, then input recovery
+            // completed while Settings was visible. Never restore the stale
+            // Pause after an accepted Native Continue; setup may remain
+            // intentionally paused only when it has a real stock chooser.
+            if (destination == ScreenId.Pause && driver != null &&
+                (!driver.IsNativePaused || driver.SourceNeedsPreparation))
+                destination = ScreenId.Lab;
             // A late Native Pause while Settings is visible must not
             // restore a live Lab solely from previously captured UI history.
             if (destination == ScreenId.Lab && driver != null &&
@@ -417,7 +425,21 @@ namespace PharmaLabVR.UI
                 }
                 screen = ScreenId.Hold;
             }
-            else if (screen == ScreenId.Hold) screen = beforeHold;
+            else if (screen == ScreenId.Hold)
+            {
+                // The Native snapshot has already been published at this
+                // point. A saved PAUSED checkpoint may have genuinely resumed
+                // running: the old Pause screen is then stale and unsafe.
+                // ResumeSetup deliberately stays paused, but only to let the
+                // learner prepare the as-yet-unprepared Native stock.
+                if (driver != null && driver.SourceNeedsPreparation)
+                    screen = ScreenId.Lab;
+                else if (driver != null && driver.IsNativePaused)
+                    screen = ScreenId.Pause;
+                else
+                    screen = beforeHold == ScreenId.Pause ?
+                        ScreenId.Lab : beforeHold;
+            }
             Refresh();
         }
 
@@ -472,34 +494,34 @@ namespace PharmaLabVR.UI
                 ScreenId.Setup => new[] { "Home", "ConfirmSetup" },
                 ScreenId.Hold => driver != null && driver.CurrentMode == "VR" ?
                     (confirmedRecoveryReady ?
-                        new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
-                        new[] { "Save", "Load", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
+                        new[] { "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight", "Continue" } :
+                        new[] { "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "ParkTool", "Recenter", "SnapLeft", "SnapRight" }) :
                     (confirmedRecoveryReady ?
-                        new[] { "Save", "Load", "Review", "Settings", "Continue" } :
-                        new[] { "Save", "Load", "Review", "Settings" }),
+                        new[] { "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings", "Continue" } :
+                        new[] { "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "Review", "Settings" }),
                 ScreenId.Lab when driver != null && driver.SourceNeedsPreparation =>
                     new[] { "PrepareResearchStock", "PrepareReserveStock", "PrepareRinseWater",
                         "SelectResearchLesson", "RecordResearchPrediction", "Learn", "Settings" },
                 ScreenId.Lab => driver != null && driver.CurrentMode == "VR" ?
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save", "ReleaseTool", "ParkTool",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" } :
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "PipetteSwitchPrimary", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" } :
                     new[] { "Inspect", "Measure", "Pause", "Review", "Notebook", "Save",
                         "PrepareResearchStock", "PrepareRinseWater", "PipetteAspirate", "PipetteDispense",
-                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" },
+                        "PipetteRinse", "BottlePour", "BottleRinse", "PrepareReserveStock", "PipetteSwitchReserve", "PipetteSwitchPrimary", "BottleRefill", "FillBurette", "SelectResearchLesson", "RecordResearchPrediction", "Learn" },
                 ScreenId.Learn => new[] { "Lab", "Inspect", "Measure", "Save" },
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?
-                    new[] { "Lab", "Save", "Load", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
-                    new[] { "Lab", "Save", "Load", "ExportPortable", "Settings", "Review" },
+                    new[] { "Lab", "Save", "SaveCopy", "NewStudy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
+                    new[] { "Lab", "Save", "SaveCopy", "NewStudy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review" },
                 ScreenId.Review => driver != null && driver.IsTimeHeld ?
-                    new[] { "Settings", "Save", "ExportCsv" } :
+                    new[] { "Hold", "Settings", "Save", "ExportCsv" } :
                     new[] { "Lab", "Settings", "Save", "Notebook", "ExportCsv",
-                        "CompareSaved", "PreviewPortableArchive", "ChoosePortableArchive", "NextInstructorAnnotation" },
+                        "CompareSaved", "ChooseLocalSave", "PreviewPortableArchive", "ChoosePortableArchive", "NextInstructorAnnotation" },
                 ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save", "Review",
                     "ExportPortable", "RecordResearchExplanation" },
-                ScreenId.Compare => new[] { "Review", "Lab" },
+                ScreenId.Compare => new[] { "Review", "Lab", "ExportComparisonCsv" },
                 ScreenId.Settings => new[] { "Back", "Save" },
                 _ => Array.Empty<string>()
             };

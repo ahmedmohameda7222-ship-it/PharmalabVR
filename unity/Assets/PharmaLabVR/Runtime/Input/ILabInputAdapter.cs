@@ -27,6 +27,13 @@ namespace PharmaLabVR.Input
         public LabCaptureEstimate[] captureFractions;
     }
 
+    // Optional explicit physical-interaction reset. Independent from the
+    // ordinary Native input-sequence watermark and recovery baseline.
+    public interface INativeRestorationInputAdapter
+    {
+        void ResetForNativeRestoration();
+    }
+
     public interface ILabInputAdapter
     {
         LabInputSample[] SampleInputs(ulong nowNs);

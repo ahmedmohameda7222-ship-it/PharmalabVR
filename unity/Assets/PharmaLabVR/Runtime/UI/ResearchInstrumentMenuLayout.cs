@@ -12,6 +12,16 @@ namespace PharmaLabVR.UI
         public ResearchMenuItem(string name, int row) { Name = name; Row = row; }
     }
 
+    // Deterministic XR ray-hit allocation independent of Unity graphics:
+    // Pause/Hold Review and Recenter both occupy the upper row.
+    public static class ResearchXRPanelHitLayout
+    {
+        public static bool SplitReviewAndRecenter(string screen,
+            bool reviewSupported, bool recenterSupported) =>
+            (screen == "Pause" || screen == "Hold") &&
+            reviewSupported && recenterSupported;
+    }
+
     public static class ResearchInstrumentMenuLayout
     {
         public static bool ShowGlobalSettings(int instrumentPage) =>
@@ -24,7 +34,7 @@ namespace PharmaLabVR.UI
             "Stock setup", "Choose stock", "Prepare chosen stock",
             "Prepare rinse water", "Choose concentration",
             "More tools and lessons", "Prepare reserve stock",
-            "Switch pipette to reserve", "Refill bottle 0.01 ml",
+            "Switch pipette to reserve", "Switch pipette to source", "Refill bottle 0.01 ml",
             "Prime burette 0.05 ml", "Strong acid lesson", "Mixed acid lesson",
             "Predict pH below 7", "Predict pH at least 7",
             "Inspect Native concepts", "Back to instruments", "Exit tools"
@@ -35,7 +45,7 @@ namespace PharmaLabVR.UI
         public static IReadOnlyList<ResearchMenuItem> Visible(int page,
             bool needsPreparation, bool canTransfer, bool reservePrepared,
             bool canFillBurette, bool canPredict, bool canDispense, bool hasRinseWater,
-            bool notebookAvailable = false)
+            bool notebookAvailable = false, bool pipetteUsingReserve = false)
         {
             var items = new List<ResearchMenuItem>(7);
             void Add(string name, int row, bool show = true)
@@ -72,7 +82,8 @@ namespace PharmaLabVR.UI
                     break;
                 case 4:
                     Add("Prepare reserve stock", 0, needsPreparation && !reservePrepared);
-                    Add("Switch pipette to reserve", 0, canTransfer && reservePrepared);
+                    Add(pipetteUsingReserve ? "Switch pipette to source" :
+                        "Switch pipette to reserve", 0, canTransfer && reservePrepared);
                     Add("Refill bottle 0.01 ml", 1, canTransfer && reservePrepared);
                     Add("Prime burette 0.05 ml", 2, canTransfer && canFillBurette);
                     Add("Strong acid lesson", 3);

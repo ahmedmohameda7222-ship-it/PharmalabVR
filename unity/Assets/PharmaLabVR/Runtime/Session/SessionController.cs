@@ -16,11 +16,20 @@ namespace PharmaLabVR.Session
     {
         [SerializeField] private CoreDriver driver;
         [SerializeField] private string saveName = "autosave";
+        private string selectedLocalNativeSaveName;
+        private string selectedLocalNativeSavePreview;
+        public string ActiveLocalSessionName => saveName;
+        public string SelectedLocalNativeSaveName => selectedLocalNativeSaveName;
+        // Recorded-only presentation data: never a live Native science result.
+        public string SelectedLocalNativeSavePreview =>
+            selectedLocalNativeSavePreview ??
+            "Choose a local Native save to inspect its recorded file before Load.";
         [SerializeField] private string checkpointId = "student-checkpoint";
         public string LastDurableSavePath { get; private set; }
         public string LastPortableArchivePath { get; private set; }
         public string LastCsvExportPath { get; private set; }
         public string LastLearnerCsvExportPath { get; private set; }
+        public string LastComparisonCsvExportPath { get; private set; }
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
             LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
@@ -48,31 +57,52 @@ namespace PharmaLabVR.Session
                         instructorAnnotationIndex));
         private string selectedArchiveFileName;
         public string SelectedArchiveFileName => selectedArchiveFileName;
+        public string LastPortableImportSummary { get; private set; }
+        private bool CanUseLocalArchives =>
+            router?.Current?.ScreenId == ScreenId.Review ||
+            router?.Current?.ScreenId == ScreenId.Pause ||
+            router?.Current?.ScreenId == ScreenId.Hold;
         private IReadOnlyList<string> AvailableLocalArchiveNames()
         {
             var root = Path.Combine(Application.persistentDataPath, "sessions");
             if (!Directory.Exists(root)) return Array.Empty<string>();
             // Bounded, top-level only; never list outside the app's offline folder.
-            var candidates = Directory.EnumerateFiles(root, "*.plvpack",
-                    SearchOption.TopDirectoryOnly).Take(128).Where(file =>
-            {
-                try { return (File.GetAttributes(file) & FileAttributes.ReparsePoint) == 0; }
-                catch (IOException) { return false; }
-                catch (UnauthorizedAccessException) { return false; }
-            });
-            return OfflineArchivePicker.Names(root, candidates);
+            // New immutable student exports must remain selectable even if
+            // older research packages exceed the 64-item XR display limit.
+            // The picker validates actual files, forbids symlinks/traversal,
+            // and orders by durable local modification time, newest first.
+            return OfflineArchivePicker.NamesNewest(root,
+                Directory.EnumerateFiles(root, "*.plvpack",
+                    SearchOption.TopDirectoryOnly), 64);
         }
 
         public bool CanChooseLocalPortableArchive
         {
             get
             {
-                if (router?.Current?.ScreenId != ScreenId.Review) return false;
+                if (!CanUseLocalArchives) return false;
                 try { return AvailableLocalArchiveNames().Count > 0; }
                 catch (IOException) { return false; }
                 catch (UnauthorizedAccessException) { return false; }
             }
         }
+        public bool CanRestoreLocalPortableSession
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                if (screen != ScreenId.Pause && screen != ScreenId.Hold ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    (driver.CurrentMode != "Desktop" && driver.CurrentMode != "VR") ||
+                    (driver.CurrentMode == "VR" && !CanReleaseTool) ||
+                    !OfflineArchivePicker.ValidName(selectedArchiveFileName))
+                    return false;
+                try { return AvailableLocalArchiveNames().Contains(selectedArchiveFileName); }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
         public bool CanPreviewLocalPortableArchive
         {
             get
@@ -93,8 +123,9 @@ namespace PharmaLabVR.Session
         {
             try
             {
-                if (router?.Current?.ScreenId != ScreenId.Review)
-                    throw new InvalidOperationException("Choose a local archive in recorded Review.");
+                if (!CanUseLocalArchives)
+                    throw new InvalidOperationException(
+                        "Choose a local archive in recorded Review or paused/held Lab.");
                 var names = AvailableLocalArchiveNames();
                 if (names.Count == 0)
                     throw new InvalidDataException("No local .plvpack files are available.");
@@ -103,7 +134,10 @@ namespace PharmaLabVR.Session
                 LastInstructorPortableReview = null;
                 instructorAnnotationIndex = 0;
                 LastError = null;
-                router.Show(ScreenId.Review);
+                // Choosing an archive from Native Pause/SessionLoad Hold
+                // must NOT navigate to Review: student RestorePortable is
+                // supported only on the original guarded screen.
+                router.Show(router.Current.ScreenId);
                 return true;
             }
             catch (Exception error)
@@ -146,6 +180,93 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+        // Local student restore from an existing .plvpack is separate from
+        // read-only instructor Preview. No cloud, grading or attestation.
+        public bool RestoreSelectedLocalPortableSession()
+        {
+            CoreSession imported = null;
+            var priorSaveName = saveName;
+            string stagedSave = null;
+            string stagedNotes = null;
+            var adopted = false;
+            try
+            {
+                if (!CanRestoreLocalPortableSession)
+                    throw new InvalidOperationException(
+                        "Choose a local study pack in Pause/Hold; VR tools must be docked.");
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                var archivePath = Path.Combine(root, selectedArchiveFileName);
+                if ((File.GetAttributes(archivePath) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException("Linked or external packages cannot be restored.");
+                var data = PortableSessionArchive.Read(archivePath);
+                // The checksum is NOT a signature. Pinned IPhreeqc and
+                // the imported Native scientific identity decide live trust.
+                imported = CoreSession.ImportSession(data.NativeJson,
+                    driver.ScientificDatabasePath);
+                if (!string.Equals(imported.BranchId, data.BranchId,
+                        StringComparison.Ordinal))
+                    throw new InvalidDataException("Imported Native branch identity disagrees.");
+                var importedView = LabViewModel.FromNativeSnapshot(imported.ReadSnapshot());
+                if (importedView == null ||
+                    !string.Equals(importedView.EventSequence, data.EventSequence,
+                        StringComparison.Ordinal))
+                    throw new InvalidDataException("Imported Native event revision disagrees.");
+
+                // Separate UUID namespace: an imported classmate's pack cannot
+                // overwrite this student's current save or Notebook. All
+                // journal bytes are durably staged before touching live Native.
+                var name = "portable-" + Guid.NewGuid().ToString("N");
+                stagedNotes = Path.Combine(root, name + ".plv-notes");
+                var expectedSave = Path.Combine(root, name + ".plv.json");
+                if (File.Exists(stagedNotes) || File.Exists(expectedSave) ||
+                    File.Exists(stagedNotes + ".bak") || File.Exists(expectedSave + ".bak"))
+                    throw new IOException("Portable restore storage identity collision.");
+                NotebookService.InstallPortableSnapshot(stagedNotes,
+                    data.NotebookSnapshot, data.BranchId, data.EventSequence);
+                stagedSave = saves.Save(imported, root, name);
+
+                // Must switch the journal path BEFORE the restored Native
+                // snapshot is published: the lesson recovery subscriber needs
+                // this imported package's authenticated Notebook, not the old one.
+                saveName = name;
+                driver.ReplaceSession(imported);
+                adopted = true;
+                imported = null;
+                LastDurableSavePath = stagedSave;
+                LastPortableImportSummary = "Restored local package · Native branch " +
+                    data.BranchId + " · event " + data.EventSequence +
+                    ". New isolated offline session; Native SessionLoad Hold remains active. " +
+                    "Checksums are not identity or scientific attestation.";
+                LastError = null;
+                RecordedReview = null;
+                CurrentComparison = null;
+                router?.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                // Never dispose a session the Native driver actually adopted.
+                if (imported != null &&
+                    !ReferenceEquals(imported, driver?.Session))
+                    imported.Dispose();
+                adopted = adopted ||
+                    (imported != null && ReferenceEquals(imported, driver?.Session));
+                if (!adopted)
+                {
+                    saveName = priorSaveName;
+                    foreach (var candidate in new[] { stagedSave, stagedNotes })
+                        if (!string.IsNullOrEmpty(candidate))
+                            try { if (File.Exists(candidate)) File.Delete(candidate); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                }
+                LastPortableImportSummary = null;
+                LastError = "Portable student restore refused: " + error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
+
         public string LastError { get; private set; }
         // Exact accepted Native command identity, not a predicted material result.
         public string LastInstrumentReceipt { get; private set; }
@@ -170,7 +291,8 @@ namespace PharmaLabVR.Session
                         router.Current.NativeRevision != view.EventSequence)
                         return false;
                     var vessel = view.Vessels.First(v => v.Id == vesselId);
-                    var notes = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    var notes = notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, view.EventSequence);
                     return !NativeMeasurementNote.WasRecorded(notes,
                         driver.Session.BranchId, view.EventSequence, vesselId,
                         vessel.MaterialRevision);
@@ -237,7 +359,8 @@ namespace PharmaLabVR.Session
                     NativeMeasurementNote.Build(driver.CurrentLabView, "receiver",
                         driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
                         driver.Measurement?.DisplayValue);
-                    var recorded = notebook.Read(NotebookFilePath(), driver.Session.BranchId);
+                    var recorded = notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, driver.CurrentLabView.EventSequence);
                     return recorded.Any(item => item.BranchId == driver.Session.BranchId &&
                         item.VesselId == "receiver" &&
                         item.EventSequence == driver.CurrentLabView.EventSequence &&
@@ -249,6 +372,7 @@ namespace PharmaLabVR.Session
                 catch (Exception error) when (error is InvalidOperationException ||
                                               error is IOException ||
                                               error is UnauthorizedAccessException ||
+                                              error is InvalidDataException ||
                                               error is ArgumentException)
                 {
                     return false;
@@ -288,6 +412,10 @@ namespace PharmaLabVR.Session
         private readonly NativeReviewAuthorityCache<RecordedSessionReview,
             RecordedRunComparison> recordedCache = new();
         private CoreDriver subscribedNativeDriver;
+        private CoreDriver observedLessonDriver;
+        private ulong observedLessonEpoch;
+        private ulong? pendingLessonRecoveryEpoch;
+        private string lastLessonRecoveryError;
 
         public RecordedSessionReview RecordedReview
         {
@@ -318,6 +446,11 @@ namespace PharmaLabVR.Session
         }
         private readonly SaveService saves = new();
         private readonly NotebookService notebook = new();
+        // A validated Saved Native Review can remain readable when its
+        // scientific model is unavailable. This never authorizes live play
+        // or borrows learner notes from the current Native session.
+        private RecordedSessionReview recordedOnlyReviewSource;
+        private string recordedOnlyReviewSavePath;
         private RecordedSessionReview cachedLearningReviewSource;
         private string cachedLearningReviewFull;
         private string cachedLearningReviewCompact;
@@ -338,9 +471,22 @@ namespace PharmaLabVR.Session
             if (recorded == null) return "Recorded study review unavailable.";
             if (!ReferenceEquals(recorded, cachedLearningReviewSource))
             {
-                // A recoverable saved branch never borrows the live branch's notes.
-                if (driver?.Session == null || !driver.Session.IsOpen ||
-                    recorded.BranchId != driver.Session.BranchId)
+                // The explicit model-unavailable saved Native source must
+                // win even if its branch string equals the active Native branch.
+                // An unconfirmed saved source may never claim either journal.
+                var scope = ResearchLearningReview.SelectNotebookScope(
+                    recorded.BranchId, driver?.Session?.BranchId,
+                    driver?.Session?.IsOpen == true,
+                    ReferenceEquals(recorded, recordedOnlyReviewSource) &&
+                    !string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath));
+                if (scope == RecordedNotebookScope.RecordedOnly)
+                {
+                    cachedLearningReviewFull =
+                        ReadRecordedOnlySavedAnnotations(recorded, false);
+                    cachedLearningReviewCompact =
+                        ReadRecordedOnlySavedAnnotations(recorded, true);
+                }
+                else if (scope == RecordedNotebookScope.Unavailable)
                 {
                     cachedLearningReviewFull =
                         "Local student notebook unavailable for this recorded branch.";
@@ -350,27 +496,58 @@ namespace PharmaLabVR.Session
                 {
                     try
                     {
-                        var notes = notebook.Read(NotebookFilePath(), recorded.BranchId,
-                            recorded.EventSequence);
+                        var path = NotebookFilePath();
+                        // Both variants read branch- and event-bounded,
+                        // checksummed annotations from the exact session file.
                         cachedLearningReviewFull =
-                            ResearchLearningReview.Render(notes, recorded.BranchId, false);
+                            ResearchLearningReview.ReadRecordedJournal(
+                                notebook, path, driver.Session.BranchId,
+                                recorded.BranchId, recorded.EventSequence, false);
                         cachedLearningReviewCompact =
-                            ResearchLearningReview.Render(notes, recorded.BranchId, true);
+                            ResearchLearningReview.ReadRecordedJournal(
+                                notebook, path, driver.Session.BranchId,
+                                recorded.BranchId, recorded.EventSequence, true);
                     }
                     catch (Exception error) when (error is IOException ||
-                           error is UnauthorizedAccessException ||
-                           error is ArgumentException)
+                            error is UnauthorizedAccessException ||
+                            error is ArgumentException ||
+                            error is InvalidOperationException)
                     {
+                        // Invalid paths cannot crash an otherwise valid
+                        // recorded Native Review or reveal journal bytes.
                         cachedLearningReviewFull =
-                            "Local notebook unavailable: " + error.Message;
-                        cachedLearningReviewCompact = "Local notebook unavailable.";
+                            "Local notebook unavailable: offline journal could not be verified.";
+                        cachedLearningReviewCompact = cachedLearningReviewFull;
                     }
                 }
                 cachedLearningReviewSource = recorded;
             }
             return compact ? cachedLearningReviewCompact : cachedLearningReviewFull;
         }
-        [SerializeField] private TextAsset strongAcidProtocol;
+        private string ReadRecordedOnlySavedAnnotations(
+            RecordedSessionReview recorded, bool compact)
+        {
+            if (recorded == null ||
+                !ReferenceEquals(recorded, recordedOnlyReviewSource) ||
+                string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath))
+                return "Local student notebook unavailable for this recorded branch.";
+            try
+            {
+                return ResearchLearningReview.ReadRecordedOnlyJournal(
+                    notebook, recordedOnlyReviewSavePath,
+                    ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath),
+                    recorded.BranchId, recorded.EventSequence, compact);
+            }
+            catch (Exception error) when (error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException ||
+                                         error is InvalidOperationException)
+            {
+                return "Recorded-only student notebook unavailable for this saved Native review.";
+            }
+        }
+
+                [SerializeField] private TextAsset strongAcidProtocol;
         [SerializeField] private TextAsset mixedAcidProtocol;
         private ResearchLessonJourney selectedResearchLesson;
         private string selectedResearchPrediction;
@@ -456,7 +633,8 @@ namespace PharmaLabVR.Session
                 var lesson = new ResearchLessonJourney(
                     definition, driver.CurrentNativeBranchId);
                 var recoveredPrediction = ResearchLessonJourney.RecoverSavedPrediction(
-                    notebook.Read(NotebookFilePath(), driver.Session.BranchId),
+                    notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, driver.CurrentLabView?.EventSequence),
                     lesson.Definition.id, driver.Session.BranchId,
                     driver.CurrentLabView?.EventSequence);
                 // Rebuild memory only after durable journal recovery succeeds.
@@ -505,11 +683,20 @@ namespace PharmaLabVR.Session
         public void Configure(CoreDriver coreDriver, string sessionName = null)
         {
             if (!ReferenceEquals(driver, coreDriver))
+            {
                 DetachNativeRestoration();
+                selectedLocalNativeSavePreview = null;
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                pendingLessonRecoveryEpoch = null;
+                observedLessonDriver = null;
+                InvalidateLearningReview();
+            }
             driver = coreDriver;
             ReconcileNativeReviewAuthority();
             if (isActiveAndEnabled)
                 AttachNativeRestoration();
+            ReconcileLessonAuthority();
             router?.Configure(driver);
             panels?.Configure(router, driver, this);
             spatialPanel?.Configure(router, panels, driver);
@@ -519,18 +706,31 @@ namespace PharmaLabVR.Session
                 // A different saved-file identity cannot reuse an old
                 // baseline comparison, even with the same Native driver.
                 recordedCache.InvalidateComparison();
+                recordedOnlyReviewSource = null;
+                recordedOnlyReviewSavePath = null;
+                // Reusing a Native driver does not authorize notes cached
+                // under the previous session filename.
+                InvalidateLearningReview();
                 LastInstructorPortableReview = null;
                 LastPortableArchivePath = null;
                 selectedArchiveFileName = null;
                 instructorArchiveDraft = string.Empty;
                 saveName = sessionName;
+                selectedLocalNativeSaveName = null;
+                selectedLocalNativeSavePreview = null;
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                pendingLessonRecoveryEpoch = null;
             }
+            RecoverInterruptedCsvForCurrentSession();
         }
 
         private void OnEnable()
         {
             ReconcileNativeReviewAuthority();
             AttachNativeRestoration();
+            ReconcileLessonAuthority();
+            RecoverInterruptedCsvForCurrentSession();
         }
 
         private void OnDisable() => DetachNativeRestoration();
@@ -542,27 +742,116 @@ namespace PharmaLabVR.Session
             DetachNativeRestoration();
             if (driver == null) return;
             driver.NativeSessionRestored += OnNativeSessionRestored;
+            driver.LabViewChanged += OnRestoredLabView;
             subscribedNativeDriver = driver;
         }
 
         private void DetachNativeRestoration()
         {
             if (subscribedNativeDriver != null)
+            {
                 subscribedNativeDriver.NativeSessionRestored -= OnNativeSessionRestored;
+                subscribedNativeDriver.LabViewChanged -= OnRestoredLabView;
+            }
             subscribedNativeDriver = null;
         }
 
         private void OnNativeSessionRestored()
         {
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             LastInstrumentReceipt = null;
-            // Imported/restarted Native branches cannot inherit lesson progress.
+            LastPortableImportSummary = null;
+            selectedLocalNativeSavePreview = null;
+            LastDurableSavePath = null;
+            LastPortableArchivePath = null;
+            LastCsvExportPath = null;
+            LastLearnerCsvExportPath = null;
+            LastComparisonCsvExportPath = null;
+            // A restored session must not inherit unsaved in-memory guidance.
+            // Rebuild only after the authoritative replacement Native snapshot.
             selectedResearchLesson = null;
             selectedResearchPrediction = null;
+            observedLessonDriver = driver;
+            observedLessonEpoch = driver != null ? driver.NativeRestorationEpoch : 0UL;
+            pendingLessonRecoveryEpoch = driver != null ?
+                driver.NativeRestorationEpoch : (ulong?)null;
+            lastLessonRecoveryError = null;
             LastInstructorPortableReview = null;
             instructorAnnotationIndex = 0;
             selectedArchiveFileName = null;
             InvalidateLearningReview();
             ReconcileNativeReviewAuthority();
+        }
+
+        private void OnRestoredLabView(LabViewModel _) => ReconcileLessonAuthority();
+
+        private void ReconcileLessonAuthority()
+        {
+            if (driver == null) return;
+            if (!ReferenceEquals(observedLessonDriver, driver))
+            {
+                observedLessonDriver = driver;
+                observedLessonEpoch = driver.NativeRestorationEpoch;
+            }
+            else if (observedLessonEpoch != driver.NativeRestorationEpoch)
+            {
+                // A disabled session panel can miss the restore signal.
+                OnNativeSessionRestored();
+            }
+            if (pendingLessonRecoveryEpoch == null ||
+                pendingLessonRecoveryEpoch.Value != driver.NativeRestorationEpoch ||
+                driver.NativePublishedRestorationEpoch != driver.NativeRestorationEpoch ||
+                driver.CurrentLabView == null)
+                return;
+            pendingLessonRecoveryEpoch = null; // one bounded recovery attempt
+            try
+            {
+                if (driver.Session == null || !driver.Session.IsOpen)
+                    throw new InvalidOperationException("No restored Native session is available.");
+                var branch = driver.Session.BranchId;
+                if (!string.Equals(driver.CurrentNativeBranchId, branch, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Restored Native branch mismatch.");
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var entries = notebook.ReadCurrent(NotebookFilePath(), branch, eventSequence);
+                var lessonId = ResearchLessonJourney.RecoverSavedLessonId(
+                    entries, branch, eventSequence);
+                if (lessonId == null)
+                {
+                    if (ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                            entries, branch, eventSequence))
+                    {
+                        lastLessonRecoveryError =
+                            "Saved learner guidance is ambiguous: conflicting local " +
+                            "hypotheses at this Native checkpoint. Inspect the Notebook; " +
+                            "no prediction or lesson was auto-selected.";
+                        LastError = lastLessonRecoveryError;
+                    }
+                    return;
+                }
+                var asset = lessonId == "strong-acid-titration-research" ?
+                    strongAcidProtocol : mixedAcidProtocol;
+                if (asset == null)
+                    throw new InvalidOperationException("Saved Research lesson asset is unavailable.");
+                var definition = JsonUtility.FromJson<ProtocolDefinition>(asset.text);
+                if (definition == null || definition.id != lessonId)
+                    throw new InvalidOperationException("Saved Research lesson identity mismatch.");
+                var recovered = new ResearchLessonJourney(definition, branch);
+                var prediction = ResearchLessonJourney.RecoverSavedPrediction(
+                    entries, lessonId, branch, eventSequence);
+                if (!ResearchLessonJourney.IsSupportedPrediction(prediction))
+                    throw new InvalidOperationException("Saved student hypothesis is unsupported.");
+                selectedResearchLesson = recovered;
+                selectedResearchPrediction = prediction;
+            }
+            catch (Exception error)
+            {
+                selectedResearchLesson = null;
+                selectedResearchPrediction = null;
+                lastLessonRecoveryError =
+                    "Saved Research guidance unavailable: " + error.Message;
+                LastError = lastLessonRecoveryError;
+            }
         }
 
         private void ReconcileNativeReviewAuthority()
@@ -606,6 +895,179 @@ namespace PharmaLabVR.Session
                 var file = Path.Combine(Application.persistentDataPath, "sessions",
                     saveName + ".plv.json");
                 return SaveService.HasSaveCandidate(file);
+            }
+        }
+
+        private IReadOnlyList<string> AvailableLocalNativeSaves()
+        {
+            var root = Path.Combine(Application.persistentDataPath, "sessions");
+            if (!Directory.Exists(root)) return Array.Empty<string>();
+            return OfflineArchivePicker.LocalNativeSaveNamesNewest(root,
+                Directory.EnumerateFiles(root, "*.plv.json*",
+                    SearchOption.TopDirectoryOnly), 64);
+        }
+
+        public bool CanChooseLocalNativeSave
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                if ((screen != ScreenId.Pause && screen != ScreenId.Hold &&
+                     screen != ScreenId.Review) ||
+                    driver?.Session == null || !driver.Session.IsOpen ||
+                    (screen == ScreenId.Review && driver.IsTimeHeld))
+                    return false;
+                try { return AvailableLocalNativeSaves().Count > 0; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
+        public bool CanLoadSelectedLocalNativeSave
+        {
+            get
+            {
+                // Browsing in recorded Review never grants live Native import.
+                var screen = router?.Current?.ScreenId;
+                if ((screen != ScreenId.Pause && screen != ScreenId.Hold) ||
+                    !CanChooseLocalNativeSave ||
+                    (driver.CurrentMode == "VR" && !CanReleaseTool) ||
+                    (driver.CurrentMode != "VR" && driver.CurrentMode != "Desktop") ||
+                    !OfflineArchivePicker.ValidNativeSaveName(selectedLocalNativeSaveName))
+                    return false;
+                try { return AvailableLocalNativeSaves().Contains(selectedLocalNativeSaveName); }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
+            }
+        }
+
+        // Display saved-file metadata prior to a destructive Native SessionLoad.
+        // Reading this recording NEVER imports chemistry or learner Notebook.
+        private static string PreviewRecordedLocalNativeSave(string directory, string name)
+        {
+            const string unavailable =
+                "Preview unavailable: selected saved Native file is unreadable or invalid. " +
+                "Load still requires separate Native scientific validation.";
+            if (!OfflineArchivePicker.ValidNativeSaveName(name)) return unavailable;
+            var path = Path.Combine(directory, name + ".plv.json");
+            try
+            {
+                // Both primary and read-only fallback must be ordinary local files.
+                foreach (var candidate in new[] { path, path + ".bak" })
+                    if (File.Exists(candidate) &&
+                        (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                        return unavailable;
+                var saved = RecordedSessionReview.OpenRecoverable(path);
+                var validEvent = ulong.TryParse(saved.EventSequence,
+                    System.Globalization.NumberStyles.None,
+                    System.Globalization.CultureInfo.InvariantCulture, out var sequence) &&
+                    sequence.ToString(System.Globalization.CultureInfo.InvariantCulture) ==
+                    saved.EventSequence;
+                var receiver = saved.Observations.FirstOrDefault(observation =>
+                    observation != null && observation.vesselId == "receiver" &&
+                    observation.observableId == "pH");
+                return "Recorded-only saved file preview (NOT live Native science).\n" +
+                    "Branch: " + BoundedPreviewIdentity(saved.BranchId) +
+                    " · Event: " + (validEvent ? saved.EventSequence : "unavailable") +
+                    " · Model: " + BoundedPreviewIdentity(saved.ModelIdentity) +
+                    "\nReceiver pH: " + (receiver?.DisplayValue ?? "--") +
+                    " (saved recording only; Load revalidates the Native model).";
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                          error is IOException ||
+                                          error is UnauthorizedAccessException ||
+                                          error is ArgumentException ||
+                                          error is InvalidOperationException)
+            {
+                return unavailable;
+            }
+        }
+
+        private static string BoundedPreviewIdentity(string identity)
+        {
+            if (string.IsNullOrWhiteSpace(identity)) return "unavailable";
+            var safe = new string(identity.Where(c =>
+                (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                (c >= '0' && c <= '9') || c == '-' || c == '_' ||
+                c == '.' || c == ':').Take(48).ToArray());
+            return safe.Length == 0 ? "unavailable" :
+                safe + (identity.Length > 48 ? "..." : string.Empty);
+        }
+
+        // List/select never touches Native material, observation or Notebook.
+        public bool ChooseNextLocalNativeSave()
+        {
+            try
+            {
+                if (!CanChooseLocalNativeSave)
+                    throw new InvalidOperationException(
+                        "Choose local Native saves in Pause/Hold or read-only Review.");
+                var names = AvailableLocalNativeSaves();
+                if (names.Count == 0)
+                    throw new InvalidDataException("There are no local Native saves to select.");
+                selectedLocalNativeSaveName =
+                    OfflineArchivePicker.NextName(names, selectedLocalNativeSaveName);
+                selectedLocalNativeSavePreview = PreviewRecordedLocalNativeSave(
+                    Path.Combine(Application.persistentDataPath, "sessions"),
+                    selectedLocalNativeSaveName);
+                recordedCache.InvalidateComparison(); // selection changes saved baseline
+                LastComparisonCsvExportPath = null;
+                LastError = null;
+                router.Show(router.Current.ScreenId);
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Local save selection refused: " + error.Message;
+                return false;
+            }
+        }
+
+        // Switch the note namespace BEFORE the Native replacement event, so
+        // the recovered lesson/hypothesis is always read from this saved run,
+        // never from the previously active student's Notebook. The Native
+        // session is never swapped unless Load/import succeeds.
+        public bool LoadSelectedLocalNativeSave()
+        {
+            if (!CanLoadSelectedLocalNativeSave)
+            {
+                LastError = "Select an existing local Native save in Pause/Hold; " +
+                    "VR instruments must be parked before loading.";
+                return false;
+            }
+            var previousName = saveName;
+            var previousNative = driver.Session;
+            var name = selectedLocalNativeSaveName;
+            var file = Path.Combine(Application.persistentDataPath, "sessions",
+                name + ".plv.json");
+            try
+            {
+                // A selected file may have changed since listing. Reject
+                // symbolic links on either the primary or backup candidate.
+                foreach (var candidate in new[] { file, file + ".bak" })
+                    if (File.Exists(candidate) &&
+                        (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                        throw new InvalidDataException(
+                            "Linked local saves cannot replace the active Native session.");
+                if (!SaveService.HasSaveCandidate(file))
+                    throw new InvalidDataException("The selected Native save no longer exists.");
+                saveName = name;
+                var loaded = ContinueFrom(file);
+                if (!loaded)
+                {
+                    if (ReferenceEquals(previousNative, driver.Session))
+                        saveName = previousName;
+                    return false;
+                }
+                LastDurableSavePath = File.Exists(file) ? file : file + ".bak";
+                return true;
+            }
+            catch (Exception error)
+            {
+                if (ReferenceEquals(previousNative, driver?.Session))
+                    saveName = previousName;
+                LastError = "Selected local Native save refused: " + error.Message;
+                return false;
             }
         }
 
@@ -719,6 +1181,13 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Hold)
             {
                 GUILayout.Label("Paused: " + driver.HoldReason + ". Close the valve and restore tracking.");
+                var desktopInput = driver.transform.root.GetComponentInChildren<DesktopInputAdapter>(true);
+                if (driver.CurrentMode == "Desktop" && desktopInput != null &&
+                    !desktopInput.HasFreshPhysicalGestureSinceRestore)
+                    GUILayout.Label("Session restored: release the held instrument, all keyboard keys and mouse buttons. Then pick up a tool again.");
+                if (HasResearchLesson)
+                    GUILayout.Label("Saved learner lesson recovered from local Notebook. " +
+                        ResearchPredictionSummary + " Native Hold remains active until Continue.");
                 if (!driver.NativeRecoveryReady)
                     GUILayout.Label(driver.HoldReason == "Compute" ?
                         "Waiting for the scientific result; saving and review remain available." :
@@ -727,9 +1196,38 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Continue", GUILayout.Height(44f))) panels?.Request(PanelAction.Continue);
                 GUI.enabled = true;
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanSaveNewLocalCopy;
+                if (GUILayout.Button("Save separate local copy (same Native branch)",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.SaveCopy);
+                GUI.enabled = CanStartIndependentStudy;
+                if (GUILayout.Button("Save current + start new Native research run",
+                        GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.NewStudy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose another local Native save", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = CanLoadSelectedLocalNativeSave;
+                if (GUILayout.Button("Load selected local Native save", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.LoadSelectedSave);
                 GUI.enabled = true;
+                GUILayout.Label("Current save: " + saveName +
+                    " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
+                    ". A restored run will enter Native SessionLoad Hold.");
+                GUILayout.Label(SelectedLocalNativeSavePreview);
+                GUI.enabled = CanChooseLocalPortableArchive;
+                if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChoosePortableArchive);
+                GUI.enabled = CanRestoreLocalPortableSession;
+                if (GUILayout.Button("Restore selected local study package", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.RestorePortable);
+                GUI.enabled = true;
+                GUILayout.Label("Local study package: " + (SelectedArchiveFileName ?? "none") +
+                    " · checksum integrity does not prove identity or scientific attestation.");
+                if (!string.IsNullOrEmpty(LastPortableImportSummary))
+                    GUILayout.Label(LastPortableImportSummary);
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
@@ -742,9 +1240,38 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Session paused. Material and simulation time are frozen.");
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f))) panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
+                GUI.enabled = CanSaveNewLocalCopy;
+                if (GUILayout.Button("Save separate local copy (same Native branch)",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.SaveCopy);
+                GUI.enabled = CanStartIndependentStudy;
+                if (GUILayout.Button("Save current + start new Native research run",
+                        GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.NewStudy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
+                GUI.enabled = CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose another local Native save", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = CanLoadSelectedLocalNativeSave;
+                if (GUILayout.Button("Load selected local Native save", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.LoadSelectedSave);
                 GUI.enabled = true;
+                GUILayout.Label("Current save: " + saveName +
+                    " · Selected local save: " + (SelectedLocalNativeSaveName ?? "none") +
+                    ". A restored run will enter Native SessionLoad Hold.");
+                GUILayout.Label(SelectedLocalNativeSavePreview);
+                GUI.enabled = CanChooseLocalPortableArchive;
+                if (GUILayout.Button("Choose next local study package", GUILayout.Height(36f)))
+                    panels?.Request(PanelAction.ChoosePortableArchive);
+                GUI.enabled = CanRestoreLocalPortableSession;
+                if (GUILayout.Button("Restore selected local study package", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.RestorePortable);
+                GUI.enabled = true;
+                GUILayout.Label("Local study package: " + (SelectedArchiveFileName ?? "none") +
+                    " · checksum integrity does not prove identity or scientific attestation.");
+                if (!string.IsNullOrEmpty(LastPortableImportSummary))
+                    GUILayout.Label(LastPortableImportSummary);
                 if (GUILayout.Button("Open recorded review", GUILayout.Height(44f))) panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f))) panels?.Request(PanelAction.Settings);
                 if (GUILayout.Button("Restart checkpoint", GUILayout.Height(44f))) RestartCheckpoint();
@@ -776,7 +1303,13 @@ namespace PharmaLabVR.Session
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
                     GUILayout.Label(LearningReviewSummary);
                 }
-                if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
+                if (driver.IsTimeHeld)
+                {
+                    if (GUILayout.Button("Return to Native Hold / recovery",
+                        GUILayout.Height(44f)))
+                        panels?.Request(PanelAction.Hold);
+                }
+                else if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Lab);
                 if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
                     GUILayout.Button("Open student notebook", GUILayout.Height(38f)))
@@ -808,8 +1341,16 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);
                 var comparisonEnabled = GUI.enabled;
+                GUI.enabled = comparisonEnabled && CanChooseLocalNativeSave;
+                if (GUILayout.Button("Choose next saved Native comparison baseline",
+                        GUILayout.Height(40f)))
+                    panels?.Request(PanelAction.ChooseLocalSave);
+                GUI.enabled = comparisonEnabled;
+                GUILayout.Label(SelectedLocalNativeSavePreview);
                 GUI.enabled = comparisonEnabled && CanCompareSaved;
-                var requestComparison = GUILayout.Button("Compare with last saved Native checkpoint",
+                GUILayout.Label("Recorded comparison baseline: " + ComparisonBaselineName +
+                    " (selected local save, or current saved checkpoint).");
+                var requestComparison = GUILayout.Button("Compare with selected/active saved Native study",
                     GUILayout.Height(44f));
                 GUI.enabled = comparisonEnabled;
                 if (requestComparison) panels?.Request(PanelAction.CompareSaved);
@@ -824,12 +1365,17 @@ namespace PharmaLabVR.Session
             }
             if (screen == ScreenId.Compare)
             {
-                GUILayout.Label("Two recorded Native runs · no recomputation");
+                GUILayout.Label("Two recorded Native snapshots · no recomputation");
                 if (CurrentComparison == null) GUILayout.Label("Comparison unavailable.");
                 else
                 {
+                    GUILayout.Label("Recorded baseline file: " + validatedComparisonBaselineName +
+                        " (local filename only; not scientific attestation)");
                     GUILayout.Label("Saved baseline branch: " + CurrentComparison.BaselineBranchId);
                     GUILayout.Label("Review candidate branch: " + CurrentComparison.CandidateBranchId);
+                    GUILayout.Label("Saved Native event: " + CurrentComparison.BaselineEventSequence);
+                    GUILayout.Label("Review Native event: " + CurrentComparison.CandidateEventSequence);
+                    GUILayout.Label(CurrentComparison.LineageSummary);
                     GUILayout.Label("Baseline package: " + CurrentComparison.BaselineModelIdentity);
                     GUILayout.Label("Candidate package: " + CurrentComparison.CandidateModelIdentity);
                     foreach (var row in CurrentComparison.Rows)
@@ -843,6 +1389,13 @@ namespace PharmaLabVR.Session
                             difference + "\n" + row.DeltaReason);
                     }
                 }
+                GUI.enabled = CanExportRecordedComparison;
+                if (GUILayout.Button("Export recorded comparison CSV", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportComparisonCsv);
+                GUI.enabled = true;
+                if (!string.IsNullOrEmpty(LastComparisonCsvExportPath))
+                    GUILayout.Label("Recorded-only comparison CSV saved: " +
+                        LastComparisonCsvExportPath);
                 if (GUILayout.Button("Back to recorded review", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Review);
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
@@ -854,7 +1407,8 @@ namespace PharmaLabVR.Session
             }
             if (screen == ScreenId.Notebook)
             {
-                GUILayout.Label("Research notebook · notes reference actual Native events.");
+                GUILayout.Label("Research notebook · notes reference actual Native events. " +
+                    "Physical material gestures are disabled until you return to Lab.");
                 var notes = ReadNotebookEntries();
                 foreach (var note in notes.Skip(Math.Max(0, notes.Count - 5)))
                     GUILayout.Label("Event " + note.EventSequence + " · " + note.VesselId +
@@ -951,10 +1505,10 @@ namespace PharmaLabVR.Session
                 GUILayout.Label("Stock volume: 25 ml. Prepared quantities come from the native model.");
             }
             if (screen == ScreenId.Lab && driver.CurrentMode == "Desktop")
-                GUILayout.Label("Desktop: F selects/places burette, pipette or bottle on the bench. " +
+                GUILayout.Label("Desktop: left-click an instrument to pick it up; F picks from view center or places a held tool on the bench. " +
                     "Held burette: left-drag actuates stopcock, Shift+left-drag moves it. " +
-                    "Held pipette/bottle: left-drag moves; G requests a measured Native delivery only over receiver. " +
-                    "Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
+                    "Held pipette/bottle: left-drag moves; G in other prepared stock changes pipette Native source, next G aspirates. G over receiver dispenses, inverted source bottle over burette primes; inverted reserve bottle over source mouth refills 0.01 ml. G with pipette tip or inverted stock-bottle outlet submerged in the open prepared-water cup rinses 0.01 ml through Native waste; the bottle stock inventory is not replaced. " +
+                    "Left-click receiver = inspect current Native pH; Alt+left-click source/reserve bottle = inspect its actual Native inventory. Point view center at receiver and F = pick receiver, drag/arrow reposition, F upright near bench to put its foot down. Wheel = held height / empty-hand zoom; Q/E = tilt; Esc = Native Pause.");
             if (screen == ScreenId.Lab && driver.SourceNeedsPreparation && !driver.ReserveStockPrepared)
             {
                 GUILayout.Label("Optional: prepare reserve stock BEFORE primary stock (no material created after setup).");
@@ -994,13 +1548,21 @@ namespace PharmaLabVR.Session
                     TryBottleMeasuredPour();
                 if (driver.ReserveStockPrepared)
                 {
-                    if (GUILayout.Button("Pipette: switch to prepared reserve", GUILayout.Height(32f)))
+                    GUILayout.Label("Pipette Native source: " +
+                        (ActivePipetteStockInventoryId ?? "unavailable"));
+                    if (ActivePipetteStockInventoryId == "reserve-stock")
+                    {
+                        if (GUILayout.Button("Pipette: switch to prepared source", GUILayout.Height(32f)))
+                            TryPipetteSwitchPrimary();
+                    }
+                    else if (GUILayout.Button("Pipette: switch to prepared reserve", GUILayout.Height(32f)))
                         TryPipetteSwitchReserve();
                     if (GUILayout.Button("Bottle: refill from prepared reserve 0.01 ml", GUILayout.Height(32f)))
                         TryBottleRefillFromReserve();
                 }
                 if (driver.RinseWaterPrepared)
                 {
+                    GUILayout.Label("Physical rinse: dip the directly held pipette tip OR the inverted source-bottle outlet into prepared Native water and press G; only the tool film is washed into Native waste.");
                     if (GUILayout.Button("Pipette: water rinse 0.01 ml", GUILayout.Height(32f)))
                         TryPipetteWaterRinse();
                     if (GUILayout.Button("Bottle: water rinse 0.01 ml", GUILayout.Height(32f)))
@@ -1020,6 +1582,8 @@ namespace PharmaLabVR.Session
                 if (measurement != null) GUILayout.Label(measurement.Explanation);
                 if (screen == ScreenId.Inspect && GUILayout.Button("Measure selected vessel", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Measure, router.Current.SelectedEntityId);
+                if (screen == ScreenId.Measure && router.Current.SelectedEntityId == "receiver")
+                    GUILayout.Label("Desktop: release the inspection click, then click the physical receiver again to record only a fresh Native pH in the Notebook.");
                 var wasEnabled = GUI.enabled;
                 GUI.enabled = wasEnabled && CanRecordCurrentNativePH;
                 var recordReading = GUILayout.Button("Record current Native pH in notebook",
@@ -1046,6 +1610,10 @@ namespace PharmaLabVR.Session
                 panels?.Request(PanelAction.Notebook);
             if (!string.IsNullOrEmpty(LastInstrumentReceipt))
                 GUILayout.Label(LastInstrumentReceipt);
+            var desktopInspection = driver?.transform.root
+                .GetComponentInChildren<DesktopInputAdapter>(true)?.LastPhysicalInspectionFeedback;
+            if (driver?.CurrentMode == "Desktop" && !string.IsNullOrEmpty(desktopInspection))
+                GUILayout.Label("Receiver inspection: " + desktopInspection);
             var desktopDelivery = driver?.transform.root
                 .GetComponentInChildren<DesktopInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
             if (driver?.CurrentMode == "Desktop" &&
@@ -1154,7 +1722,7 @@ namespace PharmaLabVR.Session
         // This is a deliberate small prime, NOT an instant 50 mL refill.
         private const double BurettePrimeM3 = 5e-8;
 
-        public bool CanFillBurette
+        private bool HasNativeBurettePrimeCapacity
         {
             get
             {
@@ -1164,10 +1732,17 @@ namespace PharmaLabVR.Session
                 var vessels = driver.CurrentLabView.Vessels;
                 var stock = vessels.FirstOrDefault(item => item.Id == "source");
                 var burette = vessels.FirstOrDefault(item => item.Id == "burette");
-                if (string.IsNullOrEmpty(stock.Id) || string.IsNullOrEmpty(burette.Id) ||
-                    stock.CommittedVolumeM3 + 1e-12 < BurettePrimeM3 ||
-                    burette.CapacityM3 - burette.CommittedVolumeM3 + 1e-12 < BurettePrimeM3)
-                    return false;
+                return !string.IsNullOrEmpty(stock.Id) && !string.IsNullOrEmpty(burette.Id) &&
+                    stock.CommittedVolumeM3 + 1e-12 >= BurettePrimeM3 &&
+                    burette.CapacityM3 - burette.CommittedVolumeM3 + 1e-12 >= BurettePrimeM3;
+            }
+        }
+
+        public bool CanFillBurette
+        {
+            get
+            {
+                if (!HasNativeBurettePrimeCapacity) return false;
                 if (driver.CurrentMode == "VR")
                     return driver.transform.root.GetComponentInChildren<ToolMount>(true)?.IsMounted == true;
                 if (driver.CurrentMode == "Desktop")
@@ -1175,6 +1750,55 @@ namespace PharmaLabVR.Session
                 return false;
             }
         }
+
+        // Called ONLY by the physical input route when the bottle outlet
+        // has actually stayed at the burette mouth through the Native step.
+        // The Desktop menu's empty-hand admission remains unchanged.
+        public bool TryPhysicalFillBuretteFromBottle(Transform physicalBottle,
+            ResearchBuretteInletTarget inlet)
+        {
+            var realInlet = driver != null ? driver.transform.root
+                .GetComponentInChildren<ResearchBuretteInletTarget>(true) : null;
+            var validBottle = physicalBottle != null &&
+                physicalBottle.GetComponent<BottlePourActuator>() != null &&
+                physicalBottle.GetComponent<ResearchStockAspirateTarget>()?.NativeInventoryId == "source";
+            var parked = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root
+                    .GetComponentInChildren<DesktopInputAdapter>(true);
+                parked = desktop != null && desktop.CurrentHeldPhysicalTool == physicalBottle &&
+                    !desktop.IsHoldingNativeTool && desktop.HasFreshPhysicalGestureSinceRestore;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var mount = driver.transform.root.GetComponentInChildren<ToolMount>(true);
+                var xr = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+                parked = mount != null && mount.IsMounted &&
+                    xr != null && xr.IsSourceBottleDirectlyGripped(physicalBottle) &&
+                    xr.HasFreshGripSinceRestore;
+            }
+            if (router?.Current?.ScreenId != ScreenId.Lab ||
+                !validBottle || !parked || !HasNativeBurettePrimeCapacity ||
+                inlet == null || inlet != realInlet ||
+                !inlet.AdmitsBottle(physicalBottle, parked, driver.Session))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Prime refused: close the Native burette valve, park the burette, " +
+                    "and hold the source bottle's downward outlet inside the upper inlet.";
+                return false;
+            }
+            return TransferNativePrime("Physical burette prime 0.05 ml");
+        }
+
+        private bool TransferNativePrime(string label) => TryResearchCommand(label, () =>
+        {
+            var commands = new LabCommandService(driver.Session);
+            return commands.Submit("TransferFixed",
+                ResearchInstrumentPayloads.RefillFromPreparedStock(
+                    "source", "burette", "spill", BurettePrimeM3),
+                commands.CaptureTouchedRevisions("source", "burette"));
+        });
 
         public bool TryFillBuretteFromBottle()
         {
@@ -1185,24 +1809,232 @@ namespace PharmaLabVR.Session
                 if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return false;
             }
-            return TryResearchCommand("Burette prime 0.05 ml", () =>
-            {
-                var commands = new LabCommandService(driver.Session);
-                return commands.Submit("TransferFixed",
-                    ResearchInstrumentPayloads.RefillFromPreparedStock(
-                        "source", "burette", "spill", BurettePrimeM3),
-                    commands.CaptureTouchedRevisions("source", "burette"));
-            });
+            return TransferNativePrime("Burette prime 0.05 ml");
         }
 
         public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
             () => ResearchBottle.Pour(1e-8));
+        // The actual scene station must still contain Native water at the
+        // command edge; a stale target or distant held pipette never rinses.
+        public bool TryPhysicalRinsePipette(Transform physicalPipette,
+            ResearchRinseWaterTarget physicalWater)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var actualPipette = root != null ?
+                root.GetComponentInChildren<PipetteActuator>(true) : null;
+            var actualWater = root != null ?
+                root.GetComponentInChildren<ResearchRinseWaterTarget>(true) : null;
+            if (driver?.Session == null || driver.SourceNeedsPreparation ||
+                driver.IsNativePaused || driver.IsTimeHeld ||
+                !driver.RinseWaterPrepared || !driver.Session.IsOpen ||
+                !PhysicallyOwnsPipette(physicalPipette) ||
+                physicalPipette == null ||
+                actualPipette == null || actualPipette.transform != physicalPipette ||
+                physicalWater == null || physicalWater != actualWater ||
+                !physicalWater.IsImmersed(physicalPipette) ||
+                router?.Current?.ScreenId != ScreenId.Lab)
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Rinse refused. Prepare real Native water, immerse the physical pipette tip and return to an active Lab.";
+                return false;
+            }
+            return TryPipetteWaterRinse();
+        }
+
         public bool TryPipetteWaterRinse() => TryResearchCommand("Pipette rinse 0.01 ml",
             () => ResearchPipette.Rinse(1e-8));
+        // Directly dip the real SOURCE bottle's downward outlet into the
+        // Native-water meniscus. This washes its metered tip film; it never
+        // silently dilutes or replaces the bottle's original stock inventory.
+        // Never allow a public call to skip the real Desktop/XR hand authority.
+        public bool TryPhysicalRinseBottle(Transform heldSourceBottle,
+            ResearchRinseWaterTarget physicalWater)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var nativeBottle = root != null ?
+                root.GetComponentInChildren<BottlePourActuator>(true) : null;
+            var stock = root != null ? root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(item => item.NativeInventoryId == "source") : null;
+            var water = root != null ?
+                root.GetComponentInChildren<ResearchRinseWaterTarget>(true) : null;
+            var receiver = root != null ?
+                root.GetComponentInChildren<LabCaptureTarget>(true) : null;
+            var inlet = root != null ?
+                root.GetComponentInChildren<ResearchBuretteInletTarget>(true) : null;
+
+            var owned = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = root.GetComponentInChildren<DesktopInputAdapter>(true);
+                owned = desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == heldSourceBottle &&
+                    desktop.HasFreshPhysicalGestureSinceRestore &&
+                    desktop.HasFreshLabScreenGesture &&
+                    !desktop.IsHoldingNativeTool;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var xr = root.GetComponentInChildren<XRInputAdapter>(true);
+                owned = xr != null &&
+                    xr.IsSourceBottleDirectlyGripped(heldSourceBottle) &&
+                    xr.HasFreshGripSinceRestore && xr.HasFreshLabScreenGesture;
+            }
+
+            var active = driver?.Session?.IsOpen == true &&
+                !driver.SourceNeedsPreparation && !driver.IsNativePaused &&
+                !driver.IsTimeHeld && driver.RinseWaterPrepared &&
+                router?.Current?.ScreenId == ScreenId.Lab;
+            var receiverCapture = heldSourceBottle != null && receiver != null &&
+                LabCaptureTarget.EstimateExclusive(heldSourceBottle, receiver).Length != 0;
+            var inletCapture = heldSourceBottle != null && inlet != null &&
+                driver?.Session?.IsOpen == true &&
+                inlet.AdmitsBottle(heldSourceBottle, true, driver.Session);
+            if (!active || !owned || heldSourceBottle == null ||
+                nativeBottle == null || nativeBottle.transform != heldSourceBottle ||
+                stock == null || stock.transform != heldSourceBottle ||
+                physicalWater == null || physicalWater != water ||
+                !physicalWater.IsImmersed(heldSourceBottle) ||
+                receiverCapture || inletCapture)
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Bottle rinse refused: hold the actual source bottle, " +
+                    "dip its downward outlet in prepared Native water, and keep " +
+                    "it clear of the receiver and burette inlet in an active Lab.";
+                return false;
+            }
+            return TryBottleWaterRinse();
+        }
+
         public bool TryBottleWaterRinse() => TryResearchCommand("Bottle rinse 0.01 ml",
             () => ResearchBottle.Rinse(1e-8));
+        public string ActivePipetteStockInventoryId
+        {
+            get
+            {
+                if (driver?.Session == null || !driver.Session.IsOpen) return null;
+                var pipette = driver.transform.root.GetComponentInChildren<PipetteActuator>(true);
+                if (pipette == null) return null;
+                foreach (var target in driver.transform.root
+                    .GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    if (target.NativeSourceMatches(driver.Session, pipette))
+                        return target.NativeInventoryId;
+                return null;
+            }
+        }
+
+        // Both gestures (pipette source selection and water cleaning) must
+        // independently prove current physical ownership at the command edge.
+        // A public controller entry point may never rely only on the caller
+        // saying the tip is immersed.
+        private bool PhysicallyOwnsPipette(Transform physicalPipette)
+        {
+            if (driver == null || physicalPipette == null) return false;
+            if (driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root
+                    .GetComponentInChildren<DesktopInputAdapter>(true);
+                return desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == physicalPipette &&
+                    desktop.HasFreshPhysicalGestureSinceRestore &&
+                    desktop.HasFreshLabScreenGesture;
+            }
+            if (driver.CurrentMode == "VR")
+            {
+                var xr = driver.transform.root
+                    .GetComponentInChildren<XRInputAdapter>(true);
+                return xr != null && xr.IsPipetteDirectlyGripped(physicalPipette) &&
+                    xr.HasFreshGripSinceRestore && xr.HasFreshLabScreenGesture;
+            }
+            return false;
+        }
+
+        // Missing production route for physical first-press source switching.
+        // Re-check the *actual* immersed prefab and Native tool source before
+        // calling the existing revision-checked SwitchPipetteSource command.
+        public bool TryPhysicalSelectPipetteSource(Transform heldPipette,
+            ResearchStockAspirateTarget physicalStock)
+        {
+            var root = driver != null ? driver.transform.root : null;
+            var actualPipette = root != null ?
+                root.GetComponentInChildren<PipetteActuator>(true) : null;
+            var stockId = physicalStock != null ? physicalStock.NativeInventoryId : null;
+            var actualStock = root != null ? root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == stockId) : null;
+            var active = driver?.Session?.IsOpen == true &&
+                !driver.SourceNeedsPreparation && !driver.IsNativePaused &&
+                !driver.IsTimeHeld && router?.Current?.ScreenId == ScreenId.Lab;
+            var prepared = active && (stockId == "source" ||
+                (stockId == "reserve-stock" && driver.ReserveStockPrepared));
+            var actualPhysicalTool = heldPipette != null && actualPipette != null &&
+                actualPipette.transform == heldPipette;
+            var alreadySelected = actualPhysicalTool && physicalStock != null &&
+                physicalStock.NativeSourceMatches(driver.Session, actualPipette);
+            var immersed = actualPhysicalTool && physicalStock != null &&
+                physicalStock == actualStock && physicalStock.IsImmersed(heldPipette);
+            if (!ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                    stockId, prepared, actualPhysicalTool &&
+                    PhysicallyOwnsPipette(heldPipette), active, immersed,
+                    alreadySelected))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Source switch refused: directly hold the pipette, " +
+                    "immerse its tip in a different prepared Native stock, then " +
+                    "press once. Release stale gestures after Native restoration.";
+                return false;
+            }
+            return stockId == "source" ?
+                TryPipetteSwitchPrimary() : TryPipetteSwitchReserve();
+        }
+
+        public bool TryPipetteSwitchPrimary() => TryResearchCommand("Pipette switch to source",
+            () => ResearchPipette.SwitchPreparedSource("source"));
         public bool TryPipetteSwitchReserve() => TryResearchCommand("Pipette switch to reserve",
             () => ResearchPipette.SwitchPreparedSource("reserve-stock"));
+        // Explicit reserve-bottle gesture routed to the existing Native
+        // measured refill. The geometry is re-evaluated at the command edge
+        // and no presenter ever creates material in the source bottle.
+        public bool TryPhysicalRefillSourceFromReserve(Transform heldReserveBottle,
+            ResearchStockAspirateTarget physicalSource)
+        {
+            var actualReserve = driver != null ? driver.transform.root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == "reserve-stock") : null;
+            var actualSource = driver != null ? driver.transform.root
+                .GetComponentsInChildren<ResearchStockAspirateTarget>(true)
+                .FirstOrDefault(t => t.NativeInventoryId == "source") : null;
+            var owned = false;
+            if (driver != null && driver.CurrentMode == "Desktop")
+            {
+                var desktop = driver.transform.root.GetComponentInChildren<DesktopInputAdapter>(true);
+                owned = desktop != null &&
+                    desktop.CurrentHeldPhysicalTool == heldReserveBottle &&
+                    desktop.HasFreshPhysicalGestureSinceRestore;
+            }
+            else if (driver != null && driver.CurrentMode == "VR")
+            {
+                var xr = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+                owned = xr != null && xr.HasFreshGripSinceRestore &&
+                    xr.IsReserveBottleDirectlyGripped(heldReserveBottle);
+            }
+            if (router?.Current?.ScreenId != ScreenId.Lab ||
+                driver?.Session == null || !driver.Session.IsOpen ||
+                driver.IsNativePaused || driver.IsTimeHeld ||
+                driver.SourceNeedsPreparation || !driver.ReserveStockPrepared ||
+                !owned || heldReserveBottle == null ||
+                actualReserve == null || actualReserve.transform != heldReserveBottle ||
+                physicalSource == null || physicalSource != actualSource ||
+                !physicalSource.AdmitsReservePour(heldReserveBottle, true))
+            {
+                LastInstrumentReceipt = null;
+                LastError = "Refill refused: grip the prepared reserve bottle and hold " +
+                    "its inverted outlet over the upright, stationary source mouth.";
+                return false;
+            }
+            return TryBottleRefillFromReserve();
+        }
+
         public bool TryBottleRefillFromReserve() => TryResearchCommand("Bottle refill 0.01 ml",
             () => ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
 
@@ -1257,7 +2089,33 @@ namespace PharmaLabVR.Session
         }
 
 
-        private string NotebookFilePath()
+        // On boot and when selecting a saved session identity, reconcile any
+        // interrupted two-file export under the same cross-process lease.
+        // An invalid/tampered recovery marker fails CLOSED and remains on
+        // disk for inspection; never silently overwrite previous CSVs.
+        private bool RecoverInterruptedCsvForCurrentSession()
+        {
+            try
+            {
+                var notesPath = NotebookFilePath();
+                var directory = Path.GetDirectoryName(notesPath);
+                RecordedCsvPairWriter.RecoverInterruptedPair(
+                    Path.Combine(directory, saveName + ".plv-results.csv"),
+                    Path.Combine(directory, saveName + ".plv-student-annotations.csv"));
+                return true;
+            }
+            catch (Exception error) when (error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException ||
+                                         error is InvalidOperationException)
+            {
+                LastError = "Previous CSV export recovery unavailable: " +
+                    error.Message;
+                return false;
+            }
+        }
+
+                private string NotebookFilePath()
         {
             if (string.IsNullOrWhiteSpace(saveName) || Path.GetFileName(saveName) != saveName ||
                 saveName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
@@ -1273,7 +2131,7 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("No open Native session.");
                 // Reading a healthy notebook must not erase an earlier failed
                 // note-commit error before Desktop/XR has rendered it.
-                return notebook.Read(NotebookFilePath(), driver.Session.BranchId,
+                return notebook.ReadCurrent(NotebookFilePath(), driver.Session.BranchId,
                     driver.CurrentLabView?.EventSequence);
             }
             catch (Exception exception)
@@ -1287,17 +2145,25 @@ namespace PharmaLabVR.Session
         {
             get
             {
-                var entries = ReadNotebookEntries();
-                if (entries.Count == 0) return "Research notebook: no recorded annotations.";
-                var latest = entries[entries.Count - 1];
-                var preview = latest.Text.Replace('\r', ' ').Replace('\n', ' ');
-                if (preview.Length > 105) preview = preview.Substring(0, 105) + "...";
-                return "Research notebook · " + entries.Count + " event-linked notes\n" +
-                    "Latest · event " + latest.EventSequence + " · " + latest.VesselId + "\n" +
-                    preview + "\n" +
-                    ResearchNotebookPHHistory.Summarize(entries,
-                        driver?.Session?.BranchId, "receiver", 3) +
-                    "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
+                if (driver?.Session == null || !driver.Session.IsOpen ||
+                    driver.CurrentLabView == null)
+                    return "Research notebook unavailable: no active Native session.";
+                try
+                {
+                    // Do not convert a corrupt or torn journal into an empty
+                    // learner notebook; render only verified Native-bounded
+                    // annotations from the exact current session namespace.
+                    return ResearchLearningReview.ReadActiveNotebookSummary(
+                        notebook, NotebookFilePath(), driver.Session.BranchId,
+                        driver.CurrentLabView.EventSequence);
+                }
+                catch (Exception error) when (error is IOException ||
+                        error is UnauthorizedAccessException ||
+                        error is ArgumentException ||
+                        error is InvalidOperationException)
+                {
+                    return "Research notebook unavailable: offline journal could not be verified.";
+                }
             }
         }
 
@@ -1334,23 +2200,51 @@ namespace PharmaLabVR.Session
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
                     throw new InvalidOperationException("CSV export requires an open recorded Native Review.");
+                if (!RecoverInterruptedCsvForCurrentSession())
+                    throw new InvalidOperationException(LastError ??
+                        "An interrupted CSV export could not be reconciled.");
                 var notesPath = NotebookFilePath(); // Enforces safe session file naming.
                 var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv-results.csv");
                 var review = RecordedReview;
-                SessionExportService.WriteCsv(target, review);
-                LastCsvExportPath = target;
-                // Preserve the scientific CSV schema; a separate file contains
-                // local learner annotations only for the same Native branch.
-                if (driver?.Session != null && driver.Session.IsOpen &&
-                    driver.Session.BranchId == review.BranchId &&
-                    !string.IsNullOrWhiteSpace(review.EventSequence))
+                // Verify current learner evidence before publishing a scientific
+                // CSV, so a damaged journal cannot cause a partial export.
+                IReadOnlyList<NotebookEntry> localNotes = null;
+                var scope = ResearchLearningReview.SelectNotebookScope(
+                    review.BranchId, driver?.Session?.BranchId,
+                    driver?.Session?.IsOpen == true,
+                    ReferenceEquals(review, recordedOnlyReviewSource) &&
+                    !string.IsNullOrWhiteSpace(recordedOnlyReviewSavePath));
+                if (scope == RecordedNotebookScope.Live)
                 {
-                    var localNotes = notebook.Read(notesPath, review.BranchId,
-                        review.EventSequence);
+                    localNotes = notebook.ReadCurrent(notesPath,
+                        review.BranchId, review.EventSequence);
+                }
+                else if (scope == RecordedNotebookScope.RecordedOnly)
+                {
+                    // Saved model-unavailable Review may export its *student
+                    // annotations* only from the exact confirmed Native
+                    // save sidecar. No solver, live session or attestation.
+                    localNotes = ResearchLearningReview.ReadRecordedOnlyEntries(
+                        notebook, recordedOnlyReviewSavePath,
+                        ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath),
+                        review.BranchId, review.EventSequence);
+                }
+                // Two-file writes may fail at either target. Stage and publish
+                // together with rollback before reporting any export path.
+                if (localNotes != null)
+                {
                     var learnerTarget = Path.Combine(Path.GetDirectoryName(notesPath),
                         saveName + ".plv-student-annotations.csv");
-                    ResearchLearningReview.WriteCsv(learnerTarget, localNotes, review.BranchId);
+                    RecordedCsvPairWriter.WritePair(target,
+                        SessionExportService.RenderCsv(review), learnerTarget,
+                        ResearchLearningReview.RenderCsv(localNotes, review.BranchId));
+                    LastCsvExportPath = target;
                     LastLearnerCsvExportPath = learnerTarget;
+                }
+                else
+                {
+                    SessionExportService.WriteCsv(target, review);
+                    LastCsvExportPath = target;
                 }
                 LastError = null;
                 router.Show(ScreenId.Review);
@@ -1382,8 +2276,13 @@ namespace PharmaLabVR.Session
                     throw new InvalidOperationException("Native revision changed before archive export.");
                 var notesPath = NotebookFilePath();
                 var notes = notebook.ExportBranch(notesPath, branch, revision);
-                var target = Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plvpack");
-                PortableSessionArchive.Write(target, driver.Session.ExportSession(),
+                var fileName = OfflineArchivePicker.NewStudentExportName(
+                    saveName, revision, Guid.NewGuid().ToString("N"));
+                var target = Path.Combine(Path.GetDirectoryName(notesPath), fileName);
+                // A new immutable package for every explicit student export;
+                // additional Notebook evidence must never erase an earlier
+                // event-bounded research artifact at the same Native revision.
+                PortableSessionArchive.WriteNew(target, driver.Session.ExportSession(),
                     notes, branch, revision);
                 LastPortableArchivePath = target;
                 LastError = null;
@@ -1392,6 +2291,221 @@ namespace PharmaLabVR.Session
             catch (Exception exception)
             {
                 LastError = "Portable export failed: " + exception.Message;
+                return false;
+            }
+        }
+
+        // New branch: preserve the old run's Native session + local journal,
+        // stage a completely empty Native bench and Notebook, then adopt the
+        // new authority under the genuine SessionLoad Hold.
+        public bool CanStartIndependentStudy =>
+            router?.Current?.ScreenId == ScreenId.Pause &&
+            driver?.Session?.IsOpen == true &&
+            driver.IsNativePaused && !driver.IsTimeHeld &&
+            driver.CurrentLabView != null &&
+            router.Current.NativeRevision == driver.CurrentLabView.EventSequence &&
+            (driver.CurrentMode == "Desktop" ||
+             (driver.CurrentMode == "VR" && CanReleaseTool));
+
+        public bool StartIndependentStudy()
+        {
+            CoreSession fresh = null;
+            var oldName = saveName;
+            string newName = null;
+            string newBranch = null;
+            string newNotes = null;
+            string newSave = null;
+            try
+            {
+                if (!CanStartIndependentStudy)
+                    throw new InvalidOperationException(
+                        "Pause the active lab and park the VR burette to start a second run.");
+                var oldBranch = driver.Session.BranchId;
+                var oldEvent = driver.CurrentLabView.EventSequence;
+                // Integrity-validate existing student journal before saving
+                // its Native branch; corrupt evidence must fail closed.
+                var notes = notebook.ExportBranch(NotebookFilePath(), oldBranch, oldEvent);
+                if (!notes.StartsWith("PLV-NOTEBOOK-V1\n", StringComparison.Ordinal))
+                    throw new InvalidDataException("Existing student journal is not verifiable.");
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                saves.Save(driver.Session, root, oldName);
+                if (driver.Session.BranchId != oldBranch ||
+                    driver.CurrentLabView.EventSequence != oldEvent)
+                    throw new InvalidOperationException(
+                        "Native session changed while saving the original experiment.");
+                // Pin the explicitly preserved first study as the recorded
+                // baseline, not as a live Native handle or scientific proof.
+                // Refuse a broken first-study recording BEFORE constructing
+                // or importing the replacement branch.
+                var priorRecorded = RecordedSessionReview.OpenRecoverable(
+                    Path.Combine(root, oldName + ".plv.json"));
+                if (priorRecorded.BranchId != oldBranch ||
+                    priorRecorded.EventSequence != oldEvent)
+                    throw new InvalidDataException(
+                        "Preserved first Native study has an inconsistent recorded branch/event.");
+                var priorPreview = PreviewRecordedLocalNativeSave(root, oldName);
+                if (priorPreview.StartsWith("Preview unavailable:",
+                    StringComparison.Ordinal))
+                    throw new InvalidDataException(
+                        "Preserved first Native study could not be previewed for comparison.");
+
+                var token = Guid.NewGuid().ToString("N");
+                newName = "run-" + token;
+                newBranch = "study-" + token;
+                newNotes = Path.Combine(root, newName + ".plv-notes");
+                newSave = Path.Combine(root, newName + ".plv.json");
+                foreach (var candidate in new[] { newSave, newSave + ".bak",
+                    newSave + ".tmp", newNotes, newNotes + ".bak",
+                    newNotes + ".lock" })
+                    if (File.Exists(candidate))
+                        throw new IOException("Independent study storage name already exists.");
+                fresh = driver.PrepareIndependentStudy(newBranch);
+                var initialView = LabViewModel.FromNativeSnapshot(fresh.ReadSnapshot());
+                if (initialView == null || string.IsNullOrEmpty(initialView.EventSequence))
+                    throw new InvalidDataException("Fresh Native event identity is unavailable.");
+                NotebookService.InstallPortableSnapshot(newNotes,
+                    "PLV-NOTEBOOK-V1\n", newBranch, initialView.EventSequence);
+                var saved = saves.Save(fresh, root, newName);
+                if (saved != newSave || driver.Session.BranchId != oldBranch ||
+                    driver.Session?.IsOpen != true)
+                    throw new InvalidOperationException(
+                        "New session staging changed the old Native authority.");
+                // Only AFTER both independent files have been published may
+                // Native Import retire the old operating handle. The staged
+                // bootstrap itself cannot step or process material commands.
+                var preImport = fresh.ExportSession();
+                var imported = CoreSession.ImportSession(preImport,
+                    driver.ScientificDatabasePath);
+                fresh.Dispose();
+                fresh = imported;
+                if (fresh.BranchId != newBranch)
+                {
+                    throw new InvalidOperationException(
+                        "New Native authority failed branch or mode admission.");
+                }
+                // The journal identity must change BEFORE Native publishes the
+                // restored snapshot; otherwise the first study's notes leak.
+                saveName = newName;
+                driver.ReplaceSession(fresh);
+                fresh = null; // CoreDriver owns the imported authority now.
+                LastDurableSavePath = saved;
+                // ReplaceSession issues NativeSessionRestored, which clears
+                // ALL stale file previews. Select the first saved study only
+                // AFTER this event. Review/Compare later re-read its file and
+                // never infer that a file label attests scientific identity.
+                selectedLocalNativeSaveName = oldName;
+                selectedLocalNativeSavePreview = priorPreview;
+                recordedCache.InvalidateComparison();
+                CurrentComparison = null;
+                validatedComparisonBaselineName = null;
+                LastComparisonCsvExportPath = null;
+                LastError = null;
+                router?.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                // Never roll back an authority that Native already adopted.
+                // A failure before replacement leaves the original session
+                // selected and cleans only newly generated file identities.
+                if (newBranch == null || driver?.Session?.BranchId != newBranch)
+                {
+                    saveName = oldName;
+                    foreach (var path in new[] { newSave,
+                        newSave == null ? null : newSave + ".tmp", newNotes })
+                        if (!string.IsNullOrEmpty(path))
+                            try { if (File.Exists(path)) File.Delete(path); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                }
+                LastError = "Independent study refused: " + error.Message;
+                return false;
+            }
+            finally
+            {
+                if (fresh != null && !ReferenceEquals(fresh, driver?.Session))
+                    fresh.Dispose();
+            }
+        }
+
+        public bool CanSaveNewLocalCopy
+        {
+            get
+            {
+                var screen = router?.Current?.ScreenId;
+                return (screen == ScreenId.Pause || screen == ScreenId.Hold) &&
+                    driver?.Session != null && driver.Session.IsOpen &&
+                    driver.CurrentLabView != null;
+            }
+        }
+
+        // Keep the previously confirmed Native checkpoint and learner notes
+        // untouched. A new file namespace copies the SAME Native branch and
+        // only its current-event local annotations; it is not a scientific
+        // fork, verified assessment, or regenerated chemistry.
+        public bool SaveAsNewLocalCopy()
+        {
+            string targetNotes = null;
+            string targetNative = null;
+            var verifiedFreshName = false;
+            try
+            {
+                if (!CanSaveNewLocalCopy)
+                    throw new InvalidOperationException(
+                        "Save a separate local copy only in paused or held Lab.");
+                var revision = driver.CurrentLabView.EventSequence;
+                if (revision != router.Current.NativeRevision)
+                    throw new InvalidOperationException(
+                        "Native revision changed while preparing a separate local copy.");
+                var branch = driver.Session.BranchId;
+                var journal = notebook.ExportBranch(NotebookFilePath(), branch, revision);
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                var name = "study-" + Guid.NewGuid().ToString("N");
+                targetNotes = Path.Combine(root, name + ".plv-notes");
+                targetNative = Path.Combine(root, name + ".plv.json");
+                if (File.Exists(targetNotes) || File.Exists(targetNotes + ".bak") ||
+                    File.Exists(targetNative) || File.Exists(targetNative + ".bak") ||
+                    File.Exists(targetNative + ".tmp"))
+                    throw new IOException("The new offline checkpoint name is already in use.");
+                verifiedFreshName = true;
+
+                // New Notes commit first; Native Save only becomes discoverable
+                // if both have published. A failed second write never changes
+                // the current save identity and best-effort cleans staged files.
+                NotebookService.InstallPortableSnapshot(targetNotes, journal, branch, revision);
+                var written = saves.Save(driver.Session, root, name);
+                if (!string.Equals(written, targetNative, StringComparison.Ordinal) ||
+                    driver.CurrentLabView.EventSequence != revision ||
+                    driver.Session.BranchId != branch)
+                    throw new InvalidOperationException(
+                        "Native session identity changed while saving the new copy.");
+
+                saveName = name;
+                selectedLocalNativeSaveName = name;
+                selectedLocalNativeSavePreview = null;
+                LastDurableSavePath = written;
+                LastPortableArchivePath = null;
+                LastCsvExportPath = null;
+                LastLearnerCsvExportPath = null;
+                selectedArchiveFileName = null;
+                RecordedReview = null;
+                CurrentComparison = null;
+                InvalidateLearningReview();
+                recordedCache.InvalidateComparison();
+                LastError = null;
+                router.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                if (verifiedFreshName)
+                    foreach (var file in new[] { targetNative, targetNative + ".tmp",
+                        targetNotes })
+                        if (!string.IsNullOrEmpty(file))
+                            try { if (File.Exists(file)) File.Delete(file); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                LastError = "New offline save copy refused: " + error.Message;
                 return false;
             }
         }
@@ -1424,14 +2538,51 @@ namespace PharmaLabVR.Session
             return Path.Combine(Path.GetDirectoryName(notesPath), saveName + ".plv.json");
         }
 
+        // Only an explicit local-save chooser operation selects an older run
+        // as the comparison baseline. SaveCopy, Native restoration or Configure
+        // discard that selection preview and revert to the active checkpoint.
+        private bool HasSelectedComparisonBaseline =>
+            selectedLocalNativeSavePreview != null &&
+            OfflineArchivePicker.ValidNativeSaveName(selectedLocalNativeSaveName);
+
+        public string ComparisonBaselineName =>
+            HasSelectedComparisonBaseline ? selectedLocalNativeSaveName : saveName;
+
+        private string validatedComparisonBaselineName;
+
+        private string ComparisonBaselinePath()
+        {
+            var name = ComparisonBaselineName;
+            if (!OfflineArchivePicker.ValidNativeSaveName(name))
+                throw new InvalidDataException("Comparison baseline has an invalid local filename.");
+            if (HasSelectedComparisonBaseline &&
+                selectedLocalNativeSavePreview.StartsWith("Preview unavailable:",
+                    StringComparison.Ordinal))
+                throw new InvalidDataException(
+                    "Selected Native file could not be previewed. Choose another saved run.");
+            var path = Path.Combine(Application.persistentDataPath, "sessions",
+                name + ".plv.json");
+            // No symlinked primary or backup may escape the offline sandbox
+            // during the later read (including an adversarial file change).
+            foreach (var candidate in new[] { path, path + ".bak" })
+                if (File.Exists(candidate) &&
+                    (File.GetAttributes(candidate) & FileAttributes.ReparsePoint) != 0)
+                    throw new InvalidDataException(
+                        "Linked comparison baseline files cannot be used.");
+            return path;
+        }
+
         public bool CanCompareSaved
         {
             get
             {
                 if (RecordedReview == null) return false;
-                try { return SaveService.HasSaveCandidate(SavedNativePath()); }
+                try { return SaveService.HasSaveCandidate(ComparisonBaselinePath()); }
                 catch (ArgumentException) { return false; }
                 catch (InvalidOperationException) { return false; }
+                catch (InvalidDataException) { return false; }
+                catch (IOException) { return false; }
+                catch (UnauthorizedAccessException) { return false; }
             }
         }
 
@@ -1442,7 +2593,12 @@ namespace PharmaLabVR.Session
                 var comparison = CurrentComparison;
                 if (comparison == null) return "No recorded run comparison is open.";
                 var summary = "Saved " + comparison.BaselineBranchId + " vs review " +
-                    comparison.CandidateBranchId + " (recorded; no recomputation)";
+                    comparison.CandidateBranchId + " (recorded; no recomputation)" +
+                    "\nNative events: saved " + comparison.BaselineEventSequence +
+                    " / review " + comparison.CandidateEventSequence +
+                    "\n" + comparison.LineageSummary +
+                    "\nRecorded baseline file: " +
+                    (validatedComparisonBaselineName ?? "unavailable");
                 var shown = 0;
                 foreach (var row in comparison.Rows)
                 {
@@ -1462,20 +2618,55 @@ namespace PharmaLabVR.Session
         public bool OpenSavedComparison()
         {
             CurrentComparison = null;
+            validatedComparisonBaselineName = null;
+            LastComparisonCsvExportPath = null;
             try
             {
                 if (router?.Current?.ScreenId != ScreenId.Review || RecordedReview == null)
                     throw new InvalidOperationException("Compare requires an open recorded Review.");
-                var path = SavedNativePath();
+                var name = ComparisonBaselineName;
+                var path = ComparisonBaselinePath();
                 if (!SaveService.HasSaveCandidate(path))
-                    throw new InvalidDataException("No confirmed saved Native checkpoint is available.");
-                CurrentComparison = RecordedRunComparison.CompareSaved(path, RecordedReview);
+                    throw new InvalidDataException("The selected Native baseline no longer exists.");
+                // Reparse and validate the file now; merely choosing/previewing
+                // it cannot authorize chemistry, Native import, or a pH delta.
+                var comparison = RecordedRunComparison.CompareSaved(path, RecordedReview);
+                validatedComparisonBaselineName = name;
+                CurrentComparison = comparison;
                 LastError = null;
                 return true;
             }
             catch (Exception error)
             {
                 LastError = "Saved recorded comparison unavailable: " + error.Message;
+                return false;
+            }
+        }
+
+        public bool CanExportRecordedComparison =>
+            router?.Current?.ScreenId == ScreenId.Compare &&
+            CurrentComparison != null &&
+            !string.IsNullOrEmpty(validatedComparisonBaselineName);
+
+        public bool ExportCurrentComparisonCsv()
+        {
+            LastComparisonCsvExportPath = null;
+            try
+            {
+                if (!CanExportRecordedComparison)
+                    throw new InvalidOperationException(
+                        "Export requires an open comparison of two recorded Native studies.");
+                var directory = Path.Combine(Application.persistentDataPath, "sessions");
+                var csv = RecordedRunComparisonCsv.WriteNew(directory, CurrentComparison,
+                    validatedComparisonBaselineName);
+                LastComparisonCsvExportPath = csv;
+                LastError = null;
+                router.Show(ScreenId.Compare); // refresh XR saved-file confirmation
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Recorded comparison CSV export refused: " + error.Message;
                 return false;
             }
         }
@@ -1499,6 +2690,8 @@ namespace PharmaLabVR.Session
 
         public void CloseReview()
         {
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             RecordedReview = null;
             CurrentComparison = null;
             LastInstructorPortableReview = null;
@@ -1508,6 +2701,8 @@ namespace PharmaLabVR.Session
         public bool ContinueFrom(string path)
         {
             CoreSession imported = null;
+            recordedOnlyReviewSource = null;
+            recordedOnlyReviewSavePath = null;
             RecordedReview = null;
             CurrentComparison = null;
             try
@@ -1517,14 +2712,19 @@ namespace PharmaLabVR.Session
                 driver.ReplaceSession(imported);
                 imported = null;
                 RecordedReview = null;
-                LastError = null;
+                LastError = lastLessonRecoveryError;
                 router?.MarkSaved();
                 return true;
             }
             catch (ScientificPackageMismatchException exception)
             {
                 imported?.Dispose();
-                try { RecordedReview = RecordedSessionReview.OpenRecoverable(path); }
+                try
+                {
+                    RecordedReview = RecordedSessionReview.OpenRecoverable(path);
+                    recordedOnlyReviewSource = RecordedReview;
+                    recordedOnlyReviewSavePath = Path.GetFullPath(path);
+                }
                 catch (Exception reviewError)
                 {
                     LastError = "Live resume blocked and recorded review unavailable: " + reviewError.Message;
@@ -1564,7 +2764,7 @@ namespace PharmaLabVR.Session
             {
                 if (driver == null) throw new InvalidOperationException("Core driver is not assigned.");
                 if (!driver.RestartCheckpoint(checkpointId)) throw new InvalidOperationException("Native checkpoint restart was rejected.");
-                LastError = null;
+                LastError = lastLessonRecoveryError;
                 return true;
             }
             catch (Exception exception)

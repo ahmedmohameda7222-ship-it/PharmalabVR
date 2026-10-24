@@ -66,6 +66,255 @@ namespace PharmaLabVR.Tests
         }
 
         [Test]
+        public void M2_DesktopCanDeliberatelyRelocatePhysicalReceiverWithoutLosingXrGrip()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                var grip = receiver.GetComponent<DesktopGrabbable>();
+                Assert.That(grip, Is.Not.Null,
+                    "Desktop F must target an actual receiver, not a UI proxy.");
+                Assert.That(grip.ToolId, Is.EqualTo("research-receiver-visual"));
+                Assert.That(receiver.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+                Assert.That(receiver.GetComponent<Rigidbody>(), Is.Not.Null);
+                var collider = receiver.GetComponent<Collider>();
+                Assert.That(collider, Is.Not.Null);
+                Assert.That(collider.enabled, Is.True);
+                Assert.That(collider.bounds.extents.y, Is.GreaterThan(0f));
+                Assert.That(DesktopReceiverRouting.Resolve(true, true, false),
+                    Is.EqualTo(DesktopReceiverAction.Inspect),
+                    "A left click must remain Native measurement inspection.");
+                Assert.That(DesktopReceiverRouting.Resolve(true, false, true),
+                    Is.EqualTo(DesktopReceiverAction.Pick));
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void M2_PhysicalSourceAndReserveInspectionTargetsRemainDistinctNativeVessels()
+        {
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var stocks = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true)).ToArray();
+                Assert.That(stocks.Count(item => item.NativeInventoryId == "source"), Is.EqualTo(1));
+                Assert.That(stocks.Count(item => item.NativeInventoryId == "reserve-stock"), Is.EqualTo(1));
+                foreach (var item in stocks)
+                {
+                    Assert.That(item.GetComponent<DesktopGrabbable>(), Is.Not.Null);
+                    Assert.That(item.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+                    Assert.That(item.GetComponentsInChildren<Collider>(true)
+                        .Any(c => c.enabled && c.gameObject.activeInHierarchy), Is.True);
+                }
+                var receiver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabCaptureTarget>(true)).Single();
+                Assert.That(receiver.GetComponent<XRGrabInteractable>(), Is.Not.Null,
+                    "Receiver grip must block touch inspection while XR receiver is held.");
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void M2_GeneratedStockBottleExposesSourceImmersionToBothPhysicalInputRoutes()
+        {
+            var bottle = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            Assert.That(bottle, Is.Not.Null);
+            Assert.That(bottle.GetComponent<ResearchStockAspirateTarget>(), Is.Not.Null);
+            Assert.That(bottle.transform.Find("ParkedResearchCap"), Is.Not.Null);
+            Assert.That(bottle.transform.Find("ClosedResearchCap"), Is.Null,
+                "A closed bottle cap must not cover the immersion opening.");
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasStockAspirateTarget, Is.True);
+                Assert.That(xr.HasStockAspirateTarget, Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void M2_ReserveStockHasNativeBoundVisibleImmersionAndPhysicalInputConnections()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchReserveStockBottle.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            var target = prefab.GetComponent<ResearchStockAspirateTarget>();
+            Assert.That(target, Is.Not.Null);
+            Assert.That(target.NativeInventoryId, Is.EqualTo("reserve-stock"));
+            Assert.That(prefab.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<BottlePourActuator>(), Is.Null,
+                "Reserve is a prepared pipette intake station, not a second Native pouring tool.");
+            Assert.That(prefab.GetComponent<XRGrabInteractable>(), Is.Not.Null);
+            Assert.That(prefab.transform.Find("ParkedResearchCap"), Is.Not.Null);
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var reserve = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
+                    .Single(item => item.NativeInventoryId == "reserve-stock");
+                Assert.That(reserve.name, Is.EqualTo("ResearchReserveStockBottle"));
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasReserveStockAspirateTarget, Is.True);
+                Assert.That(xr.HasReserveStockAspirateTarget, Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void M2_PhysicalNativeRinseStationHasWaterBoundGeometryAndSceneRoutes()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            var pipettePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchPipette.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            Assert.That(pipettePrefab, Is.Not.Null);
+            Assert.That(prefab.GetComponent<NativeMeteredInstrumentVisual>(), Is.Not.Null);
+            Assert.That(prefab.GetComponent<ResearchRinseWaterTarget>(), Is.Not.Null);
+            Assert.That(prefab.transform.Find("Opening"), Is.Not.Null);
+            var station = Object.Instantiate(prefab);
+            var pipette = Object.Instantiate(pipettePrefab);
+            try
+            {
+                var target = station.GetComponent<ResearchRinseWaterTarget>();
+                var tip = pipette.transform.Find("OutletExit");
+                pipette.transform.position = station.transform.Find("Opening").position -
+                    tip.localPosition + Vector3.down * 0.042f;
+                Assert.That(target.IsImmersed(pipette.transform), Is.False,
+                    "Unprepared Native water is not an authorized rinse.");
+                var visual = station.GetComponent<NativeMeteredInstrumentVisual>();
+                visual.ApplySnapshot(
+                    "{\"vessels\":[{\"id\":\"rinse-water\",\"inventory\":{\"researchAdditiveVolumeM3\":0.000001}}]}");
+                Assert.That(target.IsImmersed(pipette.transform), Is.True,
+                    "Aligned pipette must reach real represented Native water.");
+                pipette.transform.position += Vector3.right * 0.007f;
+                Assert.That(target.IsImmersed(pipette.transform), Is.False,
+                    "Inside the cup opening but outside actual Native water must be dry.");
+                pipette.transform.position += Vector3.right * 0.093f;
+                Assert.That(target.IsImmersed(pipette.transform), Is.False,
+                    "A tip outside the open station must be refused.");
+                visual.ApplySnapshot("{\"vessels\":[]}");
+                Assert.That(target.IsImmersed(pipette.transform), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(pipette);
+                Object.DestroyImmediate(station);
+            }
+
+            var scene = EditorSceneManager.OpenScene("Assets/PharmaLabVR/Scenes/Lab.unity",
+                OpenSceneMode.Additive);
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                Assert.That(roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ResearchRinseWaterTarget>(true)).Count(),
+                    Is.EqualTo(1));
+                Assert.That(roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single()
+                    .HasPhysicalRinseWaterTarget, Is.True);
+                Assert.That(roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single()
+                    .HasPhysicalRinseWaterTarget, Is.True);
+            }
+            finally { EditorSceneManager.CloseScene(scene, true); }
+        }
+
+        [Test]
+        public void M2_InvertedSourceBottleOutletRequiresActualNativeWaterForFilmRinse()
+        {
+            var waterPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            var stockPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchStockBottle.prefab");
+            Assert.That(waterPrefab, Is.Not.Null);
+            Assert.That(stockPrefab, Is.Not.Null);
+            Assert.That(stockPrefab.GetComponent<BottlePourActuator>(), Is.Not.Null);
+            var station = Object.Instantiate(waterPrefab);
+            var bottle = Object.Instantiate(stockPrefab);
+            try
+            {
+                var tip = bottle.transform.Find("OutletExit");
+                var mouth = station.transform.Find("Opening");
+                Assert.That(tip, Is.Not.Null);
+                Assert.That(mouth, Is.Not.Null);
+                bottle.transform.rotation = Quaternion.Euler(180f, 0f, 0f);
+                bottle.transform.position += mouth.position -
+                    Vector3.up * 0.043f - tip.position;
+                var target = station.GetComponent<ResearchRinseWaterTarget>();
+                Assert.That(target.IsImmersed(bottle.transform), Is.False,
+                    "Dry Native-water station may not rinse the stock-bottle outlet.");
+                var visual = station.GetComponent<NativeMeteredInstrumentVisual>();
+                visual.ApplySnapshot(
+                    "{\"vessels\":[{\"id\":\"rinse-water\",\"inventory\":{\"researchAdditiveVolumeM3\":0.000001}}]}");
+                Assert.That(target.IsImmersed(bottle.transform), Is.True,
+                    "Physically inverted outlet in actual Native water must be admitted.");
+                bottle.transform.position += Vector3.right * 0.008f;
+                Assert.That(target.IsImmersed(bottle.transform), Is.False,
+                    "A mouth inside the cup but outside the real meniscus is dry.");
+                visual.ApplySnapshot("{\"vessels\":[]}");
+                Assert.That(target.IsImmersed(bottle.transform), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(bottle);
+                Object.DestroyImmediate(station);
+            }
+        }
+
+        [Test]
+        public void M2_PhysicalNativeRinseIntentRejectsCompetingTargetsAndHolds()
+        {
+            ResearchAuxiliaryDeliveryIntent Resolve(bool water, bool receiver = false,
+                bool source = false, bool prepared = true, bool ready = true) =>
+                ResearchPhysicalRinseSelection.Resolve("research-pipette-visual",
+                    true, true, receiver, source, false, water, prepared, ready);
+            Assert.That(Resolve(true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.PipetteRinse));
+            Assert.That(Resolve(false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, receiver: true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, source: true), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, prepared: false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+            Assert.That(Resolve(true, ready: false), Is.EqualTo(ResearchAuxiliaryDeliveryIntent.None));
+        }
+
+        [Test]
+        public void M2_GeneratedBuretteUpperInletTracksRealGlassBodyMesh()
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Tools/ResearchBurette.prefab");
+            Assert.That(prefab, Is.Not.Null);
+            var inlet = prefab.GetComponent<ResearchBuretteInletTarget>();
+            var marker = prefab.transform.Find("InletEntry");
+            var body = prefab.transform.Find("InspectableGlassBody");
+            Assert.That(inlet, Is.Not.Null, "The Native burette needs a distinct physical intake.");
+            Assert.That(marker, Is.Not.Null);
+            Assert.That(body, Is.Not.Null);
+            var upper = body.localPosition.y +
+                body.GetComponent<MeshFilter>().sharedMesh.bounds.max.y * body.localScale.y;
+            Assert.That(marker.localPosition.y, Is.EqualTo(upper).Within(1e-5f));
+            Assert.That(prefab.GetComponent<ValveActuator>(), Is.Not.Null);
+        }
+
+        [Test]
         public void P03_03_InvalidSidewaysDockReturnPreservesActualUnityBodyState()
         {
             var root = new GameObject("dock-return-body");
