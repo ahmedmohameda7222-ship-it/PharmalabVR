@@ -199,6 +199,11 @@ namespace PharmaLabVR.UI
             });
             AddInstrumentButton("Save new local copy", -250f,
                 () => panels?.Request(PanelAction.SaveCopy));
+            AddInstrumentButton("Start independent study", -250f, () =>
+            {
+                if (panels?.Request(PanelAction.NewStudy) == true)
+                    portableRecoveryPage = false;
+            });
             AddInstrumentButton("Back to pause/hold", -306f,
                 () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
@@ -648,6 +653,7 @@ namespace PharmaLabVR.UI
             SetButton("Choose Native save", false);
             SetButton("Load chosen Native save", false);
             SetButton("Save new local copy", false);
+            SetButton("Start independent study", false);
             SetButton("Back to pause/hold", false);
             SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("CompareSaved") &&
@@ -809,12 +815,33 @@ namespace PharmaLabVR.UI
                 SetButton("Save new local copy",
                     state.SupportedActions.Contains("SaveCopy") &&
                     panels != null && panels.CanSaveNewLocalCopy);
+                var independentAvailable = state.ScreenId == ScreenId.Pause &&
+                    state.SupportedActions.Contains("NewStudy") &&
+                    panels?.CanStartIndependentStudy == true;
+                SetButton("Start independent study", independentAvailable);
+                var copyRect = buttons["Save new local copy"].GetComponent<RectTransform>();
+                copyRect.sizeDelta = new Vector2(independentAvailable ? 176f : 368f, 46f);
+                copyRect.anchoredPosition = new Vector2(independentAvailable ? -94f : 0f, -250f);
+                var copyLabel = buttons["Save new local copy"]
+                    .GetComponentInChildren<Text>(true);
+                copyLabel.text = independentAvailable ? "Save same run" : "Save new local copy";
+                copyLabel.rectTransform.sizeDelta =
+                    new Vector2(independentAvailable ? 164f : 368f, 35f);
+                var freshRect = buttons["Start independent study"].GetComponent<RectTransform>();
+                freshRect.sizeDelta = new Vector2(176f, 46f);
+                freshRect.anchoredPosition = new Vector2(94f, -250f);
+                var freshLabel = buttons["Start independent study"]
+                    .GetComponentInChildren<Text>(true);
+                freshLabel.text = "New Native run";
+                freshLabel.rectTransform.sizeDelta = new Vector2(164f, 35f);
                 SetButton("Back to pause/hold", true);
                 detail.text = "OFFLINE SESSION RECOVERY · NOT ATTESTED / NOT GRADED\n" +
                     "Native saves: choose an existing .plv.json session, then load it. " +
                     "Its own local Notebook is read at the restored Native event ceiling.\n" +
                     "Save new local copy keeps the SAME Native branch but protects " +
                     "the previous .plv.json and Notebook under a separate name.\n" +
+                    "New Native run saves the previous study, starts a distinct " +
+                    "unprepared research branch and requires SessionLoad recovery.\n" +
                     "Current: " + (panels?.ActiveLocalSessionName ?? "none") +
                     " · Selected Native save: " +
                     (panels?.SelectedLocalNativeSaveName ?? "none") +

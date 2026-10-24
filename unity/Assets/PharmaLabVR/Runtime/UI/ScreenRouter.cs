@@ -491,8 +491,8 @@ namespace PharmaLabVR.UI
                 ScreenId.Inspect => new[] { "Lab", "Measure", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Measure => new[] { "Lab", "Inspect", "Pause", "Review", "Save", "RecordCurrentPH" },
                 ScreenId.Pause => driver != null && driver.CurrentMode == "VR" ?
-                    new[] { "Lab", "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
-                    new[] { "Lab", "Save", "SaveCopy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review" },
+                    new[] { "Lab", "Save", "SaveCopy", "NewStudy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review", "ParkTool", "Recenter", "SnapLeft", "SnapRight" } :
+                    new[] { "Lab", "Save", "SaveCopy", "NewStudy", "Load", "ChooseLocalSave", "LoadSelectedSave", "RestorePortable", "ChoosePortableArchive", "ExportPortable", "Settings", "Review" },
                 ScreenId.Review => driver != null && driver.IsTimeHeld ?
                     new[] { "Settings", "Save", "ExportCsv" } :
                     new[] { "Lab", "Settings", "Save", "Notebook", "ExportCsv",

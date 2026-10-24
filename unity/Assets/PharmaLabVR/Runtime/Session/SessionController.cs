@@ -1200,6 +1200,10 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save separate local copy (same Native branch)",
                         GUILayout.Height(40f)))
                     panels?.Request(PanelAction.SaveCopy);
+                GUI.enabled = CanStartIndependentStudy;
+                if (GUILayout.Button("Save current + start new Native research run",
+                        GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.NewStudy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
                 GUI.enabled = CanChooseLocalNativeSave;
@@ -1240,6 +1244,10 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Save separate local copy (same Native branch)",
                         GUILayout.Height(40f)))
                     panels?.Request(PanelAction.SaveCopy);
+                GUI.enabled = CanStartIndependentStudy;
+                if (GUILayout.Button("Save current + start new Native research run",
+                        GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.NewStudy);
                 GUI.enabled = CanLoadSavedSession;
                 if (GUILayout.Button("Load saved session", GUILayout.Height(44f))) panels?.Request(PanelAction.Load);
                 GUI.enabled = CanChooseLocalNativeSave;
@@ -2276,6 +2284,102 @@ namespace PharmaLabVR.Session
             {
                 LastError = "Portable export failed: " + exception.Message;
                 return false;
+            }
+        }
+
+        // New branch: preserve the old run's Native session + local journal,
+        // stage a completely empty Native bench and Notebook, then adopt the
+        // new authority under the genuine SessionLoad Hold.
+        public bool CanStartIndependentStudy =>
+            router?.Current?.ScreenId == ScreenId.Pause &&
+            driver?.Session?.IsOpen == true &&
+            driver.IsNativePaused && !driver.IsTimeHeld &&
+            driver.CurrentLabView != null &&
+            router.Current.NativeRevision == driver.CurrentLabView.EventSequence &&
+            (driver.CurrentMode == "Desktop" ||
+             (driver.CurrentMode == "VR" && CanReleaseTool));
+
+        public bool StartIndependentStudy()
+        {
+            CoreSession fresh = null;
+            var oldName = saveName;
+            string newName = null;
+            string newBranch = null;
+            string newNotes = null;
+            string newSave = null;
+            try
+            {
+                if (!CanStartIndependentStudy)
+                    throw new InvalidOperationException(
+                        "Pause the active lab and park the VR burette to start a second run.");
+                var oldBranch = driver.Session.BranchId;
+                var oldEvent = driver.CurrentLabView.EventSequence;
+                // Integrity-validate existing student journal before saving
+                // its Native branch; corrupt evidence must fail closed.
+                var notes = notebook.ExportBranch(NotebookFilePath(), oldBranch, oldEvent);
+                if (!notes.StartsWith("PLV-NOTEBOOK-V1\n", StringComparison.Ordinal))
+                    throw new InvalidDataException("Existing student journal is not verifiable.");
+                var root = Path.Combine(Application.persistentDataPath, "sessions");
+                saves.Save(driver.Session, root, oldName);
+                if (driver.Session.BranchId != oldBranch ||
+                    driver.CurrentLabView.EventSequence != oldEvent)
+                    throw new InvalidOperationException(
+                        "Native session changed while saving the original experiment.");
+
+                var token = Guid.NewGuid().ToString("N");
+                newName = "run-" + token;
+                newBranch = "study-" + token;
+                newNotes = Path.Combine(root, newName + ".plv-notes");
+                newSave = Path.Combine(root, newName + ".plv.json");
+                foreach (var candidate in new[] { newSave, newSave + ".bak",
+                    newSave + ".tmp", newNotes, newNotes + ".bak",
+                    newNotes + ".lock" })
+                    if (File.Exists(candidate))
+                        throw new IOException("Independent study storage name already exists.");
+                fresh = driver.PrepareIndependentStudy(newBranch);
+                var initialView = LabViewModel.FromNativeSnapshot(fresh.ReadSnapshot());
+                if (initialView == null || string.IsNullOrEmpty(initialView.EventSequence))
+                    throw new InvalidDataException("Fresh Native event identity is unavailable.");
+                NotebookService.InstallPortableSnapshot(newNotes,
+                    "PLV-NOTEBOOK-V1\n", newBranch, initialView.EventSequence);
+                var saved = saves.Save(fresh, root, newName);
+                if (saved != newSave || driver.Session.BranchId != oldBranch)
+                    throw new InvalidOperationException(
+                        "New session staging changed the old Native authority.");
+                // The journal identity must change BEFORE Native publishes the
+                // restored snapshot; otherwise the first study's notes leak.
+                saveName = newName;
+                driver.ReplaceSession(fresh);
+                fresh = null; // CoreDriver owns the imported authority now.
+                LastDurableSavePath = saved;
+                selectedLocalNativeSaveName = null;
+                selectedLocalNativeSavePreview = null;
+                LastError = null;
+                router?.MarkSaved();
+                return true;
+            }
+            catch (Exception error)
+            {
+                // Never roll back an authority that Native already adopted.
+                // A failure before replacement leaves the original session
+                // selected and cleans only newly generated file identities.
+                if (newBranch == null || driver?.Session?.BranchId != newBranch)
+                {
+                    saveName = oldName;
+                    foreach (var path in new[] { newSave,
+                        newSave == null ? null : newSave + ".tmp", newNotes })
+                        if (!string.IsNullOrEmpty(path))
+                            try { if (File.Exists(path)) File.Delete(path); }
+                            catch (IOException) { }
+                            catch (UnauthorizedAccessException) { }
+                }
+                LastError = "Independent study refused: " + error.Message;
+                return false;
+            }
+            finally
+            {
+                if (fresh != null && !ReferenceEquals(fresh, driver?.Session))
+                    fresh.Dispose();
             }
         }
 

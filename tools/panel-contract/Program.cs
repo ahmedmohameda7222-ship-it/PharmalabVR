@@ -2604,6 +2604,7 @@ internal static class Program
                   !panels.Request(PanelAction.ChooseLocalSave) &&
                   !panels.Request(PanelAction.LoadSelectedSave) &&
                   !panels.Request(PanelAction.SaveCopy) &&
+                  !panels.Request(PanelAction.NewStudy) &&
                   session.LocalNativeLoadCalls == 0 &&
                   !panels.Request(PanelAction.RestorePortable) &&
                   session.PortableRestoreCalls == 0,
@@ -2626,6 +2627,18 @@ internal static class Program
                 "Selected Native save did not route through Pause without unpausing.");
             Check(router.Current.SupportedActions.Contains("SaveCopy"),
                 "Pause does not expose non-overwriting Native/Notebook SaveCopy.");
+            Check(router.Current.SupportedActions.Contains("NewStudy") &&
+                  panels.CanStartIndependentStudy,
+                "Pause cannot start a distinct Native research run.");
+            session.NewStudyPermitted = false;
+            Check(!panels.Request(PanelAction.NewStudy) &&
+                  session.NewStudyCalls == 0,
+                "Unavailable new Native study action falsely accepted.");
+            session.NewStudyPermitted = true;
+            Check(panels.Request(PanelAction.NewStudy) &&
+                  session.NewStudyCalls == 1 && session.SaveCalls == 0 &&
+                  driver.IsNativePaused,
+                "New Native research run did not route from Pause independently of SaveCopy.");
             session.SaveNewCopyPermitted = false;
             Check(!panels.Request(PanelAction.SaveCopy) &&
                   session.SaveCopyCalls == 0,

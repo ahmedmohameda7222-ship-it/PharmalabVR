@@ -383,17 +383,46 @@ namespace PharmaLabVR.Core
             return Path.Combine(directory, "native-" + branch + ".plv-checkpoint");
         }
 
-        private void BootstrapResearchSession()
+        private void BootstrapResearchSession() => BootstrapResearchSession(Session);
+
+        private static void BootstrapResearchSession(CoreSession target)
         {
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.00005}"));
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
-            // The burette owns a real empty Native vessel, not the bottle inventory.
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"burette\",\"capacityM3\":0.00005}"));
-            RequireAccepted(Session.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
-            RequireAccepted(Session.SubmitOrdered(
-                "PlaceTool",
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.00005}"));
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"burette\",\"capacityM3\":0.00005}"));
+            RequireAccepted(target.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
+            RequireAccepted(target.SubmitOrdered("PlaceTool",
                 "{\"toolId\":\"research-tool\",\"sourceInventoryId\":\"burette\",\"overflowSinkId\":\"spill\",\"coordinateFrame\":\"lab\",\"geometryProfileHash\":\"burette-50ml-research-v1\",\"profileRevision\":\"1\"}"));
-            RequireAccepted(Session.SubmitOrdered("Pause"));
+            RequireAccepted(target.SubmitOrdered("Pause"));
+        }
+
+        // Another trial needs a genuinely new Native identity, not a saved
+        // copy of the same scientific branch. No active session is swapped.
+        public CoreSession PrepareIndependentStudy(string branch)
+        {
+            if (Session?.IsOpen != true || string.IsNullOrEmpty(ScientificDatabasePath) ||
+                string.IsNullOrWhiteSpace(branch) || branch == Session.BranchId)
+                throw new InvalidOperationException("Open Native science and a distinct branch are required.");
+            using var staged = new CoreSession(branch, CurrentMode,
+                ScientificDatabasePath, ScientificPackage.DatabaseSha256,
+                scienceBudgetProfile.ToString(), "");
+            BootstrapResearchSession(staged);
+            var imported = CoreSession.ImportSession(staged.ExportSession(), ScientificDatabasePath);
+            try
+            {
+                var snapshot = JsonUtility.FromJson<SnapshotEnvelope>(imported.ReadSnapshot());
+                if (snapshot?.hold == null || !snapshot.hold.active ||
+                    snapshot.hold.reason != "SessionLoad" ||
+                    !string.Equals(snapshot.mode, CurrentMode, StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        "New experiment must start with Native SessionLoad Hold.");
+                return imported;
+            }
+            catch
+            {
+                imported.Dispose();
+                throw;
+            }
         }
 
         // User-requested setup water is real Native inventory, never a

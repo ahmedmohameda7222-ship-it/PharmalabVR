@@ -24,6 +24,85 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // One explicit Pause action creates a fresh Native branch and
+        // separate Notebook. Neither SaveCopy nor a synthetic scene event.
+        [UnityTest]
+        public IEnumerator M3_IndependentNativeRunPreservesPreviousStudy()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var oldName = "first-run-" + System.Guid.NewGuid().ToString("N");
+            string newName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var session = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                session.Configure(driver, oldName);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True, session.LastError);
+                var first = driver.Session;
+                var branch = first.BranchId;
+                var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "First Native run, not a copied checkpoint."), Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True, session.LastError);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.True, session.LastError);
+                newName = session.ActiveLocalSessionName;
+                Assert.That(newName, Does.StartWith("run-"));
+                Assert.That(driver.Session, Is.Not.SameAs(first));
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(branch));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(session.ReadNotebookEntries(), Is.Empty);
+                Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv-notes")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, newName + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, newName + ".plv-notes")), Is.True);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.False,
+                    "Held Native session must not silently start another run.");
+                session.Configure(driver, oldName);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, session.LastError);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(session.ReadNotebookEntries().Single().Text,
+                    Is.EqualTo("First Native run, not a copied checkpoint."));
+            }
+            finally
+            {
+                foreach (var name in new[] { oldName, newName })
+                    if (!string.IsNullOrWhiteSpace(name))
+                        foreach (var suffix in new[] { ".plv.json", ".plv.json.bak",
+                            ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                            ".plv-notes.lock" })
+                        {
+                            var file = Path.Combine(folder, name + suffix);
+                            if (File.Exists(file)) File.Delete(file);
+                        }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Same scientific branch, separate durable local file and Notebook.
         // The student can preserve the first confirmed checkpoint, continue
         // the experiment in its own namespace, and choose either one later.

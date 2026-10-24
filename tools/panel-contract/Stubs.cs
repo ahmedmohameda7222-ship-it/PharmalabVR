@@ -251,6 +251,15 @@ namespace PharmaLabVR.Session
         public bool CanLoadSavedSession => LoadPermitted;
         public bool SaveNewCopyPermitted { get; set; } = true;
         public bool CanSaveNewLocalCopy => SaveNewCopyPermitted;
+        public bool NewStudyPermitted { get; set; } = true;
+        public bool CanStartIndependentStudy => NewStudyPermitted;
+        public int NewStudyCalls { get; private set; }
+        public bool StartIndependentStudy()
+        {
+            if (!NewStudyPermitted) return false;
+            NewStudyCalls++;
+            return true;
+        }
         public int SaveCopyCalls { get; private set; }
         public bool SaveAsNewLocalCopy()
         {
