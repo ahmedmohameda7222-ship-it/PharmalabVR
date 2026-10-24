@@ -1737,7 +1737,9 @@ internal static class Program
         // It must recover via Continue rather than the unprepared ResumeSetup.
         Check(independentDriverSource.Contains("public bool setupClosed;") &&
               independentDriverSource.Contains("!state.setupClosed") &&
-              independentDriverSource.Contains("SourceNeedsPreparation ? \"ResumeSetup\" : \"Continue\""),
+              independentDriverSource.Contains("IsTimeHeld && SourceNeedsPreparation") &&
+              independentDriverSource.Contains(
+                  "requiresSetupRecovery ? \"ResumeSetup\" : \"Continue\""),
             "Unity offered stock preparation after Native setupClosed=true.");
 
         // TDD: when the learner intentionally launches a second Native
