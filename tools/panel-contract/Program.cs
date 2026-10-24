@@ -1732,6 +1732,14 @@ internal static class Program
               independentSessionSource.Contains("driver.ReplaceSession(fresh)"),
             "Unverified old Notebook or undurable new study must not retire Native.");
 
+        // Native alone closes stock preparation: a loaded session with an
+        // empty but already-closed source may NEVER offer a second PrepareStock.
+        // It must recover via Continue rather than the unprepared ResumeSetup.
+        Check(independentDriverSource.Contains("public bool setupClosed;") &&
+              independentDriverSource.Contains("!state.setupClosed") &&
+              independentDriverSource.Contains("SourceNeedsPreparation ? \"ResumeSetup\" : \"Continue\""),
+            "Unity offered stock preparation after Native setupClosed=true.");
+
         // TDD: when the learner intentionally launches a second Native
         // study, its first confirmed save is already the obvious recorded
         // comparison baseline. A read-only preview and explicit file label
