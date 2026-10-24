@@ -602,9 +602,14 @@ namespace PharmaLabVR.Core
             if (state != null) CurrentMode = state.mode;
             IsNativePaused = state?.paused ?? false;
             SourceNeedsPreparation = false;
-            if (state?.vessels != null)
+            // An empty source is NOT permission to reopen Native setup:
+            // a continued and subsequently paused experiment can have no
+            // stock yet still have setupClosed=true. Respect Native's own
+            // preparation boundary before offering any PrepareStock UI.
+            if (state?.vessels != null && !state.setupClosed)
                 foreach (var vessel in state.vessels)
-                    if (vessel.id == "source" && vessel.materialRevision == "0" && state.paused)
+                    if (vessel.id == "source" && vessel.materialRevision == "0" &&
+                        state.paused)
                         SourceNeedsPreparation = true;
             HoldReason = state?.hold?.reason ?? string.Empty;
             NativeRecoveryReady = state?.hold != null && state.hold.recoveryReady;
@@ -658,6 +663,7 @@ namespace PharmaLabVR.Core
             public HoldEnvelope hold;
             public string mode;
             public bool paused;
+            public bool setupClosed;
             public VesselEnvelope[] vessels;
             public InputWatermark[] inputWatermarks;
             public ObservationEnvelope[] observations;

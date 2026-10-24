@@ -24,6 +24,57 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // A source with materialRevision=0 may also be a CLOSED, already
+        // continued experiment. Only Native setupClosed determines whether
+        // new stock preparation is still permitted.
+        [UnityTest]
+        public IEnumerator M3_ClosedNativeSetupWithEmptyStockCannotReopenPreparation()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.SourceNeedsPreparation, Is.True,
+                    "Fresh untouched Native bench must offer explicit stock setup.");
+                var first = driver.Session.SubmitOrdered("Continue");
+                Assert.That(first, Does.Contain("\"accepted\":true"),
+                    "Native did not accept explicit closing of stock setup.");
+                driver.RefreshAfterInstrumentCommand();
+                Assert.That(driver.SourceNeedsPreparation, Is.False);
+                var paused = driver.Session.SubmitOrdered("Pause");
+                Assert.That(paused, Does.Contain("\"accepted\":true"));
+                driver.RefreshAfterInstrumentCommand();
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.Session.ExportSession(),
+                    Does.Contain("\"setupClosed\":true"));
+                Assert.That(driver.SourceNeedsPreparation, Is.False,
+                    "Empty source must never reopen a closed Native setup.");
+                Assert.That(router.Current.SupportedActions.Contains(
+                    "PrepareResearchStock"), Is.False);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.False);
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Exercise the actual generated spatial-panel button and its
         // disjoint touch/ray surfaces; this is NOT an XR device pass.
         [UnityTest]
