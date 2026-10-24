@@ -1732,6 +1732,23 @@ internal static class Program
               independentSessionSource.Contains("driver.ReplaceSession(fresh)"),
             "Unverified old Notebook or undurable new study must not retire Native.");
 
+        // TDD: when the learner intentionally launches a second Native
+        // study, its first confirmed save is already the obvious recorded
+        // comparison baseline. A read-only preview and explicit file label
+        // must survive the Native restoration invalidation callback.
+        var pinnedFirstRunLine = independentSessionSource.IndexOf(
+            "selectedLocalNativeSaveName = oldName;", StringComparison.Ordinal);
+        var pinnedFirstRunPreview = independentSessionSource.IndexOf(
+            "PreviewRecordedLocalNativeSave(root, oldName)", StringComparison.Ordinal);
+        var restoredHandoverLine = independentSessionSource.IndexOf(
+            "driver.ReplaceSession(fresh)", StringComparison.Ordinal);
+        Check(pinnedFirstRunLine > restoredHandoverLine &&
+              pinnedFirstRunPreview > 0 && pinnedFirstRunPreview < restoredHandoverLine,
+            "New Native run lost its explicitly saved previous trial as read-only comparison baseline.");
+        Check(independentSessionSource.Contains(
+            "GUILayout.Label(\"Recorded baseline file: \" + validatedComparisonBaselineName)"),
+            "Desktop recorded comparison omits the actual previous Native file identity.");
+
         // Selected saved-recording preview must be visible in both recovery
         // panels; the matching Native-backed Unity PlayMode test is NOT_RUN.
         var previewSource = System.IO.File.ReadAllText(
