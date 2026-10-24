@@ -24,6 +24,93 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Exercise the actual generated spatial-panel button and its
+        // disjoint touch/ray surfaces; this is NOT an XR device pass.
+        [UnityTest]
+        public IEnumerator M3_SpatialOfflinePageStartsSecondStudyAndPinsFirstRecordedBaseline()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var prior = "xr-first-study-" + System.Guid.NewGuid().ToString("N");
+            string next = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, prior);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                var originalBranch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Pause));
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var controls = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(controls["Portable study restore"].gameObject.activeSelf, Is.True);
+                controls["Portable study restore"].onClick.Invoke();
+                var copied = controls["Save new local copy"];
+                var independent = controls["Start independent study"];
+                Assert.That(copied.gameObject.activeSelf, Is.True);
+                Assert.That(independent.gameObject.activeSelf, Is.True);
+                var copyRect = copied.GetComponent<RectTransform>();
+                var newRect = independent.GetComponent<RectTransform>();
+                Assert.That(copyRect.sizeDelta.x, Is.GreaterThan(100f));
+                Assert.That(newRect.sizeDelta.x, Is.GreaterThan(100f));
+                Assert.That(Mathf.Abs(copyRect.anchoredPosition.x -
+                    newRect.anchoredPosition.x), Is.GreaterThanOrEqualTo(
+                    (copyRect.sizeDelta.x + newRect.sizeDelta.x) / 2f),
+                    "XR SaveCopy and NewStudy ray-hit rectangles overlap.");
+                independent.onClick.Invoke();
+                next = controller.ActiveLocalSessionName;
+                Assert.That(next, Does.StartWith("run-"), controller.LastError);
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(originalBranch));
+                Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(controller.ComparisonBaselineName, Is.EqualTo(prior));
+                Assert.That(controller.SelectedLocalNativeSavePreview,
+                    Does.Contain("Branch: " + originalBranch));
+                Assert.That(File.Exists(Path.Combine(folder, prior + ".plv.json")), Is.True);
+                Assert.That(File.Exists(Path.Combine(folder, next + ".plv.json")), Is.True);
+                Assert.That(controller.ReadNotebookEntries(), Is.Empty);
+            }
+            finally
+            {
+                foreach (var name in new[] { prior, next })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var ext in new[] { ".plv.json", ".plv.json.bak",
+                        ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                        ".plv-notes.lock" })
+                    {
+                        var candidate = Path.Combine(folder, name + ext);
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // A damaged learner evidence journal must NEVER be fixed by
         // silently replacing Native chemistry or starting an empty study.
         [UnityTest]
@@ -149,6 +236,13 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(newName, Does.StartWith("run-"));
                 Assert.That(driver.Session, Is.Not.SameAs(first));
                 Assert.That(driver.Session.BranchId, Is.Not.EqualTo(branch));
+                Assert.That(session.ComparisonBaselineName, Is.EqualTo(oldName),
+                    "Second Native run must retain the first as recorded baseline.");
+                Assert.That(session.SelectedLocalNativeSaveName, Is.EqualTo(oldName));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Branch: " + branch));
+                Assert.That(session.SelectedLocalNativeSavePreview,
+                    Does.Contain("Recorded-only saved file preview"));
                 Assert.That(driver.IsTimeHeld, Is.True);
                 Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));

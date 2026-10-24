@@ -1363,6 +1363,8 @@ namespace PharmaLabVR.Session
                 if (CurrentComparison == null) GUILayout.Label("Comparison unavailable.");
                 else
                 {
+                    GUILayout.Label("Recorded baseline file: " + validatedComparisonBaselineName +
+                        " (local filename only; not scientific attestation)");
                     GUILayout.Label("Saved baseline branch: " + CurrentComparison.BaselineBranchId);
                     GUILayout.Label("Review candidate branch: " + CurrentComparison.CandidateBranchId);
                     GUILayout.Label("Saved Native event: " + CurrentComparison.BaselineEventSequence);
@@ -2325,6 +2327,21 @@ namespace PharmaLabVR.Session
                     driver.CurrentLabView.EventSequence != oldEvent)
                     throw new InvalidOperationException(
                         "Native session changed while saving the original experiment.");
+                // Pin the explicitly preserved first study as the recorded
+                // baseline, not as a live Native handle or scientific proof.
+                // Refuse a broken first-study recording BEFORE constructing
+                // or importing the replacement branch.
+                var priorRecorded = RecordedSessionReview.OpenRecoverable(
+                    Path.Combine(root, oldName + ".plv.json"));
+                if (priorRecorded.BranchId != oldBranch ||
+                    priorRecorded.EventSequence != oldEvent)
+                    throw new InvalidDataException(
+                        "Preserved first Native study has an inconsistent recorded branch/event.");
+                var priorPreview = PreviewRecordedLocalNativeSave(root, oldName);
+                if (priorPreview.StartsWith("Preview unavailable:",
+                    StringComparison.Ordinal))
+                    throw new InvalidDataException(
+                        "Preserved first Native study could not be previewed for comparison.");
 
                 var token = Guid.NewGuid().ToString("N");
                 newName = "run-" + token;
@@ -2366,8 +2383,16 @@ namespace PharmaLabVR.Session
                 driver.ReplaceSession(fresh);
                 fresh = null; // CoreDriver owns the imported authority now.
                 LastDurableSavePath = saved;
-                selectedLocalNativeSaveName = null;
-                selectedLocalNativeSavePreview = null;
+                // ReplaceSession issues NativeSessionRestored, which clears
+                // ALL stale file previews. Select the first saved study only
+                // AFTER this event. Review/Compare later re-read its file and
+                // never infer that a file label attests scientific identity.
+                selectedLocalNativeSaveName = oldName;
+                selectedLocalNativeSavePreview = priorPreview;
+                recordedCache.InvalidateComparison();
+                CurrentComparison = null;
+                validatedComparisonBaselineName = null;
+                LastComparisonCsvExportPath = null;
                 LastError = null;
                 router?.MarkSaved();
                 return true;
