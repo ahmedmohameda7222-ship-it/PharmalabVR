@@ -24,6 +24,83 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // A damaged learner evidence journal must NEVER be fixed by
+        // silently replacing Native chemistry or starting an empty study.
+        [UnityTest]
+        public IEnumerator M3_CorruptJournalBlocksNewNativeRunWithoutRetiringOriginal()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var oldName = "damaged-study-" + System.Guid.NewGuid().ToString("N");
+            string newName = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver, oldName);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Original uncorrupted branch-scoped evidence."), Is.True);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                var native = driver.Session;
+                var branch = native.BranchId;
+                var eventSequence = driver.CurrentLabView.EventSequence;
+                var saved = Path.Combine(folder, oldName + ".plv.json");
+                var notes = Path.Combine(folder, oldName + ".plv-notes");
+                var confirmedSavedBytes = File.ReadAllBytes(saved);
+                var journal = File.ReadAllBytes(notes);
+                File.WriteAllText(notes, "not a checksummed Native-linked notebook");
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.False);
+                Assert.That(controller.LastError, Does.Contain("Independent study refused"));
+                Assert.That(driver.Session, Is.SameAs(native));
+                Assert.That(driver.Session.IsOpen, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(eventSequence));
+                Assert.That(controller.ActiveLocalSessionName, Is.EqualTo(oldName));
+                Assert.That(File.ReadAllBytes(saved), Is.EqualTo(confirmedSavedBytes),
+                    "Invalid evidence must not overwrite the last confirmed Native checkpoint.");
+                File.WriteAllBytes(notes, journal);
+                Assert.That(panels.Request(PanelAction.NewStudy), Is.True,
+                    controller.LastError);
+                newName = controller.ActiveLocalSessionName;
+                Assert.That(driver.Session.BranchId, Is.Not.EqualTo(branch));
+                Assert.That(controller.ReadNotebookEntries(), Is.Empty);
+            }
+            finally
+            {
+                foreach (var name in new[] { oldName, newName })
+                {
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    foreach (var suffix in new[] { ".plv.json", ".plv.json.bak",
+                        ".plv.json.tmp", ".plv-notes", ".plv-notes.bak",
+                        ".plv-notes.lock" })
+                    {
+                        var file = Path.Combine(folder, name + suffix);
+                        if (File.Exists(file)) File.Delete(file);
+                    }
+                }
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // One explicit Pause action creates a fresh Native branch and
         // separate Notebook. Neither SaveCopy nor a synthetic scene event.
         [UnityTest]

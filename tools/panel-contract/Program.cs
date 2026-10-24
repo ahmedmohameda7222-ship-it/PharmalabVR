@@ -1722,9 +1722,15 @@ internal static class Program
             "var saved = saves.Save(fresh, root, newName)", StringComparison.Ordinal);
         var independentImportLine = independentSessionSource.IndexOf(
             "CoreSession.ImportSession(preImport", StringComparison.Ordinal);
+        var validatedJournalLine = independentSessionSource.IndexOf(
+            "var notes = notebook.ExportBranch(NotebookFilePath()", StringComparison.Ordinal);
+        var oldRunSaveLine = independentSessionSource.IndexOf(
+            "saves.Save(driver.Session, root, oldName)", StringComparison.Ordinal);
         Check(independentSaveLine > 0 && independentImportLine > independentSaveLine &&
+              validatedJournalLine > 0 && oldRunSaveLine > validatedJournalLine &&
+              independentSaveLine > oldRunSaveLine &&
               independentSessionSource.Contains("driver.ReplaceSession(fresh)"),
-            "Native import must follow both durable new-study files.");
+            "Unverified old Notebook or undurable new study must not retire Native.");
 
         // Selected saved-recording preview must be visible in both recovery
         // panels; the matching Native-backed Unity PlayMode test is NOT_RUN.
