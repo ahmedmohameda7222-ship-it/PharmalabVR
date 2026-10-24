@@ -109,6 +109,73 @@ TEST_CASE("M3 staged blank second trial preserves old Native authority until imp
     CHECK(plv_destroy(imported) == PLV_OK);
 }
 
+TEST_CASE("M3 unprepared Native stock survives FocusLoss TrackingLoss and CheckpointRestart holds") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "Pause"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "CreateCheckpoint", {{"checkpointId", "unprepared"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto unprepared = json::parse(read_text(handle));
+    CHECK(unprepared["paused"].get<bool>());
+    CHECK_FALSE(unprepared["setupClosed"].get<bool>());
+
+    submit(handle, command("4", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "ResumeSetup", {{"monotonicNowNs", "1000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 1000) == PLV_OK);
+    CHECK(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    submit(handle, command("6", "ResumeSetup", {{"monotonicNowNs", "1000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto recovered = json::parse(read_text(handle));
+    CHECK_FALSE(recovered["hold"]["active"].get<bool>());
+    CHECK_FALSE(recovered["setupClosed"].get<bool>());
+    CHECK(recovered["paused"].get<bool>());
+    CHECK(recovered["vessels"] == unprepared["vessels"]);
+
+    submit(handle, command("7", "BeginInputHold", {{"reason", "TrackingLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 2000) == PLV_OK);
+    submit(handle, command("8", "ResumeSetup", {{"monotonicNowNs", "2000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK_FALSE(json::parse(read_text(handle))["setupClosed"].get<bool>());
+
+    submit(handle, command("9", "RestartCheckpoint", {{"checkpointId", "unprepared"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto restarted = json::parse(read_text(handle));
+    CHECK(restarted["hold"]["reason"] == "CheckpointRestart");
+    CHECK(restarted["paused"].get<bool>());
+    CHECK_FALSE(restarted["setupClosed"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 3000) == PLV_OK);
+    submit(handle, command("10", "ResumeSetup", {{"monotonicNowNs", "3000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK_FALSE(json::parse(read_text(handle))["setupClosed"].get<bool>());
+
+    submit(handle, command("11", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("12", "Continue"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto science = json::parse(read_text(handle));
+    CHECK(science["setupClosed"].get<bool>());
+    CHECK_FALSE(science["paused"].get<bool>());
+    submit(handle, command("13", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 4000) == PLV_OK);
+    submit(handle, command("14", "ResumeSetup", {{"monotonicNowNs", "4000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["vessels"] == science["vessels"]);
+    submit(handle, command("15", "Continue", {{"monotonicNowNs", "4000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
 TEST_CASE("M3 imported fresh Native setup resumes only after neutral SessionLoad recovery") {
     std::uint64_t initial = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
