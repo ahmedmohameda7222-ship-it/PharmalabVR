@@ -283,8 +283,16 @@ namespace PharmaLabVR.UI
                 // A recovered Hold must not revive obsolete Hold/Settings,
                 // and a still-paused Native session must remain in Pause.
                 if (destination == ScreenId.Settings || destination == ScreenId.Hold)
-                    destination = driver.IsNativePaused ? ScreenId.Pause : ScreenId.Lab;
+                    destination = driver.IsNativePaused && !driver.SourceNeedsPreparation ?
+                        ScreenId.Pause : ScreenId.Lab;
             }
+            // Settings opened over a saved Native Pause, then input recovery
+            // completed while Settings was visible. Never restore the stale
+            // Pause after an accepted Native Continue; setup may remain
+            // intentionally paused only when it has a real stock chooser.
+            if (destination == ScreenId.Pause && driver != null &&
+                (!driver.IsNativePaused || driver.SourceNeedsPreparation))
+                destination = ScreenId.Lab;
             // A late Native Pause while Settings is visible must not
             // restore a live Lab solely from previously captured UI history.
             if (destination == ScreenId.Lab && driver != null &&
@@ -418,10 +426,20 @@ namespace PharmaLabVR.UI
                 screen = ScreenId.Hold;
             }
             else if (screen == ScreenId.Hold)
-                // Fresh Native setup remains paused after ResumeSetup, but
-                // the student must be able to select a stock in the Lab.
-                screen = driver != null && driver.SourceNeedsPreparation ?
-                    ScreenId.Lab : beforeHold;
+            {
+                // The Native snapshot has already been published at this
+                // point. A saved PAUSED checkpoint may have genuinely resumed
+                // running: the old Pause screen is then stale and unsafe.
+                // ResumeSetup deliberately stays paused, but only to let the
+                // learner prepare the as-yet-unprepared Native stock.
+                if (driver != null && driver.SourceNeedsPreparation)
+                    screen = ScreenId.Lab;
+                else if (driver != null && driver.IsNativePaused)
+                    screen = ScreenId.Pause;
+                else
+                    screen = beforeHold == ScreenId.Pause ?
+                        ScreenId.Lab : beforeHold;
+            }
             Refresh();
         }
 

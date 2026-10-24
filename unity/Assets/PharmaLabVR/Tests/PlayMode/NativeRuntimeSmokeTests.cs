@@ -24,6 +24,85 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // The real imported Pause becomes a SessionLoad Hold. An accepted
+        // native Continue unpauses it, so presenting the old Pause screen is
+        // a dangerous UI/NATIVE mismatch (including after Settings Back).
+        [UnityTest]
+        public IEnumerator M3_SavedPausedNativeSessionContinuesToRunningLabNotStalePause()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string path = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                controller.Configure(driver,
+                    "resume-checkpoint-" + System.Guid.NewGuid().ToString("N"));
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+                    Is.True, controller.LastError);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True,
+                    "Entering the Lab should explicitly close initial stock setup.");
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(panels.Request(PanelAction.Save), Is.True, controller.LastError);
+                path = controller.LastDurableSavePath;
+                var branch = driver.Session.BranchId;
+                Assert.That(panels.Request(PanelAction.Load), Is.True, controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(driver.Session.BranchId, Is.EqualTo(branch));
+                for (var attempt = 0; !driver.NativeRecoveryReady && attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(driver.NativeRecoveryReady, Is.True, driver.Session.ReadSnapshot());
+                Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                    controller.LastError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab),
+                    "Recovered Native runtime is active, not paused.");
+
+                // Reproduce an accepted recovery while Settings obscures
+                // Native Hold; Back must not resurrect its old Pause snapshot.
+                Assert.That(panels.Request(PanelAction.Pause), Is.True);
+                Assert.That(panels.Request(PanelAction.Load), Is.True, controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                Assert.That(panels.Request(PanelAction.Settings), Is.True);
+                for (var attempt = 0; !driver.NativeRecoveryReady && attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(controller.ContinueHeldSession(), Is.True,
+                    controller.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Settings));
+                Assert.That(panels.Request(PanelAction.Back), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+            }
+            finally
+            {
+                if (!string.IsNullOrEmpty(path))
+                    foreach (var candidate in new[] { path, path + ".bak",
+                        path + ".tmp" })
+                        if (File.Exists(candidate)) File.Delete(candidate);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // True Native FocusLoss Hold: recorded Review is safe but must not
         // become an inescapable screen. Check Desktop and actual XR UI button
         // routing without submitting Continue, Save, or a material command.

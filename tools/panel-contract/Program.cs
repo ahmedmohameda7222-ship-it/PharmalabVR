@@ -2939,6 +2939,21 @@ internal static class Program
             var heldReturnPreviousContinue = driver.ContinueCalls;
             var heldReturnPreviousSaves = session.SaveCalls;
             var heldReturnPreviousPauses = driver.PauseCalls;
+            // Source-linked sequencing guard: a successful Native resume
+            // must publish the new paused/hold status before the router's
+            // HoldChanged(false) callback runs, never with the old snapshot.
+            var recoveryCore = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+            var recoveryMethod = recoveryCore.IndexOf(
+                "public bool ResumeAfterTimeHold()", StringComparison.Ordinal);
+            var recoveryEnd = recoveryCore.IndexOf(
+                "public bool BeginModeChange(", recoveryMethod, StringComparison.Ordinal);
+            var acceptedRecovery = recoveryCore.Substring(recoveryMethod,
+                recoveryEnd - recoveryMethod);
+            Check(acceptedRecovery.IndexOf("PublishSnapshot();", StringComparison.Ordinal) <
+                      acceptedRecovery.IndexOf("HoldChanged?.Invoke(false)", StringComparison.Ordinal),
+                "Recovered Native paused flag must precede HoldChanged(false) presentation.");
+
             // RED: a held imported checkpoint that was saved under Pause
             // resumes *running* when Native accepts Continue. Do not display
             // obsolete Pause while Native time/transport are active.

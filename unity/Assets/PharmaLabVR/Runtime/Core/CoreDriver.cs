@@ -230,8 +230,12 @@ namespace PharmaLabVR.Core
             accumulator = 0.0;
             establishFrameClock = true;
             IsTimeHeld = false;
-            HoldChanged?.Invoke(false);
+            // The accepted Native Continue may UNPAUSE the lab, whereas a
+            // genuine unprepared SessionLoad ResumeSetup stays Native-paused.
+            // Publish the authoritative post-command paused flag BEFORE the
+            // router receives a HoldChanged(false) and decides where to go.
             PublishSnapshot();
+            HoldChanged?.Invoke(false);
             return true;
         }
 
