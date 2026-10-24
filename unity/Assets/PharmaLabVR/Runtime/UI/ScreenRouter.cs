@@ -417,7 +417,11 @@ namespace PharmaLabVR.UI
                 }
                 screen = ScreenId.Hold;
             }
-            else if (screen == ScreenId.Hold) screen = beforeHold;
+            else if (screen == ScreenId.Hold)
+                // Fresh Native setup remains paused after ResumeSetup, but
+                // the student must be able to select a stock in the Lab.
+                screen = driver != null && driver.SourceNeedsPreparation ?
+                    ScreenId.Lab : beforeHold;
             Refresh();
         }
 

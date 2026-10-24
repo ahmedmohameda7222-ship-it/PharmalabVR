@@ -216,7 +216,12 @@ namespace PharmaLabVR.Core
             Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
             Session.Step(0.0, nowNs);
             var continueNowNs = NowNs();
-            var outcomeJson = Session.SubmitOrdered("Continue", $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
+            // Loading a deliberately blank new research branch must not
+            // close its Native setup before the learner chooses stock.
+            // ResumeSetup has exactly the same fresh-neutral Hold gate.
+            var recoveryType = HoldReason == "SessionLoad" &&
+                SourceNeedsPreparation ? "ResumeSetup" : "Continue";
+            var outcomeJson = Session.SubmitOrdered(recoveryType, $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
             var outcome = JsonUtility.FromJson<CommandOutcome>(outcomeJson);
             if (outcome == null || !outcome.accepted) return false;
             if (inputAdapterBehaviours != null)

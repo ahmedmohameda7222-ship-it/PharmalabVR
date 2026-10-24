@@ -75,6 +75,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
                 Assert.That(driver.SourceNeedsPreparation, Is.True);
                 Assert.That(session.ReadNotebookEntries(), Is.Empty);
+                Assert.That(driver.Session.ExportSession(), Does.Contain("\"setupClosed\":false"),
+                    "Independent Native import must retain the unprepared source setup.");
                 Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv.json")), Is.True);
                 Assert.That(File.Exists(Path.Combine(folder, oldName + ".plv-notes")), Is.True);
                 Assert.That(File.Exists(Path.Combine(folder, newName + ".plv.json")), Is.True);
