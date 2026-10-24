@@ -1234,7 +1234,9 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         } else if (type == "ResumeSetup") {
             // Unlike Continue, recovery of an originally unprepared setup
             // must leave Native Pause and the stock-choice window intact.
-            // Only a real SessionLoad hold with a blank Native source can use it.
+            // A focus/tracking interruption or a restart of an unprepared
+            // checkpoint is still the SAME open stock setup. Never silently
+            // close it because neutral controller recovery was required.
             const auto state = context->executor.snapshot();
             const auto source = state.vessels.find("source");
             const bool blankSource = source != state.vessels.end() &&
@@ -1249,10 +1251,22 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
                     neutralAtBoundary = submitted.value() >= context->lastMonotonicNowNs &&
                         freshNeutralInputs(*context, submitted.value());
             }
-            if (!context->holdActive || context->holdReason != "SessionLoad" ||
+            const bool setupRecoveryHold =
+                context->holdReason == "SessionLoad" ||
+                context->holdReason == "CheckpointRestart" ||
+                context->holdReason == "FocusLoss" ||
+                context->holdReason == "TrackingLoss" ||
+                context->holdReason == "Input" ||
+                context->holdReason == "TimeDiscontinuity" ||
+                context->holdReason == "Recenter" ||
+                context->holdReason == "ModeChange";
+            // Never bypass a Storage or Compute Hold, nor reopen a genuinely
+            // closed setup. Both recoveryReady and a fresh neutral sample
+            // remain necessary, exactly as for Native Continue.
+            if (!context->holdActive || !setupRecoveryHold ||
                 context->setupClosed || !state.paused || !blankSource) {
                 outcome = {false, "SetupUnavailable",
-                    "only an unprepared imported Native setup can resume"};
+                    "only a held, unprepared Native setup can resume"};
             } else if (!context->recoveryReady || !neutralAtBoundary) {
                 outcome = {false, "RecoveryNotReady",
                     "fresh neutral tracked baselines are required"};

@@ -2939,6 +2939,17 @@ internal static class Program
             var heldReturnPreviousContinue = driver.ContinueCalls;
             var heldReturnPreviousSaves = session.SaveCalls;
             var heldReturnPreviousPauses = driver.PauseCalls;
+            // Source-linked guard: unprepared FocusLoss and CheckpointRestart
+            // must choose ResumeSetup, not Continue (which CLOSES stock choice).
+            var coreRecoverySource = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+            Check(coreRecoverySource.Contains("HoldReason == \"FocusLoss\"") &&
+                  coreRecoverySource.Contains("HoldReason == \"TrackingLoss\"") &&
+                  coreRecoverySource.Contains("HoldReason == \"CheckpointRestart\"") &&
+                  coreRecoverySource.Contains(
+                    "requiresSetupRecovery ? \"ResumeSetup\" : \"Continue\""),
+                "Unity silently closed new Native stock setup after FocusLoss or restart.");
+
             // Source-linked sequencing guard: a successful Native resume
             // must publish the new paused/hold status before the router's
             // HoldChanged(false) callback runs, never with the old snapshot.

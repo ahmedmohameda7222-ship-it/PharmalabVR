@@ -219,8 +219,23 @@ namespace PharmaLabVR.Core
             // Loading a deliberately blank new research branch must not
             // close its Native setup before the learner chooses stock.
             // ResumeSetup has exactly the same fresh-neutral Hold gate.
-            var recoveryType = HoldReason == "SessionLoad" &&
-                SourceNeedsPreparation ? "ResumeSetup" : "Continue";
+            var requiresSetupRecovery = IsTimeHeld && SourceNeedsPreparation;
+            // An input/tracking interruption must not permanently CLOSE a
+            // still-paused, blank research source. ResumeSetup preserves the
+            // authorized preparation window after fresh-neutral recovery.
+            // Compute/Storage holds are not eligible for this shortcut.
+            var recoverableSetupHold =
+                HoldReason == "SessionLoad" ||
+                HoldReason == "CheckpointRestart" ||
+                HoldReason == "FocusLoss" ||
+                HoldReason == "TrackingLoss" ||
+                HoldReason == "Input" ||
+                HoldReason == "TimeDiscontinuity" ||
+                HoldReason == "Recenter" ||
+                HoldReason == "ModeChange";
+            if (requiresSetupRecovery && !recoverableSetupHold)
+                return false;
+            var recoveryType = requiresSetupRecovery ? "ResumeSetup" : "Continue";
             var outcomeJson = Session.SubmitOrdered(recoveryType, $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
             var outcome = JsonUtility.FromJson<CommandOutcome>(outcomeJson);
             if (outcome == null || !outcome.accepted) return false;

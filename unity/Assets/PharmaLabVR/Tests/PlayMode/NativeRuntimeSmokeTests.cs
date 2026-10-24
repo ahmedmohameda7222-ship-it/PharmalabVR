@@ -24,6 +24,80 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Focus/hand tracking loss or restart during first stock choice
+        // must not irreversibly close setup without the learner selecting
+        // Native research chemistry. UI choice stays on Lab, Native paused.
+        [UnityTest]
+        public IEnumerator M3_UnpreparedStockCanRearmFocusTrackingAndCheckpointHolds()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.CreateCheckpoint("unprepared-m3"), Is.True);
+                var firstBranch = driver.Session.BranchId;
+                foreach (var kind in new[] { "FocusLoss", "TrackingLoss" })
+                {
+                    Assert.That(driver.BeginInputHold(kind), Is.True);
+                    Assert.That(driver.IsTimeHeld, Is.True);
+                    Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                    for (var attempt = 0; !driver.NativeRecoveryReady &&
+                         attempt < 100; attempt++)
+                        yield return new WaitForSecondsRealtime(0.02f);
+                    Assert.That(driver.NativeRecoveryReady, Is.True,
+                        driver.Session.ReadSnapshot());
+                    Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                        controller.LastError);
+                    Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                    Assert.That(driver.IsTimeHeld, Is.False);
+                    Assert.That(driver.IsNativePaused, Is.True);
+                    Assert.That(driver.SourceNeedsPreparation, Is.True);
+                    Assert.That(driver.Session.ExportSession(),
+                        Does.Contain("\"setupClosed\":false"));
+                }
+                Assert.That(driver.RestartCheckpoint("unprepared-m3"), Is.True);
+                Assert.That(driver.HoldReason, Is.EqualTo("CheckpointRestart"));
+                for (var attempt = 0; !driver.NativeRecoveryReady &&
+                     attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(panels.Request(PanelAction.Continue), Is.True,
+                    controller.LastError);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Lab));
+                Assert.That(driver.Session.BranchId, Is.EqualTo(firstBranch));
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, controller.LastError);
+                Assert.That(driver.SourceNeedsPreparation, Is.False);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(driver.IsNativePaused, Is.False);
+                Assert.That(driver.Session.ExportSession(),
+                    Does.Contain("\"setupClosed\":true"));
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // The real imported Pause becomes a SessionLoad Hold. An accepted
         // native Continue unpauses it, so presenting the old Pause screen is
         // a dangerous UI/NATIVE mismatch (including after Settings Back).
