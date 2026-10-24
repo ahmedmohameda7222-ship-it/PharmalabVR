@@ -38,7 +38,7 @@ namespace PharmaLabVR.Core
                 checkpointFragment = ",\"checkpointPath\":\"" + Escape(automaticCheckpointPath) + "\"";
             }
             var stageFragment = stagedResearchBootstrap ?
-                ",\\\"stagedResearchBootstrap\\\":true" : "";
+                ",\"stagedResearchBootstrap\":true" : "";
             var config = Utf8($"{{\"schemaVersion\":1,\"branchId\":\"{Escape(branchId)}\",\"initialMode\":\"{initialMode}\",\"databasePath\":\"{Escape(databasePath)}\",\"databaseIdentity\":\"{Escape(databaseIdentity)}\",\"scienceBudgetMode\":\"{scienceBudgetMode}\"{checkpointFragment}{stageFragment}}}");
             Ensure(NativeMethods.Create(config, (uint)config.Length, out handle), "create");
             this.branchId = branchId;
