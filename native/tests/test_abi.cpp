@@ -50,6 +50,60 @@ json command(const std::string& sequence, const std::string& type, json payload 
 }
 }  // namespace
 
+TEST_CASE("M3 imported fresh Native setup resumes only after neutral SessionLoad recovery") {
+    std::uint64_t initial = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &initial) == PLV_OK);
+    submit(initial, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("3", "CreateSink", {{"id", "spill"}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("4", "PlaceTool",
+        {{"toolId", "research-tool"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+         {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+         {"profileRevision", "1"}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("5", "Pause")); REQUIRE(poll(initial)["accepted"]);
+    const auto saved = read_text(initial, true);
+    REQUIRE(plv_destroy(initial) == PLV_OK);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(saved.data(), static_cast<std::uint32_t>(saved.size()), &imported) == PLV_OK);
+    const auto before = json::parse(read_text(imported));
+    CHECK(before["hold"]["reason"] == "SessionLoad");
+    CHECK(before["paused"].get<bool>());
+    CHECK_FALSE(before["setupClosed"].get<bool>());
+    submit(imported, command("6", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    submit(imported, command("7", "ResumeSetup", {{"monotonicNowNs", "1020000000"}}));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    const std::string neutral = R"([{"toolId":"research-tool","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
+    REQUIRE(json::parse(read_text(imported))["hold"]["recoveryReady"].get<bool>());
+    submit(imported, command("8", "ResumeSetup", {{"monotonicNowNs", "1020000000"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto resumed = json::parse(read_text(imported));
+    CHECK_FALSE(resumed["hold"]["active"].get<bool>());
+    CHECK(resumed["paused"].get<bool>());
+    CHECK_FALSE(resumed["setupClosed"].get<bool>());
+    CHECK(resumed["vessels"] == before["vessels"]);
+    submit(imported, command("9", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    submit(imported, command("10", "Continue"));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto working = json::parse(read_text(imported));
+    CHECK(working["setupClosed"].get<bool>());
+    CHECK_FALSE(working["paused"].get<bool>());
+    submit(imported, command("11", "ResumeSetup"));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(imported))["vessels"] == working["vessels"]);
+    CHECK(plv_destroy(imported) == PLV_OK);
+}
+
 TEST_CASE("M2 first research burette primes from separate source under Native conservation") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";

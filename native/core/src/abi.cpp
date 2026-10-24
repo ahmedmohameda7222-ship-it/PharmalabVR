@@ -1205,6 +1205,38 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         } else if (type == "Pause") {
             context->executor.setPaused(true);
             outcome = {true, "Accepted", ""};
+        } else if (type == "ResumeSetup") {
+            // Unlike Continue, recovery of an originally unprepared setup
+            // must leave Native Pause and the stock-choice window intact.
+            // Only a real SessionLoad hold with a blank Native source can use it.
+            const auto state = context->executor.snapshot();
+            const auto source = state.vessels.find("source");
+            const bool blankSource = source != state.vessels.end() &&
+                source->second.materialRevision == 0U;
+            bool neutralAtBoundary = context->tools.empty();
+            if (context->holdActive && !neutralAtBoundary &&
+                payload.contains("monotonicNowNs") &&
+                payload.at("monotonicNowNs").is_string()) {
+                const auto submitted = decimalSequence(
+                    payload.at("monotonicNowNs").get<std::string>());
+                if (submitted.has_value())
+                    neutralAtBoundary = submitted.value() >= context->lastMonotonicNowNs &&
+                        freshNeutralInputs(*context, submitted.value());
+            }
+            if (!context->holdActive || context->holdReason != "SessionLoad" ||
+                context->setupClosed || !state.paused || !blankSource) {
+                outcome = {false, "SetupUnavailable",
+                    "only an unprepared imported Native setup can resume"};
+            } else if (!context->recoveryReady || !neutralAtBoundary) {
+                outcome = {false, "RecoveryNotReady",
+                    "fresh neutral tracked baselines are required"};
+            } else {
+                context->holdActive = false;
+                context->holdReason.clear();
+                context->recoveryReady = false;
+                for (auto& item : context->tools) item.second.latestInput.reset();
+                outcome = {true, "Accepted", ""};
+            }
         } else if (type == "Continue") {
             bool neutralAtBoundary = context->tools.empty();
             if (context->holdActive && !neutralAtBoundary &&
