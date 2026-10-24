@@ -65,6 +65,13 @@ TEST_CASE("M3 staged blank second trial preserves old Native authority until imp
     CHECK(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &next) == PLV_BUSY);
     CHECK(plv_input_batch(stage, "[]", 2) == PLV_BUSY);
     CHECK(plv_step(stage, 0.0, 1000000000) == PLV_BUSY);
+    // Staged contexts may never install a background checkpoint writer or
+    // publish a Native checkpoint as though they were operating sessions.
+    const std::string stageCheckpoint = "/tmp/plv-staged-forbidden-checkpoint";
+    CHECK(plv_configure_checkpoint(stage, stageCheckpoint.data(),
+        static_cast<std::uint32_t>(stageCheckpoint.size())) == PLV_BUSY);
+    CHECK(plv_checkpoint(stage, stageCheckpoint.data(),
+        static_cast<std::uint32_t>(stageCheckpoint.size())) == PLV_BUSY);
     auto stageCommand = [](const char* seq, const char* type, json payload = json::object()) {
         return json{{"schemaVersion", 1}, {"branchId", "study-new"},
             {"commandSequence", seq}, {"type", type},
@@ -150,9 +157,30 @@ TEST_CASE("M3 imported fresh Native setup resumes only after neutral SessionLoad
     const auto working = json::parse(read_text(imported));
     CHECK(working["setupClosed"].get<bool>());
     CHECK_FALSE(working["paused"].get<bool>());
-    submit(imported, command("11", "ResumeSetup"));
+    // Complete the second trial with a REAL Native material transfer after
+    // stock preparation; no canned pH or Unity-side mass calculation.
+    submit(imported, command("11", "TransferFixed",
+        {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+         {"selection", "HomogeneousAqueousLiquid"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-8}}},
+         {"captureFractions", {{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}}},
+         {"overflowSinkId", "spill"}},
+        {{"source", "1"}, {"receiver", "0"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto transferred = json::parse(read_text(imported));
+    double sourceVolume = -1.0, receiverVolume = -1.0;
+    for (const auto& vessel : transferred["vessels"]) {
+        if (vessel["id"] == "source")
+            sourceVolume = vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+        if (vessel["id"] == "receiver")
+            receiverVolume = vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    }
+    CHECK(sourceVolume == doctest::Approx(2.5e-5 - 1e-8));
+    CHECK(receiverVolume == doctest::Approx(1e-8));
+    CHECK(sourceVolume + receiverVolume == doctest::Approx(2.5e-5));
+    submit(imported, command("12", "ResumeSetup"));
     CHECK_FALSE(poll(imported)["accepted"].get<bool>());
-    CHECK(json::parse(read_text(imported))["vessels"] == working["vessels"]);
+    CHECK(json::parse(read_text(imported))["vessels"] == transferred["vessels"]);
     CHECK(plv_destroy(imported) == PLV_OK);
 }
 

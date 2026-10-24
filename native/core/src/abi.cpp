@@ -1678,7 +1678,8 @@ std::int32_t plv_export(std::uint64_t handle, char* out, std::uint32_t capacity,
 std::int32_t plv_checkpoint(std::uint64_t handle, const char* path, std::uint32_t size) {
     const auto context = getContext(handle);
     if (!context) return PLV_INVALID_HANDLE;
-    if (!context->active.load() || context->ownerThread != std::this_thread::get_id())
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id() ||
+        context->stagedResearchBootstrap)
         return PLV_BUSY;
     if (path == nullptr || size == 0U || size > 1024U ||
         std::memchr(path, '\0', size) != nullptr)
@@ -1709,7 +1710,8 @@ std::int32_t plv_configure_checkpoint(
     std::uint64_t handle, const char* path, std::uint32_t size) {
     const auto context = getContext(handle);
     if (!context) return PLV_INVALID_HANDLE;
-    if (!context->active.load() || context->ownerThread != std::this_thread::get_id())
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id() ||
+        context->stagedResearchBootstrap)
         return PLV_BUSY;
     if (path == nullptr || size == 0U || size > 1024U ||
         std::memchr(path, '\0', size) != nullptr)
