@@ -100,6 +100,9 @@ struct Context {
     std::unordered_map<std::string, CheckpointState> checkpoints;
     std::uint64_t nextCommandSequence = 1;
     bool setupClosed = false;
+    // Restricted preflight Native bench, never a second operating lab.
+    // Only initial empty geometry commands are admitted before Import.
+    bool stagedResearchBootstrap = false;
     std::string mode = "Desktop";
     bool holdActive = false;
     std::string holdReason;
@@ -612,6 +615,7 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
         if (initialMode != "Desktop" && initialMode != "VR") return PLV_INVALID_ARGUMENT;
         const auto budgetMode = parsed.value("scienceBudgetMode", "Precision");
         if (budgetMode != "Precision" && budgetMode != "Bulk") return PLV_INVALID_ARGUMENT;
+        const bool stagedBootstrap = parsed.value("stagedResearchBootstrap", false);
         const auto automaticCheckpointPath = parsed.value("checkpointPath", std::string{});
         if (!automaticCheckpointPath.empty()) {
             if (automaticCheckpointPath.size() > 1024U ||
@@ -623,11 +627,27 @@ std::int32_t plv_create(const char* config, std::uint32_t size, std::uint64_t* h
         }
         std::lock_guard<std::mutex> lock(registryMutex);
         if (contexts.size() >= maxSessionContexts) return PLV_BUSY;
-        for (const auto& [existingHandle, existing] : contexts)
-            if (existing->active.load()) return PLV_BUSY;
+        bool foundOriginal = false;
+        for (const auto& [existingHandle, existing] : contexts) {
+            if (!existing->active.load()) continue;
+            if (!stagedBootstrap || foundOriginal ||
+                existing->stagedResearchBootstrap ||
+                existing->ownerThread != std::this_thread::get_id() ||
+                !existing->executor.paused() || existing->holdActive ||
+                existing->executor.snapshot().branchId == branch ||
+                existing->mode != initialMode ||
+                existing->scienceBudgetMode != budgetMode ||
+                existing->databasePath != databasePath ||
+                existing->databaseIdentity != databaseIdentity)
+                return PLV_BUSY;
+            foundOriginal = true;
+        }
+        if (stagedBootstrap && (!foundOriginal || !automaticCheckpointPath.empty()))
+            return PLV_BUSY;
         auto context = std::make_shared<Context>(branch, databasePath, databaseIdentity,
                                                  budgetMode, automaticCheckpointPath);
         context->mode = initialMode;
+        context->stagedResearchBootstrap = stagedBootstrap;
         const auto assigned = nextHandle++;
         contexts.emplace(assigned, std::move(context));
         *handle = assigned;
@@ -683,6 +703,12 @@ std::int32_t plv_submit(std::uint64_t handle, const char* command, std::uint32_t
         const auto sequence = decimalSequence(sequenceText);
         if (!sequence) return PLV_INVALID_ARGUMENT;
         const auto type = parsed.at("type").get<std::string>();
+        // One temporary context can author only inert bench initialization,
+        // not live chemistry, tracked input, timed simulation or recovery.
+        if (context->stagedResearchBootstrap &&
+            type != "CreateVessel" && type != "CreateSink" &&
+            type != "PlaceTool" && type != "Pause")
+            return PLV_BUSY;
         if (context->events.size() >= 256U) {
             return PLV_BUSY;
         }
@@ -1295,7 +1321,8 @@ std::int32_t plv_input_batch(std::uint64_t handle, const char* samples, std::uin
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
-    if (!context->active.load() || context->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id() ||
+        context->stagedResearchBootstrap) return PLV_BUSY;
     if (!validInput(samples, size)) {
         return PLV_INVALID_ARGUMENT;
     }
@@ -1377,7 +1404,8 @@ std::int32_t plv_step(std::uint64_t handle, double delta_s, std::uint64_t monoto
     if (!context) {
         return PLV_INVALID_HANDLE;
     }
-    if (!context->active.load() || context->ownerThread != std::this_thread::get_id()) return PLV_BUSY;
+    if (!context->active.load() || context->ownerThread != std::this_thread::get_id() ||
+        context->stagedResearchBootstrap) return PLV_BUSY;
     if (!std::isfinite(delta_s) || delta_s < 0.0) return PLV_INVALID_ARGUMENT;
     std::lock_guard<std::mutex> lock(context->mutex);
     if (!context->active.load()) return PLV_BUSY;

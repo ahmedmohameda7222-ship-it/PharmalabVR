@@ -410,7 +410,7 @@ namespace PharmaLabVR.Core
                 throw new InvalidOperationException("Open Native science and a distinct branch are required.");
             using var staged = new CoreSession(branch, CurrentMode,
                 ScientificDatabasePath, ScientificPackage.DatabaseSha256,
-                scienceBudgetProfile.ToString(), "");
+                scienceBudgetProfile.ToString(), "", stagedResearchBootstrap: true);
             BootstrapResearchSession(staged);
             var imported = CoreSession.ImportSession(staged.ExportSession(), ScientificDatabasePath);
             try

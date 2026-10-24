@@ -50,6 +50,52 @@ json command(const std::string& sequence, const std::string& type, json payload 
 }
 }  // namespace
 
+TEST_CASE("M3 staged blank second trial preserves old Native authority until import") {
+    std::uint64_t original = 0;
+    const std::string originalConfig = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(originalConfig.data(), static_cast<std::uint32_t>(originalConfig.size()), &original) == PLV_OK);
+    const std::string stagedConfig = R"({"schemaVersion":1,"branchId":"study-new","scienceBudgetMode":"Precision","stagedResearchBootstrap":true})";
+    std::uint64_t stage = 0;
+    CHECK(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &stage) == PLV_BUSY);
+    submit(original, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("2", "Pause")); REQUIRE(poll(original)["accepted"]);
+    const auto savedOld = read_text(original, true);
+    REQUIRE(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &stage) == PLV_OK);
+    std::uint64_t next = 0;
+    CHECK(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &next) == PLV_BUSY);
+    CHECK(plv_input_batch(stage, "[]", 2) == PLV_BUSY);
+    CHECK(plv_step(stage, 0.0, 1000000000) == PLV_BUSY);
+    auto stageCommand = [](const char* seq, const char* type, json payload = json::object()) {
+        return json{{"schemaVersion", 1}, {"branchId", "study-new"},
+            {"commandSequence", seq}, {"type", type},
+            {"expectedMaterialRevisions", json::object()}, {"payload", payload}};
+    };
+    const auto noContinue = stageCommand("1", "Continue").dump();
+    CHECK(plv_submit(stage, noContinue.data(), static_cast<std::uint32_t>(noContinue.size())) == PLV_BUSY);
+    submit(stage, stageCommand("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("3", "CreateSink", {{"id", "spill"}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("4", "PlaceTool",
+        {{"toolId", "research-tool"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+         {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+         {"profileRevision", "1"}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("5", "Pause")); REQUIRE(poll(stage)["accepted"]);
+    CHECK(read_text(original, true) == savedOld);
+    const auto draft = read_text(stage, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(draft.data(), static_cast<std::uint32_t>(draft.size()), &imported) == PLV_OK);
+    const auto restored = json::parse(read_text(imported));
+    CHECK(restored["branchId"] == "study-new");
+    CHECK(restored["hold"]["reason"] == "SessionLoad");
+    CHECK(restored["paused"].get<bool>());
+    CHECK_FALSE(restored["setupClosed"].get<bool>());
+    const auto oldContinue = command("3", "Continue").dump();
+    CHECK(plv_submit(original, oldContinue.data(), static_cast<std::uint32_t>(oldContinue.size())) == PLV_BUSY);
+    CHECK(plv_destroy(stage) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
+    CHECK(plv_destroy(imported) == PLV_OK);
+}
+
 TEST_CASE("M3 imported fresh Native setup resumes only after neutral SessionLoad recovery") {
     std::uint64_t initial = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
