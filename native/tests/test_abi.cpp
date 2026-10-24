@@ -81,6 +81,12 @@ TEST_CASE("M3 staged blank second trial preserves old Native authority until imp
          {"profileRevision", "1"}})); REQUIRE(poll(stage)["accepted"]);
     submit(stage, stageCommand("5", "Pause")); REQUIRE(poll(stage)["accepted"]);
     CHECK(read_text(original, true) == savedOld);
+    // Even after staging an entire second empty bench the original remains
+    // the only real operating authority up to the final Native import.
+    submit(original, command("3", "Pause"));
+    REQUIRE(poll(original)["accepted"].get<bool>());
+    const auto committedOriginal = read_text(original, true);
+    CHECK(committedOriginal != savedOld);
     const auto draft = read_text(stage, true);
     std::uint64_t imported = 0;
     REQUIRE(plv_import(draft.data(), static_cast<std::uint32_t>(draft.size()), &imported) == PLV_OK);
@@ -89,7 +95,7 @@ TEST_CASE("M3 staged blank second trial preserves old Native authority until imp
     CHECK(restored["hold"]["reason"] == "SessionLoad");
     CHECK(restored["paused"].get<bool>());
     CHECK_FALSE(restored["setupClosed"].get<bool>());
-    const auto oldContinue = command("3", "Continue").dump();
+    const auto oldContinue = command("4", "Continue").dump();
     CHECK(plv_submit(original, oldContinue.data(), static_cast<std::uint32_t>(oldContinue.size())) == PLV_BUSY);
     CHECK(plv_destroy(stage) == PLV_OK);
     CHECK(plv_destroy(original) == PLV_OK);

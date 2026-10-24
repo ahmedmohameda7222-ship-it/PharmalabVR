@@ -2343,9 +2343,23 @@ namespace PharmaLabVR.Session
                 NotebookService.InstallPortableSnapshot(newNotes,
                     "PLV-NOTEBOOK-V1\n", newBranch, initialView.EventSequence);
                 var saved = saves.Save(fresh, root, newName);
-                if (saved != newSave || driver.Session.BranchId != oldBranch)
+                if (saved != newSave || driver.Session.BranchId != oldBranch ||
+                    driver.Session?.IsOpen != true)
                     throw new InvalidOperationException(
                         "New session staging changed the old Native authority.");
+                // Only AFTER both independent files have been published may
+                // Native Import retire the old operating handle. The staged
+                // bootstrap itself cannot step or process material commands.
+                var preImport = fresh.ExportSession();
+                var imported = CoreSession.ImportSession(preImport,
+                    driver.ScientificDatabasePath);
+                fresh.Dispose();
+                fresh = imported;
+                if (fresh.BranchId != newBranch)
+                {
+                    throw new InvalidOperationException(
+                        "New Native authority failed branch or mode admission.");
+                }
                 // The journal identity must change BEFORE Native publishes the
                 // restored snapshot; otherwise the first study's notes leak.
                 saveName = newName;

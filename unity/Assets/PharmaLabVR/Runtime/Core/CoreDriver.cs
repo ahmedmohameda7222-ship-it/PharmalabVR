@@ -403,29 +403,30 @@ namespace PharmaLabVR.Core
 
         // Another trial needs a genuinely new Native identity, not a saved
         // copy of the same scientific branch. No active session is swapped.
+        // IMPORTANT: this is an inert pre-import bootstrap. Import happens
+        // ONLY after the full fresh save/Notebook pair reaches durable files.
         public CoreSession PrepareIndependentStudy(string branch)
         {
             if (Session?.IsOpen != true || string.IsNullOrEmpty(ScientificDatabasePath) ||
                 string.IsNullOrWhiteSpace(branch) || branch == Session.BranchId)
                 throw new InvalidOperationException("Open Native science and a distinct branch are required.");
-            using var staged = new CoreSession(branch, CurrentMode,
+            var staged = new CoreSession(branch, CurrentMode,
                 ScientificDatabasePath, ScientificPackage.DatabaseSha256,
                 scienceBudgetProfile.ToString(), "", stagedResearchBootstrap: true);
-            BootstrapResearchSession(staged);
-            var imported = CoreSession.ImportSession(staged.ExportSession(), ScientificDatabasePath);
             try
             {
-                var snapshot = JsonUtility.FromJson<SnapshotEnvelope>(imported.ReadSnapshot());
-                if (snapshot?.hold == null || !snapshot.hold.active ||
-                    snapshot.hold.reason != "SessionLoad" ||
-                    !string.Equals(snapshot.mode, CurrentMode, StringComparison.Ordinal))
+                BootstrapResearchSession(staged);
+                var snapshot = JsonUtility.FromJson<SnapshotEnvelope>(staged.ReadSnapshot());
+                if (snapshot?.hold == null || snapshot.hold.active ||
+                    !snapshot.paused || !string.Equals(snapshot.mode, CurrentMode,
+                        StringComparison.Ordinal))
                     throw new InvalidOperationException(
-                        "New experiment must start with Native SessionLoad Hold.");
-                return imported;
+                        "Unprepared staged Native branch must be paused before handover.");
+                return staged;
             }
             catch
             {
-                imported.Dispose();
+                staged.Dispose();
                 throw;
             }
         }

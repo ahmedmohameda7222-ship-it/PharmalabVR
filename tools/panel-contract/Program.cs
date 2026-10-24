@@ -1707,6 +1707,25 @@ internal static class Program
               saveCopySource.Contains("if (verifiedFreshName)"),
             "Local SaveCopy lost its independent source journal, guarded file namespace or no-delete-on-collision rule.");
 
+        // Native run handover must not import and retire the old authority
+        // before a confirmed fresh Native .plv.json and Notebook exist.
+        var independentDriverSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        Check(independentDriverSource.Contains("stagedResearchBootstrap: true") &&
+              independentDriverSource.Contains("BootstrapResearchSession(staged)") &&
+              independentDriverSource.Contains("return staged;") &&
+              !independentDriverSource.Contains("using var staged = new CoreSession"),
+            "The new trial preflight must preserve the previous Native context.");
+        var independentSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var independentSaveLine = independentSessionSource.IndexOf(
+            "var saved = saves.Save(fresh, root, newName)", StringComparison.Ordinal);
+        var independentImportLine = independentSessionSource.IndexOf(
+            "CoreSession.ImportSession(preImport", StringComparison.Ordinal);
+        Check(independentSaveLine > 0 && independentImportLine > independentSaveLine &&
+              independentSessionSource.Contains("driver.ReplaceSession(fresh)"),
+            "Native import must follow both durable new-study files.");
+
         // Selected saved-recording preview must be visible in both recovery
         // panels; the matching Native-backed Unity PlayMode test is NOT_RUN.
         var previewSource = System.IO.File.ReadAllText(

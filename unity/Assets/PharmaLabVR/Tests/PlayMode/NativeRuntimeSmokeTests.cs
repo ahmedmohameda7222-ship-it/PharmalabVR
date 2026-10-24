@@ -66,6 +66,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(panels.Request(PanelAction.Lab), Is.True);
                 Assert.That(panels.Request(PanelAction.Pause), Is.True, session.LastError);
                 Assert.That(panels.Request(PanelAction.NewStudy), Is.True, session.LastError);
+                Assert.That(driver.Session?.IsOpen, Is.True,
+                    "Durable staged Native import must produce a live active new session.");
                 newName = session.ActiveLocalSessionName;
                 Assert.That(newName, Does.StartWith("run-"));
                 Assert.That(driver.Session, Is.Not.SameAs(first));
