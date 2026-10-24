@@ -2943,6 +2943,17 @@ internal static class Program
             Check(panels.Request(PanelAction.Review), "Recorded Review blocked during Hold");
             Check(!panels.Request(PanelAction.Lab), "Held Review bypassed native hold");
             Check(router.Current.ScreenId == ScreenId.Review, "Denied held return hid review");
+            Check(router.Current.SupportedActions.Contains("Hold"),
+                "Held recorded Review has no explicit route back to Native recovery.");
+            Check(panels.Request(PanelAction.Hold) &&
+                  router.Current.ScreenId == ScreenId.Hold &&
+                  driver.IsTimeHeld && !driver.NativeRecoveryReady &&
+                  session.RecordedReview == null,
+                "Return from recorded Review bypassed Native Hold or left stale Review.");
+            Check(session.SaveCalls == 0 && driver.ContinueCalls == 1,
+                "Review-to-Hold navigation saved/continued/recomputed Native authority.");
+            Check(!panels.Request(PanelAction.Hold),
+                "Native recovery return must not be a generic screen escape.");
             Check(session.SaveCalls == 0, "Hold/Review caused implicit Save");
             Console.WriteLine($"P06.02 headless routing checks: {checks} passed (NOT Unity, Player or Native Core)");
         }
