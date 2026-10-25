@@ -179,11 +179,6 @@ namespace PharmaLabVR.UI
                     return router.Current.ScreenId == ScreenId.Lab;
                 case PanelAction.Review:
                     if (!sessions.OpenReview()) return false;
-                    // The recorded export must still have the SAME event
-                    // and Native branch that admitted the learner evidence.
-                    if (!sessions.ConfirmExactNativeReview(
-                            validatedBranch, validatedEvent))
-                        return false;
                     router.Show(ScreenId.Review);
                     return router.Current.ScreenId == ScreenId.Review;
                 case PanelAction.Hold:
@@ -225,6 +220,9 @@ namespace PharmaLabVR.UI
                             validatedBranch, validatedEvent))
                         return false;
                     if (!sessions.OpenReview()) return false;
+                    if (!sessions.ConfirmExactNativeReview(
+                            validatedBranch, validatedEvent))
+                        return false;
                     router.Show(ScreenId.Review);
                     return router.Current.ScreenId == ScreenId.Review;
                 case PanelAction.Save:
