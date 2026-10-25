@@ -529,6 +529,103 @@ namespace PharmaLabVR.Tests.PlayMode
             }
         }
 
+        // Unity 6000.3.25f1 PlayMode source acceptance: actual IPhreeqc
+        // receiver pH -> checksum-scoped journal -> explicit durable Native
+        // save -> recorded-only Review. Not executed by headless CI.
+        [UnityTest]
+        public IEnumerator M3_ExplicitNotebookSaveAndReviewNeedsRecordedNativePHAndDurableSave()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            var name = "explicit-study-" + System.Guid.NewGuid().ToString("N");
+            var folder = Path.Combine(Application.persistentDataPath, "sessions");
+            var savePath = Path.Combine(folder, name + ".plv.json");
+            var notesPath = Path.Combine(folder, name + ".plv-notes");
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var panels = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                sessions.Configure(driver, name);
+                Assert.That(panels.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(panels.Request(PanelAction.BottlePour), Is.True,
+                    sessions.LastError);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(sessions.CanFinishNativeStudy, Is.False,
+                    "A physical transfer alone cannot count as a recorded pH.");
+                Assert.That(panels.Request(PanelAction.AddNotebookNote,
+                    "Native pH 7.00: this is only my prediction, not a measurement."),
+                    Is.True);
+                Assert.That(sessions.CanFinishNativeStudy, Is.False,
+                    "Typed student text impersonated an authoritative Native pH record.");
+                Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(File.Exists(savePath), Is.False);
+
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
+                for (var attempts = 0; attempts < 200 &&
+                     !sessions.CanRecordCurrentNativePH; attempts++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(sessions.CanRecordCurrentNativePH, Is.True,
+                    "The real Native receiver pH never became Supported/Current.");
+                Assert.That(panels.Request(PanelAction.RecordCurrentPH), Is.True,
+                    sessions.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(sessions.CanFinishNativeStudy, Is.True,
+                    "The actual event-bound Native pH is missing from the strict Notebook.");
+                var originalNative = driver.Session.ExportSession();
+                var originalNotes = File.ReadAllBytes(notesPath);
+                Assert.That(sessions.RecordedReview, Is.Null);
+
+                // A real unwritable final destination must not open Review.
+                Directory.CreateDirectory(folder);
+                Directory.CreateDirectory(savePath);
+                Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.False);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
+                Assert.That(sessions.RecordedReview, Is.Null);
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(originalNative));
+                Directory.Delete(savePath);
+
+                Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.True,
+                    sessions.LastError);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(File.Exists(savePath), Is.True);
+                Assert.That(sessions.RecordedReview, Is.Not.Null);
+                Assert.That(sessions.RecordedReview.BranchId,
+                    Is.EqualTo(driver.Session.BranchId));
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(originalNative),
+                    "The explicit save/review action modified the scientific event log.");
+                Assert.That(File.ReadAllBytes(notesPath), Is.EqualTo(originalNotes),
+                    "The explicit save/review action rewrote learner evidence.");
+                Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.False,
+                    "A recorded-only Review cannot silently Save again.");
+            }
+            finally
+            {
+                if (Directory.Exists(savePath)) Directory.Delete(savePath);
+                foreach (var path in new[] { savePath, savePath + ".bak", notesPath,
+                    notesPath + ".bak", notesPath + ".lock" })
+                    if (File.Exists(path)) File.Delete(path);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // One explicit Pause action creates a fresh Native branch and
         // separate Notebook. Neither SaveCopy nor a synthetic scene event.
         [UnityTest]
