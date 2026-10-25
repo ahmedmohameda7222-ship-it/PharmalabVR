@@ -962,6 +962,9 @@ namespace PharmaLabVR.Tests.PlayMode
                     Is.EqualTo(reserveBefore - 1e-8).Within(1e-11));
                 Assert.That(driver.CurrentLabView.EventSequence, Is.Not.EqualTo(eventBefore));
                 Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted"));
+                Assert.That(sessions.LastInstrumentReceipt,
+                    Does.Contain("Native source +0.010 mL"),
+                    "A reserve-bottle refill must display actual Native source credit.");
             }
             finally { SceneManager.UnloadSceneAsync(scene); }
         }
@@ -1607,6 +1610,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(receiver.Estimate(pipette, Vector3.zero).Length, Is.EqualTo(1));
                 Assert.That(panels.Request(PanelAction.PipetteDispense), Is.True,
                     "An aligned, sufficiently filled Native pipette must deliver real liquid.");
+                Assert.That(sessions.LastInstrumentReceipt,
+                    Does.Contain("Native receiver +0.050 mL"),
+                    "The pipette transfer label must reflect the actual Native receiver credit.");
                 Assert.That(panels.PipetteTipVolumeM3, Is.EqualTo(1e-7).Within(1e-10));
                 Assert.That(driver.CurrentLabView.Vessels.Single(v => v.Id == "receiver")
                     .CommittedVolumeM3, Is.GreaterThan(0.0));
@@ -2194,6 +2200,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(routed.Request(PanelAction.BottlePour), Is.True, sessions.LastError);
                 Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Bottle pour 0.01 ml"));
                 Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Native accepted command #"));
+                Assert.That(sessions.LastInstrumentReceipt,
+                    Does.Contain("Native receiver +0.010 mL"),
+                    "The student must see actual Native receiver credit, not nominal pour volume.");
                 var after = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
                 Assert.That(after.vessels.Single(item => item.id == "source")
                     .inventory.researchAdditiveVolumeM3,
@@ -2255,6 +2264,9 @@ namespace PharmaLabVR.Tests.PlayMode
                     Is.EqualTo(5e-8).Within(1e-10));
                 Assert.That(burette.CommittedVolumeM3, Is.EqualTo(5e-8).Within(1e-10));
                 Assert.That(sessions.LastInstrumentReceipt, Does.Contain("Burette prime 0.05 ml"));
+                Assert.That(sessions.LastInstrumentReceipt,
+                    Does.Contain("Native burette +0.050 mL"),
+                    "Burette fill must display Native-confirmed vessel credit.");
                 Assert.That(driver.PauseSession(), Is.True);
                 Assert.That(sessions.TryFillBuretteFromBottle(), Is.False);
                 Assert.That(sessions.LastInstrumentReceipt, Is.Null);
