@@ -1255,6 +1255,50 @@ internal static class Program
         Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
             "Invalid Native quantity must never display as a real receiver measurement.");
 
+        // M2: learner-facing material delta must be calculated from two
+        // independent real Native snapshots, not the nominal requested pour.
+        // Reflection lets this RED exercise fail as a test rather than as a
+        // test-harness compiler error before the production method exists.
+        var nativeTransferReadout = typeof(LabBenchReadout).GetMethod(
+            "ObservedNativeTransfer", System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Static);
+        Check(nativeTransferReadout != null,
+            "The Lab has no Native-snapshot-confirmed physical transfer feedback.");
+        if (nativeTransferReadout != null)
+        {
+            var beforeReal = new LabViewModel { EventSequence = "8" };
+            beforeReal.Vessels[0].CommittedVolumeM3 = 2.5e-5;
+            beforeReal.Vessels[0].MaterialRevision = "10";
+            beforeReal.Vessels[1].CommittedVolumeM3 = 0;
+            beforeReal.Vessels[1].MaterialRevision = "0";
+            var afterReal = new LabViewModel { EventSequence = "9" };
+            afterReal.Vessels[0].CommittedVolumeM3 = 2.4989e-5;
+            afterReal.Vessels[0].MaterialRevision = "11";
+            afterReal.Vessels[1].CommittedVolumeM3 = 1.1e-8;
+            afterReal.Vessels[1].MaterialRevision = "1";
+            string Describe(LabViewModel oldView, LabViewModel newView, string target) =>
+                (string)nativeTransferReadout.Invoke(null, new object[] {
+                    oldView, newView, target });
+            Check(Describe(beforeReal, afterReal, "receiver") ==
+                  "Native receiver +0.011 mL · events 8 → 9",
+                "The user-visible delta is not the actual committed Native receiver volume.");
+            Check(Describe(beforeReal, afterReal, "source") == null,
+                "Source debit was presented as a positive receiver credit.");
+            Check(Describe(afterReal, beforeReal, "receiver") == null &&
+                  Describe(beforeReal, beforeReal, "receiver") == null,
+                "Stale/repeated/regressed Native events fabricated an accepted transfer.");
+            afterReal.Vessels[1].CommittedVolumeM3 = double.NaN;
+            Check(Describe(beforeReal, afterReal, "receiver") == null,
+                "A nonfinite Native observation was formatted as learner transfer evidence.");
+            afterReal.Vessels[1].CommittedVolumeM3 = 0;
+            Check(Describe(beforeReal, afterReal, "receiver") == null,
+                "An accepted command with no actual receiver increment invented material credit.");
+        }
+        var labDeliverySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(labDeliverySource.Contains("ObservedNativeTransfer", StringComparison.Ordinal),
+            "The lab transfer receipt was never connected to real post-command Native inventory.");
+
         // Priming a burette is a bounded Native TransferFixed between real vessels.
         var burettePrime = ResearchInstrumentPayloads.RefillFromPreparedStock(
             "source", "burette", "spill", 5e-8);
