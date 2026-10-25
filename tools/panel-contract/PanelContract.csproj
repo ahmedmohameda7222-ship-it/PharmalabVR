@@ -41,6 +41,7 @@
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/ResearchLearningReview.cs" Link="ResearchLearningReview.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/ResearchNotebookPHHistory.cs" Link="ResearchNotebookPHHistory.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/InstructorObservationLabel.cs" Link="InstructorObservationLabel.cs" />
+    <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/InstructorFeedbackService.cs" Link="InstructorFeedbackService.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Session/OfflineArchivePicker.cs" Link="OfflineArchivePicker.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ProtocolDefinition.cs" Link="ProtocolDefinition.cs" />
     <Compile Include="../../unity/Assets/PharmaLabVR/Runtime/Protocols/ResearchLessonJourney.cs" Link="ResearchLessonJourney.cs" />
