@@ -849,6 +849,68 @@ internal static class Program
             Check(feedbackServiceSource.Contains("journal.AppendOnce(", StringComparison.Ordinal),
                 "Instructor feedback still preflights duplicate checks outside the journal lease.");
 
+            // M4 student feedback is a read-only offline *local* preview.
+            // It must be tied to the immutable exported study fingerprint,
+            // actual selected student note and strict event/branch ceiling.
+            // This must never import a teacher grade or mutate Native/notes.
+            var readStudentFeedback = typeof(InstructorFeedbackService).GetMethod(
+                "StudentSummary", System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Static);
+            Check(readStudentFeedback != null,
+                "Students cannot view exact-pack formative instructor feedback offline.");
+            if (readStudentFeedback != null)
+            {
+                var studentFeedbackPath = System.IO.Path.Combine(
+                    learningDirectory, "student-for-feedback.plv-notes");
+                var studentFeedbackNote = researchNotes.Append(studentFeedbackPath,
+                    "student-branch", "7", "receiver",
+                    "I need to compare the Native result with my hypothesis.");
+                var originalStudentBytes = System.IO.File.ReadAllBytes(studentFeedbackPath);
+                var fingerprint = InstructorFeedbackService.Fingerprint(
+                    "valid-native-study", "checksummed-student-journal");
+                var selected = researchNotes.ReadCurrent(studentFeedbackPath,
+                    "student-branch", "7");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    fingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "check-method");
+                string ReadPreview(string packFingerprint) =>
+                    (string)readStudentFeedback.Invoke(null,
+                        new object[] { researchNotes, learningDirectory,
+                            packFingerprint, "student-branch", "7", selected });
+                var result = ReadPreview(fingerprint);
+                Check(result.Contains("Review the instrument method", StringComparison.Ordinal) &&
+                      result.Contains("not graded", StringComparison.OrdinalIgnoreCase) &&
+                      !result.Contains("Certified", StringComparison.Ordinal) &&
+                      System.IO.File.ReadAllBytes(studentFeedbackPath)
+                          .SequenceEqual(originalStudentBytes),
+                    "Formative feedback preview changed a student note or claimed an institutional grade.");
+                var different = InstructorFeedbackService.Fingerprint(
+                    "different-native-study", "checksummed-student-journal");
+                Check(!ReadPreview(different).Contains("Review the instrument method",
+                    StringComparison.Ordinal),
+                    "Feedback from an unrelated archive fingerprint appeared as this student's.");
+                var localSidecar = InstructorFeedbackService.FeedbackPath(
+                    learningDirectory, fingerprint);
+                researchNotes.Append(localSidecar, "student-branch", "7", "receiver",
+                    "Fabricated instructor certification and score.");
+                var tamperedDenied = false;
+                try { ReadPreview(fingerprint); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is System.IO.InvalidDataException)
+                { tamperedDenied = true; }
+                Check(tamperedDenied,
+                    "A checksummed but unbound instructor ledger row was presented as trusted feedback.");
+            }
+            var sourceStudentFeedback = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+            var xrStudentFeedback = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+            Check(sourceStudentFeedback.Contains("StudentFormativeFeedbackSummary",
+                    StringComparison.Ordinal) &&
+                  xrStudentFeedback.Contains("StudentFormativeFeedbackSummary",
+                    StringComparison.Ordinal),
+                "Recorded student Review does not display local feedback from its exported pack.");
+
             researchNotes.Append(learningPath, "student-branch", "7", "receiver",
                 "Student hypothesis: receiver pH below 7.");
             researchNotes.Append(learningPath, "student-branch", "11", "receiver",
