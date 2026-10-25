@@ -340,6 +340,23 @@ internal static class Program
                       current.Count(x => string.Equals(origin?.GetValue(x)?.ToString(),
                           "NativePH", StringComparison.Ordinal)) == 1,
                     "Only a deliberate Native-reading append may satisfy pH evidence admission.");
+                // Two independently constructed Notebook services can race
+                // through UI retries. The file-lease transaction, not a
+                // transient page flag, must enforce one NativePH record per
+                // branch/event/vessel, while retaining the handwritten row.
+                var doubleRecorded = false;
+                try
+                {
+                    new NotebookService().AppendNativeMeasurement(
+                        handwrittenPath, "student-branch", noteView.EventSequence,
+                        "receiver", handTyped);
+                }
+                catch (System.IO.InvalidDataException) { doubleRecorded = true; }
+                Check(doubleRecorded &&
+                      evidence.ReadCurrent(handwrittenPath, "student-branch",
+                          noteView.EventSequence).Count(x =>
+                          x.RecordKind == NotebookRecordKind.NativePH) == 1,
+                    "Two independent journal writers recorded duplicate Native scientific pH events.");
                 var packed = evidence.ExportBranch(handwrittenPath, "student-branch",
                     noteView.EventSequence);
                 var unpacked = NotebookService.ReadPortableBranch(packed,
