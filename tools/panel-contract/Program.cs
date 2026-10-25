@@ -830,7 +830,7 @@ internal static class Program
                 var duplicateRefused = false;
                 try { appendOnce.Invoke(new NotebookService(), args); }
                 catch (System.Reflection.TargetInvocationException error)
-                    when (error.InnerException is System.IO.InvalidDataException)
+                    when (error.InnerException is InvalidOperationException)
                 { duplicateRefused = true; }
                 Check(duplicateRefused &&
                     System.IO.File.ReadAllBytes(feedbackProbe).SequenceEqual(original) &&
@@ -877,10 +877,10 @@ internal static class Program
                     (string)readStudentFeedback.Invoke(null,
                         new object[] { researchNotes, learningDirectory,
                             packFingerprint, "student-branch", "7", selected });
-                var result = ReadPreview(fingerprint);
-                Check(result.Contains("Review the instrument method", StringComparison.Ordinal) &&
-                      result.Contains("not graded", StringComparison.OrdinalIgnoreCase) &&
-                      !result.Contains("Certified", StringComparison.Ordinal) &&
+                var studentFormativePreview = ReadPreview(fingerprint);
+                Check(studentFormativePreview.Contains("Review the instrument method", StringComparison.Ordinal) &&
+                      studentFormativePreview.Contains("not graded", StringComparison.OrdinalIgnoreCase) &&
+                      !studentFormativePreview.Contains("Certified", StringComparison.Ordinal) &&
                       System.IO.File.ReadAllBytes(studentFeedbackPath)
                           .SequenceEqual(originalStudentBytes),
                     "Formative feedback preview changed a student note or claimed an institutional grade.");

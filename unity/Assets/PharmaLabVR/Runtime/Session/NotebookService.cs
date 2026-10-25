@@ -127,7 +127,7 @@ namespace PharmaLabVR.Session
                     item.VesselId == vesselId &&
                     item.RecordKind == recordKind &&
                     string.Equals(item.Text, text, StringComparison.Ordinal)))
-                throw new InvalidDataException(
+                throw new InvalidOperationException(
                     "This exact local formative response was already committed.");
             // Must be checked INSIDE the held file lease. Desktop/XR may
             // both pass an earlier UI preflight before either commits.
