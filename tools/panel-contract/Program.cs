@@ -1689,6 +1689,18 @@ internal static class Program
         // XR Pause/Hold places Review and Recenter on the same row. The
         // visual policy must give two independent raycast rectangles, and
         // Pause must expose the actual existing offline export action.
+        // XR formative feedback must let an instructor deliberately choose
+        // every bounded response, not merely the hardcoded "method" answer.
+        // Source admission only: real XR button hits remain Unity NOT_RUN.
+        var xrTeachingSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrTeachingSource.Contains("instructorFeedbackPage", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: request another pH", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: review method", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: compare hypothesis", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("PanelAction.RecordInstructorFeedback", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Back to imported note", StringComparison.Ordinal),
+            "XR recorded instructor Review lacks all three deliberate formative feedback choices.");
         var xrPortableUiSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
         Check(xrPortableUiSource.Contains("Export portable study", StringComparison.Ordinal) &&
