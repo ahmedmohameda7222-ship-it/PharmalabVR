@@ -313,6 +313,12 @@ internal static class Program
                     noteView.EventSequence, "receiver",
                     noteView.Vessels[1].MaterialRevision),
                 "Student-authored text masqueraded as a Native-recorded current pH measurement.");
+            Check(ResearchLearningReview.RenderPage(stored,
+                    "student-branch", 0).Contains("Student-authored", StringComparison.Ordinal) &&
+                  !ResearchLearningReview.RenderPage(stored,
+                    "student-branch", 0).Contains("Native-recorded entry",
+                        StringComparison.Ordinal),
+                "Imported teaching preview promoted copied student text to a Native reading.");
             var typedRecord = stored.Single();
             var origin = typedRecord.GetType().GetProperty("RecordKind");
             Check(origin != null && !string.Equals(
