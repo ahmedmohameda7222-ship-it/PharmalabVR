@@ -9,6 +9,11 @@ using PharmaLabVR.Tools;
 using PharmaLabVR.Input;
 using PharmaLabVR.Protocols;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor;
+using UnityEditor.SceneManagement;
+#endif
 
 namespace PharmaLabVR.Session
 {
@@ -1211,6 +1216,44 @@ namespace PharmaLabVR.Session
             return alignment != null;
         }
 
+        // A failed pinned scientific package cannot operate any lab action,
+        // but should never trap a Desktop/XR learner in an unrecoverable scene.
+        // Returning to Boot is deliberately refused while a Native session
+        // exists (even if the UI shows a stale error) or while still loading.
+        public bool CanExitFailedNativeLab =>
+            driver != null && driver.Session == null &&
+            !string.IsNullOrWhiteSpace(driver.StartupError) &&
+            gameObject.scene.name == "Lab" &&
+#if UNITY_EDITOR
+            AssetDatabase.LoadAssetAtPath<SceneAsset>(
+                "Assets/PharmaLabVR/Scenes/Boot.unity") != null;
+#else
+            Application.CanStreamedLevelBeLoaded("Boot");
+#endif
+
+        public bool ExitFailedNativeLab()
+        {
+            if (!CanExitFailedNativeLab) return false;
+            try
+            {
+#if UNITY_EDITOR
+                EditorSceneManager.LoadSceneInPlayMode(
+                    "Assets/PharmaLabVR/Scenes/Boot.unity",
+                    new LoadSceneParameters(LoadSceneMode.Single));
+#else
+                SceneManager.LoadScene("Boot", LoadSceneMode.Single);
+#endif
+                LastError = null;
+                return true;
+            }
+            catch (Exception error)
+            {
+                LastError = "Return to Boot refused: " + error.Message;
+                if (router?.Current != null) router.Show(router.Current.ScreenId);
+                return false;
+            }
+        }
+
         public bool RequestDesktopPause()
         {
             if (driver?.Session == null || driver.CurrentMode != "Desktop" ||
@@ -1241,6 +1284,10 @@ namespace PharmaLabVR.Session
             if (!string.IsNullOrEmpty(driver.StartupError))
             {
                 GUILayout.Label("Lab unavailable: " + driver.StartupError);
+                if (CanExitFailedNativeLab &&
+                    GUILayout.Button("Return to Boot", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExitFailedLab);
+                if (!string.IsNullOrEmpty(LastError)) GUILayout.Label(LastError);
                 GUILayout.EndScrollView();
                 GUILayout.EndArea();
                 return;

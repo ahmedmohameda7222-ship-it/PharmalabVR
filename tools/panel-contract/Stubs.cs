@@ -165,6 +165,7 @@ namespace PharmaLabVR.Session
         // Headless action stub only; production checks that Native has no
         // live session and has reported a concrete scientific startup error.
         public bool FailedLabExitPermitted { get; set; }
+        public bool CanExitFailedNativeLab => FailedLabExitPermitted;
         public int FailedLabExitCalls { get; private set; }
         public bool ExitFailedNativeLab()
         {

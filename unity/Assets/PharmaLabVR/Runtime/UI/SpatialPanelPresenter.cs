@@ -196,6 +196,7 @@ namespace PharmaLabVR.UI
             AddButton("Save session", -250f, PanelAction.Save);
             AddButton("Continue", -194f, PanelAction.Continue);
             AddButton("Settings", -82f, PanelAction.Settings);
+            AddButton("Return to Boot", -250f, PanelAction.ExitFailedLab);
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddButton("Park tool", -306f, PanelAction.ParkTool);
@@ -524,11 +525,15 @@ namespace PharmaLabVR.UI
                 foreach (var control in buttons.Values)
                     control.gameObject.SetActive(false);
                 var failure = !string.IsNullOrWhiteSpace(driver.StartupError);
+                SetButton("Return to Boot", failure &&
+                    panels != null && panels.CanExitFailedNativeLab);
                 title.text = failure ? "Lab unavailable" : "Initializing laboratory";
                 detail.text = failure ?
                     "Scientific package unavailable. No Native research session or material commands are available.\n" +
                     driver.StartupError :
                     "Initializing Native scientific package. Lab controls remain disabled until scientific authority is ready.";
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
                 baselineDetail = detail.text;
                 return;
             }
@@ -750,6 +755,7 @@ namespace PharmaLabVR.UI
                 .rectTransform.sizeDelta =
                     new Vector2(directLabNotebook ? 164f : 368f, 35f);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
+            SetButton("Return to Boot", false);
             SetButton("Settings", state.SupportedActions.Contains("Settings") &&
                 (state.ScreenId != ScreenId.Lab ||
                  ResearchInstrumentMenuLayout.ShowGlobalSettings(instrumentPage)));

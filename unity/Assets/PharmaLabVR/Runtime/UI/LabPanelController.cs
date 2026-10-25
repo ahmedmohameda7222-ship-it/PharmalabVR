@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, ExitFailedLab, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -62,6 +62,8 @@ namespace PharmaLabVR.UI
             sessions?.CanNextInstructorAnnotation == true;
         public bool CanRecordInstructorFeedback =>
             sessions?.CanRecordInstructorFeedback == true;
+        public bool CanExitFailedNativeLab =>
+            sessions?.CanExitFailedNativeLab == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public string ResearchLessonCompact => sessions?.ResearchLessonCompact ??
@@ -88,6 +90,11 @@ namespace PharmaLabVR.UI
 
         public bool Request(PanelAction action, string entityId = null, double? concentrationMolPerL = null)
         {
+            // The ONLY permitted action without a live Native session:
+            // explicit recovery from a reported scientific startup failure.
+            // All ordinary actions retain the normal ScreenRouter+Native gate.
+            if (boot == null && action == PanelAction.ExitFailedLab)
+                return sessions?.ExitFailedNativeLab() == true;
             if (boot != null)
             {
                 if (router?.Current == null || !router.Current.SupportedActions.Contains(action.ToString())) return false;
