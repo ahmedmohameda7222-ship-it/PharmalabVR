@@ -361,6 +361,18 @@ internal static class Program
                     noteView.EventSequence);
                 var unpacked = NotebookService.ReadPortableBranch(packed,
                     "student-branch", noteView.EventSequence);
+                var singleNativeRow = packed.Split('\n').First(row =>
+                    row.Contains("\tNativePH\t", StringComparison.Ordinal));
+                var duplicatedNativeArchive = packed + singleNativeRow + "\n";
+                var duplicateArchiveRefused = false;
+                try
+                {
+                    NotebookService.ReadPortableBranch(duplicatedNativeArchive,
+                        "student-branch", noteView.EventSequence);
+                }
+                catch (System.IO.InvalidDataException) { duplicateArchiveRefused = true; }
+                Check(duplicateArchiveRefused,
+                    "A checksummed portable study allowed two Native pH records for one vessel event.");
                 Check(unpacked.Count == 2 &&
                       string.Equals(origin?.GetValue(unpacked[0])?.ToString(),
                           "User", StringComparison.Ordinal) &&
