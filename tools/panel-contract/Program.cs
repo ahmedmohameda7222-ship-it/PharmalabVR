@@ -129,6 +129,15 @@ internal static class Program
         Check(onboardingRouter.Current.ScreenId == ScreenId.Pause,
             "Normal paused Native authority admitted live Lab navigation.");
 
+        // Unity constructs MonoBehaviour fields before Awake/OnEnable.
+        // A tracked XR view must know the requested mode before an async
+        // scientific package launch can report Pending to the spatial panel.
+        var coreStartupSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        Check(coreStartupSource.Contains(
+                "public string CurrentMode { get; private set; } = BootMenu.RequestedMode",
+                StringComparison.Ordinal),
+            "XR pending Native startup may remain invisible until OnEnable because the display defaults to Desktop.");
         // Native startup is asynchronous on Android. Without its real
         // pinned solver package, neither a transient initializing XR lab nor
         // a late package failure may advertise material/save/measurement.
