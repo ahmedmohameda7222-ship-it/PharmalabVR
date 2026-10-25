@@ -162,6 +162,9 @@ namespace PharmaLabVR.Session
     {
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
+        public bool CanFinishNativeStudy { get; set; }
+        public bool SavePermitted { get; set; } = true;
+        public bool ReviewPermitted { get; set; } = true;
         // Headless action stub only; production checks that Native has no
         // live session and has reported a concrete scientific startup error.
         public bool FailedLabExitPermitted { get; set; }
@@ -426,9 +429,10 @@ namespace PharmaLabVR.Session
             MeteredCalls++;
             return true;
         }
-        public bool Save() { SaveCalls++; return true; }
+        public bool Save() { SaveCalls++; return SavePermitted; }
         public bool OpenReview()
         {
+            if (!ReviewPermitted) return false;
             ReviewOpens++;
             RecordedReview = new RecordedSessionReview();
             return true;

@@ -322,6 +322,46 @@ internal static class Program
               noteRouter.Current.ScreenId == ScreenId.Review,
             "Notebook-to-durable-save-to-recorded-review journey is not routable.");
 
+        // Finish-from-Notebook is a separate, explicitly labeled SAVE action.
+        // No false grades, implicit saving by ordinary Review or permission to
+        // finish without recorded current scientific evidence.
+        noteRouter.Show(ScreenId.Notebook);
+        var saveReviewExists = Enum.TryParse("SaveAndReviewStudy",
+            out PanelAction saveReviewAction);
+        Check(saveReviewExists &&
+              noteRouter.Current.SupportedActions.Contains("SaveAndReviewStudy"),
+            "Research Notebook lacks an explicit end-to-end Save + Review action.");
+        var savesBeforeFinish = noteSession.SaveCalls;
+        var opensBeforeFinish = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteSession.SaveCalls == savesBeforeFinish &&
+              noteSession.ReviewOpens == opensBeforeFinish,
+            "Research experiment falsely completed without an exact Native pH note.");
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.SavePermitted = false;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.ReviewOpens == opensBeforeFinish,
+            "Failed durable save advanced to review or submitted a review anyway.");
+        noteSession.SavePermitted = true;
+        Check(notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Review &&
+              noteSession.SaveCalls == savesBeforeFinish + 2 &&
+              noteSession.ReviewOpens == opensBeforeFinish + 1,
+            "Native pH evidence did not complete deliberate Save → Review in order.");
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteSession.ReviewOpens == opensBeforeFinish + 1,
+            "Recorded Review repeated a saving-only Notebook transition.");
+        var studentSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var spatialSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(studentSource.Contains("CanFinishNativeStudy", StringComparison.Ordinal) &&
+              studentSource.Contains("Save + review", StringComparison.Ordinal) &&
+              spatialSource.Contains("Save + review evidence", StringComparison.Ordinal) &&
+              spatialSource.Contains("PanelAction.SaveAndReviewStudy", StringComparison.Ordinal),
+            "The guarded Save + Review journey is missing from Desktop or XR.");
+
         // P12.03 concept inspection must describe existing Native material
         // and exact supported observation, never a simulated plot/result.
         noteView.Observations[0].Value = 7.13d;
