@@ -359,6 +359,39 @@ internal static class Program
                     System.IO.File.Delete(handwrittenPath + suffix);
         }
 
+        // Six-field V1 records remain readable but cannot become an
+        // authoritative pH merely because their text matches the model.
+        // A seventh checksum-covered record kind is a backward-compatible
+        // extension; the same source header remains in use.
+        var legacyScientificText = NativeMeasurementNote.Build(noteView,
+            "receiver", MeasurementAvailability.Current, "7.13");
+        var legacyBranch = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("student-branch"));
+        var legacyVessel = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("receiver"));
+        var legacyAnnotation = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(legacyScientificText));
+        var legacyUtc = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(
+                DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+        var legacyBody = string.Join("\t", legacyBranch, noteView.EventSequence,
+            legacyVessel, legacyAnnotation, legacyUtc);
+        string oldChecksum;
+        using (var digest = System.Security.Cryptography.SHA256.Create())
+            oldChecksum = BitConverter.ToString(
+                digest.ComputeHash(System.Text.Encoding.UTF8.GetBytes(legacyBody)))
+                .Replace("-", string.Empty);
+        var legacyArchive = "PLV-NOTEBOOK-V1\n" +
+            legacyBody + "\t" + oldChecksum + "\n";
+        var legacyParsed = NotebookService.ReadPortableBranch(
+            legacyArchive, "student-branch", noteView.EventSequence);
+        Check(legacyParsed.Count == 1 &&
+              legacyParsed[0].RecordKind == NotebookRecordKind.Legacy &&
+              !NativeMeasurementNote.WasRecorded(legacyParsed, "student-branch",
+                noteView.EventSequence, "receiver",
+                noteView.Vessels[1].MaterialRevision),
+            "Old six-field journal either stopped loading or gained false scientific origin.");
+
         var noteRouter = new ScreenRouter();
         noteRouter.Configure(new CoreDriver());
         noteRouter.Show(ScreenId.Measure, "receiver");

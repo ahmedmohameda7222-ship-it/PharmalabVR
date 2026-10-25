@@ -578,6 +578,31 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
                 Assert.That(File.Exists(savePath), Is.False);
 
+                // A student may copy the ENTIRE visible Native pH note,
+                // including raw value, model identity and current revision.
+                // Such text remains a User entry and cannot complete an
+                // experiment without the explicit measurement-record action.
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
+                for (var initial = 0; initial < 200 &&
+                     !sessions.CanRecordCurrentNativePH; initial++)
+                    yield return new WaitForSecondsRealtime(0.01f);
+                Assert.That(sessions.CanRecordCurrentNativePH, Is.True);
+                var copiedNativeText = NativeMeasurementNote.Build(driver.CurrentLabView,
+                    "receiver", driver.Measurement.Availability,
+                    driver.Measurement.DisplayValue);
+                Assert.That(panels.Request(PanelAction.Lab), Is.True);
+                Assert.That(panels.Request(PanelAction.Notebook), Is.True);
+                Assert.That(panels.Request(PanelAction.AddNotebookNote, copiedNativeText),
+                    Is.True, sessions.LastError);
+                Assert.That(sessions.ReadNotebookEntries().Any(entry =>
+                    entry.RecordKind == NotebookRecordKind.User &&
+                    entry.Text == copiedNativeText), Is.True);
+                Assert.That(sessions.CanFinishNativeStudy, Is.False,
+                    "A handwritten full raw-model pH copy bypassed Native evidence capture.");
+                Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.False);
+                Assert.That(File.Exists(savePath), Is.False);
+
                 Assert.That(panels.Request(PanelAction.Lab), Is.True);
                 Assert.That(panels.Request(PanelAction.Measure, "receiver"), Is.True);
                 for (var attempts = 0; attempts < 200 &&
@@ -590,6 +615,15 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Notebook));
                 Assert.That(sessions.CanFinishNativeStudy, Is.True,
                     "The actual event-bound Native pH is missing from the strict Notebook.");
+                Assert.That(sessions.ReadNotebookEntries().Count(entry =>
+                    entry.RecordKind == NotebookRecordKind.NativePH &&
+                    entry.Text.StartsWith("Native pH ",
+                        System.StringComparison.Ordinal)), Is.EqualTo(1),
+                    "Exactly one app-recorded Native pH row must exist.");
+                Assert.That(ResearchLearningReview.RenderPage(
+                    sessions.ReadNotebookEntries(), driver.Session.BranchId, 1),
+                    Does.Contain("Student-authored"),
+                    "Handwritten copy misrepresented itself in the learner/instructor preview.");
                 var originalNative = driver.Session.ExportSession();
                 var originalNotes = File.ReadAllBytes(notesPath);
                 Assert.That(sessions.RecordedReview, Is.Null);
@@ -630,8 +664,13 @@ namespace PharmaLabVR.Tests.PlayMode
                     archive.NotebookSnapshot, archive.BranchId, archive.EventSequence);
                 Assert.That(studentAnnotations.Any(entry =>
                     entry.VesselId == "receiver" &&
+                    entry.RecordKind == NotebookRecordKind.NativePH &&
                     entry.Text.StartsWith("Native pH ", System.StringComparison.Ordinal)),
-                    Is.True, "The portable student pack lost the actual Native pH annotation.");
+                    Is.True, "The portable student pack lost the app-recorded Native pH annotation.");
+                Assert.That(studentAnnotations.Any(entry =>
+                    entry.RecordKind == NotebookRecordKind.User &&
+                    entry.Text == copiedNativeText), Is.True,
+                    "Portable transfer relabeled a handwritten pH copy as Native evidence.");
                 Assert.That(File.ReadAllBytes(notesPath), Is.EqualTo(originalNotes),
                     "Review export changed the student's original Notebook.");
                 Assert.That(driver.Session.ExportSession(), Is.EqualTo(originalNative),
