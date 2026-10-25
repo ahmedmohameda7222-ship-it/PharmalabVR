@@ -331,15 +331,18 @@ internal static class Program
                 Check(NativeMeasurementNote.WasRecorded(current, "student-branch",
                         noteView.EventSequence, "receiver",
                         noteView.Vessels[1].MaterialRevision) &&
-                      current.Count(x => x.RecordKind == NotebookRecordKind.NativePH) == 1,
+                      current.Count(x => string.Equals(origin?.GetValue(x)?.ToString(),
+                          "NativePH", StringComparison.Ordinal)) == 1,
                     "Only a deliberate Native-reading append may satisfy pH evidence admission.");
                 var packed = evidence.ExportBranch(handwrittenPath, "student-branch",
                     noteView.EventSequence);
                 var unpacked = NotebookService.ReadPortableBranch(packed,
                     "student-branch", noteView.EventSequence);
                 Check(unpacked.Count == 2 &&
-                      unpacked[0].RecordKind == NotebookRecordKind.User &&
-                      unpacked[1].RecordKind == NotebookRecordKind.NativePH,
+                      string.Equals(origin?.GetValue(unpacked[0])?.ToString(),
+                          "User", StringComparison.Ordinal) &&
+                      string.Equals(origin?.GetValue(unpacked[1])?.ToString(),
+                          "NativePH", StringComparison.Ordinal),
                     "Portable archive lost the checksum-protected provenance of Notebook rows.");
             }
         }
