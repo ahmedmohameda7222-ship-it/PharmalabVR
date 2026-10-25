@@ -422,6 +422,25 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Validate again AFTER SaveService disk I/O: a newly published Native
+        // result or a different session branch cannot inherit the previously
+        // admitted learner note. The saved file may exist, but Review is not
+        // opened until the learner repeats current Native evidence admission.
+        public bool ConfirmFinishNativeStudyAfterSave(
+            string validatedBranch, string validatedEvent)
+        {
+            if (!CanFinishNativeStudy ||
+                driver?.CurrentNativeBranchId != validatedBranch ||
+                driver.CurrentLabView?.EventSequence != validatedEvent ||
+                router?.Current.NativeRevision != validatedEvent)
+            {
+                LastError = "Native study changed during Save. The checkpoint may have been written, " +
+                    "but the current receiver pH must be rechecked before recorded Review.";
+                return false;
+            }
+            return true;
+        }
+
         // A measurement is an offline notebook annotation tied to the exact
         // Native branch, event and material revision. It is never a grade.
         public bool RecordCurrentNativeMeasurement()

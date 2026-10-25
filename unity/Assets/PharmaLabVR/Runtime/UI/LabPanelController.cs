@@ -208,7 +208,16 @@ namespace PharmaLabVR.UI
                     // elsewhere retains its no-implicit-save contract.
                     if (router.Current.ScreenId != ScreenId.Notebook ||
                         driver.IsTimeHeld || driver.IsNativePaused ||
-                        !sessions.CanFinishNativeStudy || !sessions.Save())
+                        !sessions.CanFinishNativeStudy)
+                        return false;
+                    var validatedBranch = driver.CurrentNativeBranchId;
+                    var validatedEvent = driver.CurrentLabView?.EventSequence;
+                    if (!sessions.Save()) return false;
+                    // Native work may publish a newer observation while
+                    // durable disk I/O is underway. Refuse stale Review
+                    // instead of promoting a different event's evidence.
+                    if (!sessions.ConfirmFinishNativeStudyAfterSave(
+                            validatedBranch, validatedEvent))
                         return false;
                     if (!sessions.OpenReview()) return false;
                     router.Show(ScreenId.Review);
