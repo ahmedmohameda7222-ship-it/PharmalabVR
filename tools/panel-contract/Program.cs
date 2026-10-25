@@ -2952,7 +2952,36 @@ internal static class Program
                     "requiresSetupRecovery ? \"ResumeSetup\" : \"Continue\""),
                 "Unity silently closed new Native stock setup after FocusLoss or restart.");
 
-            // Source-linked sequencing guard: a successful Native resume
+            // A direct native pause/continue call while any Native Hold is
+        // active bypasses the documented neutral-rearm + UI synchronization
+        // pathway. The only allowed release is ResumeAfterTimeHold.
+        var nativeCoreText = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        var guardPauseStart = nativeCoreText.IndexOf("public bool PauseSession()", StringComparison.Ordinal);
+        var guardContinueStart = nativeCoreText.IndexOf("public bool ContinueSession()", StringComparison.Ordinal);
+        var guardSelectStart = nativeCoreText.IndexOf("public bool SelectMeasurementVessel(", StringComparison.Ordinal);
+        Check(guardPauseStart > 0 && guardContinueStart > guardPauseStart &&
+              guardSelectStart > guardContinueStart &&
+              nativeCoreText.Substring(guardPauseStart,
+                  guardContinueStart - guardPauseStart).Contains(
+                      "Session == null || IsTimeHeld") &&
+              nativeCoreText.Substring(guardContinueStart,
+                  guardSelectStart - guardContinueStart).Contains(
+                      "Session == null || IsTimeHeld"),
+            "Direct Native Pause/Continue may bypass Hold recovery/rearm.");
+        var heldControllerText = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var heldContinueStart = heldControllerText.IndexOf(
+            "public bool ContinueHeldSession()", StringComparison.Ordinal);
+        var heldContinueEnd = heldControllerText.IndexOf("\n        }",
+            heldContinueStart, StringComparison.Ordinal);
+        Check(heldContinueStart > 0 && heldContinueEnd > heldContinueStart &&
+              heldControllerText.Substring(heldContinueStart,
+                  heldContinueEnd - heldContinueStart).Contains(
+                      "!driver.IsTimeHeld"),
+            "The UI held-only resume endpoint must reject an unheld direct Continue.");
+
+        // Source-linked sequencing guard: a successful Native resume
             // must publish the new paused/hold status before the router's
             // HoldChanged(false) callback runs, never with the old snapshot.
             var recoveryCore = System.IO.File.ReadAllText(

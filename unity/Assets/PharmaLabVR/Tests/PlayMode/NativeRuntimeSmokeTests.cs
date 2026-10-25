@@ -24,6 +24,64 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // A fresh-neutral Native Hold must NEVER be released via the
+        // regular pause/continue verbs, even when recoveryReady=true.
+        // This guards controller call sites as well as the visible panel.
+        [UnityTest]
+        public IEnumerator M3_DirectPauseOrContinueCannotBypassNativeHoldRecovery()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var controller = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(controller.ContinueHeldSession(), Is.False,
+                    "A non-held initial stock setup must never silently Continue.");
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.BeginInputHold("FocusLoss"), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Hold));
+                for (var attempt = 0; !driver.NativeRecoveryReady &&
+                     attempt < 100; attempt++)
+                    yield return new WaitForSecondsRealtime(0.02f);
+                Assert.That(driver.NativeRecoveryReady, Is.True,
+                    driver.Session.ReadSnapshot());
+                var original = driver.Session.ExportSession();
+                Assert.That(driver.ContinueSession(), Is.False,
+                    "Ordinary Continue would bypass fresh-neutral baseline resets.");
+                Assert.That(driver.PauseSession(), Is.False,
+                    "Native Pause while held must not append an unrelated receipt.");
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(original),
+                    "Rejected direct commands must not mutate Native receipts.");
+                Assert.That(driver.IsTimeHeld, Is.True);
+                Assert.That(controller.ContinueHeldSession(), Is.True,
+                    controller.LastError);
+                Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(driver.IsNativePaused, Is.True);
+                Assert.That(driver.SourceNeedsPreparation, Is.True);
+                var recovered = driver.Session.ExportSession();
+                Assert.That(controller.ContinueHeldSession(), Is.False);
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(recovered),
+                    "Second UI recovery call without Hold created a Native event.");
+            }
+            finally { SceneManager.UnloadSceneAsync(scene); }
+        }
+
         // Focus/hand tracking loss or restart during first stock choice
         // must not irreversibly close setup without the learner selecting
         // Native research chemistry. UI choice stays on Lab, Native paused.
