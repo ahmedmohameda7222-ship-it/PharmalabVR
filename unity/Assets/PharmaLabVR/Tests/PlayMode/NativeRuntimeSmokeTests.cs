@@ -2553,6 +2553,82 @@ namespace PharmaLabVR.Tests.PlayMode
             yield return null;
         }
 
+        // Real Unity scene admission test (authored; Unity NOT_RUN in CI).
+        // Failing pinned science must remove every scientific route but keep
+        // a visible explicit escape back to Boot in both presentation layers.
+        [UnityTest]
+        public IEnumerator M1_FailedPinnedNativeLabOffersOnlyGuardedBootRecovery()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                var spatial = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SpatialPanelPresenter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                Assert.That(sessions.CanExitFailedNativeLab, Is.False,
+                    "An operating Native lab must never offer its failure-only Boot escape.");
+                Assert.That(actions.Request(PanelAction.ExitFailedLab), Is.False,
+                    "An operating session was discarded by a recovery-only panel action.");
+
+                driver.enabled = false;
+                yield return null; // Dispose the first working Native authority.
+                Assert.That(driver.Session, Is.Null);
+                driver.ConfigurePackagePathResolver(() =>
+                    throw new ScientificPackageMismatchException(
+                        "Pinned research database is missing."));
+                LogAssert.Expect(LogType.Error,
+                    "Native scientific core unavailable: Pinned research database is missing.");
+                driver.enabled = true; // Re-enter through actual Unity OnEnable.
+                yield return null;
+                Assert.That(driver.Session, Is.Null);
+                Assert.That(driver.StartupError,
+                    Does.Contain("Pinned research database is missing."));
+                Assert.That(router.Current.SupportedActions, Is.Empty,
+                    "An unavailable Native session still exposed material/UI actions.");
+                Assert.That(sessions.CanExitFailedNativeLab, Is.True,
+                    "Valid missing-package failure cannot return to the Boot scene.");
+                Assert.That(actions.Request(PanelAction.Save), Is.False);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.False);
+                var field = typeof(SpatialPanelPresenter).GetField("buttons",
+                    System.Reflection.BindingFlags.NonPublic |
+                    System.Reflection.BindingFlags.Instance);
+                Assert.That(field, Is.Not.Null);
+                var buttons = (System.Collections.Generic.Dictionary<
+                    string, UnityEngine.UI.Button>)field.GetValue(spatial);
+                Assert.That(buttons.ContainsKey("Return to Boot"), Is.True);
+                Assert.That(buttons["Return to Boot"].gameObject.activeSelf, Is.True,
+                    "The XR failure page lacks its isolated recovery control.");
+                Assert.That(buttons.Values.Count(button =>
+                    button.gameObject.activeSelf), Is.EqualTo(1),
+                    "An XR scientific command remained actionable behind the failure page.");
+                // Do not invoke the button here: LoadScene(Single) would
+                // replace the active Unity test-runner scene. Real player click
+                // and tracked-ray acceptance remain explicit local checks.
+            }
+            finally
+            {
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         [UnityTest]
         public IEnumerator P06_01_MissingScientificPackageDisablesLiveLabSession()
         {
