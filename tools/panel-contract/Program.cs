@@ -1456,6 +1456,15 @@ internal static class Program
         Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
             "Invalid Native quantity must never display as a real receiver measurement.");
 
+        // Unity's .NET Standard-compatible player assemblies cannot rely
+        // on the modern System.Double.IsFinite helper available in net8.
+        // Source-linked headless tests otherwise miss this runtime API
+        // compatibility failure despite passing the C# syntax parser.
+        var pHHistoryUnitySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/ResearchNotebookPHHistory.cs");
+        Check(!pHHistoryUnitySource.Contains("double.IsFinite(", StringComparison.Ordinal),
+            "Unity player pH history uses a .NET API outside the supported compatibility profile.");
+
         // M2: learner-facing material delta must be calculated from two
         // independent real Native snapshots, not the nominal requested pour.
         // Reflection lets this RED exercise fail as a test rather than as a
