@@ -319,6 +319,10 @@ internal static class Program
                     "student-branch", 0).Contains("Native-recorded entry",
                         StringComparison.Ordinal),
                 "Imported teaching preview promoted copied student text to a Native reading.");
+            Check(ResearchNotebookPHHistory.Summarize(stored,
+                    "student-branch", "receiver", 4).Contains(
+                    "No recorded Native pH", StringComparison.Ordinal),
+                "A copied student pH note contaminated the Native-only event history.");
             var typedRecord = stored.Single();
             var origin = typedRecord.GetType().GetProperty("RecordKind");
             Check(origin != null && !string.Equals(

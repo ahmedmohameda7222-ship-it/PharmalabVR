@@ -620,6 +620,18 @@ namespace PharmaLabVR.Tests.PlayMode
                     entry.Text.StartsWith("Native pH ",
                         System.StringComparison.Ordinal)), Is.EqualTo(1),
                     "Exactly one app-recorded Native pH row must exist.");
+                // Independent physical gestures may race through the page
+                // preflight. The journal's own file lease must refuse an
+                // event/vessel duplicate even when invoked from a new service.
+                var beforeDuplicate = File.ReadAllBytes(notesPath);
+                Assert.Throws<InvalidDataException>(() =>
+                    new NotebookService().AppendNativeMeasurement(notesPath,
+                        driver.Session.BranchId, driver.CurrentLabView.EventSequence,
+                        "receiver", copiedNativeText));
+                Assert.That(File.ReadAllBytes(notesPath), Is.EqualTo(beforeDuplicate),
+                    "A rejected duplicate altered the committed scientific journal.");
+                Assert.That(sessions.CanFinishNativeStudy, Is.True,
+                    "Refusing a duplicate must preserve the one valid NativePH record.");
                 Assert.That(ResearchLearningReview.RenderPage(
                     sessions.ReadNotebookEntries(), driver.Session.BranchId, 1),
                     Does.Contain("Student-authored"),

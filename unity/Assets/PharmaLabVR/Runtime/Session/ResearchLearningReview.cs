@@ -226,7 +226,7 @@ namespace PharmaLabVR.Session
         }
 
         // A checksum confirms journal bytes, not a human or device identity.
-        // NativePH means the app's explicit current-Navtive-measurement path
+        // NativePH means the app's explicit current-Native-measurement path
         // wrote this record; old six-field notes and handwritten text cannot
         // claim that origin merely by imitating the observation's wording.
         public static string RecordOriginLabel(NotebookRecordKind kind) =>
