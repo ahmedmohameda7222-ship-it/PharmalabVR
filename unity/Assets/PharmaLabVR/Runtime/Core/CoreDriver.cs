@@ -211,7 +211,10 @@ namespace PharmaLabVR.Core
 
         public bool ResumeAfterTimeHold()
         {
-            if (Session == null) return false;
+            // This is exclusively a Native Hold recovery operation. Without
+            // a Hold, submitting neutral samples followed by Continue could
+            // close an unprepared Native source or insert a command receipt.
+            if (Session == null || !IsTimeHeld) return false;
             var nowNs = NowNs();
             Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
             Session.Step(0.0, nowNs);

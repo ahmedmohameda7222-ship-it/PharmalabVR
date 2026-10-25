@@ -24,6 +24,13 @@ namespace PharmaLabVR.Tests.PlayMode
 {
     public sealed class NativeRuntimeSmokeTests
     {
+        // Older physical-transport tests deliberately start from an initial
+        // Native Pause. That is ordinary Continue, not time-hold recovery.
+        // Call the correct authority based on the CURRENT native state.
+        private static bool ResumeHeldOrContinueLab(CoreDriver driver) =>
+            driver.IsTimeHeld ? driver.ResumeAfterTimeHold() :
+            driver.ContinueSession();
+
         // A fresh-neutral Native Hold must NEVER be released via the
         // regular pause/continue verbs, even when recoveryReady=true.
         // This guards controller call sites as well as the visible panel.
@@ -2729,7 +2736,7 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(unrelatedCurrent, Is.True, driver.Session.ReadSnapshot());
             tool.position = receiver.position + Vector3.up * 0.10f;
             Assert.That(target.Estimate(tool).Length, Is.EqualTo(1), "The scene outlet must aim into its real capture aperture.");
-            Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
+            Assert.That(ResumeHeldOrContinueLab(driver), Is.True, driver.Session.ReadSnapshot());
             adapter.Actuator = 1f;
             for (var attempt = 0; attempt < 100 && liquid.CommittedVolumeM3 <= 0d; attempt++)
             {
@@ -3016,7 +3023,7 @@ namespace PharmaLabVR.Tests.PlayMode
             for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                 yield return new WaitForSecondsRealtime(0.01f);
             Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
-            Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
+            Assert.That(ResumeHeldOrContinueLab(driver), Is.True, driver.Session.ReadSnapshot());
             var before = JsonUtility.FromJson<StockState>(driver.Session.ReadSnapshot());
             Assert.That(driver.Session.SubmitOrdered("TransferFixed",
                 "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00001},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
@@ -3077,7 +3084,7 @@ namespace PharmaLabVR.Tests.PlayMode
                 for (var attempt = 0; attempt < 200 && driver.Measurement.Availability != MeasurementAvailability.Current; attempt++)
                     yield return new WaitForSecondsRealtime(0.01f);
                 Assert.That(driver.Measurement.Availability, Is.EqualTo(MeasurementAvailability.Current));
-                Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
+                Assert.That(ResumeHeldOrContinueLab(driver), Is.True, driver.Session.ReadSnapshot());
                 Assert.That(driver.Session.SubmitOrdered("TransferFixed",
                     "{\"sourceInventoryId\":\"source\",\"sourceRegion\":\"Homogeneous\",\"selection\":\"HomogeneousAqueousLiquid\",\"quantity\":{\"basis\":\"LiquidVolumeM3\",\"value\":0.00000005},\"captureFractions\":[{\"destinationInventoryId\":\"receiver\",\"fraction\":1.0}],\"overflowSinkId\":\"spill\"}",
                     "{\"source\":\"1\",\"receiver\":\"0\"}"), Does.Contain("\"accepted\":true"),
@@ -3169,12 +3176,12 @@ namespace PharmaLabVR.Tests.PlayMode
             Assert.That(injectedGamepad.rightTrigger.ReadValue(), Is.GreaterThan(0.5f));
             Assert.That(rightTracking.ReadValue<float>(), Is.GreaterThan(0.5f));
             Assert.That(rightAction.isTrackedAction.action.controls.Count, Is.GreaterThan(0));
-            Assert.That(driver.ResumeAfterTimeHold(), Is.True);
+            Assert.That(ResumeHeldOrContinueLab(driver), Is.True);
             yield return null;
             left.StartManualInteraction((IXRSelectInteractable)grab);
             yield return null;
             Assert.That(grab.isSelected, Is.True);
-            Assert.That(driver.ResumeAfterTimeHold(), Is.True, driver.Session.ReadSnapshot());
+            Assert.That(ResumeHeldOrContinueLab(driver), Is.True, driver.Session.ReadSnapshot());
             InputSystem.QueueStateEvent(injectedGamepad, new GamepadState { leftTrigger = 0, rightTrigger = 255 });
             InputSystem.Update();
             yield return null;
