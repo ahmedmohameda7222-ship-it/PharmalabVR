@@ -2054,6 +2054,20 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(sessions.StudentFormativeFeedbackSummary,
                     Does.Contain("Compare this observation"),
                     "Later event-bound instructor feedback is missing from the student read-only preview.");
+                Assert.That(sessions.StudentFormativeFeedbackSummary,
+                    Does.Contain("not graded").IgnoreCase,
+                    "Local instructor responses must never claim a certified grade or identity.");
+                var verifiedFeedbackBytes = File.ReadAllBytes(feedback);
+                File.WriteAllText(feedback, "CORRUPTED LOCAL TEACHER SIDECAR");
+                Assert.That(sessions.StudentFormativeFeedbackSummary,
+                    Does.Contain("could not be verified"),
+                    "Corrupt local formative feedback was shown as authentic student feedback.");
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore));
+                Assert.That(File.ReadAllBytes(notes), Is.EqualTo(notesBefore));
+                File.WriteAllBytes(feedback, verifiedFeedbackBytes);
+                Assert.That(sessions.StudentFormativeFeedbackSummary,
+                    Does.Contain("Review the instrument method"),
+                    "Restored verified sidecar cannot be read after corrupt-data refusal.");
                 Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore));
             }
             finally
