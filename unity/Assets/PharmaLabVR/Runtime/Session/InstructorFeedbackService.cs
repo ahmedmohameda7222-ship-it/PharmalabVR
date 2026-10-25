@@ -78,13 +78,10 @@ namespace PharmaLabVR.Session
                 " · event " + studentNote.EventSequence +
                 " · SHA256 " + NoteDigest(studentNote) +
                 "\n" + label;
-            // Corruption of an instructor ledger must never trigger silent
-            // backup recovery or overwrite the student's Notebook.
-            if (journal.ReadCurrent(path, branchId, savedEventSequence)
-                .Any(entry => entry.Text == annotation))
-                throw new InvalidOperationException(
-                    "This formative response is already stored for the selected note.");
-            return journal.Append(path, branchId, savedEventSequence,
+            // One lock-held read/duplicate-check/atomic-write transaction.
+            // A separate ReadCurrent + Append raced concurrent XR presses.
+            // The feedback ledger remains separate from student Notebook.
+            return journal.AppendOnce(path, branchId, savedEventSequence,
                 studentNote.VesselId, annotation);
         }
 

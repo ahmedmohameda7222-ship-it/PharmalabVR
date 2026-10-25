@@ -53,6 +53,15 @@ namespace PharmaLabVR.Session
             AppendTyped(path, branchId, eventSequence, vesselId, text,
                 NotebookRecordKind.User);
 
+        // Instructor sidecar responses need exactly-once admission even
+        // when two controllers request the same annotation concurrently.
+        // Check under the same durable lease as journal publication.
+        // This does NOT attest an instructor identity or touch Native science.
+        public NotebookEntry AppendOnce(string path, string branchId,
+            string eventSequence, string vesselId, string text) =>
+            AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.User, rejectIdentical: true);
+
         // Only the Native measurement UI flow may use this recorder,
         // after NativeMeasurementNote.Build has checked the raw/current
         // scientific snapshot. No student text-area action calls it.
@@ -74,7 +83,7 @@ namespace PharmaLabVR.Session
 
         private NotebookEntry AppendTyped(string path, string branchId,
             string eventSequence, string vesselId, string text,
-            NotebookRecordKind recordKind)
+            NotebookRecordKind recordKind, bool rejectIdentical = false)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
@@ -94,7 +103,7 @@ namespace PharmaLabVR.Session
                 using (var lease = new FileStream(fullPath + ".lock",
                     FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
                     return AppendUnderLease(fullPath, branchId, eventSequence, vesselId,
-                        text, recordKind);
+                        text, recordKind, rejectIdentical);
             }
             catch (IOException error)
             {
@@ -104,13 +113,22 @@ namespace PharmaLabVR.Session
         }
 
         private static NotebookEntry AppendUnderLease(string fullPath, string branchId,
-            string eventSequence, string vesselId, string text, NotebookRecordKind recordKind)
+            string eventSequence, string vesselId, string text, NotebookRecordKind recordKind,
+            bool rejectIdentical)
         {
             if (!File.Exists(fullPath) && File.Exists(fullPath + ".bak"))
                 throw new InvalidDataException("Recover the confirmed notebook backup before editing.");
             // Only the primary is writable. Damaged current bytes must never
             // silently be replaced by a backup and a fresh annotation.
             var entries = ReadStrict(fullPath);
+            if (rejectIdentical &&
+                entries.Exists(item => item.BranchId == branchId &&
+                    item.EventSequence == eventSequence &&
+                    item.VesselId == vesselId &&
+                    item.RecordKind == recordKind &&
+                    string.Equals(item.Text, text, StringComparison.Ordinal)))
+                throw new InvalidDataException(
+                    "This exact local formative response was already committed.");
             // Must be checked INSIDE the held file lease. Desktop/XR may
             // both pass an earlier UI preflight before either commits.
             // The second writer must never create a duplicate app-recorded
