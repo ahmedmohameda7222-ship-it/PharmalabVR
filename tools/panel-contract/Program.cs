@@ -1299,6 +1299,24 @@ internal static class Program
         Check(labDeliverySource.Contains("ObservedNativeTransfer", StringComparison.Ordinal),
             "The lab transfer receipt was never connected to real post-command Native inventory.");
 
+        // M2: a new Native physical transfer must replace an earlier
+        // vessel-inspection status. Otherwise XR's inspection-first message
+        // wins forever and conceals the real accepted material delta.
+        var desktopPhysicalFeedbackSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var xrPhysicalFeedbackSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(desktopPhysicalFeedbackSource.Contains(
+                "LastPhysicalInspectionFeedback = null;\n            LastPhysicalDeliveryFeedback = accepted ?",
+                StringComparison.Ordinal) &&
+              xrPhysicalFeedbackSource.Contains(
+                "LastPhysicalInspectionFeedback = null;\n            LastPhysicalDeliveryFeedback = accepted ?",
+                StringComparison.Ordinal),
+            "A newer Native transfer did not supersede stale Desktop/XR inspection feedback.");
+        Check(xrPhysicalFeedbackSource.Contains(
+                "LastPhysicalDeliveryFeedback = null;\n                LastPhysicalInspectionFeedback = accepted ?",
+                StringComparison.Ordinal),
+            "XR's newer receiver/stock inspection did not supersede stale transfer feedback.");
         // Priming a burette is a bounded Native TransferFixed between real vessels.
         var burettePrime = ResearchInstrumentPayloads.RefillFromPreparedStock(
             "source", "burette", "spill", 5e-8);
