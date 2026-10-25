@@ -157,7 +157,11 @@ namespace PharmaLabVR.Input
 }
 namespace PharmaLabVR.Session
 {
-    public sealed class RecordedSessionReview { }
+    public sealed class RecordedSessionReview
+    {
+        public string BranchId { get; set; }
+        public string EventSequence { get; set; }
+    }
     public sealed class SessionController
     {
         public RecordedSessionReview RecordedReview { get; private set; }
@@ -170,6 +174,7 @@ namespace PharmaLabVR.Session
             CanFinishNativeStudy && !string.IsNullOrEmpty(branch) &&
             !string.IsNullOrEmpty(nativeEvent);
         public bool ReviewPermitted { get; set; } = true;
+        public bool ReviewEventChangedOnOpen { get; set; }
         // Headless action stub only; production checks that Native has no
         // live session and has reported a concrete scientific startup error.
         public bool FailedLabExitPermitted { get; set; }
@@ -444,7 +449,10 @@ namespace PharmaLabVR.Session
         {
             if (!ReviewPermitted) return false;
             ReviewOpens++;
-            RecordedReview = new RecordedSessionReview();
+            RecordedReview = new RecordedSessionReview {
+                BranchId = "branch-a",
+                EventSequence = ReviewEventChangedOnOpen ? "8" : "7"
+            };
             return true;
         }
         public void CloseReview() => RecordedReview = null;
