@@ -333,6 +333,7 @@ namespace PharmaLabVR.Session
         private static List<NotebookEntry> ParseStrict(string content)
         {
             var result = new List<NotebookEntry>();
+            var nativeEventKeys = new HashSet<string>(StringComparer.Ordinal);
             if (string.IsNullOrEmpty(content) ||
                 StrictUtf8.GetByteCount(content) > MaximumFileBytes)
                 throw new InvalidDataException("Notebook snapshot is empty or oversized.");
@@ -366,6 +367,10 @@ namespace PharmaLabVR.Session
                     ValidateRevision(parts[1]);
                     ValidateId(vessel, nameof(vessel));
                     ValidateText(note);
+                    if (recordKind == NotebookRecordKind.NativePH &&
+                        !nativeEventKeys.Add(branch + "\t" + parts[1] + "\t" + vessel))
+                        throw new InvalidDataException(
+                            "Duplicate app-recorded Native pH event in a checksummed Notebook.");
                     if (!DateTimeOffset.TryParseExact(timestamp, "O", CultureInfo.InvariantCulture,
                             DateTimeStyles.RoundtripKind, out var recorded) ||
                         recorded.Offset != TimeSpan.Zero)
