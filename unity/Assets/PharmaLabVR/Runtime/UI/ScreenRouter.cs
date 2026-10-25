@@ -358,6 +358,7 @@ namespace PharmaLabVR.UI
             driver.LabViewChanged += OnLabViewChanged;
             driver.HoldChanged += OnHoldChanged;
             driver.NativeSessionRestored += OnNativeSessionRestored;
+            driver.StartupFailed += OnNativeStartupFailed;
             attached = true;
         }
 
@@ -367,7 +368,15 @@ namespace PharmaLabVR.UI
             driver.LabViewChanged -= OnLabViewChanged;
             driver.HoldChanged -= OnHoldChanged;
             driver.NativeSessionRestored -= OnNativeSessionRestored;
+            driver.StartupFailed -= OnNativeStartupFailed;
             attached = false;
+        }
+
+        private void OnNativeStartupFailed(string _)
+        {
+            // Neither a pending asynchronous solver nor a failed pinned
+            // scientific package grants operating actions.
+            Refresh();
         }
 
         private void OnLabViewChanged(LabViewModel _)
@@ -525,6 +534,11 @@ namespace PharmaLabVR.UI
                 ScreenId.Settings => new[] { "Back", "Save", "SelectWorkspace" },
                 _ => Array.Empty<string>()
             };
+            // A scene is not an operating laboratory until the pinned Native
+            // scientific CoreSession is actually open. On Android this also
+            // suppresses actions during asynchronous model initialization.
+            if (driver != null && driver.Session == null)
+                actions = Array.Empty<string>();
             Current = new PanelState(screen, driver?.CurrentMode ?? pendingMode, SetupPreferencesSelection.Current, workspace,
                 selectedEntityId, nativeRevision, observation?.ModelId ?? string.Empty,
                 observation?.Support ?? "Unknown", observation?.Freshness ?? "Absent",

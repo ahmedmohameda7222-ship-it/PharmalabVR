@@ -516,6 +516,22 @@ namespace PharmaLabVR.UI
             if (panelRoot == null || driver == null) return;
             panelRoot.SetActive(driver.CurrentMode == "VR");
             if (panelRoot.activeSelf) UpdatePlacement();
+            if (driver.Session == null)
+            {
+                // Never show working chemistry controls while the pinned
+                // scientific package is pending/missing. XR needs visible
+                // failure text, since Desktop IMGUI is suppressed in VR.
+                foreach (var control in buttons.Values)
+                    control.gameObject.SetActive(false);
+                var failure = !string.IsNullOrWhiteSpace(driver.StartupError);
+                title.text = failure ? "Lab unavailable" : "Initializing laboratory";
+                detail.text = failure ?
+                    "Scientific package unavailable. No Native research session or material commands are available.\n" +
+                    driver.StartupError :
+                    "Initializing Native scientific package. Lab controls remain disabled until scientific authority is ready.";
+                baselineDetail = detail.text;
+                return;
+            }
             title.fontSize = Mathf.RoundToInt(26f * state.Setup.TextScale);
             detail.fontSize = Mathf.RoundToInt(20f * state.Setup.TextScale);
             background.color = state.Setup.HighContrast ? Color.white :

@@ -19,6 +19,9 @@ namespace PharmaLabVR.Core
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
         public enum ScienceBudgetProfile { Precision, Bulk }
         public event Action<string> SnapshotChanged;
+        // Asynchronous Android package preparation may fail after the
+        // initial XR panel has bound. Notify the view to fail closed.
+        public event Action<string> StartupFailed;
         public event Action<LabViewModel> LabViewChanged;
         public event Action<string> NativeEventReceived;
         public event Action NativeSessionRestored;
@@ -63,6 +66,12 @@ namespace PharmaLabVR.Core
 
         private void OnEnable()
         {
+            // Requested interaction mode is presentation-only until Native
+            // publishes an authoritative snapshot. Even a failed XR load
+            // must remain visible inside the tracked headset, not an invisible
+            // Desktop-default error panel.
+            CurrentMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ?
+                "VR" : "Desktop";
             if (Application.platform == RuntimePlatform.Android)
             {
                 StartCoroutine(ScientificPackage.PrepareAndroid(InitializeCore, FailStartup));
@@ -123,6 +132,7 @@ namespace PharmaLabVR.Core
             CurrentLabView = null;
             ScientificDatabasePath = null;
             enabled = false;
+            StartupFailed?.Invoke(StartupError);
         }
 
         private void OnApplicationFocus(bool focused)
