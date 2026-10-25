@@ -811,6 +811,44 @@ internal static class Program
         var learningPath = System.IO.Path.Combine(learningDirectory, "study.plv-notes");
         try
         {
+            // M4 concurrent instructor clicks may target the identical
+            // exported study and note. Duplicate decisions MUST happen under
+            // the same durable journal lease, never via a racy separate Read.
+            var appendOnce = typeof(NotebookService).GetMethod(
+                "AppendOnce", System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Instance);
+            Check(appendOnce != null,
+                "Offline instructor feedback has no atomic duplicate-check-and-append.");
+            if (appendOnce != null)
+            {
+                var feedbackProbe = System.IO.Path.Combine(
+                    learningDirectory, "formative-atomic.plv-notes");
+                object[] args = { feedbackProbe, "student-branch", "7",
+                    "receiver", "Requested method uncertainty." };
+                appendOnce.Invoke(new NotebookService(), args);
+                var original = System.IO.File.ReadAllBytes(feedbackProbe);
+                var duplicateRefused = false;
+                try { appendOnce.Invoke(new NotebookService(), args); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is System.IO.InvalidDataException)
+                { duplicateRefused = true; }
+                Check(duplicateRefused &&
+                    System.IO.File.ReadAllBytes(feedbackProbe).SequenceEqual(original) &&
+                    new NotebookService().ReadCurrent(
+                        feedbackProbe, "student-branch", "7").Count == 1,
+                    "Two instructor requests committed the same feedback or rewrote an accepted response.");
+                appendOnce.Invoke(new NotebookService(),
+                    new object[] { feedbackProbe, "student-branch", "7",
+                        "receiver", "A different deliberate response." });
+                Check(new NotebookService().ReadCurrent(
+                        feedbackProbe, "student-branch", "7").Count == 2,
+                    "The atomic ledger incorrectly blocked distinct teacher responses.");
+            }
+            var feedbackServiceSource = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/InstructorFeedbackService.cs");
+            Check(feedbackServiceSource.Contains("journal.AppendOnce(", StringComparison.Ordinal),
+                "Instructor feedback still preflights duplicate checks outside the journal lease.");
+
             researchNotes.Append(learningPath, "student-branch", "7", "receiver",
                 "Student hypothesis: receiver pH below 7.");
             researchNotes.Append(learningPath, "student-branch", "11", "receiver",
