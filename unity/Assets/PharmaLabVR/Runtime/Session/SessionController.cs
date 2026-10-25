@@ -32,8 +32,75 @@ namespace PharmaLabVR.Session
         public string LastComparisonCsvExportPath { get; private set; }
         public InstructorPortableReview LastInstructorPortableReview { get; private set; }
         public string InstructorPortableSummary =>
-            LastInstructorPortableReview?.Summary ?? "No offline instructor preview selected.";
+            LastInstructorPortableReview == null ?
+                "No offline instructor preview selected." :
+                LastInstructorPortableReview.Summary + "\n" + InstructorFeedbackSummary;
         private int instructorAnnotationIndex;
+        // Formative commentary can reference only a validated, selected
+        // recorded student note; it never executes a Native command.
+        public bool CanRecordInstructorFeedback =>
+            router?.Current?.ScreenId == ScreenId.Review &&
+            (router.Current.Workspace == "Instructor" ||
+             router.Current.Workspace == "Expert") &&
+            LastInstructorPortableReview != null &&
+            LastInstructorPortableReview.StudentAnnotations.Count > 0 &&
+            instructorAnnotationIndex >= 0 &&
+            instructorAnnotationIndex < LastInstructorPortableReview.StudentAnnotations.Count;
+
+        public string InstructorFeedbackSummary
+        {
+            get
+            {
+                if (LastInstructorPortableReview == null)
+                    return "Preview a local student study to see formative feedback.";
+                try
+                {
+                    var preview = LastInstructorPortableReview;
+                    return InstructorFeedbackService.Summary(notebook,
+                        Path.Combine(Application.persistentDataPath, "sessions"),
+                        preview.PackageFingerprint, preview.NativeBranchId,
+                        preview.NativeEventSequence);
+                }
+                catch (Exception error) when (error is IOException ||
+                                              error is UnauthorizedAccessException ||
+                                              error is InvalidDataException ||
+                                              error is ArgumentException ||
+                                              error is InvalidOperationException)
+                {
+                    return "Local instructor feedback unavailable: checksummed sidecar could not be read.";
+                }
+            }
+        }
+
+        public bool RecordInstructorFeedback(string choice)
+        {
+            try
+            {
+                if (!CanRecordInstructorFeedback)
+                    throw new InvalidOperationException(
+                        "Instructor/Expert recorded Review and a selected student note are required.");
+                var preview = LastInstructorPortableReview;
+                InstructorFeedbackService.Record(notebook,
+                    Path.Combine(Application.persistentDataPath, "sessions"),
+                    preview.PackageFingerprint, preview.NativeBranchId,
+                    preview.NativeEventSequence,
+                    preview.StudentAnnotations[instructorAnnotationIndex],
+                    instructorAnnotationIndex, choice);
+                LastError = null;
+                router.Show(ScreenId.Review);
+                return true;
+            }
+            catch (Exception error) when (error is IOException ||
+                                          error is UnauthorizedAccessException ||
+                                          error is InvalidDataException ||
+                                          error is ArgumentException ||
+                                          error is InvalidOperationException)
+            {
+                LastError = "Instructor formative feedback refused: " + error.Message;
+                return false;
+            }
+        }
+
         public bool CanNextInstructorAnnotation =>
             router?.Current?.ScreenId == ScreenId.Review &&
             LastInstructorPortableReview?.StudentAnnotations.Count > 1;
@@ -54,7 +121,7 @@ namespace PharmaLabVR.Session
                     string.Empty : "\n" + ResearchLearningReview.RenderPage(
                         LastInstructorPortableReview.StudentAnnotations,
                         LastInstructorPortableReview.NativeBranchId,
-                        instructorAnnotationIndex));
+                        instructorAnnotationIndex)) + "\n" + InstructorFeedbackSummary;
         private string selectedArchiveFileName;
         public string SelectedArchiveFileName => selectedArchiveFileName;
         public string LastPortableImportSummary { get; private set; }
@@ -1337,6 +1404,17 @@ namespace PharmaLabVR.Session
                     if (CanNextInstructorAnnotation &&
                         GUILayout.Button("Next imported student note", GUILayout.Height(38f)))
                         panels?.Request(PanelAction.NextInstructorAnnotation);
+                    if (CanRecordInstructorFeedback)
+                    {
+                        GUILayout.Label("Local formative response for this exact student note; never a grade.");
+                        foreach (var option in new[] {
+                            ("Request another Native measurement", "request-evidence"),
+                            ("Review method and uncertainty", "check-method"),
+                            ("Compare with learner hypothesis", "compare-hypothesis")
+                        })
+                            if (GUILayout.Button(option.Item1, GUILayout.Height(38f)))
+                                panels?.Request(PanelAction.RecordInstructorFeedback, option.Item2);
+                    }
                 }
                 if (GUILayout.Button("Export Native results and local study notes (separate CSVs)", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.ExportCsv);

@@ -1014,6 +1014,13 @@ internal static class Program
         var teachingSessions = new SessionController();
         var teachingPanels = new LabPanelController();
         teachingPanels.Configure(teachingRouter, new CoreDriver(), teachingSessions);
+        Check(teachingRouter.Current.SupportedActions.Contains("RecordInstructorFeedback") &&
+              teachingPanels.Request(PanelAction.RecordInstructorFeedback, "check-method") &&
+              teachingSessions.InstructorFeedbackCalls == 1,
+            "Recorded Review teaching feedback never reached the session action.");
+        Check(!teachingPanels.Request(PanelAction.RecordInstructorFeedback, "certify-grade") &&
+              teachingSessions.InstructorFeedbackCalls == 1,
+            "An unsupported teaching grade was admitted as formative feedback.");
         Check(teachingRouter.Current.SupportedActions.Contains("PreviewPortableArchive") &&
               teachingRouter.Current.SupportedActions.Contains("ChoosePortableArchive") &&
               teachingRouter.Current.SupportedActions.Contains("NextInstructorAnnotation") &&

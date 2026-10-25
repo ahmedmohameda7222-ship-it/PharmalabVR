@@ -32,6 +32,58 @@ internal static class Program
         var notes = new NotebookService();
         try
         {
+            // A teacher response references exact student evidence yet never
+            // changes the student journal or an unrelated saved study.
+            var studentPath = Path.Combine(root, "student.plv-notes");
+            var original = notes.Append(studentPath, "research-branch", "4",
+                "receiver", "Student compares recorded Native pH to hypothesis.");
+            var originalBytes = File.ReadAllBytes(studentPath);
+            var fingerprint = InstructorFeedbackService.Fingerprint(
+                "NATIVE-A", "STUDENT-JOURNAL-A");
+            var different = InstructorFeedbackService.Fingerprint(
+                "NATIVE-B", "STUDENT-JOURNAL-A");
+            Require(fingerprint.Length == 64 && fingerprint != different,
+                "A changed scientific snapshot inherited another study's feedback identity.");
+            var formative = InstructorFeedbackService.Record(notes, root, fingerprint,
+                "research-branch", "5", original, 0, "check-method");
+            var feedbackPath = InstructorFeedbackService.FeedbackPath(root, fingerprint);
+            Require(formative.Text.Contains("NOT GRADED OR ATTESTED") &&
+                    formative.Text.Contains("Student note #1") &&
+                    notes.ReadCurrent(feedbackPath, "research-branch", "5").Count == 1 &&
+                    File.ReadAllBytes(studentPath).SequenceEqual(originalBytes),
+                "Teacher feedback changed student evidence or lost its event anchor.");
+            Require(InstructorFeedbackService.Summary(notes, root, fingerprint,
+                    "research-branch", "5").Contains("1 formative response") &&
+                    InstructorFeedbackService.Summary(notes, root, different,
+                        "research-branch", "5").Contains("none"),
+                "Feedback crossed distinct Native study content snapshots.");
+            var duplicateRejected = false;
+            try { InstructorFeedbackService.Record(notes, root, fingerprint,
+                "research-branch", "5", original, 0, "check-method"); }
+            catch (InvalidOperationException) { duplicateRejected = true; }
+            var futureRejected = false;
+            try { InstructorFeedbackService.Record(notes, root, fingerprint,
+                "research-branch", "3", original, 0, "request-evidence"); }
+            catch (InvalidDataException) { futureRejected = true; }
+            var branchRejected = false;
+            try { InstructorFeedbackService.Record(notes, root, fingerprint,
+                "different-branch", "5", original, 0, "request-evidence"); }
+            catch (InvalidDataException) { branchRejected = true; }
+            var gradeRejected = false;
+            try { InstructorFeedbackService.Record(notes, root, fingerprint,
+                "research-branch", "5", original, 0, "certify-grade"); }
+            catch (ArgumentException) { gradeRejected = true; }
+            Require(duplicateRejected && futureRejected && branchRejected && gradeRejected &&
+                    notes.ReadCurrent(feedbackPath, "research-branch", "5").Count == 1,
+                "Teacher response admitted a duplicate, future note, branch crossing or grade.");
+            File.WriteAllText(feedbackPath, "CORRUPTED INSTRUCTOR LEDGER");
+            var corruptedRejected = false;
+            try { InstructorFeedbackService.Record(notes, root, fingerprint,
+                "research-branch", "5", original, 0, "request-evidence"); }
+            catch (InvalidDataException) { corruptedRejected = true; }
+            Require(corruptedRejected && File.ReadAllBytes(studentPath).SequenceEqual(originalBytes),
+                "Corrupted teacher feedback was silently restored or damaged learner evidence.");
+
             // Regression: a two-file CSV request is one reported operation.
             // A filesystem error at the SECOND destination must restore
             // any earlier scientific CSV, never leave a misleading partial

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -60,6 +60,8 @@ namespace PharmaLabVR.UI
             "No offline instructor preview selected.";
         public bool CanNextInstructorAnnotation =>
             sessions?.CanNextInstructorAnnotation == true;
+        public bool CanRecordInstructorFeedback =>
+            sessions?.CanRecordInstructorFeedback == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
             "Research lesson unavailable.";
         public string ResearchLessonCompact => sessions?.ResearchLessonCompact ??
@@ -209,6 +211,8 @@ namespace PharmaLabVR.UI
                     return sessions.RestoreSelectedLocalPortableSession();
                 case PanelAction.NextInstructorAnnotation:
                     return sessions.NextInstructorAnnotation();
+                case PanelAction.RecordInstructorFeedback:
+                    return sessions.RecordInstructorFeedback(entityId);
                 case PanelAction.CompareSaved:
                     if (!sessions.OpenSavedComparison()) return false;
                     router.Show(ScreenId.Compare);

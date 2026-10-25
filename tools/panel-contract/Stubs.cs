@@ -198,6 +198,14 @@ namespace PharmaLabVR.Session
         public string InstructorPortableSummary => "Offline student pack; not attested.";
         public string InstructorPortableCompactSummary => "OFFLINE · NOT ATTESTED.";
         public bool CanNextInstructorAnnotation => true;
+        public bool CanRecordInstructorFeedback { get; set; } = true;
+        public int InstructorFeedbackCalls { get; private set; }
+        public bool RecordInstructorFeedback(string choice)
+        {
+            if (!CanRecordInstructorFeedback || choice != "check-method") return false;
+            InstructorFeedbackCalls++;
+            return true;
+        }
         public int NextImportedNoteCalls { get; private set; }
         public bool NextInstructorAnnotation()
         {

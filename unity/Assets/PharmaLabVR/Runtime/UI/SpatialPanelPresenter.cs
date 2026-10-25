@@ -162,6 +162,8 @@ namespace PharmaLabVR.UI
             AddInstrumentButton("Back to notebook", -306f,
                 () => notebookReflectionPage = false);
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
+            AddButton("Formative: review method", -306f, PanelAction.RecordInstructorFeedback,
+                "check-method");
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
             AddButton("Export comparison CSV", -250f, PanelAction.ExportComparisonCsv);
@@ -590,11 +592,15 @@ namespace PharmaLabVR.UI
             SetButton("Back to notebook", false);
             var importedStudentNotes = state.ScreenId == ScreenId.Review &&
                 panels != null && panels.CanNextInstructorAnnotation;
+            var instructorFeedbackAvailable = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("RecordInstructorFeedback") &&
+                panels != null && panels.CanRecordInstructorFeedback;
             var directLabNotebook = state.ScreenId == ScreenId.Lab &&
                 instrumentPage == 0 && state.SupportedActions.Contains("Notebook");
             SetButton("Open notebook", directLabNotebook ||
                 (state.ScreenId == ScreenId.Review &&
-                 state.SupportedActions.Contains("Notebook") && !importedStudentNotes));
+                 state.SupportedActions.Contains("Notebook") &&
+                 !importedStudentNotes && !instructorFeedbackAvailable));
             // The primary Lab includes one-touch Notebook navigation even
             // before any lesson was chosen. Save shares the row as a separate
             // *half-width* raycast rectangle, never a second overlapping hit.
@@ -609,6 +615,21 @@ namespace PharmaLabVR.UI
                     new Vector2(directLabNotebook ? 164f : 368f, 35f);
             SetButton("Next imported note", importedStudentNotes &&
                 state.SupportedActions.Contains("NextInstructorAnnotation"));
+            // Peer ray-hit rectangles never overlap; single-note feedback
+            // occupies this full row when note paging is unavailable.
+            var notePageRect = buttons["Next imported note"].GetComponent<RectTransform>();
+            notePageRect.sizeDelta = new Vector2(instructorFeedbackAvailable ? 176f : 368f, 46f);
+            notePageRect.anchoredPosition = new Vector2(instructorFeedbackAvailable ? -94f : 0f, -306f);
+            buttons["Next imported note"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                new Vector2(instructorFeedbackAvailable ? 164f : 368f, 35f);
+            SetButton("Formative: review method", instructorFeedbackAvailable);
+            var formativeRect = buttons["Formative: review method"].GetComponent<RectTransform>();
+            formativeRect.sizeDelta = new Vector2(importedStudentNotes ? 176f : 368f, 46f);
+            formativeRect.anchoredPosition = new Vector2(importedStudentNotes ? 94f : 0f, -306f);
+            buttons["Formative: review method"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                new Vector2(importedStudentNotes ? 164f : 368f, 35f);
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
