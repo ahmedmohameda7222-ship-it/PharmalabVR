@@ -2045,6 +2045,12 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(actions.Request(PanelAction.Back), Is.True);
                 Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
                     "request-evidence"), Is.False);
+                Assert.That(sessions.StudentFormativeFeedbackSummary,
+                    Does.Contain("Review the instrument method"),
+                    "Switching to Student must expose locally received formative feedback for this exact exported pack.");
+                Assert.That(sessions.StudentFormativeFeedbackSummary,
+                    Does.Contain("Compare this observation"),
+                    "Later event-bound instructor feedback is missing from the student read-only preview.");
                 Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore));
             }
             finally

@@ -910,6 +910,17 @@ internal static class Program
                   xrStudentFeedback.Contains("StudentFormativeFeedbackSummary",
                     StringComparison.Ordinal),
                 "Recorded student Review does not display local feedback from its exported pack.");
+            var summaryStart = sourceStudentFeedback.IndexOf(
+                "public string StudentFormativeFeedbackSummary", StringComparison.Ordinal);
+            var summaryEnd = sourceStudentFeedback.IndexOf(
+                "private int instructorAnnotationIndex", summaryStart,
+                StringComparison.Ordinal);
+            Check(summaryStart >= 0 && summaryEnd > summaryStart &&
+                  !sourceStudentFeedback.Substring(
+                      summaryStart, summaryEnd - summaryStart)
+                      .Contains("LastInstructorPortableReview != null", StringComparison.Ordinal),
+                "Switching back to Student view still hides the exact exported study's feedback behind cached teacher preview.");
+
 
             researchNotes.Append(learningPath, "student-branch", "7", "receiver",
                 "Student hypothesis: receiver pH below 7.");
