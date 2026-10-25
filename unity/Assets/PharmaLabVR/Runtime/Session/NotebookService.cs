@@ -25,7 +25,8 @@ namespace PharmaLabVR.Session
         public NotebookRecordKind RecordKind { get; }
 
         internal NotebookEntry(string branchId, string eventSequence, string vesselId,
-            string text, string recordedAtUtc, NotebookRecordKind recordKind)
+            string text, string recordedAtUtc,
+            NotebookRecordKind recordKind = NotebookRecordKind.Legacy)
         {
             BranchId = branchId;
             EventSequence = eventSequence;
