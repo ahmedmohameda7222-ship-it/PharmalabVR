@@ -165,6 +165,7 @@ namespace PharmaLabVR.Session
         public bool CanFinishNativeStudy { get; set; }
         public bool CanExportCurrentReviewPortable { get; set; } = true;
         public bool SavePermitted { get; set; } = true;
+        public bool InvalidateNativeStudyOnSave { get; set; }
         public bool ReviewPermitted { get; set; } = true;
         // Headless action stub only; production checks that Native has no
         // live session and has reported a concrete scientific startup error.
@@ -430,7 +431,12 @@ namespace PharmaLabVR.Session
             MeteredCalls++;
             return true;
         }
-        public bool Save() { SaveCalls++; return SavePermitted; }
+        public bool Save()
+        {
+            SaveCalls++;
+            if (InvalidateNativeStudyOnSave) CanFinishNativeStudy = false;
+            return SavePermitted;
+        }
         public bool OpenReview()
         {
             if (!ReviewPermitted) return false;

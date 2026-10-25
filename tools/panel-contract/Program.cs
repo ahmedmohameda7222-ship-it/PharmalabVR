@@ -372,6 +372,19 @@ internal static class Program
               xrExportSource.Contains("Export archive", StringComparison.Ordinal) &&
               xrExportSource.Contains("Compare saved", StringComparison.Ordinal),
             "XR Review's Native pack export cannot coexist with Compare on non-overlapping ray targets.");
+        // A background Native event/branch change between the evidence
+        // preflight and durable Save must not open a mismatched Review.
+        noteRouter.Show(ScreenId.Notebook);
+        noteSession.CloseReview();
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.InvalidateNativeStudyOnSave = true;
+        var opensBeforeChangedNative = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.ReviewOpens == opensBeforeChangedNative,
+            "An outdated Native pH note was promoted after the source changed during Save.");
+        noteSession.InvalidateNativeStudyOnSave = false;
+
         var studentSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
         var spatialSource = System.IO.File.ReadAllText(
