@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, ExitFailedLab, SaveAndReviewStudy, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, ExitFailedLab, SaveAndReviewStudy, RefreshStudentFeedback, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -205,6 +205,15 @@ namespace PharmaLabVR.UI
                     return router.Current.ScreenId == ScreenId.Settings;
                 case PanelAction.Back:
                     return router.ReturnFromSettings();
+                case PanelAction.RefreshStudentFeedback:
+                    // Explicit XR Study Review repaint after the learner
+                    // copies a local instructor sidecar. No Save, Native
+                    // material command, instructor action, or grade is issued.
+                    if (router.Current.ScreenId != ScreenId.Review ||
+                        router.Current.Workspace != "Student")
+                        return false;
+                    router.Show(ScreenId.Review);
+                    return router.Current.ScreenId == ScreenId.Review;
                 case PanelAction.SaveAndReviewStudy:
                     // Explicit Notebook action: durable Native save MUST
                     // succeed before opening read-only Review. A bare Review

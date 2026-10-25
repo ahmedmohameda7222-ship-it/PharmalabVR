@@ -142,6 +142,8 @@ namespace PharmaLabVR.UI
             AddButton("Open review", -138f, PanelAction.Review);
             AddButton("Save + review evidence", -82f, PanelAction.SaveAndReviewStudy);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
+            AddButton("Refresh local feedback", -306f,
+                PanelAction.RefreshStudentFeedback);
             AddInstrumentButton("Quick notes", -82f, () => notebookReflectionPage = true);
             AddInstrumentButton("Note: request another pH", 30f, () =>
             {
@@ -665,7 +667,11 @@ namespace PharmaLabVR.UI
             SetButton("Note: method uncertainty", false);
             SetButton("Back to notebook", false);
             var importedStudentNotes = state.ScreenId == ScreenId.Review &&
+                (state.Workspace == "Instructor" || state.Workspace == "Expert") &&
                 panels != null && panels.CanNextInstructorAnnotation;
+            var studentRefreshAvailable = state.ScreenId == ScreenId.Review &&
+                state.Workspace == "Student" &&
+                state.SupportedActions.Contains("RefreshStudentFeedback");
             var instructorFeedbackAvailable = state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("RecordInstructorFeedback") &&
                 panels != null && panels.CanRecordInstructorFeedback;
@@ -679,14 +685,21 @@ namespace PharmaLabVR.UI
             // before any lesson was chosen. Save shares the row as a separate
             // *half-width* raycast rectangle, never a second overlapping hit.
             var notebookEntryRect = buttons["Open notebook"].GetComponent<RectTransform>();
+            var splitNotebookFeedback = directLabNotebook || studentRefreshAvailable;
             notebookEntryRect.sizeDelta =
-                new Vector2(directLabNotebook ? 176f : 368f, 46f);
+                new Vector2(splitNotebookFeedback ? 176f : 368f, 46f);
             notebookEntryRect.anchoredPosition =
-                new Vector2(directLabNotebook ? -94f : 0f,
+                new Vector2(splitNotebookFeedback ? -94f : 0f,
                     directLabNotebook ? -250f : -306f);
             buttons["Open notebook"].GetComponentInChildren<Text>(true)
                 .rectTransform.sizeDelta =
-                    new Vector2(directLabNotebook ? 164f : 368f, 35f);
+                    new Vector2(splitNotebookFeedback ? 164f : 368f, 35f);
+            SetButton("Refresh local feedback", studentRefreshAvailable);
+            var refreshRect = buttons["Refresh local feedback"].GetComponent<RectTransform>();
+            refreshRect.sizeDelta = new Vector2(176f, 46f);
+            refreshRect.anchoredPosition = new Vector2(94f, -306f);
+            buttons["Refresh local feedback"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
             SetButton("Next imported note", importedStudentNotes &&
                 state.SupportedActions.Contains("NextInstructorAnnotation"));
             // Peer ray-hit rectangles never overlap; single-note feedback

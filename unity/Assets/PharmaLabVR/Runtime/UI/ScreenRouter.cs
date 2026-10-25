@@ -527,7 +527,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Review => driver != null && driver.IsTimeHeld ?
                     new[] { "Hold", "Settings", "Save", "ExportCsv", "RecordInstructorFeedback" } :
                     new[] { "Lab", "Settings", "Save", "Notebook", "ExportCsv", "ExportPortable",
-                        "CompareSaved", "ChooseLocalSave", "PreviewPortableArchive", "ChoosePortableArchive", "NextInstructorAnnotation", "RecordInstructorFeedback" },
+                        "RefreshStudentFeedback", "CompareSaved", "ChooseLocalSave", "PreviewPortableArchive", "ChoosePortableArchive", "NextInstructorAnnotation", "RecordInstructorFeedback" },
                 ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save", "Review",
                     "SaveAndReviewStudy", "ExportPortable", "RecordResearchExplanation" },
                 ScreenId.Compare => new[] { "Review", "Lab", "ExportComparisonCsv" },
