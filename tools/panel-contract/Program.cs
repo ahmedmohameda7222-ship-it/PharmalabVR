@@ -161,6 +161,30 @@ internal static class Program
               offlineXRSource.Contains("Initializing Native scientific package", StringComparison.Ordinal),
             "XR must show an explicit fail-closed Native pending/error view.");
 
+        // Real user recovery from an XR/Desktop Native package failure:
+        // every scientific route remains denied, but an explicit error-only
+        // return to Boot must be reachable. Pending startup must not expose it.
+        var outageSessions = new SessionController { FailedLabExitPermitted = true };
+        var outagePanels = new LabPanelController();
+        outagePanels.Configure(lateRouter, lateNative, outageSessions);
+        var exitKnown = Enum.TryParse("ExitFailedLab", out PanelAction exitAction);
+        Check(exitKnown && lateRouter.Current.SupportedActions.Count == 0 &&
+              outagePanels.Request(exitAction) &&
+              outageSessions.FailedLabExitCalls == 1,
+            "Failed scientific initialization has no guarded route back to Boot.");
+        outageSessions.FailedLabExitPermitted = false;
+        Check(!outagePanels.Request(exitAction) && outageSessions.FailedLabExitCalls == 1,
+            "Normal or merely pending Native startup admitted a forced scene exit.");
+        Check(!outagePanels.Request(PanelAction.Save) &&
+              !outagePanels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+            "Startup recovery accidentally authorized scientific operations.");
+        var desktopFailureSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(desktopFailureSource.Contains("Return to Boot", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("Return to Boot", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("PanelAction.ExitFailedLab", StringComparison.Ordinal),
+            "Scientific failure recovery is not exposed in both Desktop and XR.");
+
         // A notebook reading is not typed by the user or inferred from
         // a lesson. It is bound to a Current Native pH and matching vessel revision.
         var noteView = new LabViewModel();

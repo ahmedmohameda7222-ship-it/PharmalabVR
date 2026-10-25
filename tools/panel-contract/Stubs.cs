@@ -162,6 +162,16 @@ namespace PharmaLabVR.Session
     {
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
+        // Headless action stub only; production checks that Native has no
+        // live session and has reported a concrete scientific startup error.
+        public bool FailedLabExitPermitted { get; set; }
+        public int FailedLabExitCalls { get; private set; }
+        public bool ExitFailedNativeLab()
+        {
+            if (!FailedLabExitPermitted) return false;
+            FailedLabExitCalls++;
+            return true;
+        }
         public int ReviewOpens { get; private set; }
         public int NotebookAppendCalls { get; private set; }
         public bool CanRecordCurrentNativePH { get; set; } = true;
