@@ -1014,6 +1014,34 @@ internal static class Program
         var teachingSessions = new SessionController();
         var teachingPanels = new LabPanelController();
         teachingPanels.Configure(teachingRouter, new CoreDriver(), teachingSessions);
+        // Integration regression: the teacher must be able to enter the
+        // local Instructor/Expert evidence workspace through actual Settings
+        // actions, without treating the selection as authenticated identity.
+        Check(teachingPanels.Request(PanelAction.Settings) &&
+              teachingRouter.Current.ScreenId == ScreenId.Settings,
+            "Recorded Review cannot open the local-workspace Settings screen.");
+        var workspaceActionExists = Enum.TryParse("SelectWorkspace", out PanelAction workspaceAction);
+        Check(workspaceActionExists &&
+              teachingRouter.Current.SupportedActions.Contains("SelectWorkspace") &&
+              teachingPanels.Request(workspaceAction, "Instructor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "Settings has no actionable local Instructor workspace selection.");
+        Check(!teachingPanels.Request(workspaceAction, "CertifiedAssessor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "An unrecognized or implied certified identity changed the local workspace.");
+        Check(teachingPanels.Request(workspaceAction, "Expert") &&
+              teachingRouter.Current.Workspace == "Expert" &&
+              teachingPanels.Request(workspaceAction, "Student") &&
+              teachingRouter.Current.Workspace == "Student" &&
+              teachingPanels.Request(workspaceAction, "Instructor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "Local instructor, expert and student views cannot be explicitly selected.");
+        Check(teachingPanels.Request(PanelAction.Back) &&
+              teachingRouter.Current.ScreenId == ScreenId.Review,
+            "Choosing an offline workspace lost the original recorded Review.");
+        Check(!teachingPanels.Request(workspaceAction, "Expert") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "A recorded Review bypassed Settings-only workspace choice.");
         Check(teachingRouter.Current.SupportedActions.Contains("RecordInstructorFeedback") &&
               teachingPanels.Request(PanelAction.RecordInstructorFeedback, "check-method") &&
               teachingSessions.InstructorFeedbackCalls == 1,
