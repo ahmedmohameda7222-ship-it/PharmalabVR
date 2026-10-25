@@ -40,7 +40,12 @@ namespace PharmaLabVR.Core
         public string ScientificDatabasePath { get; private set; }
         public MeasurementView Measurement { get; private set; }
         public LabViewModel CurrentLabView { get; private set; }
-        public string CurrentMode { get; private set; } = "Desktop";
+        // Boot's requested presentation mode must exist BEFORE any Unity
+        // Awake runs. On Android, Native package preparation is asynchronous
+        // and an XR error/loading panel must not start as hidden Desktop UI.
+        // A successful Native snapshot still supersedes this initial hint.
+        public string CurrentMode { get; private set; } = BootMenu.RequestedMode ==
+            ApplicationMode.VirtualReality ? "VR" : "Desktop";
         public string HoldReason { get; private set; } = string.Empty;
         public bool NativeRecoveryReady { get; private set; }
         public bool IsTimeHeld { get; private set; }
