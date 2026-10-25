@@ -45,7 +45,7 @@ namespace PharmaLabVR.Session
                         vesselTag + vesselId + " · material revision ", StringComparison.Ordinal) ||
                     !double.TryParse(rawText, NumberStyles.Float,
                         CultureInfo.InvariantCulture, out var raw) ||
-                    !double.IsFinite(raw) ||
+                    double.IsNaN(raw) || double.IsInfinity(raw) ||
                     raw.ToString("0.00", CultureInfo.InvariantCulture) != displayed)
                     continue;
                 if (!points.ContainsKey(eventId)) points.Add(eventId, raw);
