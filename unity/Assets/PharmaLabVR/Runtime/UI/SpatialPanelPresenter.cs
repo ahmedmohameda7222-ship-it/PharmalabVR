@@ -591,6 +591,9 @@ namespace PharmaLabVR.UI
                     "Empty tracked hand: touch receiver and press trigger to inspect its current Native pH. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
+            if (state.ScreenId == ScreenId.Review && state.Workspace == "Student")
+                detail.text += "\n" + (panels?.StudentFormativeFeedbackSummary ??
+                    "Local student formative feedback unavailable.");
             if (state.ScreenId == ScreenId.Compare &&
                 !string.IsNullOrEmpty(panels?.LastComparisonCsvFileName))
                 detail.text += "\nExported offline recorded-only CSV: " +

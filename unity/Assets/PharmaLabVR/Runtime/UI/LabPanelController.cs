@@ -64,6 +64,9 @@ namespace PharmaLabVR.UI
             sessions?.CanRecordInstructorFeedback == true;
         public bool CanFinishNativeStudy =>
             sessions?.CanFinishNativeStudy == true;
+        public string StudentFormativeFeedbackSummary =>
+            sessions?.StudentFormativeFeedbackSummary ??
+            "Student formative feedback unavailable.";
         public bool CanExportCurrentReviewPortable =>
             sessions?.CanExportCurrentReviewPortable == true;
         public bool CanExitFailedNativeLab =>

@@ -40,6 +40,46 @@ namespace PharmaLabVR.Session
             LastInstructorPortableReview == null ?
                 "No offline instructor preview selected." :
                 LastInstructorPortableReview.Summary + "\n" + InstructorFeedbackSummary;
+        // The student sees only feedback about an actual local exported
+        // snapshot; never teacher identity, grades, live session changes or
+        // feedback attached to another checksum/branch/event.
+        public string StudentFormativeFeedbackSummary
+        {
+            get
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review ||
+                    router.Current.Workspace != "Student" ||
+                    LastInstructorPortableReview != null ||
+                    RecordedReview == null ||
+                    driver?.Session?.IsOpen != true || driver.IsTimeHeld ||
+                    driver.CurrentLabView == null)
+                    return "Local formative feedback is unavailable outside the student's active recorded Review.";
+                if (string.IsNullOrEmpty(LastPortableArchivePath))
+                    return "Export the active Native + Notebook pack to check local formative feedback for that exact study.";
+                try
+                {
+                    var saved = InstructorPortableReview.Open(LastPortableArchivePath);
+                    var review = RecordedReview;
+                    if (saved.NativeBranchId != review.BranchId ||
+                        saved.NativeEventSequence != review.EventSequence ||
+                        driver.CurrentNativeBranchId != review.BranchId ||
+                        driver.CurrentLabView.EventSequence != review.EventSequence)
+                        return "Exported study differs from the current Native Review; no feedback preview is admitted.";
+                    return InstructorFeedbackService.StudentSummary(notebook,
+                        Path.Combine(Application.persistentDataPath, "sessions"),
+                        saved.PackageFingerprint, saved.NativeBranchId,
+                        saved.NativeEventSequence, saved.StudentAnnotations);
+                }
+                catch (Exception error) when (error is InvalidDataException ||
+                                              error is IOException ||
+                                              error is UnauthorizedAccessException ||
+                                              error is ArgumentException ||
+                                              error is InvalidOperationException)
+                {
+                    return "Local formative feedback unavailable: exported study or instructor sidecar could not be verified.";
+                }
+            }
+        }
         private int instructorAnnotationIndex;
         // Formative commentary can reference only a validated, selected
         // recorded student note; it never executes a Native command.
@@ -1498,6 +1538,8 @@ namespace PharmaLabVR.Session
                         GUILayout.Label($"Recorded {observation.vesselId} pH: {observation.DisplayValue} " +
                             $"({observation.freshness}, rev {observation.asOfMaterialRevision})");
                     GUILayout.Label(LearningReviewSummary);
+                    if (router?.Current?.Workspace == "Student")
+                        GUILayout.Label(StudentFormativeFeedbackSummary);
                 }
                 if (driver.IsTimeHeld)
                 {
