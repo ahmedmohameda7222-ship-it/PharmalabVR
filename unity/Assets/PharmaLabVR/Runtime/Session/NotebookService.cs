@@ -111,6 +111,17 @@ namespace PharmaLabVR.Session
             // Only the primary is writable. Damaged current bytes must never
             // silently be replaced by a backup and a fresh annotation.
             var entries = ReadStrict(fullPath);
+            // Must be checked INSIDE the held file lease. Desktop/XR may
+            // both pass an earlier UI preflight before either commits.
+            // The second writer must never create a duplicate app-recorded
+            // Native pH for the same scientific branch/event/vessel.
+            if (recordKind == NotebookRecordKind.NativePH &&
+                entries.Exists(item => item.RecordKind == NotebookRecordKind.NativePH &&
+                    item.BranchId == branchId &&
+                    item.EventSequence == eventSequence &&
+                    item.VesselId == vesselId))
+                throw new InvalidDataException(
+                    "The current Native vessel pH was already recorded for this event.");
             if (entries.Count >= MaximumNotes)
                 throw new InvalidDataException("Research notebook record limit reached.");
             var added = new NotebookEntry(branchId, eventSequence, vesselId, text,
