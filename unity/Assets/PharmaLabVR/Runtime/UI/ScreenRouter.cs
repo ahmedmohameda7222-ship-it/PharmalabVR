@@ -522,7 +522,7 @@ namespace PharmaLabVR.UI
                 ScreenId.Notebook => new[] { "Lab", "AddNotebookNote", "Save", "Review",
                     "ExportPortable", "RecordResearchExplanation" },
                 ScreenId.Compare => new[] { "Review", "Lab", "ExportComparisonCsv" },
-                ScreenId.Settings => new[] { "Back", "Save" },
+                ScreenId.Settings => new[] { "Back", "Save", "SelectWorkspace" },
                 _ => Array.Empty<string>()
             };
             Current = new PanelState(screen, driver?.CurrentMode ?? pendingMode, SetupPreferencesSelection.Current, workspace,

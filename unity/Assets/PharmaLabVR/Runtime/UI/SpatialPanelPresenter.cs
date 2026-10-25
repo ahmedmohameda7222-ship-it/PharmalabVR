@@ -413,7 +413,7 @@ namespace PharmaLabVR.UI
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() =>
             {
-                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 2);
+                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 3);
                 if (router?.Current != null) Present(router.Current);
             });
         }
@@ -448,6 +448,13 @@ namespace PharmaLabVR.UI
                     else if (choice == 3) next = current.With(audioVolume:
                         current.AudioVolume >= 0.99f ? 0f : 1f);
                     break;
+                case 3:
+                    // These controls are explicitly marked local, unverified
+                    // workspaces. They never authorize grades or cloud roles.
+                    var workspaces = new[] { "Student", "Instructor", "Researcher", "Expert" };
+                    if (choice >= 0 && choice < workspaces.Length)
+                        panels?.Request(PanelAction.SelectWorkspace, workspaces[choice]);
+                    return;
             }
             if (!ReferenceEquals(current, next)) router.UpdateSetupPreferences(next);
         }
@@ -459,10 +466,12 @@ namespace PharmaLabVR.UI
             {
                 0 => new[] { "Posture: " + setup.Posture, "Hand: " + setup.DominantHand, "", "" },
                 1 => new[] { "Bench lower", "Bench higher", "Text larger", "Text smaller" },
-                _ => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
+                2 => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
                     "Reduced motion: " + (setup.ReducedMotion ? "On" : "Off"),
                     "Contrast: " + (setup.HighContrast ? "High" : "Normal"),
-                    "Audio: " + (setup.AudioVolume > 0f ? "On" : "Muted") }
+                    "Audio: " + (setup.AudioVolume > 0f ? "On" : "Muted") },
+                _ => new[] { "Local Student view", "Local Instructor view",
+                    "Local Researcher view", "Local Expert view" }
             };
             var names = new[] { "Settings choice A", "Settings choice B",
                 "Settings choice C", "Settings choice D" };
@@ -472,9 +481,14 @@ namespace PharmaLabVR.UI
                 var label = buttons[names[i]].GetComponentInChildren<Text>(true);
                 if (label != null) label.text = labels[i];
             }
-            SetButton("Next settings", settingsPage < 2);
+            SetButton("Next settings", settingsPage < 3);
             SetButton("Previous settings", settingsPage > 0);
-            detail.text = "Settings " + (settingsPage + 1) + "/3 · " +
+            detail.text = settingsPage == 3 ?
+                "OFFLINE LOCAL VIEW · NOT VERIFIED IDENTITY / GRADE AUTHORITY\n" +
+                "Current: " + state.Workspace + "\n" +
+                "Choose a local role view for recorded student evidence. " +
+                "No campus login, attestation, or permissions are granted." :
+                "Settings " + (settingsPage + 1) + "/4 · " +
                 setup.BenchHeightMeters.ToString("0.00") + "m · text " +
                 setup.TextScale.ToString("0.00") + "×";
         }

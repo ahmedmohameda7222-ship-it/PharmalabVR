@@ -1536,6 +1536,11 @@ namespace PharmaLabVR.Session
             if (screen == ScreenId.Settings)
             {
                 SetupPreferenceControls.Draw(router);
+                GUILayout.Label("Offline local view only — not a verified campus role, identity or grading permission.");
+                GUILayout.Label("Current view: " + router.Current.Workspace);
+                foreach (var localView in new[] { "Student", "Instructor", "Researcher", "Expert" })
+                    if (GUILayout.Button("Local " + localView + " view", GUILayout.Height(36f)))
+                        panels?.Request(PanelAction.SelectWorkspace, localView);
                 if (GUILayout.Button("Back", GUILayout.Height(44f))) panels?.Request(PanelAction.Back);
                 if (GUILayout.Button("Save session", GUILayout.Height(44f))) panels?.Request(PanelAction.Save);
                 GUILayout.EndScrollView();

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -213,6 +213,14 @@ namespace PharmaLabVR.UI
                     return sessions.NextInstructorAnnotation();
                 case PanelAction.RecordInstructorFeedback:
                     return sessions.RecordInstructorFeedback(entityId);
+                case PanelAction.SelectWorkspace:
+                    // Local presentation role only. No academic identity,
+                    // authorization, enrollment or grade originates here.
+                    if (entityId != "Student" && entityId != "Instructor" &&
+                        entityId != "Researcher" && entityId != "Expert")
+                        return false;
+                    router.SetWorkspace(entityId);
+                    return router.Current.Workspace == entityId;
                 case PanelAction.CompareSaved:
                     if (!sessions.OpenSavedComparison()) return false;
                     router.Show(ScreenId.Compare);
