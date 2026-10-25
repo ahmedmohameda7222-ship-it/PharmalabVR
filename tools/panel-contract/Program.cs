@@ -894,6 +894,29 @@ internal static class Program
                         StringComparison.Ordinal),
                     "Student offline feedback handoff has no exact fingerprint-bound file instructions.");
 
+                // A vanished primary must not silently present older
+                // .bak feedback as the current handoff from the instructor.
+                var backupFingerprint = InstructorFeedbackService.Fingerprint(
+                    "NATIVE-FORMATIVE-BACKUP", "STUDENT-NOTES-BACKUP");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    backupFingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "check-method");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    backupFingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "request-evidence");
+                var backupOnly = InstructorFeedbackService.FeedbackPath(
+                    learningDirectory, backupFingerprint);
+                Check(System.IO.File.Exists(backupOnly + ".bak"),
+                    "Feedback fixture failed to create an actual older committed backup.");
+                System.IO.File.Delete(backupOnly);
+                var backupOnlyRejected = false;
+                try { ReadPreview(backupFingerprint); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is System.IO.InvalidDataException)
+                { backupOnlyRejected = true; }
+                Check(backupOnlyRejected,
+                    "Learner feedback silently promoted stale instructor .bak into current data.");
+
                 var localSidecar = InstructorFeedbackService.FeedbackPath(
                     learningDirectory, fingerprint);
                 researchNotes.Append(localSidecar, "student-branch", "7", "receiver",
