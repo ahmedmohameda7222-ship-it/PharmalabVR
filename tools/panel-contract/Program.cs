@@ -889,6 +889,11 @@ internal static class Program
                 Check(!ReadPreview(different).Contains("Review the instrument method",
                     StringComparison.Ordinal),
                     "Feedback from an unrelated archive fingerprint appeared as this student's.");
+                Check(ReadPreview(different).Contains(
+                        "Copy instructor-feedback-" + different + ".plv-notes",
+                        StringComparison.Ordinal),
+                    "Student offline feedback handoff has no exact fingerprint-bound file instructions.");
+
                 var localSidecar = InstructorFeedbackService.FeedbackPath(
                     learningDirectory, fingerprint);
                 researchNotes.Append(localSidecar, "student-branch", "7", "receiver",
