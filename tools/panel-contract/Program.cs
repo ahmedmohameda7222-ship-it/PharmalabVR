@@ -2981,6 +2981,22 @@ internal static class Program
                       "!driver.IsTimeHeld"),
             "The UI held-only resume endpoint must reject an unheld direct Continue.");
 
+        // The low-level recovery API is also public: even if UI routes are
+        // correct, directly calling it without a Native Hold could silently
+        // close still-open stock setup. Guard before ANY input submission.
+        var heldGuardMethod = nativeCoreText.IndexOf(
+            "public bool ResumeAfterTimeHold()", StringComparison.Ordinal);
+        var heldGuardBodyEnd = nativeCoreText.IndexOf(
+            "public bool BeginModeChange(", heldGuardMethod, StringComparison.Ordinal);
+        var heldGuardBody = nativeCoreText.Substring(
+            heldGuardMethod, heldGuardBodyEnd - heldGuardMethod);
+        var heldGuardCheck = heldGuardBody.IndexOf(
+            "Session == null || !IsTimeHeld", StringComparison.Ordinal);
+        var heldInputWrite = heldGuardBody.IndexOf(
+            "Session.SubmitInputs(", StringComparison.Ordinal);
+        Check(heldGuardCheck > 0 && heldInputWrite > heldGuardCheck,
+            "Direct ResumeAfterTimeHold without Native Hold could fabricate Continue.");
+
         // Source-linked sequencing guard: a successful Native resume
             // must publish the new paused/hold status before the router's
             // HoldChanged(false) callback runs, never with the old snapshot.

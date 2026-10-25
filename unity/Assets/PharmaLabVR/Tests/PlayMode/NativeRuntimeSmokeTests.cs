@@ -50,6 +50,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     root.GetComponentsInChildren<ScreenRouter>(true)).Single();
                 Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
                 Assert.That(driver.IsTimeHeld, Is.False);
+                Assert.That(driver.ResumeAfterTimeHold(), Is.False,
+                    "The low-level recovery method must not submit Native Continue without Hold.");
                 Assert.That(controller.ContinueHeldSession(), Is.False,
                     "A non-held initial stock setup must never silently Continue.");
                 Assert.That(driver.SourceNeedsPreparation, Is.True);
