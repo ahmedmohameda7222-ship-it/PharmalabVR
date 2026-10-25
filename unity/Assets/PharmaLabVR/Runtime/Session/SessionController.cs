@@ -49,7 +49,6 @@ namespace PharmaLabVR.Session
             {
                 if (router?.Current?.ScreenId != ScreenId.Review ||
                     router.Current.Workspace != "Student" ||
-                    LastInstructorPortableReview != null ||
                     RecordedReview == null ||
                     driver?.Session?.IsOpen != true || driver.IsTimeHeld ||
                     driver.CurrentLabView == null)
