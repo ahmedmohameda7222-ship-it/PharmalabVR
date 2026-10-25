@@ -2034,6 +2034,9 @@ namespace PharmaLabVR.Tests.PlayMode
                     "compare-hypothesis"), Is.True, sessions.LastError);
                 Assert.That(sessions.InstructorFeedbackSummary,
                     Does.Contain("2 formative response"));
+                Assert.That(sessions.InstructorFeedbackSummary,
+                    Does.Contain(Path.GetFileName(feedback)),
+                    "The instructor cannot locate the exact local sidecar to share with the learner.");
                 Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore),
                     "Local teaching comments modified Native scientific authority.");
                 Assert.That(File.ReadAllBytes(notes), Is.EqualTo(notesBefore),

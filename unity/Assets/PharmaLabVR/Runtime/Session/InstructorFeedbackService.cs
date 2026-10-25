@@ -88,7 +88,10 @@ namespace PharmaLabVR.Session
             var feedback = journal.ReadCurrent(
                 FeedbackPath(directory, fingerprint), branchId, savedEventSequence);
             if (feedback.Count == 0)
-                return "No local instructor formative feedback for this exact exported study.";
+                return "No local instructor formative feedback for this exact exported study. " +
+                    "Copy instructor-feedback-" + fingerprint + ".plv-notes from the " +
+                    "instructor into this device's local sessions folder if supplied. " +
+                    "This sidecar is unsigned, ungraded and not an identity attestation.";
             var labels = new StringBuilder(
                 "Local formative feedback (not graded/attested; no identity verification).");
             var seen = new HashSet<string>(StringComparer.Ordinal);

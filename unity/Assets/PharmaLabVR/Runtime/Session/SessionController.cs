@@ -100,10 +100,16 @@ namespace PharmaLabVR.Session
                 try
                 {
                     var preview = LastInstructorPortableReview;
-                    return InstructorFeedbackService.Summary(notebook,
-                        Path.Combine(Application.persistentDataPath, "sessions"),
-                        preview.PackageFingerprint, preview.NativeBranchId,
+                    var folder = Path.Combine(Application.persistentDataPath, "sessions");
+                    var summary = InstructorFeedbackService.Summary(notebook,
+                        folder, preview.PackageFingerprint, preview.NativeBranchId,
                         preview.NativeEventSequence);
+                    var sidecar = InstructorFeedbackService.FeedbackPath(
+                        folder, preview.PackageFingerprint);
+                    return File.Exists(sidecar) ? summary +
+                        "\nShare this exact local feedback file with the student: " +
+                        sidecar + "\nThis is an unsigned formative sidecar, not an institutional grade." :
+                        summary;
                 }
                 catch (Exception error) when (error is IOException ||
                                               error is UnauthorizedAccessException ||
