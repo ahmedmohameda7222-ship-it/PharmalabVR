@@ -4,6 +4,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using PharmaLabVR.Session;
 
 internal static class Program
@@ -76,6 +78,50 @@ internal static class Program
             Require(duplicateRejected && futureRejected && branchRejected && gradeRejected &&
                     notes.ReadCurrent(feedbackPath, "research-branch", "5").Count == 1,
                 "Teacher response admitted a duplicate, future note, branch crossing or grade.");
+            var learnerPreview = InstructorFeedbackService.StudentSummary(
+                notes, root, fingerprint, "research-branch", "5",
+                notes.ReadCurrent(studentPath, "research-branch", "5"));
+            Require(learnerPreview.Contains("Review the instrument method") &&
+                    learnerPreview.Contains("not graded") &&
+                    !learnerPreview.Contains("Certified"),
+                "Student could not read exact snapshot feedback as ungraded local annotation.");
+
+            // Two independent controllers attempt the same response at the
+            // exact time. One can commit; the other must fail either as
+            // busy or as an already-committed response. Student evidence
+            // and journal must be unchanged by either losing attempt.
+            var concurrentFingerprint = InstructorFeedbackService.Fingerprint(
+                "NATIVE-CONCURRENT", "JOURNAL-CONCURRENT");
+            var concurrentPath = InstructorFeedbackService.FeedbackPath(
+                root, concurrentFingerprint);
+            var acceptedResponses = 0;
+            var rejectedResponses = 0;
+            using (var start = new ManualResetEventSlim(false))
+            {
+                var workers = Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
+                {
+                    start.Wait();
+                    try
+                    {
+                        InstructorFeedbackService.Record(new NotebookService(),
+                            root, concurrentFingerprint, "research-branch", "5",
+                            original, 0, "request-evidence");
+                        Interlocked.Increment(ref acceptedResponses);
+                    }
+                    catch (Exception error) when (
+                        error is InvalidOperationException ||
+                        error is InvalidDataException)
+                    {
+                        Interlocked.Increment(ref rejectedResponses);
+                    }
+                })).ToArray();
+                start.Set();
+                Task.WaitAll(workers);
+            }
+            Require(acceptedResponses == 1 && rejectedResponses == 1 &&
+                    notes.ReadCurrent(concurrentPath, "research-branch", "5").Count == 1 &&
+                    File.ReadAllBytes(studentPath).SequenceEqual(originalBytes),
+                "Concurrent teacher requests duplicated the same formative response or altered student evidence.");
             File.WriteAllText(feedbackPath, "CORRUPTED INSTRUCTOR LEDGER");
             var corruptedRejected = false;
             try { InstructorFeedbackService.Record(notes, root, fingerprint,
