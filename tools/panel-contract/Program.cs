@@ -938,6 +938,12 @@ internal static class Program
                   xrStudentFeedback.Contains("StudentFormativeFeedbackSummary",
                     StringComparison.Ordinal),
                 "Recorded student Review does not display local feedback from its exported pack.");
+            Check(sourceStudentFeedback.Contains(
+                    "SelectedStudentFeedbackArchivePath(", StringComparison.Ordinal) &&
+                  sourceStudentFeedback.Contains(
+                    "AvailableLocalArchiveNames().Contains(selectedArchiveFileName)",
+                    StringComparison.Ordinal),
+                "A restarted student cannot select an existing validated .plvpack to view returned feedback.");
             var summaryStart = sourceStudentFeedback.IndexOf(
                 "public string StudentFormativeFeedbackSummary", StringComparison.Ordinal);
             var summaryEnd = sourceStudentFeedback.IndexOf(
