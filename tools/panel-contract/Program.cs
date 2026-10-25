@@ -294,6 +294,62 @@ internal static class Program
         catch (InvalidOperationException) { missingModelDenied = true; }
         Check(missingModelDenied, "A reading without the actual Native model package was recorded.");
         noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        // A student-controlled text note may exactly copy the current
+        // scientific display, model hash and revision. It must NOT be counted
+        // as an app-recorded Native measurement when completing the study.
+        // Old six-field notebooks must remain readable but unprivileged.
+        var handwrittenPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-handwritten-" + Guid.NewGuid().ToString("N") + ".plv-notes");
+        try
+        {
+            var evidence = new NotebookService();
+            var handTyped = NativeMeasurementNote.Build(noteView, "receiver",
+                MeasurementAvailability.Current, "7.13");
+            evidence.Append(handwrittenPath, "student-branch", noteView.EventSequence,
+                "receiver", handTyped);
+            var stored = evidence.ReadCurrent(handwrittenPath,
+                "student-branch", noteView.EventSequence);
+            Check(!NativeMeasurementNote.WasRecorded(stored, "student-branch",
+                    noteView.EventSequence, "receiver",
+                    noteView.Vessels[1].MaterialRevision),
+                "Student-authored text masqueraded as a Native-recorded current pH measurement.");
+            var typedRecord = stored.Single();
+            var origin = typedRecord.GetType().GetProperty("RecordKind");
+            Check(origin != null && !string.Equals(
+                    origin?.GetValue(typedRecord)?.ToString(), "NativePH",
+                    StringComparison.Ordinal),
+                "Notebook storage lacks a distinct, checksum-covered Native observation kind.");
+            var nativeAppend = typeof(NotebookService).GetMethod("AppendNativeMeasurement");
+            Check(nativeAppend != null,
+                "Scientific pH records are written through the same untyped user note route.");
+            if (nativeAppend != null)
+            {
+                nativeAppend.Invoke(evidence, new object[] { handwrittenPath,
+                    "student-branch", noteView.EventSequence, "receiver", handTyped });
+                var current = evidence.ReadCurrent(handwrittenPath,
+                    "student-branch", noteView.EventSequence);
+                Check(NativeMeasurementNote.WasRecorded(current, "student-branch",
+                        noteView.EventSequence, "receiver",
+                        noteView.Vessels[1].MaterialRevision) &&
+                      current.Count(x => x.RecordKind == NotebookRecordKind.NativePH) == 1,
+                    "Only a deliberate Native-reading append may satisfy pH evidence admission.");
+                var packed = evidence.ExportBranch(handwrittenPath, "student-branch",
+                    noteView.EventSequence);
+                var unpacked = NotebookService.ReadPortableBranch(packed,
+                    "student-branch", noteView.EventSequence);
+                Check(unpacked.Count == 2 &&
+                      unpacked[0].RecordKind == NotebookRecordKind.User &&
+                      unpacked[1].RecordKind == NotebookRecordKind.NativePH,
+                    "Portable archive lost the checksum-protected provenance of Notebook rows.");
+            }
+        }
+        finally
+        {
+            foreach (var suffix in new[] { "", ".bak", ".lock" })
+                if (System.IO.File.Exists(handwrittenPath + suffix))
+                    System.IO.File.Delete(handwrittenPath + suffix);
+        }
+
         var noteRouter = new ScreenRouter();
         noteRouter.Configure(new CoreDriver());
         noteRouter.Show(ScreenId.Measure, "receiver");
