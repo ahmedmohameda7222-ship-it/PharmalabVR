@@ -85,8 +85,15 @@ namespace PharmaLabVR.Session
                     CultureInfo.InvariantCulture, out var ceiling) ||
                 savedEventSequence != ceiling.ToString(CultureInfo.InvariantCulture))
                 throw new InvalidDataException("Validated student study checkpoint required.");
+            var sidecar = FeedbackPath(directory, fingerprint);
+            // A vanished latest ledger with only an older backup cannot
+            // claim to contain the instructor's current formative handoff.
+            // The original backup remains intact for explicit recovery.
+            if (!File.Exists(sidecar) && File.Exists(sidecar + ".bak"))
+                throw new InvalidDataException(
+                    "Current instructor feedback sidecar is missing; older backup is not current evidence.");
             var feedback = journal.ReadCurrent(
-                FeedbackPath(directory, fingerprint), branchId, savedEventSequence);
+                sidecar, branchId, savedEventSequence);
             if (feedback.Count == 0)
                 return "No local instructor formative feedback for this exact exported study. " +
                     "Copy instructor-feedback-" + fingerprint + ".plv-notes from the " +
