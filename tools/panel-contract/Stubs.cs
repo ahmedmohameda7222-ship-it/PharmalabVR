@@ -81,7 +81,15 @@ namespace PharmaLabVR.Core
 {
     public sealed class CoreDriver
     {
-        public object Session { get; } = new object();
+        public object Session { get; set; } = new object();
+        public string StartupError { get; private set; }
+        public event Action<string> StartupFailed;
+        public void FailBootstrap(string reason)
+        {
+            StartupError = reason;
+            Session = null;
+            StartupFailed?.Invoke(reason);
+        }
         public string CurrentNativeBranchId { get; set; } = "branch-a";
         public PharmaLabVR.Lab.LabViewModel CurrentLabView { get; } = new();
         public bool IsTimeHeld { get; private set; }

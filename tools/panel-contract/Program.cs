@@ -129,6 +129,29 @@ internal static class Program
         Check(onboardingRouter.Current.ScreenId == ScreenId.Pause,
             "Normal paused Native authority admitted live Lab navigation.");
 
+        // Native startup is asynchronous on Android. Without its real
+        // pinned solver package, neither a transient initializing XR lab nor
+        // a late package failure may advertise material/save/measurement.
+        var noNative = new CoreDriver { Session = null, CurrentMode = "VR" };
+        var noNativeRouter = new ScreenRouter();
+        noNativeRouter.Configure(noNative);
+        Check(noNativeRouter.Current.SupportedActions.Count == 0,
+            "XR Native initialization exposed live scientific actions before a session existed.");
+        var lateNative = new CoreDriver { CurrentMode = "VR" };
+        var lateRouter = new ScreenRouter();
+        lateRouter.Configure(lateNative);
+        Check(lateRouter.Current.SupportedActions.Contains("Pause"),
+            "Healthy Native Lab fixture never offered ordinary operating actions.");
+        lateNative.FailBootstrap("Pinned IPhreeqc package unavailable.");
+        Check(lateRouter.Current.SupportedActions.Count == 0 &&
+              lateNative.StartupError.Contains("IPhreeqc"),
+            "A failed asynchronous Native package left unsafe live Lab controls exposed.");
+        var offlineXRSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(offlineXRSource.Contains("Scientific package unavailable", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("Initializing Native scientific package", StringComparison.Ordinal),
+            "XR must show an explicit fail-closed Native pending/error view.");
+
         // A notebook reading is not typed by the user or inferred from
         // a lesson. It is bound to a Current Native pH and matching vessel revision.
         var noteView = new LabViewModel();
