@@ -441,6 +441,25 @@ namespace PharmaLabVR.Session
             return true;
         }
 
+        public bool ConfirmExactNativeReview(
+            string validatedBranch, string validatedEvent)
+        {
+            var recorded = RecordedReview;
+            if (recorded != null &&
+                recorded.BranchId == validatedBranch &&
+                recorded.EventSequence == validatedEvent &&
+                driver?.CurrentNativeBranchId == validatedBranch &&
+                driver.CurrentLabView?.EventSequence == validatedEvent)
+                return true;
+            // An asynchronous Native publication during ExportSession may
+            // have replaced the event. Never mislabel it as the completed
+            // learner attempt or inherit old cached Review content.
+            CloseReview();
+            LastError = "Native scientific event changed before recorded Review. " +
+                "Check the current receiver pH and save the study again.";
+            return false;
+        }
+
         // A measurement is an offline notebook annotation tied to the exact
         // Native branch, event and material revision. It is never a grade.
         public bool RecordCurrentNativeMeasurement()

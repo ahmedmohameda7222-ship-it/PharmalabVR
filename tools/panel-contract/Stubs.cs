@@ -173,6 +173,14 @@ namespace PharmaLabVR.Session
         public bool ConfirmFinishNativeStudyAfterSave(string branch, string nativeEvent) =>
             CanFinishNativeStudy && !string.IsNullOrEmpty(branch) &&
             !string.IsNullOrEmpty(nativeEvent);
+        public bool ConfirmExactNativeReview(string branch, string nativeEvent)
+        {
+            if (RecordedReview?.BranchId == branch &&
+                RecordedReview?.EventSequence == nativeEvent)
+                return true;
+            CloseReview();
+            return false;
+        }
         public bool ReviewPermitted { get; set; } = true;
         public bool ReviewEventChangedOnOpen { get; set; }
         // Headless action stub only; production checks that Native has no
