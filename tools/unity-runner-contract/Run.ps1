@@ -79,11 +79,11 @@ $cases = @(
 try {
     foreach ($case in $cases) {
         $env:PLV_FAKE_UNITY_MODE = $case.Mode
-        & pwsh -NoProfile -File $isolatedRunner -UnityEditor $fake -Platform $case.Platform *> $null
+        $output = (& pwsh -NoProfile -File $isolatedRunner -UnityEditor $fake -Platform $case.Platform 2>&1 | Out-String)
         $exitCode = $LASTEXITCODE
         $passed = $exitCode -eq 0
         if ($passed -ne $case.Pass) {
-            throw "Fake Unity runner regression ($($case.Mode), $($case.Platform)): expected success=$($case.Pass), actual exit=$exitCode."
+            throw "Fake Unity runner regression ($($case.Mode), $($case.Platform)): expected success=$($case.Pass), actual exit=$exitCode. Child output: $output"
         }
     }
     Write-Host "Local Unity runner contract: $($cases.Count) fake-editor cases passed (NOT Unity)."
