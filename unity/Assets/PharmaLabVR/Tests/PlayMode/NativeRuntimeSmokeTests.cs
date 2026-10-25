@@ -1576,6 +1576,8 @@ namespace PharmaLabVR.Tests.PlayMode
                     root.GetComponentsInChildren<CoreDriver>(true)).Single();
                 var panels = roots.SelectMany(root =>
                     root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
                 var source = roots.SelectMany(root =>
                     root.GetComponentsInChildren<ResearchStockAspirateTarget>(true))
                     .Single(item => item.NativeInventoryId == "source");
