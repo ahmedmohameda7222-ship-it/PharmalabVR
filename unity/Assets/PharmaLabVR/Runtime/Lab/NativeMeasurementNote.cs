@@ -28,7 +28,9 @@ namespace PharmaLabVR.Lab
                 " · event " + eventSequence + " · Supported/Current";
             return entries.Any(item => item != null &&
                 item.BranchId == branchId && item.EventSequence == eventSequence &&
-                item.VesselId == vesselId && item.Text != null &&
+                item.VesselId == vesselId &&
+                item.RecordKind == NotebookRecordKind.NativePH &&
+                item.Text != null &&
                 item.Text.StartsWith("Native pH ", StringComparison.Ordinal) &&
                 item.Text.Contains(fingerprint, StringComparison.Ordinal) &&
                 item.Text.Contains("Research observation only; no certified endpoint inferred.",

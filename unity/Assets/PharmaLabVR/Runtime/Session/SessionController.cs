@@ -409,6 +409,7 @@ namespace PharmaLabVR.Session
                         item.BranchId == driver.Session.BranchId &&
                         item.EventSequence == view.EventSequence &&
                         item.VesselId == "receiver" &&
+                        item.RecordKind == NotebookRecordKind.NativePH &&
                         item.Text.StartsWith(expectedNote, StringComparison.Ordinal));
                 }
                 catch (Exception error) when (error is InvalidOperationException ||
@@ -479,8 +480,8 @@ namespace PharmaLabVR.Session
                     note += "\n" + ResearchLessonJourney.CompareRecordedPrediction(
                         selectedResearchPrediction, view, vessel,
                         driver.Measurement.Availability, driver.Measurement.DisplayValue);
-                notebook.Append(NotebookFilePath(), driver.Session.BranchId,
-                    view.EventSequence, vessel, note);
+                notebook.AppendNativeMeasurement(NotebookFilePath(),
+                    driver.Session.BranchId, view.EventSequence, vessel, note);
                 InvalidateLearningReview();
                 LastError = null;
                 router.Show(ScreenId.Notebook);
@@ -516,6 +517,7 @@ namespace PharmaLabVR.Session
                     return recorded.Any(item => item.BranchId == driver.Session.BranchId &&
                         item.VesselId == "receiver" &&
                         item.EventSequence == driver.CurrentLabView.EventSequence &&
+                        item.RecordKind == NotebookRecordKind.NativePH &&
                         item.Text.StartsWith("Native pH ", StringComparison.Ordinal)) &&
                         !ResearchLessonJourney.HasRecordedExplanation(recorded,
                             selectedResearchLesson.Definition.id,

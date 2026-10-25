@@ -967,8 +967,8 @@ internal static class Program
             // Reopening Measure without a new Native event must not append
             // the same receiver pH evidence again. New events and unrelated
             // branches remain independently recordable.
-            researchNotes.Append(learningPath, "idempotent-branch", "7", "receiver",
-                nativeNote);
+            researchNotes.AppendNativeMeasurement(learningPath,
+                "idempotent-branch", "7", "receiver", nativeNote);
             var onceRecorded = researchNotes.Read(learningPath, "idempotent-branch");
             Check(NativeMeasurementNote.WasRecorded(onceRecorded,
                     "idempotent-branch", "7", "receiver", "3") &&
@@ -996,9 +996,10 @@ internal static class Program
                 "Existing raw Native pH observation was absent from local event history.");
             var nextNote = nativeNote.Replace("Native pH 7.13", "Native pH 6.99")
                 .Replace(" · event 7 ·", " · event 8 ·");
-            researchNotes.Append(learningPath, "idempotent-branch", "8", "receiver", nextNote);
-            researchNotes.Append(learningPath, "idempotent-branch", "9", "receiver",
-                nextNote.Replace(" · event 8 ·", " · event 9 ·")
+            researchNotes.AppendNativeMeasurement(learningPath, "idempotent-branch", "8",
+                "receiver", nextNote);
+            researchNotes.AppendNativeMeasurement(learningPath, "idempotent-branch",
+                "9", "receiver", nextNote.Replace(" · event 8 ·", " · event 9 ·")
                     .Replace("raw Native pH 6.99", "raw Native pH NaN"));
             var eventTrend = ResearchNotebookPHHistory.Summarize(
                 researchNotes.Read(learningPath, "idempotent-branch"),

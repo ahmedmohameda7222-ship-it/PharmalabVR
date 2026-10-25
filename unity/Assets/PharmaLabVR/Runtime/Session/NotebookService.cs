@@ -9,6 +9,12 @@ namespace PharmaLabVR.Session
 {
     // Research notebook notes are annotations, never Native material or solver commands.
     // Their branch and event revisions come from an actual CoreSession/LabViewModel.
+    // Local record provenance, not cryptographic source attestation.
+    // V1 six-field archives remain LEGACY and cannot grant new Native pH
+    // completion; a seventh, checksum-covered field preserves kind for
+    // all newly committed records.
+    public enum NotebookRecordKind { Legacy, User, NativePH }
+
     public sealed class NotebookEntry
     {
         public string BranchId { get; }
@@ -16,15 +22,17 @@ namespace PharmaLabVR.Session
         public string VesselId { get; }
         public string Text { get; }
         public string RecordedAtUtc { get; }
+        public NotebookRecordKind RecordKind { get; }
 
         internal NotebookEntry(string branchId, string eventSequence, string vesselId,
-            string text, string recordedAtUtc)
+            string text, string recordedAtUtc, NotebookRecordKind recordKind)
         {
             BranchId = branchId;
             EventSequence = eventSequence;
             VesselId = vesselId;
             Text = text;
             RecordedAtUtc = recordedAtUtc;
+            RecordKind = recordKind;
         }
     }
 
@@ -40,7 +48,32 @@ namespace PharmaLabVR.Session
         private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
         public NotebookEntry Append(string path, string branchId, string eventSequence,
-            string vesselId, string text)
+            string vesselId, string text) =>
+            AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.User);
+
+        // Only the Native measurement UI flow may use this recorder,
+        // after NativeMeasurementNote.Build has checked the raw/current
+        // scientific snapshot. No student text-area action calls it.
+        public NotebookEntry AppendNativeMeasurement(string path, string branchId,
+            string eventSequence, string vesselId, string text)
+        {
+            if (string.IsNullOrEmpty(text) ||
+                !text.StartsWith("Native pH ", StringComparison.Ordinal) ||
+                !text.Contains(" · event " + eventSequence + " · Supported/Current",
+                    StringComparison.Ordinal) ||
+                !text.Contains(" · vessel " + vesselId + " · material revision ",
+                    StringComparison.Ordinal))
+                throw new ArgumentException(
+                    "Native pH journal entry requires a matching recorded scientific event.",
+                    nameof(text));
+            return AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.NativePH);
+        }
+
+        private NotebookEntry AppendTyped(string path, string branchId,
+            string eventSequence, string vesselId, string text,
+            NotebookRecordKind recordKind)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
@@ -59,7 +92,8 @@ namespace PharmaLabVR.Session
             {
                 using (var lease = new FileStream(fullPath + ".lock",
                     FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-                    return AppendUnderLease(fullPath, branchId, eventSequence, vesselId, text);
+                    return AppendUnderLease(fullPath, branchId, eventSequence, vesselId,
+                        text, recordKind);
             }
             catch (IOException error)
             {
@@ -69,7 +103,7 @@ namespace PharmaLabVR.Session
         }
 
         private static NotebookEntry AppendUnderLease(string fullPath, string branchId,
-            string eventSequence, string vesselId, string text)
+            string eventSequence, string vesselId, string text, NotebookRecordKind recordKind)
         {
             if (!File.Exists(fullPath) && File.Exists(fullPath + ".bak"))
                 throw new InvalidDataException("Recover the confirmed notebook backup before editing.");
@@ -79,7 +113,7 @@ namespace PharmaLabVR.Session
             if (entries.Count >= MaximumNotes)
                 throw new InvalidDataException("Research notebook record limit reached.");
             var added = new NotebookEntry(branchId, eventSequence, vesselId, text,
-                DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture), recordKind);
             entries.Add(added);
             var bytes = StrictUtf8.GetBytes(Serialize(entries));
             if (bytes.Length > MaximumFileBytes)
@@ -298,9 +332,10 @@ namespace PharmaLabVR.Session
             {
                 if (line.Length == 0) continue;
                 var parts = line.Split('\t');
-                if (parts.Length != 6 ||
-                    !string.Equals(Hash(string.Join("\t", parts, 0, 5)), parts[5],
-                        StringComparison.OrdinalIgnoreCase))
+                var checksumIndex = parts.Length - 1;
+                if ((parts.Length != 6 && parts.Length != 7) ||
+                    !string.Equals(Hash(string.Join("\t", parts, 0, checksumIndex)),
+                        parts[checksumIndex], StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("Notebook record checksum is invalid.");
                 try
                 {
@@ -308,6 +343,13 @@ namespace PharmaLabVR.Session
                     var vessel = Decode(parts[2]);
                     var note = Decode(parts[3]);
                     var timestamp = Decode(parts[4]);
+                    var recordKind = NotebookRecordKind.Legacy;
+                    if (parts.Length == 7 &&
+                        (!Enum.TryParse(parts[5], false, out recordKind) ||
+                         (recordKind != NotebookRecordKind.Legacy &&
+                          recordKind != NotebookRecordKind.User &&
+                          recordKind != NotebookRecordKind.NativePH)))
+                        throw new InvalidDataException("Notebook evidence kind is unsupported.");
                     ValidateId(branch, nameof(branch));
                     ValidateRevision(parts[1]);
                     ValidateId(vessel, nameof(vessel));
@@ -316,7 +358,8 @@ namespace PharmaLabVR.Session
                             DateTimeStyles.RoundtripKind, out var recorded) ||
                         recorded.Offset != TimeSpan.Zero)
                         throw new InvalidDataException("Notebook timestamp is invalid.");
-                    result.Add(new NotebookEntry(branch, parts[1], vessel, note, timestamp));
+                    result.Add(new NotebookEntry(branch, parts[1], vessel, note,
+                        timestamp, recordKind));
                 }
                 catch (Exception error) when (error is ArgumentException ||
                                              error is FormatException ||
@@ -336,7 +379,8 @@ namespace PharmaLabVR.Session
             foreach (var entry in entries)
             {
                 var body = string.Join("\t", Encode(entry.BranchId), entry.EventSequence,
-                    Encode(entry.VesselId), Encode(entry.Text), Encode(entry.RecordedAtUtc));
+                    Encode(entry.VesselId), Encode(entry.Text),
+                    Encode(entry.RecordedAtUtc), entry.RecordKind.ToString());
                 text.Append(body).Append('\t').Append(Hash(body)).Append('\n');
             }
             return text.ToString();
