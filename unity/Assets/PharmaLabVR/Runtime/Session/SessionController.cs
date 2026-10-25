@@ -380,6 +380,48 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Deliberate learner completion is stricter than ordinary Review:
+        // an actual Supported/Current Native receiver reading must have been
+        // committed to the checksum-valid, current-event student Notebook.
+        // Merely typing a prediction or opening a recorded preview is not
+        // evidence that the lab has produced a scientific observation.
+        public bool CanFinishNativeStudy
+        {
+            get
+            {
+                if (driver?.Session?.IsOpen != true ||
+                    driver.IsNativePaused || driver.IsTimeHeld ||
+                    driver.SourceNeedsPreparation ||
+                    router?.Current?.ScreenId != ScreenId.Notebook ||
+                    driver.CurrentLabView == null ||
+                    router.Current.NativeRevision != driver.CurrentLabView.EventSequence ||
+                    driver.SelectedMeasurementVesselId != "receiver")
+                    return false;
+                try
+                {
+                    var view = driver.CurrentLabView;
+                    var expectedNote = NativeMeasurementNote.Build(view, "receiver",
+                        driver.Measurement?.Availability ?? MeasurementAvailability.Unsupported,
+                        driver.Measurement?.DisplayValue);
+                    var entries = notebook.ReadCurrent(NotebookFilePath(),
+                        driver.Session.BranchId, view.EventSequence);
+                    return entries.Any(item => item != null &&
+                        item.BranchId == driver.Session.BranchId &&
+                        item.EventSequence == view.EventSequence &&
+                        item.VesselId == "receiver" &&
+                        item.Text.StartsWith(expectedNote, StringComparison.Ordinal));
+                }
+                catch (Exception error) when (error is InvalidOperationException ||
+                                              error is IOException ||
+                                              error is UnauthorizedAccessException ||
+                                              error is InvalidDataException ||
+                                              error is ArgumentException)
+                {
+                    return false;
+                }
+            }
+        }
+
         // A measurement is an offline notebook annotation tied to the exact
         // Native branch, event and material revision. It is never a grade.
         public bool RecordCurrentNativeMeasurement()
@@ -1555,6 +1597,12 @@ namespace PharmaLabVR.Session
                 if (GUILayout.Button("Record note for current event", GUILayout.Height(44f)) &&
                     panels?.Request(PanelAction.AddNotebookNote, notebookDraft) == true)
                     notebookDraft = string.Empty;
+                GUI.enabled = CanFinishNativeStudy;
+                if (GUILayout.Button("Save + review recorded Native study", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.SaveAndReviewStudy);
+                GUI.enabled = true;
+                if (!CanFinishNativeStudy)
+                    GUILayout.Label("To finish this Native study: select the receiver, record its current supported pH and return to this event-bound Notebook.");
                 if (GUILayout.Button("Return to lab", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Lab);
                 if (GUILayout.Button("Save Native session", GUILayout.Height(44f)))

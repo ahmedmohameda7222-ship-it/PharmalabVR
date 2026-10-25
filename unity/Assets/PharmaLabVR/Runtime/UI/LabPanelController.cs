@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace PharmaLabVR.UI
 {
-    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, ExitFailedLab, Learn }
+    public enum PanelAction { NewStudy, ExportComparisonCsv, Home, EnterDesktop, EnterVR, ConfirmSetup, Lab, Inspect, Measure, Pause, Hold, Review, Notebook, AddNotebookNote, ExportPortable, ExportCsv, CompareSaved, Settings, Save, Continue, Back, ReleaseTool, ParkTool, Load, ChooseLocalSave, LoadSelectedSave, SaveCopy, Recenter, SnapLeft, SnapRight, PrepareResearchStock, PrepareRinseWater, PipetteAspirate, PipetteDispense, PipetteRinse, BottlePour, BottleRinse, PrepareReserveStock, PipetteSwitchReserve, PipetteSwitchPrimary, BottleRefill, FillBurette, SelectResearchLesson, RecordCurrentPH, RecordResearchPrediction, RecordResearchExplanation, PreviewPortableArchive, ChoosePortableArchive, RestorePortable, NextInstructorAnnotation, RecordInstructorFeedback, SelectWorkspace, ExitFailedLab, SaveAndReviewStudy, Learn }
 
     public sealed class LabPanelController : MonoBehaviour
     {
@@ -62,6 +62,8 @@ namespace PharmaLabVR.UI
             sessions?.CanNextInstructorAnnotation == true;
         public bool CanRecordInstructorFeedback =>
             sessions?.CanRecordInstructorFeedback == true;
+        public bool CanFinishNativeStudy =>
+            sessions?.CanFinishNativeStudy == true;
         public bool CanExitFailedNativeLab =>
             sessions?.CanExitFailedNativeLab == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??
@@ -198,6 +200,17 @@ namespace PharmaLabVR.UI
                     return router.Current.ScreenId == ScreenId.Settings;
                 case PanelAction.Back:
                     return router.ReturnFromSettings();
+                case PanelAction.SaveAndReviewStudy:
+                    // Explicit Notebook action: durable Native save MUST
+                    // succeed before opening read-only Review. A bare Review
+                    // elsewhere retains its no-implicit-save contract.
+                    if (router.Current.ScreenId != ScreenId.Notebook ||
+                        driver.IsTimeHeld || driver.IsNativePaused ||
+                        !sessions.CanFinishNativeStudy || !sessions.Save())
+                        return false;
+                    if (!sessions.OpenReview()) return false;
+                    router.Show(ScreenId.Review);
+                    return router.Current.ScreenId == ScreenId.Review;
                 case PanelAction.Save:
                     return sessions.Save();
                 case PanelAction.SaveCopy:

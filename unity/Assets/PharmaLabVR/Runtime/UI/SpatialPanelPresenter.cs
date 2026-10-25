@@ -140,6 +140,7 @@ namespace PharmaLabVR.UI
             AddButton("Explain: model", -306f, PanelAction.RecordResearchExplanation,
                 "model-limitations");
             AddButton("Open review", -138f, PanelAction.Review);
+            AddButton("Save + review evidence", -82f, PanelAction.SaveAndReviewStudy);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
             AddInstrumentButton("Quick notes", -82f, () => notebookReflectionPage = true);
             AddInstrumentButton("Note: request another pH", 30f, () =>
@@ -576,7 +577,9 @@ namespace PharmaLabVR.UI
                     driver.CurrentLabView, state.SelectedEntityId),
                 ScreenId.Notebook => "Physical instrument transfers are inactive on this Notebook page. " +
                     "Return to Lab to perform a deliberate Native action.\n" +
-                    (panels?.NotebookSummary ?? "Research notebook unavailable."),
+                    (panels?.NotebookSummary ?? "Research notebook unavailable.") +
+                    "\nSave + review evidence deliberately saves the Native run first; " +
+                    "it is offered only after recording a current supported receiver pH.",
                 ScreenId.Compare => panels?.ComparisonSummary ?? "Recorded comparison unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
                     state.SelectedEntityId,
@@ -621,8 +624,13 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ParkTool");
             buttons["Park tool"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : -306f);
+            var mayFinishNativeStudy = state.ScreenId == ScreenId.Notebook &&
+                state.SupportedActions.Contains("SaveAndReviewStudy") &&
+                panels?.CanFinishNativeStudy == true;
             SetButton("Open review", state.SupportedActions.Contains("Review") &&
-                !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
+                !mayFinishNativeStudy && !dockReleaseVisible &&
+                !(parkVisible && state.ScreenId == ScreenId.Lab));
+            SetButton("Save + review evidence", mayFinishNativeStudy);
             // Notebook uses a genuinely split row, not two raycast hit
             // rectangles covering each other.
             var notebookSplitReview = state.ScreenId == ScreenId.Notebook &&
@@ -636,6 +644,13 @@ namespace PharmaLabVR.UI
             buttons["Open review"].GetComponentInChildren<Text>(true)
                 .rectTransform.sizeDelta =
                     new Vector2(notebookSplitReview ? 164f : 368f, 35f);
+            var finishButton = buttons["Save + review evidence"];
+            finishButton.GetComponent<RectTransform>().sizeDelta =
+                new Vector2(176f, 46f);
+            finishButton.GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(94f, -82f);
+            finishButton.GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
             var quickRect = buttons["Quick notes"].GetComponent<RectTransform>();
             quickRect.sizeDelta = new Vector2(176f, 46f);
             quickRect.anchoredPosition = new Vector2(-94f, -82f);
