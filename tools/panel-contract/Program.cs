@@ -1418,6 +1418,35 @@ internal static class Program
               choice.Any(item => item.Name == "Predict pH at least 7"),
             "Lesson selection must lead to both pre-transfer prediction options.");
 
+        // M4: imported feedback can arrive while a student remains on
+        // XR Review. A separate refresh ray target must re-render the same
+        // Review, never issue Native material, Save, or a teacher action.
+        var localRefreshRouter = new ScreenRouter();
+        localRefreshRouter.Configure(new CoreDriver());
+        localRefreshRouter.Show(ScreenId.Review);
+        var localRefreshSessions = new SessionController();
+        var localRefreshPanel = new LabPanelController();
+        localRefreshPanel.Configure(localRefreshRouter, new CoreDriver(),
+            localRefreshSessions);
+        var refreshFound = Enum.TryParse("RefreshStudentFeedback",
+            out PanelAction refreshAction);
+        Check(refreshFound &&
+              localRefreshRouter.Current.SupportedActions.Contains("RefreshStudentFeedback") &&
+              localRefreshPanel.Request(refreshAction) &&
+              localRefreshRouter.Current.ScreenId == ScreenId.Review &&
+              localRefreshSessions.SaveCalls == 0 &&
+              localRefreshSessions.ReviewOpens == 0,
+            "XR Student Review cannot refresh local teacher feedback without mutating Native evidence.");
+        localRefreshRouter.SetWorkspace("Instructor");
+        Check(!localRefreshPanel.Request(refreshAction),
+            "A non-student view used the student-only formative feedback refresh.");
+        var xrStudentRefreshSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrStudentRefreshSource.Contains("Refresh local feedback", StringComparison.Ordinal) &&
+              xrStudentRefreshSource.Contains("PanelAction.RefreshStudentFeedback",
+                  StringComparison.Ordinal),
+            "XR student has no separate tracked-ray feedback refresh control.");
+
         // Offline teaching preview is a read-only REVIEW action. It is
         // neither a Native command nor permission to grade or upload.
         var teachingRouter = new ScreenRouter();
