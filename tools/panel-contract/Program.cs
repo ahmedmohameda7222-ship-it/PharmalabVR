@@ -385,6 +385,18 @@ internal static class Program
             "An outdated Native pH note was promoted after the source changed during Save.");
         noteSession.InvalidateNativeStudyOnSave = false;
 
+        // A newly published Native event while opening Review must never
+        // be confused with the student's previously admitted pH result.
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.ReviewEventChangedOnOpen = true;
+        var reviewCallsBeforeRace = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.RecordedReview == null &&
+              noteSession.ReviewOpens == reviewCallsBeforeRace + 1,
+            "Recorded Review accepted a different scientific event after Native Save.");
+        noteSession.ReviewEventChangedOnOpen = false;
+
         var studentSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
         var spatialSource = System.IO.File.ReadAllText(
