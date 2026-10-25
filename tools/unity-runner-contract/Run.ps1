@@ -58,6 +58,12 @@ cat > "$result" <<XML
 XML
 if [[ "$mode" == "nonzero" ]]; then exit 41; fi
 '@
+# PowerShell here-strings from a CRLF checkout can retain carriage
+# returns even when invoked on Linux. Normalize the fake bash shebang:
+# /usr/bin/env must see "bash", never "bash" followed by CR.
+$lf = ([char]10).ToString()
+$crlf = ([char]13).ToString() + $lf
+$fakeText = $fakeText.Replace($crlf, $lf)
 [System.IO.File]::WriteAllText($fake, $fakeText,
     (New-Object System.Text.UTF8Encoding($false)))
 & chmod +x $fake
