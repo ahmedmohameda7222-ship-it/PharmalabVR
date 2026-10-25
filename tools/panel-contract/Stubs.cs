@@ -163,6 +163,7 @@ namespace PharmaLabVR.Session
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
         public bool CanFinishNativeStudy { get; set; }
+        public bool CanExportCurrentReviewPortable { get; set; } = true;
         public bool SavePermitted { get; set; } = true;
         public bool ReviewPermitted { get; set; } = true;
         // Headless action stub only; production checks that Native has no
