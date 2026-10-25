@@ -64,6 +64,8 @@ namespace PharmaLabVR.UI
             sessions?.CanRecordInstructorFeedback == true;
         public bool CanFinishNativeStudy =>
             sessions?.CanFinishNativeStudy == true;
+        public bool CanExportCurrentReviewPortable =>
+            sessions?.CanExportCurrentReviewPortable == true;
         public bool CanExitFailedNativeLab =>
             sessions?.CanExitFailedNativeLab == true;
         public string ResearchLessonSummary => sessions?.ResearchLessonSummary ??

@@ -1470,6 +1470,12 @@ namespace PharmaLabVR.Session
                 if (router?.Current?.SupportedActions.Contains("Notebook") == true &&
                     GUILayout.Button("Open student notebook", GUILayout.Height(38f)))
                     panels?.Request(PanelAction.Notebook);
+                GUI.enabled = CanExportCurrentReviewPortable;
+                if (GUILayout.Button("Export ACTIVE Native + Notebook pack", GUILayout.Height(44f)))
+                    panels?.Request(PanelAction.ExportPortable);
+                GUI.enabled = true;
+                if (!string.IsNullOrEmpty(LastPortableArchivePath))
+                    GUILayout.Label("Active Native study pack: " + LastPortableArchivePath);
                 if (GUILayout.Button("Settings", GUILayout.Height(44f)))
                     panels?.Request(PanelAction.Settings);
                 GUILayout.Label("Offline study pack preview — checksums, NOT signed institutional attestation.");
@@ -2447,6 +2453,25 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // In recorded Review, export is permitted only for this exact
+        // active Native branch/event, never for a selected/imported teaching
+        // preview, a held CoreSession, or a stale recorded-only review.
+        public bool CanExportCurrentReviewPortable
+        {
+            get
+            {
+                if (router?.Current?.ScreenId != ScreenId.Review ||
+                    driver?.Session?.IsOpen != true || driver.IsTimeHeld ||
+                    driver.CurrentLabView == null || LastInstructorPortableReview != null)
+                    return false;
+                var recorded = RecordedReview;
+                return recorded != null &&
+                    recorded.BranchId == driver.Session.BranchId &&
+                    recorded.EventSequence == driver.CurrentLabView.EventSequence &&
+                    router.Current.NativeRevision == driver.CurrentLabView.EventSequence;
+            }
+        }
+
         public bool ExportPortableSession()
         {
             LastPortableArchivePath = null;
@@ -2454,10 +2479,12 @@ namespace PharmaLabVR.Session
             {
                 if (router?.Current == null ||
                     (router.Current.ScreenId != ScreenId.Pause &&
-                     router.Current.ScreenId != ScreenId.Notebook) ||
+                     router.Current.ScreenId != ScreenId.Notebook &&
+                     !CanExportCurrentReviewPortable) ||
                     driver?.Session == null || !driver.Session.IsOpen ||
                     driver.CurrentLabView == null)
-                    throw new InvalidOperationException("Portable export requires Pause/Notebook and an open Native session.");
+                    throw new InvalidOperationException(
+                        "Portable export requires an active Native Pause/Notebook or exact current recorded Review.");
                 // The Native export and lab view must identify the same revision.
                 // The archive validates exact Native branch and revision before writing.
                 var branch = driver.Session.BranchId;

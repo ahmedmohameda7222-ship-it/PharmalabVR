@@ -706,8 +706,27 @@ namespace PharmaLabVR.UI
                 "Feedback: review method", "Feedback: compare hypothesis",
                 "Back to imported note" })
                 SetButton(choice, false);
-            SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
-                state.SupportedActions.Contains("ExportPortable"));
+            var reviewExportAvailable = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("ExportPortable") &&
+                panels?.CanExportCurrentReviewPortable == true;
+            var canCompareNative = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("CompareSaved") &&
+                panels?.CanCompareSaved == true;
+            var splitReviewArchiveAndCompare = reviewExportAvailable &&
+                canCompareNative;
+            SetButton("Export archive",
+                (state.ScreenId == ScreenId.Notebook &&
+                 state.SupportedActions.Contains("ExportPortable")) ||
+                reviewExportAvailable);
+            var archiveRect = buttons["Export archive"].GetComponent<RectTransform>();
+            archiveRect.sizeDelta = new Vector2(
+                splitReviewArchiveAndCompare ? 176f : 368f, 46f);
+            archiveRect.anchoredPosition = new Vector2(
+                splitReviewArchiveAndCompare ? 94f : 0f,
+                state.ScreenId == ScreenId.Notebook ? -250f : -194f);
+            buttons["Export archive"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(
+                    splitReviewArchiveAndCompare ? 164f : 368f, 35f);
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
             SetButton("Export comparison CSV", state.ScreenId == ScreenId.Compare &&
@@ -753,9 +772,15 @@ namespace PharmaLabVR.UI
             SetButton("Save new local copy", false);
             SetButton("Start independent study", false);
             SetButton("Back to pause/hold", false);
-            SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
-                state.SupportedActions.Contains("CompareSaved") &&
-                panels != null && panels.CanCompareSaved);
+            SetButton("Compare saved", canCompareNative);
+            var compareRect = buttons["Compare saved"].GetComponent<RectTransform>();
+            compareRect.sizeDelta = new Vector2(
+                splitReviewArchiveAndCompare ? 176f : 368f, 46f);
+            compareRect.anchoredPosition = new Vector2(
+                splitReviewArchiveAndCompare ? -94f : 0f, -194f);
+            buttons["Compare saved"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(
+                    splitReviewArchiveAndCompare ? 164f : 368f, 35f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
             SetButton("Return to Hold", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("Hold"));

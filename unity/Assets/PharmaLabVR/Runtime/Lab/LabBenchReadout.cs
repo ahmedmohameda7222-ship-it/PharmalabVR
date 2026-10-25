@@ -89,7 +89,7 @@ namespace PharmaLabVR.Lab
             // of the label. Do not emit "Native +0.000 mL".
             var roundedMl = Math.Round(deltaM3 * 1e6, 3,
                 MidpointRounding.AwayFromZero);
-            if (!double.IsFinite(deltaM3) || roundedMl <= 0d)
+            if (double.IsNaN(deltaM3) || double.IsInfinity(deltaM3) || roundedMl <= 0d)
                 return null;
             return "Native " + destinationId + " +" +
                 roundedMl.ToString("0.000", CultureInfo.InvariantCulture) +
