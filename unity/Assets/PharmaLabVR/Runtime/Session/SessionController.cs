@@ -1625,7 +1625,9 @@ namespace PharmaLabVR.Session
                 var notes = ReadNotebookEntries();
                 foreach (var note in notes.Skip(Math.Max(0, notes.Count - 5)))
                     GUILayout.Label("Event " + note.EventSequence + " · " + note.VesselId +
-                        " · " + note.RecordedAtUtc + "\n" + note.Text);
+                        " · " + note.RecordedAtUtc + " · " +
+                        ResearchLearningReview.RecordOriginLabel(note.RecordKind) +
+                        "\n" + note.Text);
                 GUILayout.Label("Native event revision: " + router.Current.NativeRevision +
                     ". Notes do not change the scientific state.");
                 if (CanRecordResearchExplanation)

@@ -148,7 +148,9 @@ namespace PharmaLabVR.Session
                 return "Research notebook · " + entries.Count +
                     " event-linked notes\n" +
                     "Latest · event " + latest.EventSequence + " · " +
-                    latest.VesselId + "\n" + preview + "\n" +
+                    latest.VesselId + " · " +
+                    RecordOriginLabel(latest.RecordKind) +
+                    "\n" + preview + "\n" +
                     ResearchNotebookPHHistory.Summarize(entries, activeBranchId,
                         "receiver", 3) +
                     "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
@@ -223,6 +225,19 @@ namespace PharmaLabVR.Session
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
+        // A checksum confirms journal bytes, not a human or device identity.
+        // NativePH means the app's explicit current-Navtive-measurement path
+        // wrote this record; old six-field notes and handwritten text cannot
+        // claim that origin merely by imitating the observation's wording.
+        public static string RecordOriginLabel(NotebookRecordKind kind) =>
+            kind switch
+            {
+                NotebookRecordKind.NativePH =>
+                    "Native-recorded entry (offline; not attested)",
+                NotebookRecordKind.User => "Student-authored note",
+                _ => "Legacy note (source unverified)"
+            };
+
         public static string RenderPage(IReadOnlyList<NotebookEntry> notes,
             string reviewBranchId, int requestedIndex)
         {
@@ -239,6 +254,7 @@ namespace PharmaLabVR.Session
                 statement = statement.Substring(0, 77) + "...";
             return "Student note " + (index + 1) + "/" + matching.Length +
                 " · event " + entry.EventSequence + " · " + entry.VesselId +
+                " · " + RecordOriginLabel(entry.RecordKind) +
                 "\n" + statement + " (not independently verified)";
         }
 
@@ -264,7 +280,9 @@ namespace PharmaLabVR.Session
                 if (excerpt.Length > maxLength)
                     excerpt = excerpt.Substring(0, maxLength - 3) + "...";
                 text.Append("\nevent ").Append(entry.EventSequence).Append(" · ")
-                    .Append(entry.VesselId).Append(" · ").Append(excerpt);
+                    .Append(entry.VesselId).Append(" · ")
+                    .Append(RecordOriginLabel(entry.RecordKind)).Append(" · ")
+                    .Append(excerpt);
             }
             if (start > 0) text.Append("\nOpen Notebook for earlier notes.");
             if (!compact)
