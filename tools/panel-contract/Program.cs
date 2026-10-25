@@ -1472,6 +1472,19 @@ internal static class Program
         Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
             "Invalid Native quantity must never display as a real receiver measurement.");
 
+        // Local Unity editor test reports are release evidence only when a
+        // fresh XML exists, at least one test actually ran, every reported
+        // test passed, and the real M3 PlayMode scientific journey executed.
+        // Exit code 0 or stale previous-run XML cannot qualify a Player.
+        var localUnityRunner = System.IO.File.ReadAllText("scripts/test-unity.ps1");
+        Check(localUnityRunner.Contains("Remove-Item", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("SelectSingleNode", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("test-run", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("M3_ExplicitNotebookSaveAndReviewNeedsRecordedNativePHAndDurableSave",
+                    StringComparison.Ordinal) &&
+              localUnityRunner.Contains("Test report unavailable", StringComparison.Ordinal),
+            "Unity local PlayMode runner can falsely pass missing/stale/empty results without the full scientific journey.");
+
         // Unity's .NET Standard-compatible player assemblies cannot rely
         // on the modern System.Double.IsFinite helper available in net8.
         // Source-linked headless tests otherwise miss this runtime API
