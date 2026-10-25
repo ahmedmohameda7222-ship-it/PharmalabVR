@@ -517,6 +517,7 @@ namespace PharmaLabVR.Input
             if (intent == ResearchAuxiliaryDeliveryIntent.None ||
                 intent != admittedAtPress)
             {
+                LastPhysicalInspectionFeedback = null;
                 LastPhysicalDeliveryFeedback =
                     "Delivery refused. Keep the pipette immersed in stock or the outlet aligned over the receiver from G press through the Native step.";
                 return;
@@ -549,6 +550,9 @@ namespace PharmaLabVR.Input
                         PanelAction.BottlePour :
                     intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
                         PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
+            // Latest physical action wins: do not let a previous inspection
+            // conceal the Native-confirmed receiver/source material credit.
+            LastPhysicalInspectionFeedback = null;
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native command accepted.") :
                 (session?.LastError ?? "Native research transfer refused.");
@@ -699,8 +703,11 @@ namespace PharmaLabVR.Input
             var panel = coreDriver.transform.root
                 .GetComponentInChildren<LabPanelController>(true);
             if (panel?.Request(PanelAction.RecordCurrentPH) == true)
+            {
+                LastPhysicalDeliveryFeedback = null;
                 LastPhysicalInspectionFeedback =
                     "Current Native receiver pH recorded in the branch-bound Notebook.";
+            }
         }
 
         // Alt-click an actual stock body for its Native inventory metadata.
@@ -727,6 +734,7 @@ namespace PharmaLabVR.Input
                 .GetComponentInChildren<LabPanelController>(true);
             var accepted = panel != null &&
                 panel.Request(PanelAction.Inspect, inventoryId);
+            LastPhysicalDeliveryFeedback = null;
             LastPhysicalInspectionFeedback = accepted ?
                 "Native " + inventoryId +
                 " selected for material inspection; unsupported measurements remain unavailable." :
@@ -751,6 +759,7 @@ namespace PharmaLabVR.Input
             var panel = coreDriver.transform.root.GetComponentInChildren<LabPanelController>(true);
             var accepted = panel != null &&
                 panel.Request(PanelAction.Measure, physicallySelected.InventoryId);
+            LastPhysicalDeliveryFeedback = null;
             LastPhysicalInspectionFeedback = accepted ? null :
                 "Native measurement selection was refused. Check the active lab and receiver.";
             return accepted;

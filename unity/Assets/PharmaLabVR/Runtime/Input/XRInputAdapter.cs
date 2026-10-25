@@ -383,8 +383,11 @@ namespace PharmaLabVR.Input
                         touched, emptyHands, uiClear, nativeReady))
                     continue;
                 if (deliveryPanel.Request(PanelAction.RecordCurrentPH))
+                {
+                    LastPhysicalDeliveryFeedback = null;
                     LastPhysicalInspectionFeedback =
                         "Current Native receiver pH recorded in the branch-bound Notebook.";
+                }
                 break; // One tracked hand can record at most one current event.
             }
         }
@@ -427,6 +430,7 @@ namespace PharmaLabVR.Input
                 if (id == null) continue;
                 var accepted = deliveryPanel.Request(
                     id == "receiver" ? PanelAction.Measure : PanelAction.Inspect, id);
+                LastPhysicalDeliveryFeedback = null;
                 LastPhysicalInspectionFeedback = accepted ?
                     (id == "receiver" ?
                         "Native receiver selected for supported pH inspection." :
@@ -532,6 +536,7 @@ namespace PharmaLabVR.Input
             if (intent == ResearchAuxiliaryDeliveryIntent.None ||
                 intent != admittedAtPress)
             {
+                LastPhysicalInspectionFeedback = null;
                 LastPhysicalDeliveryFeedback =
                     "Delivery refused. Maintain immersion or receiver alignment from press through Native step.";
                 return;
@@ -563,6 +568,7 @@ namespace PharmaLabVR.Input
                         PanelAction.BottlePour :
                     intent == ResearchAuxiliaryDeliveryIntent.PipetteAspirate ?
                         PanelAction.PipetteAspirate : PanelAction.PipetteDispense);
+            LastPhysicalInspectionFeedback = null;
             LastPhysicalDeliveryFeedback = accepted ?
                 (session?.LastInstrumentReceipt ?? "Native operation accepted.") :
                 (session?.LastError ?? "Native operation refused.");
