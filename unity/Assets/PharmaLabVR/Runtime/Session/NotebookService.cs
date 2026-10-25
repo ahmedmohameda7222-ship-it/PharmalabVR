@@ -9,6 +9,12 @@ namespace PharmaLabVR.Session
 {
     // Research notebook notes are annotations, never Native material or solver commands.
     // Their branch and event revisions come from an actual CoreSession/LabViewModel.
+    // Local record provenance, not cryptographic source attestation.
+    // V1 six-field archives remain LEGACY and cannot grant new Native pH
+    // completion; a seventh, checksum-covered field preserves kind for
+    // all newly committed records.
+    public enum NotebookRecordKind { Legacy, User, NativePH }
+
     public sealed class NotebookEntry
     {
         public string BranchId { get; }
@@ -16,15 +22,18 @@ namespace PharmaLabVR.Session
         public string VesselId { get; }
         public string Text { get; }
         public string RecordedAtUtc { get; }
+        public NotebookRecordKind RecordKind { get; }
 
         internal NotebookEntry(string branchId, string eventSequence, string vesselId,
-            string text, string recordedAtUtc)
+            string text, string recordedAtUtc,
+            NotebookRecordKind recordKind = NotebookRecordKind.Legacy)
         {
             BranchId = branchId;
             EventSequence = eventSequence;
             VesselId = vesselId;
             Text = text;
             RecordedAtUtc = recordedAtUtc;
+            RecordKind = recordKind;
         }
     }
 
@@ -40,7 +49,41 @@ namespace PharmaLabVR.Session
         private static readonly UTF8Encoding StrictUtf8 = new UTF8Encoding(false, true);
 
         public NotebookEntry Append(string path, string branchId, string eventSequence,
-            string vesselId, string text)
+            string vesselId, string text) =>
+            AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.User);
+
+        // Instructor sidecar responses need exactly-once admission even
+        // when two controllers request the same annotation concurrently.
+        // Check under the same durable lease as journal publication.
+        // This does NOT attest an instructor identity or touch Native science.
+        public NotebookEntry AppendOnce(string path, string branchId,
+            string eventSequence, string vesselId, string text) =>
+            AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.User, rejectIdentical: true);
+
+        // Only the Native measurement UI flow may use this recorder,
+        // after NativeMeasurementNote.Build has checked the raw/current
+        // scientific snapshot. No student text-area action calls it.
+        public NotebookEntry AppendNativeMeasurement(string path, string branchId,
+            string eventSequence, string vesselId, string text)
+        {
+            if (string.IsNullOrEmpty(text) ||
+                !text.StartsWith("Native pH ", StringComparison.Ordinal) ||
+                !text.Contains(" · event " + eventSequence + " · Supported/Current",
+                    StringComparison.Ordinal) ||
+                !text.Contains(" · vessel " + vesselId + " · material revision ",
+                    StringComparison.Ordinal))
+                throw new ArgumentException(
+                    "Native pH journal entry requires a matching recorded scientific event.",
+                    nameof(text));
+            return AppendTyped(path, branchId, eventSequence, vesselId, text,
+                NotebookRecordKind.NativePH);
+        }
+
+        private NotebookEntry AppendTyped(string path, string branchId,
+            string eventSequence, string vesselId, string text,
+            NotebookRecordKind recordKind, bool rejectIdentical = false)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
@@ -59,7 +102,8 @@ namespace PharmaLabVR.Session
             {
                 using (var lease = new FileStream(fullPath + ".lock",
                     FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None))
-                    return AppendUnderLease(fullPath, branchId, eventSequence, vesselId, text);
+                    return AppendUnderLease(fullPath, branchId, eventSequence, vesselId,
+                        text, recordKind, rejectIdentical);
             }
             catch (IOException error)
             {
@@ -69,17 +113,37 @@ namespace PharmaLabVR.Session
         }
 
         private static NotebookEntry AppendUnderLease(string fullPath, string branchId,
-            string eventSequence, string vesselId, string text)
+            string eventSequence, string vesselId, string text, NotebookRecordKind recordKind,
+            bool rejectIdentical)
         {
             if (!File.Exists(fullPath) && File.Exists(fullPath + ".bak"))
                 throw new InvalidDataException("Recover the confirmed notebook backup before editing.");
             // Only the primary is writable. Damaged current bytes must never
             // silently be replaced by a backup and a fresh annotation.
             var entries = ReadStrict(fullPath);
+            if (rejectIdentical &&
+                entries.Exists(item => item.BranchId == branchId &&
+                    item.EventSequence == eventSequence &&
+                    item.VesselId == vesselId &&
+                    item.RecordKind == recordKind &&
+                    string.Equals(item.Text, text, StringComparison.Ordinal)))
+                throw new InvalidOperationException(
+                    "This exact local formative response was already committed.");
+            // Must be checked INSIDE the held file lease. Desktop/XR may
+            // both pass an earlier UI preflight before either commits.
+            // The second writer must never create a duplicate app-recorded
+            // Native pH for the same scientific branch/event/vessel.
+            if (recordKind == NotebookRecordKind.NativePH &&
+                entries.Exists(item => item.RecordKind == NotebookRecordKind.NativePH &&
+                    item.BranchId == branchId &&
+                    item.EventSequence == eventSequence &&
+                    item.VesselId == vesselId))
+                throw new InvalidDataException(
+                    "The current Native vessel pH was already recorded for this event.");
             if (entries.Count >= MaximumNotes)
                 throw new InvalidDataException("Research notebook record limit reached.");
             var added = new NotebookEntry(branchId, eventSequence, vesselId, text,
-                DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture));
+                DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture), recordKind);
             entries.Add(added);
             var bytes = StrictUtf8.GetBytes(Serialize(entries));
             if (bytes.Length > MaximumFileBytes)
@@ -111,25 +175,58 @@ namespace PharmaLabVR.Session
             }
         }
 
+        // Recovery-oriented reads preserve the last confirmed, checksummed
+        // backup when a primary was damaged. This is NOT proof that the
+        // backup represents the current Native event.
         public IReadOnlyList<NotebookEntry> Read(string path, string branchId)
+        {
+            return ReadInternal(path, branchId, allowDamagedPrimaryRecovery: true);
+        }
+
+        // UI/Review reads may NOT silently present older backup annotations
+        // as the active student's current evidence when the primary exists
+        // but is corrupt. Missing primary still supports committed backup
+        // recovery; a damaged primary is explicitly unavailable.
+        public IReadOnlyList<NotebookEntry> ReadCurrent(string path,
+            string branchId, string maxEventSequence)
+        {
+            ValidateRevision(maxEventSequence);
+            var ceiling = ulong.Parse(maxEventSequence, CultureInfo.InvariantCulture);
+            var all = ReadInternal(path, branchId,
+                allowDamagedPrimaryRecovery: false);
+            var visible = new List<NotebookEntry>();
+            foreach (var entry in all)
+                if (ulong.Parse(entry.EventSequence, CultureInfo.InvariantCulture) <= ceiling)
+                    visible.Add(entry);
+            return visible.AsReadOnly();
+        }
+
+        private static IReadOnlyList<NotebookEntry> ReadInternal(string path,
+            string branchId, bool allowDamagedPrimaryRecovery)
         {
             ValidatePath(path);
             ValidateId(branchId, nameof(branchId));
             var fullPath = Path.GetFullPath(path);
             List<NotebookEntry> all;
-            try
+            if (!File.Exists(fullPath))
             {
-                if (!File.Exists(fullPath) && !File.Exists(fullPath + ".bak"))
-                    return Array.Empty<NotebookEntry>();
-                all = ReadStrict(fullPath);
-                if (!File.Exists(fullPath))
-                    all = ReadStrict(fullPath + ".bak");
+                all = File.Exists(fullPath + ".bak") ?
+                    ReadStrict(fullPath + ".bak") : new List<NotebookEntry>();
             }
-            catch (Exception error) when (error is InvalidDataException ||
-                                         error is IOException || error is DecoderFallbackException)
+            else if (!allowDamagedPrimaryRecovery)
             {
-                if (!File.Exists(fullPath + ".bak")) throw;
-                all = ReadStrict(fullPath + ".bak");
+                all = ReadStrict(fullPath);
+            }
+            else
+            {
+                try { all = ReadStrict(fullPath); }
+                catch (Exception error) when (error is InvalidDataException ||
+                                               error is IOException ||
+                                               error is DecoderFallbackException)
+                {
+                    if (!File.Exists(fullPath + ".bak")) throw;
+                    all = ReadStrict(fullPath + ".bak");
+                }
             }
             var result = new List<NotebookEntry>();
             foreach (var item in all)
@@ -186,6 +283,44 @@ namespace PharmaLabVR.Session
                     throw new InvalidDataException("Portable notes do not match the Native branch/revision.");
         }
 
+        // Transactional student restore: stage only a checksum-validated,
+        // branch-scoped local journal in a *new* session namespace. This
+        // must never merge into or replace another student's Notebook.
+        public static void InstallPortableSnapshot(string path, string snapshot,
+            string branchId, string maxEventSequence)
+        {
+            ValidatePath(path);
+            ValidatePortableSnapshot(snapshot, branchId, maxEventSequence);
+            var fullPath = Path.GetFullPath(path);
+            var directory = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrEmpty(directory))
+                throw new InvalidDataException("Portable Notebook has no parent directory.");
+            Directory.CreateDirectory(directory);
+            if (File.Exists(fullPath) || File.Exists(fullPath + ".bak"))
+                throw new IOException("Portable restore cannot overwrite an existing Notebook.");
+            var bytes = StrictUtf8.GetBytes(snapshot);
+            var temporary = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                using (var stream = new FileStream(temporary, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                // Atomic, no-overwrite publish; the importer chooses a fresh
+                // namespace and swaps its Native session only after success.
+                File.Move(temporary, fullPath);
+            }
+            catch
+            {
+                try { if (File.Exists(temporary)) File.Delete(temporary); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
         // Used by read-only teaching review of a .plvpack. Parse the
         // checksum-verified journal in memory; never recreate/write a local
         // Notebook file or accept a different Native branch/future event.
@@ -216,6 +351,7 @@ namespace PharmaLabVR.Session
         private static List<NotebookEntry> ParseStrict(string content)
         {
             var result = new List<NotebookEntry>();
+            var nativeEventKeys = new HashSet<string>(StringComparer.Ordinal);
             if (string.IsNullOrEmpty(content) ||
                 StrictUtf8.GetByteCount(content) > MaximumFileBytes)
                 throw new InvalidDataException("Notebook snapshot is empty or oversized.");
@@ -227,9 +363,10 @@ namespace PharmaLabVR.Session
             {
                 if (line.Length == 0) continue;
                 var parts = line.Split('\t');
-                if (parts.Length != 6 ||
-                    !string.Equals(Hash(string.Join("\t", parts, 0, 5)), parts[5],
-                        StringComparison.OrdinalIgnoreCase))
+                var checksumIndex = parts.Length - 1;
+                if ((parts.Length != 6 && parts.Length != 7) ||
+                    !string.Equals(Hash(string.Join("\t", parts, 0, checksumIndex)),
+                        parts[checksumIndex], StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException("Notebook record checksum is invalid.");
                 try
                 {
@@ -237,15 +374,27 @@ namespace PharmaLabVR.Session
                     var vessel = Decode(parts[2]);
                     var note = Decode(parts[3]);
                     var timestamp = Decode(parts[4]);
+                    var recordKind = NotebookRecordKind.Legacy;
+                    if (parts.Length == 7 &&
+                        (!Enum.TryParse(parts[5], false, out recordKind) ||
+                         (recordKind != NotebookRecordKind.Legacy &&
+                          recordKind != NotebookRecordKind.User &&
+                          recordKind != NotebookRecordKind.NativePH)))
+                        throw new InvalidDataException("Notebook evidence kind is unsupported.");
                     ValidateId(branch, nameof(branch));
                     ValidateRevision(parts[1]);
                     ValidateId(vessel, nameof(vessel));
                     ValidateText(note);
+                    if (recordKind == NotebookRecordKind.NativePH &&
+                        !nativeEventKeys.Add(branch + "\t" + parts[1] + "\t" + vessel))
+                        throw new InvalidDataException(
+                            "Duplicate app-recorded Native pH event in a checksummed Notebook.");
                     if (!DateTimeOffset.TryParseExact(timestamp, "O", CultureInfo.InvariantCulture,
                             DateTimeStyles.RoundtripKind, out var recorded) ||
                         recorded.Offset != TimeSpan.Zero)
                         throw new InvalidDataException("Notebook timestamp is invalid.");
-                    result.Add(new NotebookEntry(branch, parts[1], vessel, note, timestamp));
+                    result.Add(new NotebookEntry(branch, parts[1], vessel, note,
+                        timestamp, recordKind));
                 }
                 catch (Exception error) when (error is ArgumentException ||
                                              error is FormatException ||
@@ -265,7 +414,8 @@ namespace PharmaLabVR.Session
             foreach (var entry in entries)
             {
                 var body = string.Join("\t", Encode(entry.BranchId), entry.EventSequence,
-                    Encode(entry.VesselId), Encode(entry.Text), Encode(entry.RecordedAtUtc));
+                    Encode(entry.VesselId), Encode(entry.Text),
+                    Encode(entry.RecordedAtUtc), entry.RecordKind.ToString());
                 text.Append(body).Append('\t').Append(Hash(body)).Append('\n');
             }
             return text.ToString();

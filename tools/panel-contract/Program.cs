@@ -129,6 +129,62 @@ internal static class Program
         Check(onboardingRouter.Current.ScreenId == ScreenId.Pause,
             "Normal paused Native authority admitted live Lab navigation.");
 
+        // Unity constructs MonoBehaviour fields before Awake/OnEnable.
+        // A tracked XR view must know the requested mode before an async
+        // scientific package launch can report Pending to the spatial panel.
+        var coreStartupSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        Check(coreStartupSource.Contains(
+                "public string CurrentMode { get; private set; } = BootMenu.RequestedMode",
+                StringComparison.Ordinal),
+            "XR pending Native startup may remain invisible until OnEnable because the display defaults to Desktop.");
+        // Native startup is asynchronous on Android. Without its real
+        // pinned solver package, neither a transient initializing XR lab nor
+        // a late package failure may advertise material/save/measurement.
+        var noNative = new CoreDriver { Session = null, CurrentMode = "VR" };
+        var noNativeRouter = new ScreenRouter();
+        noNativeRouter.Configure(noNative);
+        Check(noNativeRouter.Current.SupportedActions.Count == 0,
+            "XR Native initialization exposed live scientific actions before a session existed.");
+        var lateNative = new CoreDriver { CurrentMode = "VR" };
+        var lateRouter = new ScreenRouter();
+        lateRouter.Configure(lateNative);
+        Check(lateRouter.Current.SupportedActions.Contains("Pause"),
+            "Healthy Native Lab fixture never offered ordinary operating actions.");
+        lateNative.FailBootstrap("Pinned IPhreeqc package unavailable.");
+        Check(lateRouter.Current.SupportedActions.Count == 0 &&
+              lateNative.StartupError.Contains("IPhreeqc"),
+            "A failed asynchronous Native package left unsafe live Lab controls exposed.");
+        var offlineXRSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(offlineXRSource.Contains("Scientific package unavailable", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("Initializing Native scientific package", StringComparison.Ordinal),
+            "XR must show an explicit fail-closed Native pending/error view.");
+
+        // Real user recovery from an XR/Desktop Native package failure:
+        // every scientific route remains denied, but an explicit error-only
+        // return to Boot must be reachable. Pending startup must not expose it.
+        var outageSessions = new SessionController { FailedLabExitPermitted = true };
+        var outagePanels = new LabPanelController();
+        outagePanels.Configure(lateRouter, lateNative, outageSessions);
+        var exitKnown = Enum.TryParse("ExitFailedLab", out PanelAction exitAction);
+        Check(exitKnown && lateRouter.Current.SupportedActions.Count == 0 &&
+              outagePanels.Request(exitAction) &&
+              outageSessions.FailedLabExitCalls == 1,
+            "Failed scientific initialization has no guarded route back to Boot.");
+        outageSessions.FailedLabExitPermitted = false;
+        Check(!outagePanels.Request(exitAction) && outageSessions.FailedLabExitCalls == 1,
+            "Normal or merely pending Native startup admitted a forced scene exit.");
+        Check(!outagePanels.Request(PanelAction.Save) &&
+              !outagePanels.Request(PanelAction.PrepareResearchStock, "hcl", 0.05),
+            "Startup recovery accidentally authorized scientific operations.");
+        var desktopFailureSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(desktopFailureSource.Contains("Return to Boot", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("Return to Boot", StringComparison.Ordinal) &&
+              offlineXRSource.Contains("PanelAction.ExitFailedLab", StringComparison.Ordinal),
+            "Scientific failure recovery is not exposed in both Desktop and XR.");
+
         // A notebook reading is not typed by the user or inferred from
         // a lesson. It is bound to a Current Native pH and matching vessel revision.
         var noteView = new LabViewModel();
@@ -238,6 +294,137 @@ internal static class Program
         catch (InvalidOperationException) { missingModelDenied = true; }
         Check(missingModelDenied, "A reading without the actual Native model package was recorded.");
         noteView.Observations[0].DatabaseIdentity = "sha256:research-db";
+        // A student-controlled text note may exactly copy the current
+        // scientific display, model hash and revision. It must NOT be counted
+        // as an app-recorded Native measurement when completing the study.
+        // Old six-field notebooks must remain readable but unprivileged.
+        var handwrittenPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-handwritten-" + Guid.NewGuid().ToString("N") + ".plv-notes");
+        try
+        {
+            var evidence = new NotebookService();
+            var handTyped = NativeMeasurementNote.Build(noteView, "receiver",
+                MeasurementAvailability.Current, "7.13");
+            evidence.Append(handwrittenPath, "student-branch", noteView.EventSequence,
+                "receiver", handTyped);
+            var stored = evidence.ReadCurrent(handwrittenPath,
+                "student-branch", noteView.EventSequence);
+            Check(!NativeMeasurementNote.WasRecorded(stored, "student-branch",
+                    noteView.EventSequence, "receiver",
+                    noteView.Vessels[1].MaterialRevision),
+                "Student-authored text masqueraded as a Native-recorded current pH measurement.");
+            Check(ResearchLearningReview.RenderPage(stored,
+                    "student-branch", 0).Contains("Student-authored", StringComparison.Ordinal) &&
+                  !ResearchLearningReview.RenderPage(stored,
+                    "student-branch", 0).Contains("Native-recorded entry",
+                        StringComparison.Ordinal),
+                "Imported teaching preview promoted copied student text to a Native reading.");
+            Check(ResearchNotebookPHHistory.Summarize(stored,
+                    "student-branch", "receiver", 4).Contains(
+                    "No recorded Native pH", StringComparison.Ordinal),
+                "A copied student pH note contaminated the Native-only event history.");
+            var typedRecord = stored.Single();
+            var origin = typedRecord.GetType().GetProperty("RecordKind");
+            Check(origin != null && !string.Equals(
+                    origin?.GetValue(typedRecord)?.ToString(), "NativePH",
+                    StringComparison.Ordinal),
+                "Notebook storage lacks a distinct, checksum-covered Native observation kind.");
+            var nativeAppend = typeof(NotebookService).GetMethod("AppendNativeMeasurement");
+            Check(nativeAppend != null,
+                "Scientific pH records are written through the same untyped user note route.");
+            if (nativeAppend != null)
+            {
+                nativeAppend.Invoke(evidence, new object[] { handwrittenPath,
+                    "student-branch", noteView.EventSequence, "receiver", handTyped });
+                var current = evidence.ReadCurrent(handwrittenPath,
+                    "student-branch", noteView.EventSequence);
+                Check(NativeMeasurementNote.WasRecorded(current, "student-branch",
+                        noteView.EventSequence, "receiver",
+                        noteView.Vessels[1].MaterialRevision) &&
+                      current.Count(x => string.Equals(origin?.GetValue(x)?.ToString(),
+                          "NativePH", StringComparison.Ordinal)) == 1,
+                    "Only a deliberate Native-reading append may satisfy pH evidence admission.");
+                // Two independently constructed Notebook services can race
+                // through UI retries. The file-lease transaction, not a
+                // transient page flag, must enforce one NativePH record per
+                // branch/event/vessel, while retaining the handwritten row.
+                var doubleRecorded = false;
+                try
+                {
+                    new NotebookService().AppendNativeMeasurement(
+                        handwrittenPath, "student-branch", noteView.EventSequence,
+                        "receiver", handTyped);
+                }
+                catch (System.IO.InvalidDataException) { doubleRecorded = true; }
+                Check(doubleRecorded &&
+                      evidence.ReadCurrent(handwrittenPath, "student-branch",
+                          noteView.EventSequence).Count(x =>
+                          x.RecordKind == NotebookRecordKind.NativePH) == 1,
+                    "Two independent journal writers recorded duplicate Native scientific pH events.");
+                var packed = evidence.ExportBranch(handwrittenPath, "student-branch",
+                    noteView.EventSequence);
+                var unpacked = NotebookService.ReadPortableBranch(packed,
+                    "student-branch", noteView.EventSequence);
+                var singleNativeRow = packed.Split('\n').First(row =>
+                    row.Contains("\tNativePH\t", StringComparison.Ordinal));
+                var duplicatedNativeArchive = packed + singleNativeRow + "\n";
+                var duplicateArchiveRefused = false;
+                try
+                {
+                    NotebookService.ReadPortableBranch(duplicatedNativeArchive,
+                        "student-branch", noteView.EventSequence);
+                }
+                catch (System.IO.InvalidDataException) { duplicateArchiveRefused = true; }
+                Check(duplicateArchiveRefused,
+                    "A checksummed portable study allowed two Native pH records for one vessel event.");
+                Check(unpacked.Count == 2 &&
+                      string.Equals(origin?.GetValue(unpacked[0])?.ToString(),
+                          "User", StringComparison.Ordinal) &&
+                      string.Equals(origin?.GetValue(unpacked[1])?.ToString(),
+                          "NativePH", StringComparison.Ordinal),
+                    "Portable archive lost the checksum-protected provenance of Notebook rows.");
+            }
+        }
+        finally
+        {
+            foreach (var suffix in new[] { "", ".bak", ".lock" })
+                if (System.IO.File.Exists(handwrittenPath + suffix))
+                    System.IO.File.Delete(handwrittenPath + suffix);
+        }
+
+        // Six-field V1 records remain readable but cannot become an
+        // authoritative pH merely because their text matches the model.
+        // A seventh checksum-covered record kind is a backward-compatible
+        // extension; the same source header remains in use.
+        var legacyScientificText = NativeMeasurementNote.Build(noteView,
+            "receiver", MeasurementAvailability.Current, "7.13");
+        var legacyBranch = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("student-branch"));
+        var legacyVessel = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes("receiver"));
+        var legacyAnnotation = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(legacyScientificText));
+        var legacyUtc = Convert.ToBase64String(
+            System.Text.Encoding.UTF8.GetBytes(
+                DateTime.UtcNow.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+        var legacyBody = string.Join("\t", legacyBranch, noteView.EventSequence,
+            legacyVessel, legacyAnnotation, legacyUtc);
+        string oldChecksum;
+        using (var digest = System.Security.Cryptography.SHA256.Create())
+            oldChecksum = BitConverter.ToString(
+                digest.ComputeHash(System.Text.Encoding.UTF8.GetBytes(legacyBody)))
+                .Replace("-", string.Empty);
+        var legacyArchive = "PLV-NOTEBOOK-V1\n" +
+            legacyBody + "\t" + oldChecksum + "\n";
+        var legacyParsed = NotebookService.ReadPortableBranch(
+            legacyArchive, "student-branch", noteView.EventSequence);
+        Check(legacyParsed.Count == 1 &&
+              legacyParsed[0].RecordKind == NotebookRecordKind.Legacy &&
+              !NativeMeasurementNote.WasRecorded(legacyParsed, "student-branch",
+                noteView.EventSequence, "receiver",
+                noteView.Vessels[1].MaterialRevision),
+            "Old six-field journal either stopped loading or gained false scientific origin.");
+
         var noteRouter = new ScreenRouter();
         noteRouter.Configure(new CoreDriver());
         noteRouter.Show(ScreenId.Measure, "receiver");
@@ -265,6 +452,91 @@ internal static class Program
               notePanels.Request(PanelAction.Review) &&
               noteRouter.Current.ScreenId == ScreenId.Review,
             "Notebook-to-durable-save-to-recorded-review journey is not routable.");
+
+        // Finish-from-Notebook is a separate, explicitly labeled SAVE action.
+        // No false grades, implicit saving by ordinary Review or permission to
+        // finish without recorded current scientific evidence.
+        noteRouter.Show(ScreenId.Notebook);
+        var saveReviewExists = Enum.TryParse("SaveAndReviewStudy",
+            out PanelAction saveReviewAction);
+        Check(saveReviewExists &&
+              noteRouter.Current.SupportedActions.Contains("SaveAndReviewStudy"),
+            "Research Notebook lacks an explicit end-to-end Save + Review action.");
+        var savesBeforeFinish = noteSession.SaveCalls;
+        var opensBeforeFinish = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteSession.SaveCalls == savesBeforeFinish &&
+              noteSession.ReviewOpens == opensBeforeFinish,
+            "Research experiment falsely completed without an exact Native pH note.");
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.SavePermitted = false;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.ReviewOpens == opensBeforeFinish,
+            "Failed durable save advanced to review or submitted a review anyway.");
+        noteSession.SavePermitted = true;
+        Check(notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Review &&
+              noteSession.SaveCalls == savesBeforeFinish + 2 &&
+              noteSession.ReviewOpens == opensBeforeFinish + 1,
+            "Native pH evidence did not complete deliberate Save → Review in order.");
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteSession.ReviewOpens == opensBeforeFinish + 1,
+            "Recorded Review repeated a saving-only Notebook transition.");
+        // Recorded student Review must let the learner explicitly export
+        // their active Native + Notebook as an immutable portable pack,
+        // without visiting a different screen or exporting teacher preview.
+        var exportedBeforeReview = noteSession.PortableExportCalls;
+        Check(noteRouter.Current.SupportedActions.Contains("ExportPortable") &&
+              notePanels.Request(PanelAction.ExportPortable) &&
+              noteSession.PortableExportCalls == exportedBeforeReview + 1 &&
+              noteRouter.Current.ScreenId == ScreenId.Review,
+            "An explicitly saved Native Review cannot export its current branch-bound student pack.");
+        noteRouter.Show(ScreenId.Lab);
+        Check(!notePanels.Request(PanelAction.ExportPortable) &&
+              noteSession.PortableExportCalls == exportedBeforeReview + 1,
+            "Lab operations bypassed the explicit Notebook/Review/Paused portable export gate.");
+        noteRouter.Show(ScreenId.Review);
+        var xrExportSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrExportSource.Contains("reviewExportAvailable", StringComparison.Ordinal) &&
+              xrExportSource.Contains("Export archive", StringComparison.Ordinal) &&
+              xrExportSource.Contains("Compare saved", StringComparison.Ordinal),
+            "XR Review's Native pack export cannot coexist with Compare on non-overlapping ray targets.");
+        // A background Native event/branch change between the evidence
+        // preflight and durable Save must not open a mismatched Review.
+        noteRouter.Show(ScreenId.Notebook);
+        noteSession.CloseReview();
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.InvalidateNativeStudyOnSave = true;
+        var opensBeforeChangedNative = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.ReviewOpens == opensBeforeChangedNative,
+            "An outdated Native pH note was promoted after the source changed during Save.");
+        noteSession.InvalidateNativeStudyOnSave = false;
+
+        // A newly published Native event while opening Review must never
+        // be confused with the student's previously admitted pH result.
+        noteSession.CanFinishNativeStudy = true;
+        noteSession.ReviewEventChangedOnOpen = true;
+        var reviewCallsBeforeRace = noteSession.ReviewOpens;
+        Check(!notePanels.Request(saveReviewAction) &&
+              noteRouter.Current.ScreenId == ScreenId.Notebook &&
+              noteSession.RecordedReview == null &&
+              noteSession.ReviewOpens == reviewCallsBeforeRace + 1,
+            "Recorded Review accepted a different scientific event after Native Save.");
+        noteSession.ReviewEventChangedOnOpen = false;
+
+        var studentSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var spatialSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(studentSource.Contains("CanFinishNativeStudy", StringComparison.Ordinal) &&
+              studentSource.Contains("Save + review", StringComparison.Ordinal) &&
+              spatialSource.Contains("Save + review evidence", StringComparison.Ordinal) &&
+              spatialSource.Contains("PanelAction.SaveAndReviewStudy", StringComparison.Ordinal),
+            "The guarded Save + Review journey is missing from Desktop or XR.");
 
         // P12.03 concept inspection must describe existing Native material
         // and exact supported observation, never a simulated plot/result.
@@ -350,7 +622,7 @@ internal static class Program
             "This is a learner prediction, not a Native result or certified endpoint.",
             DateTime.UtcNow.ToString("O"));
         var progressMeasurement = new NotebookEntry("predict-branch", "7", "receiver", nativeNote,
-            DateTime.UtcNow.ToString("O"));
+            DateTime.UtcNow.ToString("O"), NotebookRecordKind.NativePH);
         var progressExplanation = new NotebookEntry("predict-branch", "7", "receiver",
             "Student explanation for strong-acid-titration-research at Native event 7 · model-limitations: " +
             "Selected by learner; not Native scientific evidence.",
@@ -371,6 +643,60 @@ internal static class Program
               ResearchLessonJourney.RecoverSavedPrediction(
                 new[] { hypothesis }, predictiveDefinition.id, "predict-branch", "5") == "below-7",
             "Predictions must become visible at their exact authored Native event.");
+        // On SessionLoad, only one authenticated, branch-matched, event-
+        // bounded lesson hypothesis can automatically restore guidance.
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, futureHypothesis }, "predict-branch", "7") ==
+                "strong-acid-titration-research",
+            "Saved Research lesson was not recovered from its original durable hypothesis.");
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { futureHypothesis }, "predict-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis }, "other-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis }, "predict-branch", "4") == null,
+            "A future, foreign or not-yet-recorded prediction must not restore a lesson.");
+        var contradictoryPrediction = new NotebookEntry(
+            "predict-branch", "6", "receiver",
+            "Student hypothesis for strong-acid-titration-research: receiver pH predicted at least 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        Check(ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, contradictoryPrediction }, "predict-branch", "7") &&
+              !ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, futureHypothesis }, "predict-branch", "7") &&
+              !ResearchLessonJourney.HasAmbiguousSavedPredictions(
+                new[] { hypothesis, hypothesis }, "predict-branch", "7"),
+            "Conflicting on-branch learner guidance needs an explicit visible warning.");
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, contradictoryPrediction },
+                predictiveDefinition.id, "predict-branch", "7") == null &&
+              ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, contradictoryPrediction }, "predict-branch", "7") == null,
+            "Contradictory student hypotheses for the SAME lesson must not auto-restore.");
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, contradictoryPrediction,
+                    new NotebookEntry("predict-branch", "6", "receiver",
+                        "Student hypothesis for mixed-acid-titration-research: receiver pH predicted below 7. " +
+                        "This is a learner prediction, not a Native result or certified endpoint.",
+                        DateTime.UtcNow.ToString("O")) },
+                "predict-branch", "7") == null,
+            "A contradictory lesson must not be ignored to auto-select another lesson.");
+        Check(ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, contradictoryPrediction },
+                predictiveDefinition.id, "predict-branch", "5") == "below-7" &&
+              ResearchLessonJourney.RecoverSavedPrediction(
+                new[] { hypothesis, hypothesis }, predictiveDefinition.id,
+                "predict-branch", "7") == "below-7",
+            "Future conflicting notes must remain outside the restored event ceiling; exact duplicates are stable.");
+        var conflictingLesson = new NotebookEntry("predict-branch", "6", "receiver",
+            "Student hypothesis for mixed-acid-titration-research: receiver pH predicted at least 7. " +
+            "This is a learner prediction, not a Native result or certified endpoint.",
+            DateTime.UtcNow.ToString("O"));
+        Check(ResearchLessonJourney.RecoverSavedLessonId(
+                new[] { hypothesis, conflictingLesson }, "predict-branch", "7") == null,
+            "Two conflicting student lessons cannot be silently auto-selected.");
+
         var futureChecklist = predictionJourney.EvidenceChecklist(
             "predict-branch", predictiveView, new[] { futureHypothesis });
         Check(futureChecklist.Contains("Pending: student hypothesis") &&
@@ -485,6 +811,151 @@ internal static class Program
         var learningPath = System.IO.Path.Combine(learningDirectory, "study.plv-notes");
         try
         {
+            // M4 concurrent instructor clicks may target the identical
+            // exported study and note. Duplicate decisions MUST happen under
+            // the same durable journal lease, never via a racy separate Read.
+            var appendOnce = typeof(NotebookService).GetMethod(
+                "AppendOnce", System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Instance);
+            Check(appendOnce != null,
+                "Offline instructor feedback has no atomic duplicate-check-and-append.");
+            if (appendOnce != null)
+            {
+                var feedbackProbe = System.IO.Path.Combine(
+                    learningDirectory, "formative-atomic.plv-notes");
+                object[] args = { feedbackProbe, "student-branch", "7",
+                    "receiver", "Requested method uncertainty." };
+                appendOnce.Invoke(new NotebookService(), args);
+                var original = System.IO.File.ReadAllBytes(feedbackProbe);
+                var duplicateRefused = false;
+                try { appendOnce.Invoke(new NotebookService(), args); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is InvalidOperationException)
+                { duplicateRefused = true; }
+                Check(duplicateRefused &&
+                    System.IO.File.ReadAllBytes(feedbackProbe).SequenceEqual(original) &&
+                    new NotebookService().ReadCurrent(
+                        feedbackProbe, "student-branch", "7").Count == 1,
+                    "Two instructor requests committed the same feedback or rewrote an accepted response.");
+                appendOnce.Invoke(new NotebookService(),
+                    new object[] { feedbackProbe, "student-branch", "7",
+                        "receiver", "A different deliberate response." });
+                Check(new NotebookService().ReadCurrent(
+                        feedbackProbe, "student-branch", "7").Count == 2,
+                    "The atomic ledger incorrectly blocked distinct teacher responses.");
+            }
+            var feedbackServiceSource = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/InstructorFeedbackService.cs");
+            Check(feedbackServiceSource.Contains("journal.AppendOnce(", StringComparison.Ordinal),
+                "Instructor feedback still preflights duplicate checks outside the journal lease.");
+
+            // M4 student feedback is a read-only offline *local* preview.
+            // It must be tied to the immutable exported study fingerprint,
+            // actual selected student note and strict event/branch ceiling.
+            // This must never import a teacher grade or mutate Native/notes.
+            var readStudentFeedback = typeof(InstructorFeedbackService).GetMethod(
+                "StudentSummary", System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.Static);
+            Check(readStudentFeedback != null,
+                "Students cannot view exact-pack formative instructor feedback offline.");
+            if (readStudentFeedback != null)
+            {
+                var studentFeedbackPath = System.IO.Path.Combine(
+                    learningDirectory, "student-for-feedback.plv-notes");
+                var studentFeedbackNote = researchNotes.Append(studentFeedbackPath,
+                    "student-branch", "7", "receiver",
+                    "I need to compare the Native result with my hypothesis.");
+                var originalStudentBytes = System.IO.File.ReadAllBytes(studentFeedbackPath);
+                var fingerprint = InstructorFeedbackService.Fingerprint(
+                    "valid-native-study", "checksummed-student-journal");
+                var selected = researchNotes.ReadCurrent(studentFeedbackPath,
+                    "student-branch", "7");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    fingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "check-method");
+                string ReadPreview(string packFingerprint) =>
+                    (string)readStudentFeedback.Invoke(null,
+                        new object[] { researchNotes, learningDirectory,
+                            packFingerprint, "student-branch", "7", selected });
+                var studentFormativePreview = ReadPreview(fingerprint);
+                Check(studentFormativePreview.Contains("Review the instrument method", StringComparison.Ordinal) &&
+                      studentFormativePreview.Contains("not graded", StringComparison.OrdinalIgnoreCase) &&
+                      !studentFormativePreview.Contains("Certified", StringComparison.Ordinal) &&
+                      System.IO.File.ReadAllBytes(studentFeedbackPath)
+                          .SequenceEqual(originalStudentBytes),
+                    "Formative feedback preview changed a student note or claimed an institutional grade.");
+                var different = InstructorFeedbackService.Fingerprint(
+                    "different-native-study", "checksummed-student-journal");
+                Check(!ReadPreview(different).Contains("Review the instrument method",
+                    StringComparison.Ordinal),
+                    "Feedback from an unrelated archive fingerprint appeared as this student's.");
+                Check(ReadPreview(different).Contains(
+                        "Copy instructor-feedback-" + different + ".plv-notes",
+                        StringComparison.Ordinal),
+                    "Student offline feedback handoff has no exact fingerprint-bound file instructions.");
+
+                // A vanished primary must not silently present older
+                // .bak feedback as the current handoff from the instructor.
+                var backupFingerprint = InstructorFeedbackService.Fingerprint(
+                    "NATIVE-FORMATIVE-BACKUP", "STUDENT-NOTES-BACKUP");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    backupFingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "check-method");
+                InstructorFeedbackService.Record(researchNotes, learningDirectory,
+                    backupFingerprint, "student-branch", "7",
+                    studentFeedbackNote, 0, "request-evidence");
+                var backupOnly = InstructorFeedbackService.FeedbackPath(
+                    learningDirectory, backupFingerprint);
+                Check(System.IO.File.Exists(backupOnly + ".bak"),
+                    "Feedback fixture failed to create an actual older committed backup.");
+                System.IO.File.Delete(backupOnly);
+                var backupOnlyRejected = false;
+                try { ReadPreview(backupFingerprint); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is System.IO.InvalidDataException)
+                { backupOnlyRejected = true; }
+                Check(backupOnlyRejected,
+                    "Learner feedback silently promoted stale instructor .bak into current data.");
+
+                var localSidecar = InstructorFeedbackService.FeedbackPath(
+                    learningDirectory, fingerprint);
+                researchNotes.Append(localSidecar, "student-branch", "7", "receiver",
+                    "Fabricated instructor certification and score.");
+                var tamperedDenied = false;
+                try { ReadPreview(fingerprint); }
+                catch (System.Reflection.TargetInvocationException error)
+                    when (error.InnerException is System.IO.InvalidDataException)
+                { tamperedDenied = true; }
+                Check(tamperedDenied,
+                    "A checksummed but unbound instructor ledger row was presented as trusted feedback.");
+            }
+            var sourceStudentFeedback = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+            var xrStudentFeedback = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+            Check(sourceStudentFeedback.Contains("StudentFormativeFeedbackSummary",
+                    StringComparison.Ordinal) &&
+                  xrStudentFeedback.Contains("StudentFormativeFeedbackSummary",
+                    StringComparison.Ordinal),
+                "Recorded student Review does not display local feedback from its exported pack.");
+            Check(sourceStudentFeedback.Contains(
+                    "SelectedStudentFeedbackArchivePath(", StringComparison.Ordinal) &&
+                  sourceStudentFeedback.Contains(
+                    "AvailableLocalArchiveNames().Contains(selectedArchiveFileName)",
+                    StringComparison.Ordinal),
+                "A restarted student cannot select an existing validated .plvpack to view returned feedback.");
+            var summaryStart = sourceStudentFeedback.IndexOf(
+                "public string StudentFormativeFeedbackSummary", StringComparison.Ordinal);
+            var summaryEnd = sourceStudentFeedback.IndexOf(
+                "private int instructorAnnotationIndex", summaryStart,
+                StringComparison.Ordinal);
+            Check(summaryStart >= 0 && summaryEnd > summaryStart &&
+                  !sourceStudentFeedback.Substring(
+                      summaryStart, summaryEnd - summaryStart)
+                      .Contains("LastInstructorPortableReview != null", StringComparison.Ordinal),
+                "Switching back to Student view still hides the exact exported study's feedback behind cached teacher preview.");
+
+
             researchNotes.Append(learningPath, "student-branch", "7", "receiver",
                 "Student hypothesis: receiver pH below 7.");
             researchNotes.Append(learningPath, "student-branch", "11", "receiver",
@@ -493,7 +964,182 @@ internal static class Program
                 "Private unrelated student annotation.");
             // A Native checkpoint at event 7 must not display/export local
             // annotations from event 11 merely because the branch ID agrees.
-            var historical = researchNotes.Read(learningPath, "student-branch", "7");
+            // Real recorded review must load only branch+event-bounded journal
+            // evidence. The same persisted path must never expose a future
+            // measurement, and corrupt bytes must not crash the Review screen.
+            var boundedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "student-branch",
+                "student-branch", "7", false);
+            Check(boundedReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !boundedReview.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !boundedReview.Contains("Private unrelated", StringComparison.Ordinal),
+                "Restored event-7 Review exposed future or cross-branch Notebook evidence.");
+            var restoredReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "student-branch",
+                "student-branch", "11", false);
+            Check(restoredReview.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  restoredReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !restoredReview.Contains("Private unrelated", StringComparison.Ordinal),
+                "Valid saved Native review lost current durable student observations.");
+            var foreignReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, learningPath, "other-live-branch",
+                "student-branch", "11", false);
+            Check(!foreignReview.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !foreignReview.Contains("Native pH 6.20", StringComparison.Ordinal),
+                "Review displayed recorded notes from another live Native branch.");
+            var damagedJournalPath = System.IO.Path.Combine(
+                learningDirectory, "damaged.plv-notes");
+            researchNotes.Append(damagedJournalPath, "student-branch", "7",
+                "receiver", "Private unverified damaged journal content.");
+            System.IO.File.WriteAllText(damagedJournalPath,
+                "PLV-NOTEBOOK-V1\\ninvalid-record\\n");
+            var damagedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, damagedJournalPath, "student-branch",
+                "student-branch", "7", false);
+            var activeNotebookAtSeven = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, learningPath, "student-branch", "7");
+            Check(activeNotebookAtSeven.Contains("Latest · event 7", StringComparison.Ordinal) &&
+                  activeNotebookAtSeven.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !activeNotebookAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !activeNotebookAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
+                "Notebook screen displayed future or foreign annotations after checkpoint restore.");
+            var emptyNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, System.IO.Path.Combine(learningDirectory, "no-notes.plv-notes"),
+                "student-branch", "7");
+            Check(emptyNotebook.Contains("no recorded annotations", StringComparison.Ordinal),
+                "A genuinely empty notebook must not be misreported as corrupted.");
+            // A previously committed .bak may contain OLD valid evidence.
+            // When the current primary is visibly corrupt it must NOT be
+            // silently promoted to the student's current Notebook or Review.
+            var backedJournal = System.IO.Path.Combine(
+                learningDirectory, "backed-journal.plv-notes");
+            researchNotes.Append(backedJournal, "student-branch", "7",
+                "receiver", "Old backup-only learner hypothesis.");
+            researchNotes.Append(backedJournal, "student-branch", "11",
+                "receiver", "Latest current learner measurement.");
+            Check(System.IO.File.Exists(backedJournal + ".bak"),
+                "Regression fixture lacks an actually committed prior journal backup.");
+            System.IO.File.WriteAllText(backedJournal,
+                "PLV-NOTEBOOK-V1\\nCORRUPTED-CURRENT-PRIMARY\\n");
+            var corruptBackedReview = ResearchLearningReview.ReadRecordedJournal(
+                researchNotes, backedJournal, "student-branch",
+                "student-branch", "11", false);
+            var corruptBackedNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, backedJournal, "student-branch", "11");
+            Check(corruptBackedReview.Contains("Local notebook unavailable",
+                    StringComparison.Ordinal) &&
+                  corruptBackedNotebook.Contains("Research notebook unavailable",
+                    StringComparison.Ordinal) &&
+                  !corruptBackedReview.Contains("Old backup-only", StringComparison.Ordinal) &&
+                  !corruptBackedNotebook.Contains("Old backup-only", StringComparison.Ordinal),
+                "Corrupt current Notebook silently surfaced a stale .bak as current learner evidence.");
+                        var corruptNotebook = ResearchLearningReview.ReadActiveNotebookSummary(
+                researchNotes, damagedJournalPath, "student-branch", "7");
+            Check(corruptNotebook.Contains("Research notebook unavailable", StringComparison.Ordinal) &&
+                  !corruptNotebook.Contains("no recorded annotations", StringComparison.Ordinal) &&
+                  !corruptNotebook.Contains("Private unverified", StringComparison.Ordinal),
+                "Corrupted offline Notebook misleadingly appeared empty or leaked unverified notes.");
+            Check(damagedReview.Contains("Local notebook unavailable", StringComparison.Ordinal) &&
+                  !damagedReview.Contains("Private unverified", StringComparison.Ordinal),
+                "Damaged Notebook interrupted offline Review or leaked unverified notes.");
+                        // When the pinned scientific model is unavailable, the confirmed
+            // saved Native review still permits bounded, explicitly UNVERIFIED
+            // learner annotations from the matching offline sidecar.
+            var recordedNativePath = System.IO.Path.Combine(
+                learningDirectory, "study.plv.json");
+            Check(ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "student-branch", true, true) ==
+                    RecordedNotebookScope.RecordedOnly &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "other-live-branch", true, true) ==
+                    RecordedNotebookScope.RecordedOnly &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "student-branch", true, false) ==
+                    RecordedNotebookScope.Live &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", "other-live-branch", true, false) ==
+                    RecordedNotebookScope.Unavailable &&
+                  ResearchLearningReview.SelectNotebookScope(
+                "student-branch", null, false, false) ==
+                    RecordedNotebookScope.Unavailable,
+                "A confirmed recorded-only source must win even when active and saved Native branches share an ID.");
+                        // Saved Review may have a different filename from the currently
+            // active UI saveName. The authoritative sidecar must be resolved
+            // from the file that actually supplied RecordedSessionReview.
+            Check(ResearchLearningReview.SidecarForSavedNative(recordedNativePath) ==
+                    learningPath &&
+                  ResearchLearningReview.ReadRecordedOnlyJournal(
+                    researchNotes, recordedNativePath,
+                    ResearchLearningReview.SidecarForSavedNative(recordedNativePath),
+                    "student-branch", "7", false)
+                    .Contains("Student hypothesis", StringComparison.Ordinal),
+                "Model-unavailable Review did not resolve its annotations from the saved file.");
+            var invalidSavedReviewPathRejected = false;
+            try
+            {
+                ResearchLearningReview.SidecarForSavedNative(
+                    System.IO.Path.Combine(learningDirectory, "active-other-session.plv-notes"));
+            }
+            catch (System.IO.InvalidDataException) { invalidSavedReviewPathRejected = true; }
+            Check(invalidSavedReviewPathRejected,
+                "A non-Native filename became a recorded-only learner sidecar.");
+                        // Production Unity adapters are not compiled by the headless
+            // suite. Pin their saved-source routing in the contract so a
+            // future edit cannot silently revert to the active saveName.
+            var recordedOnlyController = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+            Check(recordedOnlyController.Contains(
+                    "ReadRecordedOnlySavedAnnotations(", StringComparison.Ordinal) &&
+                  recordedOnlyController.Split(
+                    "ResearchLearningReview.SidecarForSavedNative(recordedOnlyReviewSavePath)")
+                    .Length >= 3,
+                "Unity recorded-only Review/CSV route drifted back to an unrelated active notebook.");
+                        var recordedOnlyAtSeven = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "7", false);
+            Check(recordedOnlyAtSeven.Contains("Recorded-only", StringComparison.Ordinal) &&
+                  recordedOnlyAtSeven.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !recordedOnlyAtSeven.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !recordedOnlyAtSeven.Contains("Private unrelated", StringComparison.Ordinal),
+                "Saved model-unavailable Review lost bounded student notes or leaked future evidence.");
+            // Recorded-only Review must also export the same constrained
+            // student annotation CSV without a live Native model. Scientific
+            // and student file identities remain distinct; no future notes.
+            var recordedOnlyEntries = ResearchLearningReview.ReadRecordedOnlyEntries(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "7");
+            var recordedOnlyCsv = ResearchLearningReview.RenderCsv(
+                recordedOnlyEntries, "student-branch");
+            Check(recordedOnlyEntries.Count == 1 &&
+                  recordedOnlyCsv.Contains("studentAnnotation", StringComparison.Ordinal) &&
+                  recordedOnlyCsv.Contains("Student hypothesis", StringComparison.Ordinal) &&
+                  !recordedOnlyCsv.Contains("Native pH 6.20", StringComparison.Ordinal) &&
+                  !recordedOnlyCsv.Contains("Private unrelated", StringComparison.Ordinal),
+                "Saved model-unavailable Review could not export only recorded, event-bounded learner annotations.");
+            var wrongExportSidecarRejected = false;
+            try
+            {
+                ResearchLearningReview.ReadRecordedOnlyEntries(researchNotes,
+                    recordedNativePath,
+                    System.IO.Path.Combine(learningDirectory, "other.plv-notes"),
+                    "student-branch", "11");
+            }
+            catch (System.IO.InvalidDataException) { wrongExportSidecarRejected = true; }
+            Check(wrongExportSidecarRejected,
+                "Student CSV export paired a different sidecar with saved Native evidence.");
+                        var mismatchedSidecar = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath,
+                System.IO.Path.Combine(learningDirectory, "other.plv-notes"),
+                "student-branch", "11", false);
+            Check(mismatchedSidecar.Contains("unavailable", StringComparison.Ordinal) &&
+                  !mismatchedSidecar.Contains("Native pH 6.20", StringComparison.Ordinal),
+                "Recorded-only fallback attached a different student's notebook path.");
+            var invalidRecordedCeiling = ResearchLearningReview.ReadRecordedOnlyJournal(
+                researchNotes, recordedNativePath, learningPath,
+                "student-branch", "011", false);
+            Check(invalidRecordedCeiling.Contains("unavailable", StringComparison.Ordinal),
+                "Recorded-only fallback accepted an invalid saved Native event identity.");
+                        var historical = researchNotes.Read(learningPath, "student-branch", "7");
             Check(historical.Count == 1 && historical[0].EventSequence == "7" &&
                   !historical[0].Text.Contains("Native pH 6.20"),
                 "Recorded checkpoint at event 7 exposed later event-11 learner evidence.");
@@ -538,8 +1184,8 @@ internal static class Program
             // Reopening Measure without a new Native event must not append
             // the same receiver pH evidence again. New events and unrelated
             // branches remain independently recordable.
-            researchNotes.Append(learningPath, "idempotent-branch", "7", "receiver",
-                nativeNote);
+            researchNotes.AppendNativeMeasurement(learningPath,
+                "idempotent-branch", "7", "receiver", nativeNote);
             var onceRecorded = researchNotes.Read(learningPath, "idempotent-branch");
             Check(NativeMeasurementNote.WasRecorded(onceRecorded,
                     "idempotent-branch", "7", "receiver", "3") &&
@@ -567,9 +1213,10 @@ internal static class Program
                 "Existing raw Native pH observation was absent from local event history.");
             var nextNote = nativeNote.Replace("Native pH 7.13", "Native pH 6.99")
                 .Replace(" · event 7 ·", " · event 8 ·");
-            researchNotes.Append(learningPath, "idempotent-branch", "8", "receiver", nextNote);
-            researchNotes.Append(learningPath, "idempotent-branch", "9", "receiver",
-                nextNote.Replace(" · event 8 ·", " · event 9 ·")
+            researchNotes.AppendNativeMeasurement(learningPath, "idempotent-branch", "8",
+                "receiver", nextNote);
+            researchNotes.AppendNativeMeasurement(learningPath, "idempotent-branch",
+                "9", "receiver", nextNote.Replace(" · event 8 ·", " · event 9 ·")
                     .Replace("raw Native pH 6.99", "raw Native pH NaN"));
             var eventTrend = ResearchNotebookPHHistory.Summarize(
                 researchNotes.Read(learningPath, "idempotent-branch"),
@@ -750,6 +1397,18 @@ internal static class Program
               readyExtra.Any(item => item.Name == "Prime burette 0.05 ml") &&
               !readyExtra.Any(item => item.Name == "Prepare reserve stock"),
             "Native-ready reserve/burette operations must not conflict with setup-only actions.");
+        var returnToPrimary = ResearchInstrumentMenuLayout.Visible(
+            4, false, true, true, true, false, true, true, false, true);
+        Check(returnToPrimary.Any(item => item.Name == "Switch pipette to source" && item.Row == 0) &&
+              !returnToPrimary.Any(item => item.Name == "Switch pipette to reserve") &&
+              returnToPrimary.Select(item => item.Row).Distinct().Count() == returnToPrimary.Count,
+            "XR must offer accessible Native source return after reserve without overlapping page controls.");
+        var physicalReturnSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(physicalReturnSource.Contains("ActivePipetteStockInventoryId") &&
+              physicalReturnSource.Contains("TryPipetteSwitchPrimary"),
+            "Desktop and XR must expose current Native pipette source and an explicit way back.");
+
         var notebookChoice = ResearchInstrumentMenuLayout.Visible(
             3, false, true, false, false, true, false, false, true);
         Check(notebookChoice.Any(item => item.Name == "Open notebook" && item.Row == 2) &&
@@ -765,6 +1424,35 @@ internal static class Program
               choice.Any(item => item.Name == "Predict pH at least 7"),
             "Lesson selection must lead to both pre-transfer prediction options.");
 
+        // M4: imported feedback can arrive while a student remains on
+        // XR Review. A separate refresh ray target must re-render the same
+        // Review, never issue Native material, Save, or a teacher action.
+        var localRefreshRouter = new ScreenRouter();
+        localRefreshRouter.Configure(new CoreDriver());
+        localRefreshRouter.Show(ScreenId.Review);
+        var localRefreshSessions = new SessionController();
+        var localRefreshPanel = new LabPanelController();
+        localRefreshPanel.Configure(localRefreshRouter, new CoreDriver(),
+            localRefreshSessions);
+        var refreshFound = Enum.TryParse("RefreshStudentFeedback",
+            out PanelAction refreshAction);
+        Check(refreshFound &&
+              localRefreshRouter.Current.SupportedActions.Contains("RefreshStudentFeedback") &&
+              localRefreshPanel.Request(refreshAction) &&
+              localRefreshRouter.Current.ScreenId == ScreenId.Review &&
+              localRefreshSessions.SaveCalls == 0 &&
+              localRefreshSessions.ReviewOpens == 0,
+            "XR Student Review cannot refresh local teacher feedback without mutating Native evidence.");
+        localRefreshRouter.SetWorkspace("Instructor");
+        Check(!localRefreshPanel.Request(refreshAction),
+            "A non-student view used the student-only formative feedback refresh.");
+        var xrStudentRefreshSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrStudentRefreshSource.Contains("Refresh local feedback", StringComparison.Ordinal) &&
+              xrStudentRefreshSource.Contains("PanelAction.RefreshStudentFeedback",
+                  StringComparison.Ordinal),
+            "XR student has no separate tracked-ray feedback refresh control.");
+
         // Offline teaching preview is a read-only REVIEW action. It is
         // neither a Native command nor permission to grade or upload.
         var teachingRouter = new ScreenRouter();
@@ -773,6 +1461,41 @@ internal static class Program
         var teachingSessions = new SessionController();
         var teachingPanels = new LabPanelController();
         teachingPanels.Configure(teachingRouter, new CoreDriver(), teachingSessions);
+        // Integration regression: the teacher must be able to enter the
+        // local Instructor/Expert evidence workspace through actual Settings
+        // actions, without treating the selection as authenticated identity.
+        Check(teachingPanels.Request(PanelAction.Settings) &&
+              teachingRouter.Current.ScreenId == ScreenId.Settings,
+            "Recorded Review cannot open the local-workspace Settings screen.");
+        var workspaceActionExists = Enum.TryParse("SelectWorkspace", out PanelAction workspaceAction);
+        Check(workspaceActionExists &&
+              teachingRouter.Current.SupportedActions.Contains("SelectWorkspace") &&
+              teachingPanels.Request(workspaceAction, "Instructor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "Settings has no actionable local Instructor workspace selection.");
+        Check(!teachingPanels.Request(workspaceAction, "CertifiedAssessor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "An unrecognized or implied certified identity changed the local workspace.");
+        Check(teachingPanels.Request(workspaceAction, "Expert") &&
+              teachingRouter.Current.Workspace == "Expert" &&
+              teachingPanels.Request(workspaceAction, "Student") &&
+              teachingRouter.Current.Workspace == "Student" &&
+              teachingPanels.Request(workspaceAction, "Instructor") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "Local instructor, expert and student views cannot be explicitly selected.");
+        Check(teachingPanels.Request(PanelAction.Back) &&
+              teachingRouter.Current.ScreenId == ScreenId.Review,
+            "Choosing an offline workspace lost the original recorded Review.");
+        Check(!teachingPanels.Request(workspaceAction, "Expert") &&
+              teachingRouter.Current.Workspace == "Instructor",
+            "A recorded Review bypassed Settings-only workspace choice.");
+        Check(teachingRouter.Current.SupportedActions.Contains("RecordInstructorFeedback") &&
+              teachingPanels.Request(PanelAction.RecordInstructorFeedback, "check-method") &&
+              teachingSessions.InstructorFeedbackCalls == 1,
+            "Recorded Review teaching feedback never reached the session action.");
+        Check(!teachingPanels.Request(PanelAction.RecordInstructorFeedback, "certify-grade") &&
+              teachingSessions.InstructorFeedbackCalls == 1,
+            "An unsupported teaching grade was admitted as formative feedback.");
         Check(teachingRouter.Current.SupportedActions.Contains("PreviewPortableArchive") &&
               teachingRouter.Current.SupportedActions.Contains("ChoosePortableArchive") &&
               teachingRouter.Current.SupportedActions.Contains("NextInstructorAnnotation") &&
@@ -805,6 +1528,55 @@ internal static class Program
         });
         Check(choices.Count == 2 && choices[0] == "A.plvpack" && choices[1] == "B.plvpack",
             "Offline teaching picker did not restrict itself to distinct canonical session filenames.");
+        // Each student export must be an independently selectable,
+        // bounded archive. Exporting new Notebook evidence at the same Native
+        // material event cannot silently replace the original student pack.
+        // Newly exported evidence must remain selectable even after the
+        // app has accumulated more research bundles than its 64-card picker
+        // limit; sort by local file recency, never arbitrary directory order.
+        var recentFolder = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(), "plv-recent-" + Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(recentFolder);
+        try
+        {
+            var oldPack = System.IO.Path.Combine(recentFolder, "older.plvpack");
+            var midPack = System.IO.Path.Combine(recentFolder, "middle.plvpack");
+            var newPack = System.IO.Path.Combine(recentFolder, "newest.plvpack");
+            foreach (var file in new[] { oldPack, midPack, newPack })
+                System.IO.File.WriteAllText(file, "test-pack");
+            var t = new DateTime(2025, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+            System.IO.File.SetLastWriteTimeUtc(oldPack, t.AddMinutes(-5));
+            System.IO.File.SetLastWriteTimeUtc(midPack, t.AddMinutes(-2));
+            System.IO.File.SetLastWriteTimeUtc(newPack, t);
+            var result = OfflineArchivePicker.NamesNewest(recentFolder,
+                new[] { oldPack, newPack, midPack, oldPack,
+                    System.IO.Path.Combine(recentFolder, "..", "outside.plvpack") }, 2);
+            Check(result.Count == 2 && result[0] == "newest.plvpack" &&
+                  result[1] == "middle.plvpack",
+                "Recent exported Native/Notebook packs are hidden behind older alphabetical bundles.");
+        }
+        finally { System.IO.Directory.Delete(recentFolder, recursive: true); }
+        var firstName = OfflineArchivePicker.NewStudentExportName(
+            "student-research", "8", "0123456789abcdef0123456789abcdef");
+        var secondName = OfflineArchivePicker.NewStudentExportName(
+            "student-research", "8", "fedcba9876543210fedcba9876543210");
+        Check(firstName != secondName &&
+              OfflineArchivePicker.ValidName(firstName) &&
+              OfflineArchivePicker.ValidName(secondName) &&
+              firstName.Contains("-e8-", StringComparison.Ordinal) &&
+              !firstName.Contains("/", StringComparison.Ordinal),
+            "Portable student export may overwrite previous event-bounded evidence.");
+        Check(OfflineArchivePicker.ValidName(
+            OfflineArchivePicker.NewStudentExportName(
+                "overlong-study-" + new string('x', 120), "18446744073709551615",
+                "0123456789abcdef0123456789abcdef")),
+            "Long student labels must never produce an invalid/non-discoverable archive.");
+        var unsafeRevision = false;
+        try { OfflineArchivePicker.NewStudentExportName(
+            "study", "../8", "0123456789abcdef0123456789abcdef"); }
+        catch (ArgumentException) { unsafeRevision = true; }
+        Check(unsafeRevision, "Unsafe Native event identities must be rejected for portable export.");
+
         Check(OfflineArchivePicker.NextName(choices, "A.plvpack") == "B.plvpack" &&
               OfflineArchivePicker.NextName(choices, "B.plvpack") == "A.plvpack" &&
               OfflineArchivePicker.NextName(choices, "missing.plvpack") == "A.plvpack",
@@ -874,6 +1646,90 @@ internal static class Program
         Check(LabBenchReadout.Inventory(bench).Contains("Receiver: unavailable"),
             "Invalid Native quantity must never display as a real receiver measurement.");
 
+        // Local Unity editor test reports are release evidence only when a
+        // fresh XML exists, at least one test actually ran, every reported
+        // test passed, and the real M3 PlayMode scientific journey executed.
+        // Exit code 0 or stale previous-run XML cannot qualify a Player.
+        var localUnityRunner = System.IO.File.ReadAllText("scripts/test-unity.ps1");
+        Check(localUnityRunner.Contains("Remove-Item", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("SelectSingleNode", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("test-run", StringComparison.Ordinal) &&
+              localUnityRunner.Contains("M3_ExplicitNotebookSaveAndReviewNeedsRecordedNativePHAndDurableSave",
+                    StringComparison.Ordinal) &&
+              localUnityRunner.Contains("Test report unavailable", StringComparison.Ordinal),
+            "Unity local PlayMode runner can falsely pass missing/stale/empty results without the full scientific journey.");
+
+        // Unity's .NET Standard-compatible player assemblies cannot rely
+        // on the modern System.Double.IsFinite helper available in net8.
+        // Source-linked headless tests otherwise miss this runtime API
+        // compatibility failure despite passing the C# syntax parser.
+        var pHHistoryUnitySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/ResearchNotebookPHHistory.cs");
+        Check(!pHHistoryUnitySource.Contains("double.IsFinite(", StringComparison.Ordinal),
+            "Unity player pH history uses a .NET API outside the supported compatibility profile.");
+
+        // M2: learner-facing material delta must be calculated from two
+        // independent real Native snapshots, not the nominal requested pour.
+        // Reflection lets this RED exercise fail as a test rather than as a
+        // test-harness compiler error before the production method exists.
+        var nativeTransferReadout = typeof(LabBenchReadout).GetMethod(
+            "ObservedNativeTransfer", System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Static);
+        Check(nativeTransferReadout != null,
+            "The Lab has no Native-snapshot-confirmed physical transfer feedback.");
+        if (nativeTransferReadout != null)
+        {
+            var beforeReal = new LabViewModel { EventSequence = "8" };
+            beforeReal.Vessels[0].CommittedVolumeM3 = 2.5e-5;
+            beforeReal.Vessels[0].MaterialRevision = "10";
+            beforeReal.Vessels[1].CommittedVolumeM3 = 0;
+            beforeReal.Vessels[1].MaterialRevision = "0";
+            var afterReal = new LabViewModel { EventSequence = "9" };
+            afterReal.Vessels[0].CommittedVolumeM3 = 2.4989e-5;
+            afterReal.Vessels[0].MaterialRevision = "11";
+            afterReal.Vessels[1].CommittedVolumeM3 = 1.1e-8;
+            afterReal.Vessels[1].MaterialRevision = "1";
+            string Describe(LabViewModel oldView, LabViewModel newView, string target) =>
+                (string)nativeTransferReadout.Invoke(null, new object[] {
+                    oldView, newView, target });
+            Check(Describe(beforeReal, afterReal, "receiver") ==
+                  "Native receiver +0.011 mL · events 8 → 9",
+                "The user-visible delta is not the actual committed Native receiver volume.");
+            Check(Describe(beforeReal, afterReal, "source") == null,
+                "Source debit was presented as a positive receiver credit.");
+            Check(Describe(afterReal, beforeReal, "receiver") == null &&
+                  Describe(beforeReal, beforeReal, "receiver") == null,
+                "Stale/repeated/regressed Native events fabricated an accepted transfer.");
+            afterReal.Vessels[1].CommittedVolumeM3 = double.NaN;
+            Check(Describe(beforeReal, afterReal, "receiver") == null,
+                "A nonfinite Native observation was formatted as learner transfer evidence.");
+            afterReal.Vessels[1].CommittedVolumeM3 = 0;
+            Check(Describe(beforeReal, afterReal, "receiver") == null,
+                "An accepted command with no actual receiver increment invented material credit.");
+        }
+        var labDeliverySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(labDeliverySource.Contains("ObservedNativeTransfer", StringComparison.Ordinal),
+            "The lab transfer receipt was never connected to real post-command Native inventory.");
+
+        // M2: a new Native physical transfer must replace an earlier
+        // vessel-inspection status. Otherwise XR's inspection-first message
+        // wins forever and conceals the real accepted material delta.
+        var desktopPhysicalFeedbackSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var xrPhysicalFeedbackSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(desktopPhysicalFeedbackSource.Contains(
+                "LastPhysicalInspectionFeedback = null;\n            LastPhysicalDeliveryFeedback = accepted ?",
+                StringComparison.Ordinal) &&
+              xrPhysicalFeedbackSource.Contains(
+                "LastPhysicalInspectionFeedback = null;\n            LastPhysicalDeliveryFeedback = accepted ?",
+                StringComparison.Ordinal),
+            "A newer Native transfer did not supersede stale Desktop/XR inspection feedback.");
+        Check(xrPhysicalFeedbackSource.Contains(
+                "LastPhysicalDeliveryFeedback = null;\n                LastPhysicalInspectionFeedback = accepted ?",
+                StringComparison.Ordinal),
+            "XR's newer receiver/stock inspection did not supersede stale transfer feedback.");
         // Priming a burette is a bounded Native TransferFixed between real vessels.
         var burettePrime = ResearchInstrumentPayloads.RefillFromPreparedStock(
             "source", "burette", "spill", 5e-8);
@@ -1051,7 +1907,28 @@ internal static class Program
         Check(!DesktopPlacementAdmission.CanPlace(double.NaN, 1.0, true, false) &&
               !DesktopPlacementAdmission.CanPlace(0.04, double.PositiveInfinity, true, false),
             "Invalid physical pose must fail closed before any Rigidbody release");
-        // P10.01 held-tool mouse plane drag has priority over left-drag valve;
+        // M2 Desktop receiver control: left click still only inspects Native pH;
+        // F explicitly picks the physical receiver, and F releases it on bench.
+        Check(DesktopReceiverRouting.Resolve(true, true, false) ==
+              DesktopReceiverAction.Inspect &&
+              DesktopReceiverRouting.Resolve(true, false, true) ==
+              DesktopReceiverAction.Pick,
+            "Click-to-inspect and F-to-reposition must not share receiver ownership.");
+        Check(DesktopReceiverRouting.Resolve(false, false, true) ==
+              DesktopReceiverAction.None &&
+              DesktopReceiverRouting.Resolve(true, true, true) ==
+              DesktopReceiverAction.None,
+            "An unsupported or simultaneous receiver gesture must not pick it up.");
+        Check(DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.045, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.035, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.35, 0.04, 1.0, true, false) &&
+              !DesktopPlacementAdmission.CanPlaceReceiver(
+                  0.045, 0.04, 0.1, true, false),
+            "Receiver placement must use its physical bottom, not embed its center in the bench.");
+                // P10.01 held-tool mouse plane drag has priority over left-drag valve;
         // both routes share exclusive ownership and obey HUD focus.
         // A momentary input event may occur between Native simulation ticks.
         // Capture the actual Unity-frame press, then consume exactly once on
@@ -1111,6 +1988,657 @@ internal static class Program
                 "research-pipette-visual", false, true, true, true)
                 == ResearchAuxiliaryDeliveryIntent.None,
             "No press, missing geometry, paused session, wrong tool or no grip must never deliver.");
+
+        // M3: crash recovery must be wired to Unity's session lifecycle
+        // as well as the next export, not exist only as a detached helper.
+        var exportControllerSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(exportControllerSource.Contains(
+                "private bool RecoverInterruptedCsvForCurrentSession(", StringComparison.Ordinal) &&
+              exportControllerSource.Contains(
+                "RecordedCsvPairWriter.RecoverInterruptedPair(", StringComparison.Ordinal) &&
+              exportControllerSource.Split(
+                "RecoverInterruptedCsvForCurrentSession();").Length >= 3 &&
+              exportControllerSource.Contains(
+                "if (!RecoverInterruptedCsvForCurrentSession())",
+                StringComparison.Ordinal),
+            "Unity session initialization and CSV export do not reconcile interrupted paired outputs.");
+                // Verify the gesture is actually routed by both input adapters,
+        // not merely accepted by a detached presentation-only helper.
+        var noteDesktopSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var noteXrSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(noteDesktopSource.Contains("TryRecordPhysicalReceiverPH()", StringComparison.Ordinal) &&
+              noteDesktopSource.Contains("measurementGestureGate.ObserveNeutral(", StringComparison.Ordinal) &&
+              noteDesktopSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal) &&
+              noteXrSource.Contains("TryRecordPhysicalReceiverPH()", StringComparison.Ordinal) &&
+              noteXrSource.Contains("measurementGestureGate.ObserveNeutral(", StringComparison.Ordinal) &&
+              noteXrSource.Contains("PanelAction.RecordCurrentPH", StringComparison.Ordinal),
+            "Desktop/XR must use fresh physical receiver gestures for the real Notebook command.");
+
+        // The same live physical grip authority must also guard an
+        // otherwise geometrically valid Native pipette rinse.
+        var physicalRinseSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var physicalSessionRinseBodyStart = physicalRinseSessionSource.IndexOf(
+            "public bool TryPhysicalRinsePipette(", StringComparison.Ordinal);
+        var physicalSessionRinseBodyEnd = physicalRinseSessionSource.IndexOf(
+            "public bool TryPipetteWaterRinse()", StringComparison.Ordinal);
+        Check(physicalSessionRinseBodyStart >= 0 &&
+              physicalSessionRinseBodyEnd > physicalSessionRinseBodyStart &&
+              physicalRinseSessionSource.Substring(physicalSessionRinseBodyStart,
+                physicalSessionRinseBodyEnd - physicalSessionRinseBodyStart)
+                .Contains("!PhysicallyOwnsPipette(physicalPipette)", StringComparison.Ordinal),
+            "A public rinse endpoint must not consume Native water without physical pipette ownership.");
+
+        // A held stock-bottle mouth dipped into real Native rinse water
+        // requests cleaning only when no receiver/inlet owns its outlet.
+        Check(ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.BottleRinse,
+            "Physical bottle-mouth immersion did not admit the Native rinse intent.");
+        Check(ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-reserve-stock-bottle-visual", true, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", false, true, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, false, false, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, true, false,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, true,
+              true, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              false, true, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, false, true) == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalBottleRinseSelection.Resolve(
+              "research-stock-bottle-visual", true, true, false, false,
+              true, true, false) == ResearchAuxiliaryDeliveryIntent.None,
+            "Stock-bottle cleaning must refuse ambiguous, unprepared or unattended physical gestures.");
+
+        // M2 first-use cleaning: RinseTool requires a Native tool
+        // registration. Neither instrument may depend on a prior pour
+        // or aspiration to establish its actual PlaceTool revision.
+        foreach (var instrumentFile in new[] {
+            "unity/Assets/PharmaLabVR/Runtime/Tools/PipetteActuator.cs",
+            "unity/Assets/PharmaLabVR/Runtime/Tools/BottlePourActuator.cs"
+        })
+        {
+            var instrumentSource = System.IO.File.ReadAllText(instrumentFile);
+            var rinseAt = instrumentSource.LastIndexOf(
+                "public LabCommandReceipt Rinse(double quantityM3)", StringComparison.Ordinal);
+            Check(rinseAt >= 0 &&
+                  instrumentSource.Substring(rinseAt).Contains(
+                    "native.EnsurePlaced(toolId, sourceId, sinkId,", StringComparison.Ordinal) &&
+                  instrumentSource.Substring(rinseAt).Contains(
+                    "return native.Rinse(", StringComparison.Ordinal),
+                "Cold-start Native rinse must register the physical instrument before RinseTool: " +
+                instrumentFile);
+        }
+
+                // M2 source-only physical pipette selection is invoked from both
+        // Desktop/XR adapters. The public SessionController must really
+        // define it (not just a stub) and validate physical ownership again.
+        var physicalPipetteSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(physicalPipetteSessionSource.Contains(
+                "public bool TryPhysicalSelectPipetteSource(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "ResearchPhysicalPipetteSelectionAdmission.MaySelect(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "IsPipetteDirectlyGripped(", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "TryPipetteSwitchReserve()", StringComparison.Ordinal) &&
+              physicalPipetteSessionSource.Contains(
+                "TryPipetteSwitchPrimary()", StringComparison.Ordinal),
+            "Native source-switch gesture is called by Desktop/XR but lacks its actual SessionController implementation.");
+        Check(ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "reserve-stock", true, true, true, true, false) &&
+              ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "rinse-water", true, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", false, true, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, false, true, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, false, true, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, false, false) &&
+              !ResearchPhysicalPipetteSelectionAdmission.MaySelect(
+                "source", true, true, true, true, true),
+            "Physical pipette source selection must refuse unsupported, unprepared, unheld, paused, dry or already selected stock.");
+
+                // M3: a SECOND deliberate physical receiver contact on Measure must
+        // persist only the current Native observation, never replay the first
+        // Lab inspection gesture or create synthetic notebook evidence.
+        Check(ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, true),
+            "A fresh physically repeated receiver gesture must offer current Native pH recording.");
+        Check(!ResearchPhysicalMeasurementRecording.CanRecord(
+                "Lab", "receiver", true, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "source", true, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", false, true, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, false, true, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, false, true, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, false, true, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, false, true) &&
+              !ResearchPhysicalMeasurementRecording.CanRecord(
+                "Measure", "receiver", true, true, true, true, true, false),
+            "No stale, duplicate, source, held-hand, UI-owned, paused or first-touch pH may be recorded.");
+
+                // M2 physical bottle inspection: no invented pH or source switching.
+        // Two close candidates cannot be resolved by collider traversal order.
+        Check(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .025, double.PositiveInfinity, double.PositiveInfinity) == "receiver" &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .025, double.PositiveInfinity) == "source" &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .20, .025) == "reserve-stock",
+            "XR empty-hand touch must select the exact Native vessel represented by physical geometry.");
+        Check(ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .025, .025, double.PositiveInfinity) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, double.NaN, .025, .025) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, false, .20, .20, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, false, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                false, true, true, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, false, true, false, .20, .025, .20) == null &&
+              ResearchPhysicalInspectionSelection.XrUniqueInventory(
+                true, true, true, true, .20, .025, .20) == null,
+            "Overlapping, unknown, untracked, paused, held or UI-owned XR touches must fail closed.");
+        Check(ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, true, true) == "source" &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "reserve-stock", true, true, true, true) == "reserve-stock" &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "rinse-water", true, true, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, false, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", false, true, true, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, false, true) == null &&
+              ResearchPhysicalInspectionSelection.DesktopBottleInventory(
+                "source", true, true, true, false) == null,
+            "Alt-click must inspect only a prepared real bottle, never pick or transfer on stale gestures.");
+
+                // This headless suite cannot launch Unity input, but keeps both
+        // actual scene routes wired to the policy exercised above.
+        var stockInspectDesktop = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var stockInspectXr = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(stockInspectDesktop.Contains("pointerBottleInspectionAtPress", StringComparison.Ordinal) &&
+              stockInspectDesktop.Contains("TryInspectStockBottle(", StringComparison.Ordinal) &&
+              stockInspectDesktop.Contains("PanelAction.Inspect, inventoryId", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("TryInspectPhysicalVesselByTouch(", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("ResearchPhysicalInspectionSelection.XrUniqueInventory(", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("receiverGrip == null || !receiverGrip.isSelected", StringComparison.Ordinal) &&
+              stockInspectXr.Contains("PanelAction.Measure : PanelAction.Inspect", StringComparison.Ordinal),
+            "Physical Desktop/XR inspection must reach shared Native stock/receiver panel routes.");
+
+        // XR empty-hand fingertip/trigger can select a real receiver for its
+        // existing Native pH panel, but cannot read when a tool/GUI owns
+        // the trigger, tracking is stale, or the receiver is out of touch.
+        Check(ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, .02),
+            "Fresh tracked XR fingertip touching receiver must admit Native inspection.");
+        Check(!ResearchXRReceiverInspectionAdmission.MayInspect(
+            false, true, true, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, false, true, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, false, false, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, true, .02) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, .20) &&
+              !ResearchXRReceiverInspectionAdmission.MayInspect(
+            true, true, true, false, double.NaN),
+            "XR receiver inspection must fail closed on Hold, tracking, held tool, UI or distance.");
+
+        // XR Pause/Hold places Review and Recenter on the same row. The
+        // visual policy must give two independent raycast rectangles, and
+        // Pause must expose the actual existing offline export action.
+        // XR formative feedback must let an instructor deliberately choose
+        // every bounded response, not merely the hardcoded "method" answer.
+        // Source admission only: real XR button hits remain Unity NOT_RUN.
+        var xrTeachingSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrTeachingSource.Contains("instructorFeedbackPage", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: request another pH", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: review method", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Feedback: compare hypothesis", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("PanelAction.RecordInstructorFeedback", StringComparison.Ordinal) &&
+              xrTeachingSource.Contains("Back to imported note", StringComparison.Ordinal),
+            "XR recorded instructor Review lacks all three deliberate formative feedback choices.");
+        var xrPortableUiSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrPortableUiSource.Contains("Export portable study", StringComparison.Ordinal) &&
+              xrPortableUiSource.Contains("SplitReviewAndRecenter(", StringComparison.Ordinal) &&
+              xrPortableUiSource.Contains("LastPortableArchiveFileName", StringComparison.Ordinal),
+            "XR offline Pause lost its export route/filename or Review-Recenter raycast split.");
+        Check(ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Pause", true, true) &&
+              ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Hold", true, true) &&
+              !ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Lab", true, true) &&
+              !ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                "Pause", false, true),
+            "XR Pause/Hold Review and Recenter hit rectangles must be exclusive.");
+        // Native save chooser is a bounded offline discovery API only:
+        // no candidate bytes are treated as Native authority by the picker.
+        var chooserFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
+            "plv-save-picker-" + System.Guid.NewGuid().ToString("N"));
+        System.IO.Directory.CreateDirectory(chooserFolder);
+        try
+        {
+            var oldSave = System.IO.Path.Combine(chooserFolder, "older.plv.json");
+            var nextBackup = System.IO.Path.Combine(chooserFolder, "newer.plv.json.bak");
+            var unrelated = System.IO.Path.Combine(chooserFolder, "nope.plv.json.tmp");
+            System.IO.File.WriteAllText(oldSave, "untrusted placeholder only");
+            System.IO.File.WriteAllText(nextBackup, "untrusted placeholder only");
+            System.IO.File.WriteAllText(unrelated, "untrusted placeholder only");
+            System.IO.File.SetLastWriteTimeUtc(oldSave,
+                new System.DateTime(2020, 1, 1, 0, 0, 0, System.DateTimeKind.Utc));
+            System.IO.File.SetLastWriteTimeUtc(nextBackup,
+                new System.DateTime(2025, 1, 1, 0, 0, 0, System.DateTimeKind.Utc));
+            var names = OfflineArchivePicker.LocalNativeSaveNamesNewest(
+                chooserFolder, new[] { oldSave, nextBackup, unrelated,
+                    System.IO.Path.Combine(chooserFolder, "..", "outside.plv.json") });
+            Check(names.Count == 2 && names[0] == "newer" && names[1] == "older" &&
+                  OfflineArchivePicker.NextName(names, names[0]) == "older" &&
+                  OfflineArchivePicker.ValidNativeSaveName("older") &&
+                  !OfflineArchivePicker.ValidNativeSaveName("../older") &&
+                  !OfflineArchivePicker.ValidNativeSaveName("older.plv.json"),
+                "Offline Native saved-session chooser admitted traversal/staging or lost a backup.");
+        }
+        finally { System.IO.Directory.Delete(chooserFolder, true); }
+
+        var saveCopySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(saveCopySource.Contains("public bool SaveAsNewLocalCopy()") &&
+              saveCopySource.Contains("NotebookService.InstallPortableSnapshot(") &&
+              saveCopySource.Contains("var verifiedFreshName = false;") &&
+              saveCopySource.Contains("saveName = name;") &&
+              saveCopySource.Contains("if (verifiedFreshName)"),
+            "Local SaveCopy lost its independent source journal, guarded file namespace or no-delete-on-collision rule.");
+
+        // Native run handover must not import and retire the old authority
+        // before a confirmed fresh Native .plv.json and Notebook exist.
+        var independentDriverSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        Check(independentDriverSource.Contains("stagedResearchBootstrap: true") &&
+              independentDriverSource.Contains("BootstrapResearchSession(staged)") &&
+              independentDriverSource.Contains("return staged;") &&
+              !independentDriverSource.Contains("using var staged = new CoreSession"),
+            "The new trial preflight must preserve the previous Native context.");
+        var independentSessionSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var independentSaveLine = independentSessionSource.IndexOf(
+            "var saved = saves.Save(fresh, root, newName)", StringComparison.Ordinal);
+        var independentImportLine = independentSessionSource.IndexOf(
+            "CoreSession.ImportSession(preImport", StringComparison.Ordinal);
+        var validatedJournalLine = independentSessionSource.IndexOf(
+            "var notes = notebook.ExportBranch(NotebookFilePath()", StringComparison.Ordinal);
+        var oldRunSaveLine = independentSessionSource.IndexOf(
+            "saves.Save(driver.Session, root, oldName)", StringComparison.Ordinal);
+        Check(independentSaveLine > 0 && independentImportLine > independentSaveLine &&
+              validatedJournalLine > 0 && oldRunSaveLine > validatedJournalLine &&
+              independentSaveLine > oldRunSaveLine &&
+              independentSessionSource.Contains("driver.ReplaceSession(fresh)"),
+            "Unverified old Notebook or undurable new study must not retire Native.");
+
+        // Native alone closes stock preparation: a loaded session with an
+        // empty but already-closed source may NEVER offer a second PrepareStock.
+        // It must recover via Continue rather than the unprepared ResumeSetup.
+        Check(independentDriverSource.Contains("public bool setupClosed;") &&
+              independentDriverSource.Contains("!state.setupClosed") &&
+              independentDriverSource.Contains("IsTimeHeld && SourceNeedsPreparation") &&
+              independentDriverSource.Contains(
+                  "requiresSetupRecovery ? \"ResumeSetup\" : \"Continue\""),
+            "Unity offered stock preparation after Native setupClosed=true.");
+
+        // TDD: when the learner intentionally launches a second Native
+        // study, its first confirmed save is already the obvious recorded
+        // comparison baseline. A read-only preview and explicit file label
+        // must survive the Native restoration invalidation callback.
+        var pinnedFirstRunLine = independentSessionSource.IndexOf(
+            "selectedLocalNativeSaveName = oldName;", StringComparison.Ordinal);
+        var pinnedFirstRunPreview = independentSessionSource.IndexOf(
+            "PreviewRecordedLocalNativeSave(root, oldName)", StringComparison.Ordinal);
+        var restoredHandoverLine = independentSessionSource.IndexOf(
+            "driver.ReplaceSession(fresh)", StringComparison.Ordinal);
+        Check(pinnedFirstRunLine > restoredHandoverLine &&
+              pinnedFirstRunPreview > 0 && pinnedFirstRunPreview < restoredHandoverLine,
+            "New Native run lost its explicitly saved previous trial as read-only comparison baseline.");
+        Check(independentSessionSource.Contains(
+            "GUILayout.Label(\"Recorded baseline file: \" + validatedComparisonBaselineName"),
+            "Desktop recorded comparison omits the actual previous Native file identity.");
+
+        // Selected saved-recording preview must be visible in both recovery
+        // panels; the matching Native-backed Unity PlayMode test is NOT_RUN.
+        var previewSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var xrRecoverySource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(previewSource.Contains("RecordedSessionReview.OpenRecoverable(path)") &&
+              previewSource.Contains("PreviewRecordedLocalNativeSave(") &&
+              previewSource.Contains("selectedLocalNativeSavePreview = null;") &&
+              previewSource.Contains("GUILayout.Label(SelectedLocalNativeSavePreview)") &&
+              xrRecoverySource.Contains("panels?.SelectedLocalNativeSavePreview"),
+            "Read-only Native-save preview lost Desktop or XR recovery integration.");
+
+        // Comparison must use the explicitly chosen offline file, not silently
+        // replace it with an active Save name; scientific comparison already
+        // requires matching recorded Native model/provider provenance.
+        Check(previewSource.Contains("public string ComparisonBaselineName") &&
+              previewSource.Contains("RecordedRunComparison.CompareSaved(path, RecordedReview)") &&
+              previewSource.Contains("ComparisonBaselinePath()") &&
+              previewSource.Contains("recordedCache.InvalidateComparison(); // selection changes saved baseline") &&
+              xrRecoverySource.Contains("panels?.ComparisonBaselineName"),
+            "Selected saved-file comparison is not wired through real Desktop/XR Review.");
+
+        // Native comparison selection in Review is read-only, with two
+        // disjoint XR ray-hit regions for CSV vs saved-baseline selection.
+        Check(previewSource.Contains("screen != ScreenId.Pause && screen != ScreenId.Hold)") &&
+              previewSource.Contains("Browsing in recorded Review never grants live Native import.") &&
+              xrRecoverySource.Contains("AddInstrumentButton(\"Choose comparison run\"") &&
+              xrRecoverySource.Contains("canChooseComparison ? 176f : 368f") &&
+              xrRecoverySource.Contains("chooser.anchoredPosition = new Vector2(94f, -250f)"),
+            "Review baseline chooser or non-overlapping XR hit admission lost.");
+
+        // The new immutable recorded-only CSV producer runs in the real-file
+        // Notebook headless suite, and the same action is exposed in Desktop/XR.
+        var comparisonCsvSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/RecordedRunComparison.cs");
+        Check(comparisonCsvSource.Contains("public static class RecordedRunComparisonCsv") &&
+              comparisonCsvSource.Contains("FileMode.CreateNew") &&
+              previewSource.Contains("public bool ExportCurrentComparisonCsv()") &&
+              xrRecoverySource.Contains("AddButton(\"Export comparison CSV\""),
+            "Native recorded comparison immutable CSV export lost production/Desktop/XR linkage.");
+
+        // Source-level safeguard for the Unity compile gate. The original
+        // generated reserve-stock smoke test briefly escaped its test class;
+        // keep the fixture nested and XR quick-note controls panel-routed.
+        var unitySmokeSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Tests/PlayMode/NativeRuntimeSmokeTests.cs");
+        var unityClassAt = unitySmokeSource.IndexOf(
+            "public sealed class NativeRuntimeSmokeTests", StringComparison.Ordinal);
+        var firstUnityTestAt = unitySmokeSource.IndexOf(
+            "[UnityTest]", StringComparison.Ordinal);
+        Check(unityClassAt >= 0 && firstUnityTestAt > unityClassAt &&
+              unitySmokeSource.IndexOf("public sealed class NativeRuntimeSmokeTests",
+                  unityClassAt + 1, StringComparison.Ordinal) < 0,
+            "Authored Unity smoke tests escaped or duplicated their NUnit class.");
+        var xrNotebookSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrNotebookSource.Contains("Quick notes", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("notebookReflectionPage", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains(
+                  "panels?.Request(PanelAction.AddNotebookNote,", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("directLabNotebook", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("notebookEntryRect.sizeDelta", StringComparison.Ordinal) &&
+              xrNotebookSource.Contains("saveRect.sizeDelta", StringComparison.Ordinal),
+            "XR learner direct Lab Notebook/Quick notes navigation lost separate hit targets or routing.");
+
+        // CI cannot build Unity player scripts without the Unity SDK; fail
+        // source-level CI when a UI edit accidentally discards production
+        // physical priming wiring or redirects Pause/Hold chooser to Review.
+        var integrationSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        Check(integrationSource.Contains("public bool TryPhysicalFillBuretteFromBottle(") &&
+              integrationSource.Contains("private bool HasNativeBurettePrimeCapacity") &&
+              integrationSource.Contains("router?.Current?.ScreenId != ScreenId.Lab") &&
+              integrationSource.Contains("private bool TransferNativePrime(") &&
+              integrationSource.Contains("router.Show(router.Current.ScreenId);"),
+            "Unity product route lost physical Native burette prime or offline Pause archive chooser.");
+
+        Check(ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, .002, false) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, .2, .07, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, -.02, .0001, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .04, .025, .002, true) &&
+              !ResearchReserveBottleRefillAdmission.MayRefill(
+                1, 1, .07, .0001, .025, 1.0, true),
+            "Native reserve-to-source refill must require real inverted outlet over stable stock mouth.");
+
+        // The source bottle can physically prime the real burette only at
+        // its separate upright receiving mouth, never at the receiver or
+        // via a held/undocked burette, dry stock, or an open valve.
+        Check(ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, true, true),
+            "An upright docked burette with bottle outlet over its neck must admit measured prime.");
+        Check(!ResearchBuretteInletAdmission.MayPrime(
+            0, 1, .075, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 0, .075, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, -.005, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .16, .0001, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0005, .018, true, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, false, true) &&
+              !ResearchBuretteInletAdmission.MayPrime(
+            1, 1, .075, .0001, .018, true, false),
+            "Wrong bottle orientation, distance, aperture, bench ownership or valve status must refuse prime.");
+        Check(ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                false, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.BurettePrime &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                true, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-stock-bottle-visual", true, true,
+                false, false, true, false) ==
+                ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchAuxiliaryDelivery.Resolve(
+                "research-pipette-visual", true, true,
+                false, false, true, true) ==
+                ResearchAuxiliaryDeliveryIntent.None,
+            "Physical priming needs exclusive source-bottle and burette-inlet authority.");
+
+        // A 1 mL Native water meniscus is narrower than its visible cup rim.
+        // No rinse when the pipette is in the dry annulus around the liquid.
+        var rinseWaterRadius = ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+            0.010, 0.5, 0.008, 0.5, 0.008);
+        Check(Math.Abs(rinseWaterRadius - 0.004) < 1e-12 &&
+              ResearchSourceImmersionAdmission.MayAspirate(
+                  1, 1, .043, .036, .056, .003 * .003, rinseWaterRadius, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+                  1, 1, .043, .036, .056, .007 * .007, rinseWaterRadius, 0),
+            "Inside the cup rim but outside actual Native water is a dry rinse.");
+        Check(ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+                0.01, 0.5, 0, 0.5, 0.008) == 0d &&
+              ResearchRinseApertureAdmission.EffectiveRadiusMeters(
+                0.01, double.NaN, 0.008, 0.5, 0.008) == 0d,
+            "Empty or malformed Native-water geometry must fail closed.");
+                // M2: physical aspiration must reach the Native-rendered liquid
+        // surface, not just a lip; disallowed geometry cannot generate an intent.
+        Check(ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0001, .025, 0),
+            "Stationary upright prepared stock must admit an immersed tip.");
+        Check(!ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .150, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .191, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0008, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 0, .171, .162, .192, .0001, .025, 0) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, .162, .192, .0001, .025, .04) &&
+              !ResearchSourceImmersionAdmission.MayAspirate(
+            1, 1, .171, double.NaN, .192, .0001, .025, 0),
+            "Dry, bottomed-out, off-center, inverted, moving and unknown-liquid tips must fail.");
+        Check(ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteAspirate &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, true, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteDispense &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, true, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-stock-bottle-visual", true, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+            ResearchAuxiliaryDelivery.Resolve(
+            "research-pipette-visual", true, true, false, true, false)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Physical pipette station must be exclusive; paused or bottle aspiration disallowed.");
+
+        Check(ResearchPhysicalSourceBinding.Matches(
+                "source", "source", null, false) &&
+              ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "source", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "reserve-stock", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "reserve-stock", "source", null, false) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "source", "", true),
+            "Physical immersion must not siphon a different Native reserve source.");
+        Check(ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", "reserve-stock", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", "source", true) &&
+              !ResearchPhysicalSourceBinding.Matches(
+                "source", "reserve-stock", null, false) &&
+              ResearchPhysicalSourceBinding.Matches(
+                "source", "source", null, false),
+            "A switched Native pipette must draw only from its real represented reserve vessel.");
+
+        var desktopPhysicalSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/DesktopInputAdapter.cs");
+        var xrPhysicalSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Input/XRInputAdapter.cs");
+        Check(desktopPhysicalSource.Contains("screenGestureGate.RequireFreshNeutralInput()") &&
+              desktopPhysicalSource.Contains("screenGestureGate.ObserveNeutral(") &&
+              desktopPhysicalSource.Contains("!screenGestureGate.IsArmed") &&
+              xrPhysicalSource.Contains("screenGestureGate.RequireFreshNeutralInput()") &&
+              xrPhysicalSource.Contains("screenGestureGate.ObserveNeutral(") &&
+              xrPhysicalSource.Contains("!screenGestureGate.IsArmed"),
+            "Returning from Notebook/Review may reuse an XR trigger or Desktop G/valve gesture.");
+        Check(desktopPhysicalSource.Contains("if (!IsOperatingLabScreen())") &&
+              desktopPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate(") &&
+              xrPhysicalSource.Contains("!IsOperatingLabScreen()") &&
+              xrPhysicalSource.Contains("ResearchLabScreenAdmission.MayActuate("),
+            "Physical Desktop/XR Native gestures lost Notebook/Review lab-screen isolation.");
+
+        // Leaving Lab disowns a pending trigger without requiring the
+        // student to destroy physical ownership of a held Desktop tool.
+        // Returning to Lab while G/trigger is still down must not fire; a
+        // new neutral frame is observed before any later deliberate press.
+        var screenGesture = new ResearchRestorationGestureGate();
+        screenGesture.RequireFreshNeutralInput();
+        Check(!screenGesture.ObserveNeutral(true, false, true) &&
+              !screenGesture.ObserveNeutral(true, true, false) &&
+              screenGesture.ObserveNeutral(true, true, true),
+            "Screen navigation accepted a carried press or untracked neutral baseline.");
+        screenGesture.RequireFreshNeutralInput();
+        Check(!screenGesture.IsArmed &&
+              !screenGesture.ObserveNeutral(true, false, true) &&
+              screenGesture.IsArmed == false,
+            "A second Notebook/Review transition reused the previous button release.");
+        // Physical material gestures must be admitted only from active Lab,
+        // never while the student records a branch-bound Notebook note,
+        // reviews recorded evidence, or navigates a paused/held screen.
+        Check(ResearchLabScreenAdmission.MayActuate("Lab", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Notebook", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Review", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Inspect", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Measure", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Pause", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Hold", true) &&
+              !ResearchLabScreenAdmission.MayActuate("Lab", false) &&
+              !ResearchLabScreenAdmission.MayActuate(null, true),
+            "Physical material inputs leaked through non-Lab screens or Native Hold.");
+
+        // Deliberate pipette contact with the *other* prepared stock first
+        // requests a Native source switch. This must never aspirate any
+        // material during the same trigger gesture.
+        Check(ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteSelectReserve &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            true, false, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.PipetteSelectPrimary &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, true, true)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Physical mismatched-source touch must switch only once; matched stock aspirates separately.");
+        Check(ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, true,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            true, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, false, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-pipette-visual", true, true, false,
+            false, true, false, false, false)
+                == ResearchAuxiliaryDeliveryIntent.None &&
+              ResearchPhysicalSourceSelection.Resolve(
+            "research-stock-bottle-visual", true, true, false,
+            false, true, false, false, true)
+                == ResearchAuxiliaryDeliveryIntent.None,
+            "Two stocks, receiver overlap, absent grip/press or Native Hold must deny switching.");
+
+        // Restored Native authority must disown held physical gestures until
+        // real controls are neutral and the previous grip has been released.
+        var restoredGate = new ResearchRestorationGestureGate();
+        Check(restoredGate.IsArmed, "Fresh laboratory input should begin armed.");
+        restoredGate.RequireFreshNeutralInput();
+        Check(!restoredGate.IsArmed &&
+              !restoredGate.ObserveNeutral(false, true, true) &&
+              !restoredGate.ObserveNeutral(true, false, true) &&
+              !restoredGate.ObserveNeutral(true, true, false),
+            "Native restoration accepted held equipment, depressed controls or missing tracking.");
+        Check(restoredGate.ObserveNeutral(true, true, true) &&
+              restoredGate.IsArmed,
+            "A released tool, neutral controls and valid tracking did not re-arm input.");
+        restoredGate.RequireFreshNeutralInput();
+        Check(!restoredGate.IsArmed,
+            "A second Native session restoration reused an earlier neutral baseline.");
 
         // M2: holding a real visual-only pipette/stock bottle must never
         // turn pointer motion into a Native burette valve command. They can
@@ -1680,6 +3208,13 @@ internal static class Program
                 "Notebook note was not sent to the session-owned note store.");
             Check(session.NotebookAppendCalls == 1 && session.SaveCalls == 0,
                 "Notebook note was replayed or implicitly saved Native chemistry.");
+            Check(panels.Request(PanelAction.AddNotebookNote,
+                    "Student selected reflection: I want another Native pH measurement before reaching a conclusion.") &&
+                  session.NotebookAppendCalls == 2 &&
+                  session.SaveCalls == 0 &&
+                  driver.CurrentLabView.EventSequence == "7",
+                "XR student-selectable reflection failed to route through the same real branch-linked Notebook.");
+
             Check(router.Current.SupportedActions.Contains("ExportPortable"),
                 "Notebook has no explicit portable Native+notes export action.");
             Check(panels.Request(PanelAction.ExportPortable),
@@ -1695,15 +3230,78 @@ internal static class Program
             Check(router.Current.ModelIdentity == "IPhreeqc-research", "Native-derived model metadata lost");
             Check(panels.Request(PanelAction.Measure, "receiver"), "Measure action refused");
             Check(router.Current.ScreenId == ScreenId.Measure, "Measure route missing");
-            Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0,
-                "Live Desktop Measure unexpectedly permitted a Native session replacement");
+            Check(!panels.Request(PanelAction.Load) && session.LoadCalls == 0 &&
+                  !panels.Request(PanelAction.ChooseLocalSave) &&
+                  !panels.Request(PanelAction.LoadSelectedSave) &&
+                  !panels.Request(PanelAction.SaveCopy) &&
+                  !panels.Request(PanelAction.NewStudy) &&
+                  session.LocalNativeLoadCalls == 0 &&
+                  !panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 0,
+                "Live Desktop Measure unexpectedly permitted any Native session replacement");
             Check(panels.Request(PanelAction.Pause), "Pause action refused");
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused, "Pause not held");
+            Check(router.Current.SupportedActions.Contains("ChooseLocalSave") &&
+                  router.Current.SupportedActions.Contains("LoadSelectedSave") &&
+                  panels.Request(PanelAction.ChooseLocalSave) &&
+                  session.LocalNativeChooseCalls == 1 &&
+                  session.LocalNativeLoadCalls == 0,
+                "Pause did not expose a side-effect-free local Native save selector.");
+            session.NativeSelectedLoadPermitted = false;
+            Check(!panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 0 && driver.IsNativePaused,
+                "Invalid selected Native save bypassed guarded admission.");
+            session.NativeSelectedLoadPermitted = true;
+            Check(panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 1 && driver.IsNativePaused,
+                "Selected Native save did not route through Pause without unpausing.");
+            Check(router.Current.SupportedActions.Contains("SaveCopy"),
+                "Pause does not expose non-overwriting Native/Notebook SaveCopy.");
+            Check(router.Current.SupportedActions.Contains("NewStudy") &&
+                  panels.CanStartIndependentStudy,
+                "Pause cannot start a distinct Native research run.");
+            session.NewStudyPermitted = false;
+            Check(!panels.Request(PanelAction.NewStudy) &&
+                  session.NewStudyCalls == 0,
+                "Unavailable new Native study action falsely accepted.");
+            session.NewStudyPermitted = true;
+            Check(panels.Request(PanelAction.NewStudy) &&
+                  session.NewStudyCalls == 1 && session.SaveCalls == 0 &&
+                  driver.IsNativePaused,
+                "New Native research run did not route from Pause independently of SaveCopy.");
+            session.SaveNewCopyPermitted = false;
+            Check(!panels.Request(PanelAction.SaveCopy) &&
+                  session.SaveCopyCalls == 0,
+                "Unavailable SaveCopy must not mutate the active study.");
+            session.SaveNewCopyPermitted = true;
+            Check(panels.Request(PanelAction.SaveCopy) &&
+                  session.SaveCopyCalls == 1 && session.SaveCalls == 0 &&
+                  driver.IsNativePaused,
+                "New local checkpoint copy was not distinct from Native Save/Continue.");
+            Check(router.Current.SupportedActions.Contains("RestorePortable") &&
+                  router.Current.SupportedActions.Contains("ChoosePortableArchive") &&
+                  panels.Request(PanelAction.ChoosePortableArchive),
+                "Offline student package selection missing from Pause.");
+            Check(router.Current.SupportedActions.Contains("ExportPortable") &&
+                  panels.Request(PanelAction.ExportPortable) &&
+                  panels.LastPortableArchiveFileName == "student.plvpack" &&
+                  session.PortableExportCalls == 2 &&
+                  session.SaveCalls == 0,
+                "Paused XR package page must expose a real branch-local export with visible filename.");
+            session.PortableRestorePermitted = false;
+            Check(!panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 0,
+                "Unavailable or invalid offline package falsely imported a session.");
+            session.PortableRestorePermitted = true;
+            Check(panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 1 &&
+                  driver.IsNativePaused,
+                "Native-backed offline restore did not route from Pause without unpausing.");
             Check(router.Current.SupportedActions.Contains("ExportPortable"),
                 "Native Pause does not expose portable Export.");
             Check(panels.Request(PanelAction.ExportPortable),
                 "Native Pause refused its explicit research archive Export.");
-            Check(session.PortableExportCalls == 2 && session.SaveCalls == 0,
+            Check(session.PortableExportCalls == 3 && session.SaveCalls == 0,
                 "Portable Export caused an unintended Native Save or duplicate command.");
             driver.CurrentMode = "VR";
             router.Configure(driver);
@@ -1744,14 +3342,33 @@ internal static class Program
             Check(router.Current.ScreenId == ScreenId.Pause && driver.IsNativePaused,
                 "Settings Back unpaused the operating authority");
             Check(panels.Request(PanelAction.Review), "Paused Review refused");
+            Check(!panels.Request(PanelAction.RestorePortable) &&
+                  session.PortableRestoreCalls == 1,
+                "Read-only recorded Review unexpectedly admitted live package import.");
             Check(router.Current.ScreenId == ScreenId.Review, "Review route missing");
             Check(router.Current.SupportedActions.Contains("CompareSaved"),
                 "Review cannot explicitly compare with a recorded saved checkpoint.");
+            Check(router.Current.SupportedActions.Contains("ChooseLocalSave") &&
+                  panels.Request(PanelAction.ChooseLocalSave) &&
+                  session.LocalNativeChooseCalls == 2 &&
+                  !router.Current.SupportedActions.Contains("LoadSelectedSave") &&
+                  !panels.Request(PanelAction.LoadSelectedSave) &&
+                  session.LocalNativeLoadCalls == 1 &&
+                  driver.IsNativePaused,
+                "Review selected a recorded baseline by importing or unpausing Native.");
             Check(panels.Request(PanelAction.CompareSaved),
                 "Compare action did not use session-owned recorded source data.");
             Check(router.Current.ScreenId == ScreenId.Compare &&
                 session.SavedCompareCalls == 1 && session.SaveCalls == 0,
                 "Compare mutated Native chemistry, implicitly saved or missed the Compare route.");
+            Check(router.Current.SupportedActions.Contains("ExportComparisonCsv") &&
+                  panels.CanExportRecordedComparison &&
+                  panels.Request(PanelAction.ExportComparisonCsv) &&
+                  session.ComparisonCsvCalls == 1 &&
+                  panels.LastComparisonCsvFileName == "native-comparison.plv-compare.csv" &&
+                  session.LocalNativeLoadCalls == 1 &&
+                  driver.IsNativePaused && session.SaveCalls == 0,
+                "Recorded comparison CSV must export real selected study without Native import/Save.");
             Check(panels.Request(PanelAction.Review) &&
                 router.Current.ScreenId == ScreenId.Review,
                 "Comparing recorded data lost the original Review navigation.");
@@ -1899,6 +3516,138 @@ internal static class Program
                   interruptedDriver.PauseCalls == 1,
                 "Hold recovery during Settings unpaused or re-paused Native authority");
 
+            var heldReturnPreviousContinue = driver.ContinueCalls;
+            var heldReturnPreviousSaves = session.SaveCalls;
+            var heldReturnPreviousPauses = driver.PauseCalls;
+            // Source-linked guard: unprepared FocusLoss and CheckpointRestart
+            // must choose ResumeSetup, not Continue (which CLOSES stock choice).
+            var coreRecoverySource = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+            Check(coreRecoverySource.Contains("HoldReason == \"FocusLoss\"") &&
+                  coreRecoverySource.Contains("HoldReason == \"TrackingLoss\"") &&
+                  coreRecoverySource.Contains("HoldReason == \"CheckpointRestart\"") &&
+                  coreRecoverySource.Contains(
+                    "requiresSetupRecovery ? \"ResumeSetup\" : \"Continue\""),
+                "Unity silently closed new Native stock setup after FocusLoss or restart.");
+
+            // A direct native pause/continue call while any Native Hold is
+        // active bypasses the documented neutral-rearm + UI synchronization
+        // pathway. The only allowed release is ResumeAfterTimeHold.
+        var nativeCoreText = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+        var guardPauseStart = nativeCoreText.IndexOf("public bool PauseSession()", StringComparison.Ordinal);
+        var guardContinueStart = nativeCoreText.IndexOf("public bool ContinueSession()", StringComparison.Ordinal);
+        var guardSelectStart = nativeCoreText.IndexOf("public bool SelectMeasurementVessel(", StringComparison.Ordinal);
+        Check(guardPauseStart > 0 && guardContinueStart > guardPauseStart &&
+              guardSelectStart > guardContinueStart &&
+              nativeCoreText.Substring(guardPauseStart,
+                  guardContinueStart - guardPauseStart).Contains(
+                      "Session == null || IsTimeHeld") &&
+              nativeCoreText.Substring(guardContinueStart,
+                  guardSelectStart - guardContinueStart).Contains(
+                      "Session == null || IsTimeHeld"),
+            "Direct Native Pause/Continue may bypass Hold recovery/rearm.");
+        var heldControllerText = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
+        var heldContinueStart = heldControllerText.IndexOf(
+            "public bool ContinueHeldSession()", StringComparison.Ordinal);
+        var heldContinueEnd = heldControllerText.IndexOf("\n        }",
+            heldContinueStart, StringComparison.Ordinal);
+        Check(heldContinueStart > 0 && heldContinueEnd > heldContinueStart &&
+              heldControllerText.Substring(heldContinueStart,
+                  heldContinueEnd - heldContinueStart).Contains(
+                      "!driver.IsTimeHeld"),
+            "The UI held-only resume endpoint must reject an unheld direct Continue.");
+
+        // The low-level recovery API is also public: even if UI routes are
+        // correct, directly calling it without a Native Hold could silently
+        // close still-open stock setup. Guard before ANY input submission.
+        var heldGuardMethod = nativeCoreText.IndexOf(
+            "public bool ResumeAfterTimeHold()", StringComparison.Ordinal);
+        var heldGuardBodyEnd = nativeCoreText.IndexOf(
+            "public bool BeginModeChange(", heldGuardMethod, StringComparison.Ordinal);
+        var heldGuardBody = nativeCoreText.Substring(
+            heldGuardMethod, heldGuardBodyEnd - heldGuardMethod);
+        var heldGuardCheck = heldGuardBody.IndexOf(
+            "Session == null || !IsTimeHeld", StringComparison.Ordinal);
+        var heldInputWrite = heldGuardBody.IndexOf(
+            "Session.SubmitInputs(", StringComparison.Ordinal);
+        Check(heldGuardCheck > 0 && heldInputWrite > heldGuardCheck,
+            "Direct ResumeAfterTimeHold without Native Hold could fabricate Continue.");
+
+        // Source-linked sequencing guard: a successful Native resume
+            // must publish the new paused/hold status before the router's
+            // HoldChanged(false) callback runs, never with the old snapshot.
+            var recoveryCore = System.IO.File.ReadAllText(
+                "unity/Assets/PharmaLabVR/Runtime/Core/CoreDriver.cs");
+            var recoveryMethod = recoveryCore.IndexOf(
+                "public bool ResumeAfterTimeHold()", StringComparison.Ordinal);
+            var recoveryEnd = recoveryCore.IndexOf(
+                "public bool BeginModeChange(", recoveryMethod, StringComparison.Ordinal);
+            var acceptedRecovery = recoveryCore.Substring(recoveryMethod,
+                recoveryEnd - recoveryMethod);
+            Check(acceptedRecovery.IndexOf("PublishSnapshot();", StringComparison.Ordinal) <
+                      acceptedRecovery.IndexOf("HoldChanged?.Invoke(false)", StringComparison.Ordinal),
+                "Recovered Native paused flag must precede HoldChanged(false) presentation.");
+
+            // RED: a held imported checkpoint that was saved under Pause
+            // resumes *running* when Native accepts Continue. Do not display
+            // obsolete Pause while Native time/transport are active.
+            var resumedDriver = new CoreDriver();
+            var resumedRouter = new ScreenRouter();
+            resumedRouter.Configure(resumedDriver);
+            var resumedSession = new SessionController();
+            var resumedPanels = new LabPanelController();
+            resumedPanels.Configure(resumedRouter, resumedDriver, resumedSession);
+            Check(resumedPanels.Request(PanelAction.Pause) &&
+                  resumedRouter.Current.ScreenId == ScreenId.Pause,
+                "Cannot simulate paused original Native checkpoint.");
+            resumedDriver.SetHold(true);
+            Check(resumedRouter.Current.ScreenId == ScreenId.Hold,
+                "Paused checkpoint was not held.");
+            var resumePauses = resumedDriver.PauseCalls;
+            var resumeContinues = resumedDriver.ContinueCalls;
+            resumedDriver.CompleteRecovery(remainsPaused: false, needsPreparation: false);
+            Check(resumedRouter.Current.ScreenId == ScreenId.Lab &&
+                  !resumedDriver.IsNativePaused && !resumedDriver.IsTimeHeld &&
+                  resumedDriver.PauseCalls == resumePauses &&
+                  resumedDriver.ContinueCalls == resumeContinues &&
+                  resumedSession.SaveCalls == 0,
+                "Native Continue released saved Pause but router exposed obsolete Pause UI.");
+            // Settings can obscure Hold while the exact same recovery
+            // finishes. Back must reconcile the CURRENT Native pause flag.
+            var settingsRecoveryDriver = new CoreDriver();
+            var settingsRecoveryRouter = new ScreenRouter();
+            settingsRecoveryRouter.Configure(settingsRecoveryDriver);
+            var settingsRecoverySession = new SessionController();
+            var settingsRecoveryPanels = new LabPanelController();
+            settingsRecoveryPanels.Configure(settingsRecoveryRouter,
+                settingsRecoveryDriver, settingsRecoverySession);
+            Check(settingsRecoveryPanels.Request(PanelAction.Pause),
+                "Settings recovery could not construct paused Native source.");
+            settingsRecoveryDriver.SetHold(true);
+            Check(settingsRecoveryPanels.Request(PanelAction.Settings),
+                "Held Settings admission missing.");
+            settingsRecoveryDriver.CompleteRecovery(remainsPaused: false,
+                needsPreparation: false);
+            Check(settingsRecoveryPanels.Request(PanelAction.Back) &&
+                  settingsRecoveryRouter.Current.ScreenId == ScreenId.Lab &&
+                  settingsRecoveryDriver.ContinueCalls == 0 &&
+                  settingsRecoverySession.SaveCalls == 0,
+                "Settings Back restored stale Pause after Native recovered running.");
+            // ResumeSetup is the sole valid exception: genuinely unprepared,
+            // still Native-paused stock setup should return to the Lab chooser.
+            var setupResumeDriver = new CoreDriver { SourceNeedsPreparation = true };
+            var setupResumeRouter = new ScreenRouter();
+            setupResumeRouter.Configure(setupResumeDriver);
+            setupResumeDriver.SetHold(true);
+            setupResumeDriver.CompleteRecovery(remainsPaused: true,
+                needsPreparation: true);
+            Check(setupResumeRouter.Current.ScreenId == ScreenId.Lab &&
+                  setupResumeDriver.IsNativePaused &&
+                  setupResumeDriver.SourceNeedsPreparation,
+                "Unprepared Native ResumeSetup did not return to stock choice.");
+
             driver.SetHold(true);
             Check(router.Current.ScreenId == ScreenId.Hold, "Native hold not routed");
             Check(!panels.Request(PanelAction.Continue), "Unavailable held Continue falsely succeeded");
@@ -1906,6 +3655,19 @@ internal static class Program
             Check(panels.Request(PanelAction.Review), "Recorded Review blocked during Hold");
             Check(!panels.Request(PanelAction.Lab), "Held Review bypassed native hold");
             Check(router.Current.ScreenId == ScreenId.Review, "Denied held return hid review");
+            Check(router.Current.SupportedActions.Contains("Hold"),
+                "Held recorded Review has no explicit route back to Native recovery.");
+            Check(panels.Request(PanelAction.Hold) &&
+                  router.Current.ScreenId == ScreenId.Hold &&
+                  driver.IsTimeHeld && !driver.NativeRecoveryReady &&
+                  session.RecordedReview == null,
+                "Return from recorded Review bypassed Native Hold or left stale Review.");
+            Check(session.SaveCalls == heldReturnPreviousSaves &&
+                  driver.ContinueCalls == heldReturnPreviousContinue &&
+                  driver.PauseCalls == heldReturnPreviousPauses,
+                "Review-to-Hold navigation saved/continued/recomputed Native authority.");
+            Check(!panels.Request(PanelAction.Hold),
+                "Native recovery return must not be a generic screen escape.");
             Check(session.SaveCalls == 0, "Hold/Review caused implicit Save");
             Console.WriteLine($"P06.02 headless routing checks: {checks} passed (NOT Unity, Player or Native Core)");
         }

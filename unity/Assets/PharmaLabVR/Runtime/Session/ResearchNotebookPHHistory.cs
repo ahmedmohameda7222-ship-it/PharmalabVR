@@ -18,7 +18,9 @@ namespace PharmaLabVR.Session
             var points = new SortedDictionary<ulong, double>();
             foreach (var note in notes)
             {
-                if (note == null || note.BranchId != branchId || note.VesselId != vesselId ||
+                if (note == null ||
+                    note.RecordKind != NotebookRecordKind.NativePH ||
+                    note.BranchId != branchId || note.VesselId != vesselId ||
                     note.Text == null || !note.Text.StartsWith("Native pH ", StringComparison.Ordinal) ||
                     !ulong.TryParse(note.EventSequence, NumberStyles.None,
                         CultureInfo.InvariantCulture, out var eventId) ||
@@ -43,7 +45,7 @@ namespace PharmaLabVR.Session
                         vesselTag + vesselId + " · material revision ", StringComparison.Ordinal) ||
                     !double.TryParse(rawText, NumberStyles.Float,
                         CultureInfo.InvariantCulture, out var raw) ||
-                    !double.IsFinite(raw) ||
+                    double.IsNaN(raw) || double.IsInfinity(raw) ||
                     raw.ToString("0.00", CultureInfo.InvariantCulture) != displayed)
                     continue;
                 if (!points.ContainsKey(eventId)) points.Add(eventId, raw);

@@ -105,8 +105,20 @@ namespace PharmaLabVR.Protocols
         // lesson survives a scene/controller rebuild. Annotation only; never
         // infer chemistry or import hypotheses across independent branches.
         public static string RecoverSavedPrediction(IReadOnlyList<NotebookEntry> entries,
-            string lessonId, string nativeBranchId, string currentNativeEventSequence)
+            string lessonId, string nativeBranchId, string currentNativeEventSequence) =>
+            RecoverSavedPredictionChecked(entries, lessonId,
+                nativeBranchId, currentNativeEventSequence, out _);
+
+        // Conflicting learner declarations cannot silently become an
+        // authoritative "saved" hypothesis. A single valid prediction (or
+        // identical duplicates) is sufficient; two different valid choices
+        // on the same branch and event ceiling require explicit learner review.
+        private static string RecoverSavedPredictionChecked(
+            IReadOnlyList<NotebookEntry> entries, string lessonId,
+            string nativeBranchId, string currentNativeEventSequence,
+            out bool conflicting)
         {
+            conflicting = false;
             if (entries == null || string.IsNullOrWhiteSpace(lessonId) ||
                 string.IsNullOrWhiteSpace(nativeBranchId) ||
                 !ulong.TryParse(currentNativeEventSequence, NumberStyles.None,
@@ -117,6 +129,7 @@ namespace PharmaLabVR.Protocols
                 ": receiver pH predicted ";
             const string suffix =
                 ". This is a learner prediction, not a Native result or certified endpoint.";
+            string recovered = null;
             foreach (var entry in entries)
             {
                 // Restoring event N on the *same* branch must not use a
@@ -132,10 +145,53 @@ namespace PharmaLabVR.Protocols
                     continue;
                 var answer = entry.Text.Substring(prefix.Length,
                     entry.Text.Length - prefix.Length - suffix.Length);
-                if (answer == "below 7") return "below-7";
-                if (answer == "at least 7") return "at-least-7";
+                var choice = answer == "below 7" ? "below-7" :
+                    answer == "at least 7" ? "at-least-7" : null;
+                if (choice == null) continue;
+                if (recovered != null && recovered != choice)
+                {
+                    conflicting = true;
+                    return null;
+                }
+                recovered = choice;
             }
-            return null;
+            return recovered;
+        }
+
+        // After Native SessionLoad/CheckpointRestart, reconstruct only a
+        // uniquely identified local lesson with a durable, branch-scoped
+        // hypothesis at or before the restored Native event. Two different
+        // lesson hypotheses are ambiguous: ask the student to select explicitly.
+        // This never credits future notes or changes Native material.
+        public static string RecoverSavedLessonId(IReadOnlyList<NotebookEntry> entries,
+            string nativeBranchId, string currentNativeEventSequence)
+        {
+            const string strongId = "strong-acid-titration-research";
+            const string mixedId = "mixed-acid-titration-research";
+            var strong = RecoverSavedPredictionChecked(entries, strongId,
+                nativeBranchId, currentNativeEventSequence, out var strongConflict);
+            var mixed = RecoverSavedPredictionChecked(entries, mixedId,
+                nativeBranchId, currentNativeEventSequence, out var mixedConflict);
+            if (strongConflict || mixedConflict ||
+                (strong != null) == (mixed != null)) return null;
+            return strong != null ? strongId : mixedId;
+        }
+
+        // Report why lesson recovery was withheld without inventing a
+        // replacement student prediction. A foreign branch or future Native
+        // event cannot create an ambiguity at the restored checkpoint.
+        public static bool HasAmbiguousSavedPredictions(
+            IReadOnlyList<NotebookEntry> entries, string nativeBranchId,
+            string currentNativeEventSequence)
+        {
+            var strong = RecoverSavedPredictionChecked(entries,
+                "strong-acid-titration-research", nativeBranchId,
+                currentNativeEventSequence, out var strongConflict);
+            var mixed = RecoverSavedPredictionChecked(entries,
+                "mixed-acid-titration-research", nativeBranchId,
+                currentNativeEventSequence, out var mixedConflict);
+            return strongConflict || mixedConflict ||
+                (strong != null && mixed != null);
         }
 
         public static bool IsSupportedPrediction(string choice) =>

@@ -6,10 +6,163 @@ using System.Text;
 
 namespace PharmaLabVR.Session
 {
+    public enum RecordedNotebookScope { Unavailable, Live, RecordedOnly }
+
+    // A confirmed saved Native Review takes precedence over the current live
+    // branch, even when a replayed/foreign Native session shares its string ID.
+    // No recorded-only content may be used for live solver admission.
+    // The caller must establish recordedOnlyValidated from the exact saved
+    // review reference returned by OpenRecoverable.
     // Durable learner annotations are separate from authoritative Native chemistry.
     public static class ResearchLearningReview
     {
         private const int MaxExportBytes = 8 * 1024 * 1024;
+
+        // Replay learner findings from a real checksum-validated offline
+        // journal, at or before the Native checkpoint being reviewed.
+        // A corrupt/missing journal may not crash Review or fabricate evidence.
+        // Source branch identity must match the currently loaded Native branch.
+        public static string ReadRecordedJournal(NotebookService journal,
+            string filePath, string activeNativeBranchId, string recordedBranchId,
+            string recordedEventSequence, bool compact)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(filePath) ||
+                string.IsNullOrWhiteSpace(activeNativeBranchId) ||
+                !string.Equals(activeNativeBranchId, recordedBranchId,
+                    StringComparison.Ordinal))
+                return "Local student notebook unavailable for this recorded branch.";
+            try
+            {
+                var notes = journal.ReadCurrent(filePath, recordedBranchId,
+                    recordedEventSequence);
+                return Render(notes, recordedBranchId, compact);
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                         error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException)
+            {
+                // Do not leak unvalidated note text, paths, backup identities
+                // or partial results into student/instructor Review.
+                return "Local notebook unavailable: offline journal could not be verified.";
+            }
+        }
+
+        public static RecordedNotebookScope SelectNotebookScope(
+            string recordedBranchId, string activeBranchId, bool liveNativeOpen,
+            bool recordedOnlyValidated)
+        {
+            if (string.IsNullOrWhiteSpace(recordedBranchId))
+                return RecordedNotebookScope.Unavailable;
+            if (recordedOnlyValidated)
+                return RecordedNotebookScope.RecordedOnly;
+            return liveNativeOpen &&
+                string.Equals(recordedBranchId, activeBranchId, StringComparison.Ordinal) ?
+                RecordedNotebookScope.Live : RecordedNotebookScope.Unavailable;
+        }
+
+                // Only the caller holding a validated RecordedSessionReview may use
+        // this when live Native import failed for an unavailable scientific
+        // model. A sidecar from another saved session is never acceptable,
+        // and the result is explicitly learner annotation, not Native proof.
+        // Both read-only Preview and student CSV export use the same exact
+        // Native-save/Notebook-sidecar admission. The caller must first hold
+        // the validated saved RecordedSessionReview reference returned by
+        // OpenRecoverable after model-dependent import failed.
+        public static string SidecarForSavedNative(string recordedSavePath)
+        {
+            if (string.IsNullOrWhiteSpace(recordedSavePath))
+                throw new InvalidDataException("Saved Native review path is missing.");
+            var source = Path.GetFullPath(recordedSavePath);
+            if (!source.EndsWith(".plv.json", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException("Saved Native review file extension is invalid.");
+            return source.Substring(0, source.Length - ".plv.json".Length) +
+                ".plv-notes";
+        }
+
+                public static IReadOnlyList<NotebookEntry> ReadRecordedOnlyEntries(
+            NotebookService journal, string recordedSavePath,
+            string notebookPath, string recordedBranchId,
+            string recordedEventSequence)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(recordedSavePath) ||
+                string.IsNullOrWhiteSpace(notebookPath) ||
+                string.IsNullOrWhiteSpace(recordedBranchId) ||
+                string.IsNullOrWhiteSpace(recordedEventSequence))
+                throw new InvalidDataException(
+                    "Recorded-only journal requires a saved Native review identity.");
+            var exactSidecar = SidecarForSavedNative(recordedSavePath);
+            if (!string.Equals(exactSidecar, Path.GetFullPath(notebookPath),
+                StringComparison.OrdinalIgnoreCase))
+                throw new InvalidDataException(
+                    "Recorded-only annotations must belong to this saved Native file.");
+            // Refuse an existing corrupt primary even if its .bak is valid;
+            // Native event + branch boundaries apply before CSV packaging.
+            return journal.ReadCurrent(exactSidecar, recordedBranchId,
+                recordedEventSequence);
+        }
+
+        public static string ReadRecordedOnlyJournal(NotebookService journal,
+            string recordedSavePath, string notebookPath, string recordedBranchId,
+            string recordedEventSequence, bool compact)
+        {
+            const string unavailable =
+                "Recorded-only student notebook unavailable for this saved Native review.";
+            try
+            {
+                var entries = ReadRecordedOnlyEntries(journal,
+                    recordedSavePath, notebookPath, recordedBranchId,
+                    recordedEventSequence);
+                return "Recorded-only student annotations · scientific model unavailable. " +
+                    "These are not independently verified Native evidence.\n" +
+                    Render(entries, recordedBranchId, compact);
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                         error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException)
+            {
+                return unavailable;
+            }
+        }
+
+        // Live Notebook must distinguish genuinely absent observations from
+        // an unreadable checksum-protected journal. Both its latest entry
+        // and pH history are scoped to the current Native event ceiling.
+        public static string ReadActiveNotebookSummary(NotebookService journal,
+            string filePath, string activeBranchId, string activeEventSequence)
+        {
+            if (journal == null || string.IsNullOrWhiteSpace(filePath) ||
+                string.IsNullOrWhiteSpace(activeBranchId))
+                return "Research notebook unavailable: no active Native journal.";
+            try
+            {
+                var entries = journal.ReadCurrent(filePath, activeBranchId,
+                    activeEventSequence);
+                if (entries.Count == 0)
+                    return "Research notebook: no recorded annotations.";
+                var latest = entries[entries.Count - 1];
+                var preview = latest.Text.Replace('\r', ' ').Replace('\n', ' ');
+                if (preview.Length > 105)
+                    preview = preview.Substring(0, 105) + "...";
+                return "Research notebook · " + entries.Count +
+                    " event-linked notes\n" +
+                    "Latest · event " + latest.EventSequence + " · " +
+                    latest.VesselId + " · " +
+                    RecordOriginLabel(latest.RecordKind) +
+                    "\n" + preview + "\n" +
+                    ResearchNotebookPHHistory.Summarize(entries, activeBranchId,
+                        "receiver", 3) +
+                    "\nDesktop: write notes; Desktop/XR: record pH and select a research explanation.";
+            }
+            catch (Exception error) when (error is InvalidDataException ||
+                                         error is IOException ||
+                                         error is UnauthorizedAccessException ||
+                                         error is ArgumentException)
+            {
+                return "Research notebook unavailable: offline journal could not be verified.";
+            }
+        }
 
         // Student CSV has its own schema; not certified Native results.
         public static string RenderCsv(IReadOnlyList<NotebookEntry> notes, string reviewBranchId)
@@ -72,6 +225,19 @@ namespace PharmaLabVR.Session
             return "\"" + value.Replace("\"", "\"\"") + "\"";
         }
 
+        // A checksum confirms journal bytes, not a human or device identity.
+        // NativePH means the app's explicit current-Native-measurement path
+        // wrote this record; old six-field notes and handwritten text cannot
+        // claim that origin merely by imitating the observation's wording.
+        public static string RecordOriginLabel(NotebookRecordKind kind) =>
+            kind switch
+            {
+                NotebookRecordKind.NativePH =>
+                    "Native-recorded entry (offline; not attested)",
+                NotebookRecordKind.User => "Student-authored note",
+                _ => "Legacy note (source unverified)"
+            };
+
         public static string RenderPage(IReadOnlyList<NotebookEntry> notes,
             string reviewBranchId, int requestedIndex)
         {
@@ -88,6 +254,7 @@ namespace PharmaLabVR.Session
                 statement = statement.Substring(0, 77) + "...";
             return "Student note " + (index + 1) + "/" + matching.Length +
                 " · event " + entry.EventSequence + " · " + entry.VesselId +
+                " · " + RecordOriginLabel(entry.RecordKind) +
                 "\n" + statement + " (not independently verified)";
         }
 
@@ -113,7 +280,9 @@ namespace PharmaLabVR.Session
                 if (excerpt.Length > maxLength)
                     excerpt = excerpt.Substring(0, maxLength - 3) + "...";
                 text.Append("\nevent ").Append(entry.EventSequence).Append(" · ")
-                    .Append(entry.VesselId).Append(" · ").Append(excerpt);
+                    .Append(entry.VesselId).Append(" · ")
+                    .Append(RecordOriginLabel(entry.RecordKind)).Append(" · ")
+                    .Append(excerpt);
             }
             if (start > 0) text.Append("\nOpen Notebook for earlier notes.");
             if (!compact)

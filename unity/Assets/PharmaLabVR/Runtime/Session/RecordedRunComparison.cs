@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Globalization;
+using System.Text;
 
 namespace PharmaLabVR.Session
 {
@@ -12,6 +14,33 @@ namespace PharmaLabVR.Session
     {
         public string BaselineBranchId { get; }
         public string CandidateBranchId { get; }
+        public string BaselineEventSequence { get; }
+        public string CandidateEventSequence { get; }
+        // A copy of a saved file is not automatically an independent run.
+        public string LineageSummary
+        {
+            get
+            {
+                if (!string.Equals(BaselineBranchId, CandidateBranchId,
+                    StringComparison.Ordinal))
+                    return "Different Native branches; recorded comparison is not proof of independent trials.";
+                if (BaselineEventSequence == "unavailable" ||
+                    CandidateEventSequence == "unavailable")
+                    return "Same Native branch with Native event unknown; independent trial not established.";
+                if (BaselineEventSequence == CandidateEventSequence)
+                    return "Same Native branch at the same recorded event; possibly two copies of one checkpoint.";
+                return "Same Native branch at different recorded events; checkpoints not independent trials.";
+            }
+        }
+
+        private static string CanonicalEvent(string value)
+        {
+            return ulong.TryParse(value, NumberStyles.None,
+                CultureInfo.InvariantCulture, out var number) &&
+                number.ToString(CultureInfo.InvariantCulture) == value ?
+                value : "unavailable";
+        }
+
         public string BaselineModelIdentity { get; }
         public string CandidateModelIdentity { get; }
         public IReadOnlyList<ComparisonRow> Rows { get; }
@@ -21,6 +50,8 @@ namespace PharmaLabVR.Session
         {
             BaselineBranchId = baseline.BranchId;
             CandidateBranchId = candidate.BranchId;
+            BaselineEventSequence = CanonicalEvent(baseline.EventSequence);
+            CandidateEventSequence = CanonicalEvent(candidate.EventSequence);
             BaselineModelIdentity = baseline.ModelIdentity;
             CandidateModelIdentity = candidate.ModelIdentity;
             Rows = rows;
@@ -43,6 +74,15 @@ namespace PharmaLabVR.Session
             public bool DeltaAvailable { get; }
             public double Delta { get; }
             public string DeltaReason { get; }
+            // Exact recorded numbers: do not export rounded UI labels.
+            public bool BaselineRawAvailable { get; }
+            public bool CandidateRawAvailable { get; }
+            public double BaselineRawPH { get; }
+            public double CandidateRawPH { get; }
+            public string BaselineProviderModelId { get; }
+            public string BaselineDatabaseIdentity { get; }
+            public string CandidateProviderModelId { get; }
+            public string CandidateDatabaseIdentity { get; }
 
             internal ComparisonRow(string vessel, string observable,
                 RecordedSessionReview baselineRun, RecordedSessionReview candidateRun,
@@ -53,6 +93,14 @@ namespace PharmaLabVR.Session
                 ObservableId = observable;
                 BaselineStatus = Availability(a);
                 CandidateStatus = Availability(b);
+                BaselineRawAvailable = BaselineStatus == "Current" && a != null;
+                CandidateRawAvailable = CandidateStatus == "Current" && b != null;
+                BaselineRawPH = BaselineRawAvailable ? a.value : 0.0;
+                CandidateRawPH = CandidateRawAvailable ? b.value : 0.0;
+                BaselineProviderModelId = a?.modelId ?? string.Empty;
+                BaselineDatabaseIdentity = a?.databaseIdentity ?? string.Empty;
+                CandidateProviderModelId = b?.modelId ?? string.Empty;
+                CandidateDatabaseIdentity = b?.databaseIdentity ?? string.Empty;
                 BaselineDisplay = BaselineStatus == "Current" ? a.DisplayValue : "--";
                 CandidateDisplay = CandidateStatus == "Current" ? b.DisplayValue : "--";
                 bool samePackage =
@@ -149,4 +197,147 @@ namespace PharmaLabVR.Session
             }
         }
     }
+
+    // Immutable, recorded-only comparison export. Input rows originate from
+    // two separately validated saved Native snapshots. This never runs a
+    // scientific solver, invents unavailable pH or yields a grade.
+    public static class RecordedRunComparisonCsv
+    {
+        private const int MaxBytes = 2 * 1024 * 1024;
+        private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
+
+        public static string RenderCsv(RecordedRunComparison recorded,
+            string baselineLocalSaveName = null)
+        {
+            if (recorded == null) throw new ArgumentNullException(nameof(recorded));
+            // A locally chosen filename is an unsigned selection hint, not
+            // Native provenance, a content digest or institutional identity.
+            var localName = ValidateLocalSaveName(baselineLocalSaveName);
+            if (recorded.Rows.Count > 32)
+                throw new InvalidDataException("Recorded comparison exceeds two Native vessel collections.");
+            var output = new StringBuilder();
+            output.Append("schemaVersion,recordKind,baselineBranchId,candidateBranchId,");
+            output.Append("baselineEventSequence,candidateEventSequence,lineage,");
+            output.Append("baselineModelIdentity,candidateModelIdentity,");
+            output.Append("baselineProviderModelId,baselineDatabaseIdentity,");
+            output.Append("candidateProviderModelId,candidateDatabaseIdentity,vesselId,observableId,");
+            output.Append("unit,baselineStatus,candidateStatus,baselineRawPH,candidateRawPH,");
+            output.Append("deltaAvailable,deltaPH,deltaReason,baselineLocalSaveName\n");
+            if (recorded.Rows.Count == 0)
+            {
+                // A valid Native save may precede the first pH observation.
+                // Retain the local source and Native identities in an explicit
+                // metadata-only record, never an invented value or delta.
+                AppendRow(output, "2", "recorded-no-observations",
+                    recorded.BaselineBranchId, recorded.CandidateBranchId,
+                    recorded.BaselineEventSequence, recorded.CandidateEventSequence,
+                    recorded.LineageSummary,
+                    recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
+                    "", "", "", "", "", "", "",
+                    "Absent", "Absent", "", "", "false", "",
+                    "No recorded Native observations are available for comparison.",
+                    localName);
+            }
+            foreach (var row in recorded.Rows)
+            {
+                AppendRow(output, "2", "recorded-only-not-attested",
+                    recorded.BaselineBranchId, recorded.CandidateBranchId,
+                    recorded.BaselineEventSequence, recorded.CandidateEventSequence,
+                    recorded.LineageSummary,
+                    recorded.BaselineModelIdentity, recorded.CandidateModelIdentity,
+                    row.BaselineProviderModelId, row.BaselineDatabaseIdentity,
+                    row.CandidateProviderModelId, row.CandidateDatabaseIdentity,
+                    row.VesselId, row.ObservableId, "pH",
+                    row.BaselineStatus, row.CandidateStatus,
+                    row.BaselineRawAvailable ?
+                        row.BaselineRawPH.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.CandidateRawAvailable ?
+                        row.CandidateRawPH.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.DeltaAvailable ? "true" : "false",
+                    row.DeltaAvailable ?
+                        row.Delta.ToString("R", CultureInfo.InvariantCulture) : "",
+                    row.DeltaReason, localName);
+            }
+            var text = output.ToString();
+            if (Utf8.GetByteCount(text) > MaxBytes)
+                throw new InvalidDataException("Recorded comparison CSV exceeds 2 MiB.");
+            return text;
+        }
+
+        // Every student export receives a new name. Neither an existing CSV
+        // nor a prior Native/Notebook checkpoint is overwritten.
+        public static string WriteNew(string directory, RecordedRunComparison recorded,
+            string baselineLocalSaveName = null)
+        {
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new ArgumentException("Offline CSV directory is required.", nameof(directory));
+            var bytes = Utf8.GetBytes(RenderCsv(recorded, baselineLocalSaveName));
+            directory = Path.GetFullPath(directory);
+            Directory.CreateDirectory(directory);
+            var target = Path.Combine(directory,
+                "native-comparison-" + Guid.NewGuid().ToString("N") + ".plv-compare.csv");
+            var stage = target + ".stage";
+            if (File.Exists(target) || File.Exists(stage))
+                throw new IOException("Offline comparison export file already exists.");
+            try
+            {
+                using (var stream = new FileStream(stage, FileMode.CreateNew,
+                    FileAccess.Write, FileShare.None, 4096, FileOptions.WriteThrough))
+                {
+                    stream.Write(bytes, 0, bytes.Length);
+                    stream.Flush(true);
+                }
+                File.Move(stage, target); // immutable destination; never Replace
+                return target;
+            }
+            catch
+            {
+                try { if (File.Exists(stage)) File.Delete(stage); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+                throw;
+            }
+        }
+
+        private static string ValidateLocalSaveName(string name)
+        {
+            if (name == null) return "unavailable";
+            if (name.Length < 1 || name.Length > 96)
+                throw new InvalidDataException("Comparison baseline save name is invalid.");
+            foreach (var c in name)
+                if (!((c >= 'a' && c <= 'z') ||
+                      (c >= 'A' && c <= 'Z') ||
+                      (c >= '0' && c <= '9') || c == '_' || c == '-'))
+                    throw new InvalidDataException(
+                        "Comparison baseline save name contains forbidden characters.");
+            return name;
+        }
+
+        private static void AppendRow(StringBuilder output, params string[] columns)
+        {
+            if (columns.Length != 24)
+                throw new InvalidOperationException("Recorded comparison CSV column count changed.");
+            for (var index = 0; index < columns.Length; index++)
+            {
+                if (index > 0) output.Append(',');
+                // Only finite C# double values emitted using invariant
+                // round-trip format can bypass spreadsheet text escaping.
+                output.Append(index == 18 || index == 19 || index == 21 ?
+                    columns[index] ?? string.Empty : EscapeText(columns[index]));
+            }
+            output.Append('\n');
+        }
+
+        private static string EscapeText(string text)
+        {
+            text ??= string.Empty;
+            if (text.Length > 0 && (text[0] == '=' || text[0] == '+' ||
+                text[0] == '-' || text[0] == '@' || text[0] == '\r' ||
+                text[0] == '\t'))
+                text = "'" + text;
+            return text.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0 ?
+                "\"" + text.Replace("\"", "\"\"") + "\"" : text;
+        }
+    }
+
 }

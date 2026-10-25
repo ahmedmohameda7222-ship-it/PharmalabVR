@@ -11,4 +11,19 @@ namespace PharmaLabVR.Input
             return directBodyGrip && controllerTracked && !uiOwnsTrigger;
         }
     }
+    public static class ResearchXRReceiverInspectionAdmission
+    {
+        public static bool MayInspect(bool nativeReady, bool tracked,
+            bool allInstrumentGripsReleased, bool uiOwnsTrigger,
+            double distanceToReceiverColliderMetres)
+        {
+            return nativeReady && tracked && allInstrumentGripsReleased &&
+                !uiOwnsTrigger &&
+                !double.IsNaN(distanceToReceiverColliderMetres) &&
+                !double.IsInfinity(distanceToReceiverColliderMetres) &&
+                distanceToReceiverColliderMetres >= 0 &&
+                distanceToReceiverColliderMetres <= 0.08;
+        }
+    }
+
 }

@@ -1395,8 +1395,26 @@ namespace PharmaLabVR.Tests.PlayMode
                     root.GetComponentsInChildren<CoreDriver>(true)).Single();
                 Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
                 Assert.That(driver.CurrentMode, Is.EqualTo("Desktop"));
+                var roots = scene.GetRootGameObjects();
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                var pipette = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopGrabbable>(true))
+                    .Single(tool => tool.ToolId == "research-pipette-visual");
+                var pipetteBody = pipette.GetComponent<Rigidbody>();
+                var originallyKinematic = pipetteBody.isKinematic;
+                var beginHold = typeof(DesktopInputAdapter).GetMethod("BeginHold",
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.NonPublic);
+                Assert.That(beginHold, Is.Not.Null);
+                beginHold.Invoke(desktop, new object[] { pipette.transform });
+                Assert.That(desktop.HasHeldTool, Is.True);
                 var original = driver.Session;
                 var revision = driver.CurrentLabView.EventSequence;
+                Assert.That(driver.SelectMeasurementVessel("receiver"), Is.True);
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("receiver"));
                 imported = CoreSession.ImportSession(original.ExportSession(), driver.ScientificDatabasePath);
                 driver.ReplaceSession(imported);
                 imported = null;
@@ -1406,6 +1424,16 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(driver.HoldReason, Is.EqualTo("SessionLoad"));
                 Assert.That(driver.NativeRecoveryReady, Is.False);
                 Assert.That(driver.CurrentLabView.EventSequence, Is.EqualTo(revision));
+                Assert.That(driver.SelectedMeasurementVesselId, Is.EqualTo("source"),
+                    "Restored source screen must not retain the previous receiver's pH selection.");
+                Assert.That(desktop.HasHeldTool, Is.False,
+                    "Restoration must release the old Desktop hand-to-tool owner.");
+                Assert.That(pipetteBody.isKinematic, Is.EqualTo(originallyKinematic),
+                    "Restoring ownership must preserve the authored physical Rigidbody policy.");
+                Assert.That(desktop.HasFreshPhysicalGestureSinceRestore, Is.False,
+                    "An old Desktop press cannot be reused after Native import.");
+                Assert.That(xr.HasFreshGripSinceRestore, Is.False,
+                    "An old XR grip/trigger cannot be reused after Native import.");
                 Assert.That(driver.IsNativePaused, Is.True);
             }
             finally
@@ -1456,6 +1484,12 @@ namespace PharmaLabVR.Tests.PlayMode
                     "Explicit Load must not create material or observation revisions.");
                 Assert.That(session.RecordedReview, Is.Null,
                     "Load cannot implicitly open or recompute Review.");
+                var desktop = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<DesktopInputAdapter>(true)).Single();
+                var xr = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<XRInputAdapter>(true)).Single();
+                Assert.That(desktop.HasFreshPhysicalGestureSinceRestore, Is.False);
+                Assert.That(xr.HasFreshGripSinceRestore, Is.False);
             }
             finally
             {
@@ -1550,6 +1584,7 @@ namespace PharmaLabVR.Tests.PlayMode
 #endif
             yield return null;
             string notesPath = null;
+            string exportedPackage = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -1575,7 +1610,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(entries[0].BranchId, Is.EqualTo(driver.Session.BranchId));
                 Assert.That(actions.Request(PanelAction.ExportPortable), Is.True, session.LastError);
                 Assert.That(session.LastPortableArchivePath, Is.Not.Null.And.Not.Empty);
-                var archive = PortableSessionArchive.Read(session.LastPortableArchivePath);
+                exportedPackage = session.LastPortableArchivePath;
+                Assert.That(OfflineArchivePicker.ValidName(Path.GetFileName(exportedPackage)),
+                    Is.True, "Student export must be discoverable in the offline package chooser.");
+                var archive = PortableSessionArchive.Read(exportedPackage);
                 Assert.That(archive.BranchId, Is.EqualTo(driver.Session.BranchId));
                 Assert.That(archive.EventSequence, Is.EqualTo(revision));
                 Assert.That(archive.NotebookSnapshot, Does.Contain("PLV-NOTEBOOK-V1"));
@@ -1614,10 +1652,10 @@ namespace PharmaLabVR.Tests.PlayMode
                 if (notesPath != null && File.Exists(notesPath + ".bak")) File.Delete(notesPath + ".bak");
                 if (notesPath != null)
                 {
-                    var archivePath = Path.Combine(Path.GetDirectoryName(notesPath),
-                        Path.GetFileNameWithoutExtension(notesPath) + ".plvpack");
-                    if (File.Exists(archivePath)) File.Delete(archivePath);
-                    if (File.Exists(archivePath + ".bak")) File.Delete(archivePath + ".bak");
+                    if (!string.IsNullOrEmpty(exportedPackage) && File.Exists(exportedPackage))
+                        File.Delete(exportedPackage);
+                    if (!string.IsNullOrEmpty(exportedPackage) && File.Exists(exportedPackage + ".bak"))
+                        File.Delete(exportedPackage + ".bak");
                     var checkpoint = Path.Combine(Path.GetDirectoryName(notesPath),
                         Path.GetFileNameWithoutExtension(notesPath) + ".plv.json");
                     if (File.Exists(checkpoint)) File.Delete(checkpoint);

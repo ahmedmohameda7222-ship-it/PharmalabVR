@@ -11,6 +11,7 @@ namespace PharmaLabVR.Session
     public sealed class InstructorPortableReview
     {
         public string NativeBranchId { get; }
+        public string PackageFingerprint { get; }
         public string NativeEventSequence { get; }
         public string ScientificModelIdentity { get; }
         public IReadOnlyList<RecordedSessionReview.RecordedCommandReceipt> NativeReceipts { get; }
@@ -21,6 +22,8 @@ namespace PharmaLabVR.Session
             RecordedSessionReview recorded, IReadOnlyList<NotebookEntry> notes)
         {
             NativeBranchId = source.BranchId;
+            PackageFingerprint = InstructorFeedbackService.Fingerprint(
+                source.NativeJson, source.NotebookSnapshot);
             NativeEventSequence = source.EventSequence;
             ScientificModelIdentity = recorded.ModelIdentity;
             NativeReceipts = recorded.CommandReceipts;

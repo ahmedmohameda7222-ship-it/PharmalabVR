@@ -19,6 +19,9 @@ namespace PharmaLabVR.Core
         [SerializeField] private MonoBehaviour[] inputAdapterBehaviours;
         public enum ScienceBudgetProfile { Precision, Bulk }
         public event Action<string> SnapshotChanged;
+        // Asynchronous Android package preparation may fail after the
+        // initial XR panel has bound. Notify the view to fail closed.
+        public event Action<string> StartupFailed;
         public event Action<LabViewModel> LabViewChanged;
         public event Action<string> NativeEventReceived;
         public event Action NativeSessionRestored;
@@ -37,7 +40,12 @@ namespace PharmaLabVR.Core
         public string ScientificDatabasePath { get; private set; }
         public MeasurementView Measurement { get; private set; }
         public LabViewModel CurrentLabView { get; private set; }
-        public string CurrentMode { get; private set; } = "Desktop";
+        // Boot's requested presentation mode must exist BEFORE any Unity
+        // Awake runs. On Android, Native package preparation is asynchronous
+        // and an XR error/loading panel must not start as hidden Desktop UI.
+        // A successful Native snapshot still supersedes this initial hint.
+        public string CurrentMode { get; private set; } = BootMenu.RequestedMode ==
+            ApplicationMode.VirtualReality ? "VR" : "Desktop";
         public string HoldReason { get; private set; } = string.Empty;
         public bool NativeRecoveryReady { get; private set; }
         public bool IsTimeHeld { get; private set; }
@@ -63,6 +71,12 @@ namespace PharmaLabVR.Core
 
         private void OnEnable()
         {
+            // Requested interaction mode is presentation-only until Native
+            // publishes an authoritative snapshot. Even a failed XR load
+            // must remain visible inside the tracked headset, not an invisible
+            // Desktop-default error panel.
+            CurrentMode = BootMenu.RequestedMode == ApplicationMode.VirtualReality ?
+                "VR" : "Desktop";
             if (Application.platform == RuntimePlatform.Android)
             {
                 StartCoroutine(ScientificPackage.PrepareAndroid(InitializeCore, FailStartup));
@@ -123,6 +137,7 @@ namespace PharmaLabVR.Core
             CurrentLabView = null;
             ScientificDatabasePath = null;
             enabled = false;
+            StartupFailed?.Invoke(StartupError);
         }
 
         private void OnApplicationFocus(bool focused)
@@ -211,12 +226,35 @@ namespace PharmaLabVR.Core
 
         public bool ResumeAfterTimeHold()
         {
-            if (Session == null) return false;
+            // This is exclusively a Native Hold recovery operation. Without
+            // a Hold, submitting neutral samples followed by Continue could
+            // close an unprepared Native source or insert a command receipt.
+            if (Session == null || !IsTimeHeld) return false;
             var nowNs = NowNs();
             Session.SubmitInputs(NativeJsonCodec.EncodeInputBatch(CollectSamples(nowNs)));
             Session.Step(0.0, nowNs);
             var continueNowNs = NowNs();
-            var outcomeJson = Session.SubmitOrdered("Continue", $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
+            // Loading a deliberately blank new research branch must not
+            // close its Native setup before the learner chooses stock.
+            // ResumeSetup has exactly the same fresh-neutral Hold gate.
+            var requiresSetupRecovery = IsTimeHeld && SourceNeedsPreparation;
+            // An input/tracking interruption must not permanently CLOSE a
+            // still-paused, blank research source. ResumeSetup preserves the
+            // authorized preparation window after fresh-neutral recovery.
+            // Compute/Storage holds are not eligible for this shortcut.
+            var recoverableSetupHold =
+                HoldReason == "SessionLoad" ||
+                HoldReason == "CheckpointRestart" ||
+                HoldReason == "FocusLoss" ||
+                HoldReason == "TrackingLoss" ||
+                HoldReason == "Input" ||
+                HoldReason == "TimeDiscontinuity" ||
+                HoldReason == "Recenter" ||
+                HoldReason == "ModeChange";
+            if (requiresSetupRecovery && !recoverableSetupHold)
+                return false;
+            var recoveryType = requiresSetupRecovery ? "ResumeSetup" : "Continue";
+            var outcomeJson = Session.SubmitOrdered(recoveryType, $"{{\"monotonicNowNs\":\"{continueNowNs}\"}}");
             var outcome = JsonUtility.FromJson<CommandOutcome>(outcomeJson);
             if (outcome == null || !outcome.accepted) return false;
             if (inputAdapterBehaviours != null)
@@ -225,8 +263,12 @@ namespace PharmaLabVR.Core
             accumulator = 0.0;
             establishFrameClock = true;
             IsTimeHeld = false;
-            HoldChanged?.Invoke(false);
+            // The accepted Native Continue may UNPAUSE the lab, whereas a
+            // genuine unprepared SessionLoad ResumeSetup stays Native-paused.
+            // Publish the authoritative post-command paused flag BEFORE the
+            // router receives a HoldChanged(false) and decides where to go.
             PublishSnapshot();
+            HoldChanged?.Invoke(false);
             return true;
         }
 
@@ -254,7 +296,10 @@ namespace PharmaLabVR.Core
 
         public bool PauseSession()
         {
-            if (Session == null) return false;
+            // Native Hold is a distinct recovery authority. A direct Pause
+            // must not generate a receipt or change that authority while
+            // fresh-neutral input baselines are being established.
+            if (Session == null || IsTimeHeld) return false;
             var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Pause"));
             if (outcome == null || !outcome.accepted) return false;
             accumulator = 0.0;
@@ -264,7 +309,10 @@ namespace PharmaLabVR.Core
 
         public bool ContinueSession()
         {
-            if (Session == null) return false;
+            // Ordinary Continue lacks the recovery-neutral input and baseline
+            // reset from ResumeAfterTimeHold. Never let a recovered-ready
+            // held session bypass that explicit recovery contract.
+            if (Session == null || IsTimeHeld) return false;
             var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Continue"));
             if (outcome == null || !outcome.accepted) return false;
             accumulator = 0.0;
@@ -296,6 +344,11 @@ namespace PharmaLabVR.Core
             if (outcome == null || !outcome.accepted) return false;
             IsTimeHeld = true;
             accumulator = 0.0;
+            // A Native checkpoint is a replacement observation authority.
+            // A previously selected receiver cannot stay selected while the
+            // UI resets to the saved source and asks for fresh inspection.
+            SelectedMeasurementVesselId = "source";
+            ResetPhysicalInteractionAfterNativeRestoration();
             HoldChanged?.Invoke(true);
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
@@ -327,14 +380,28 @@ namespace PharmaLabVR.Core
                 replacement.ConfigureAutomaticCheckpoint(checkpointPath);
             var previous = Session;
             Session = replacement;
+            SelectedMeasurementVesselId = "source";
             AutomaticCheckpointPath = checkpointPath;
             accumulator = 0.0;
             establishFrameClock = true;
             previous?.Dispose();
             SynchronizeInputSequences();
+            ResetPhysicalInteractionAfterNativeRestoration();
             NativeRestorationEpoch++;
             NativeSessionRestored?.Invoke();
             PublishSnapshot();
+        }
+
+        // The Native session was already accepted. Every old physical
+        // selection/gesture now belongs to the wrong scientific authority.
+        // Keep the lab pose non-authoritative but block gestures until the
+        // student releases inputs and establishes a fresh neutral state.
+        private void ResetPhysicalInteractionAfterNativeRestoration()
+        {
+            if (inputAdapterBehaviours == null) return;
+            foreach (var behaviour in inputAdapterBehaviours)
+                if (behaviour is INativeRestorationInputAdapter adapter)
+                    adapter.ResetForNativeRestoration();
         }
 
         public void SynchronizeInputSequences()
@@ -364,17 +431,47 @@ namespace PharmaLabVR.Core
             return Path.Combine(directory, "native-" + branch + ".plv-checkpoint");
         }
 
-        private void BootstrapResearchSession()
+        private void BootstrapResearchSession() => BootstrapResearchSession(Session);
+
+        private static void BootstrapResearchSession(CoreSession target)
         {
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.00005}"));
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
-            // The burette owns a real empty Native vessel, not the bottle inventory.
-            RequireAccepted(Session.SubmitOrdered("CreateVessel", "{\"id\":\"burette\",\"capacityM3\":0.00005}"));
-            RequireAccepted(Session.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
-            RequireAccepted(Session.SubmitOrdered(
-                "PlaceTool",
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"source\",\"capacityM3\":0.00005}"));
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"receiver\",\"capacityM3\":0.0001}"));
+            RequireAccepted(target.SubmitOrdered("CreateVessel", "{\"id\":\"burette\",\"capacityM3\":0.00005}"));
+            RequireAccepted(target.SubmitOrdered("CreateSink", "{\"id\":\"spill\"}"));
+            RequireAccepted(target.SubmitOrdered("PlaceTool",
                 "{\"toolId\":\"research-tool\",\"sourceInventoryId\":\"burette\",\"overflowSinkId\":\"spill\",\"coordinateFrame\":\"lab\",\"geometryProfileHash\":\"burette-50ml-research-v1\",\"profileRevision\":\"1\"}"));
-            RequireAccepted(Session.SubmitOrdered("Pause"));
+            RequireAccepted(target.SubmitOrdered("Pause"));
+        }
+
+        // Another trial needs a genuinely new Native identity, not a saved
+        // copy of the same scientific branch. No active session is swapped.
+        // IMPORTANT: this is an inert pre-import bootstrap. Import happens
+        // ONLY after the full fresh save/Notebook pair reaches durable files.
+        public CoreSession PrepareIndependentStudy(string branch)
+        {
+            if (Session?.IsOpen != true || string.IsNullOrEmpty(ScientificDatabasePath) ||
+                string.IsNullOrWhiteSpace(branch) || branch == Session.BranchId)
+                throw new InvalidOperationException("Open Native science and a distinct branch are required.");
+            var staged = new CoreSession(branch, CurrentMode,
+                ScientificDatabasePath, ScientificPackage.DatabaseSha256,
+                scienceBudgetProfile.ToString(), "", stagedResearchBootstrap: true);
+            try
+            {
+                BootstrapResearchSession(staged);
+                var snapshot = JsonUtility.FromJson<SnapshotEnvelope>(staged.ReadSnapshot());
+                if (snapshot?.hold == null || snapshot.hold.active ||
+                    !snapshot.paused || !string.Equals(snapshot.mode, CurrentMode,
+                        StringComparison.Ordinal))
+                    throw new InvalidOperationException(
+                        "Unprepared staged Native branch must be paused before handover.");
+                return staged;
+            }
+            catch
+            {
+                staged.Dispose();
+                throw;
+            }
         }
 
         // User-requested setup water is real Native inventory, never a
@@ -548,9 +645,14 @@ namespace PharmaLabVR.Core
             if (state != null) CurrentMode = state.mode;
             IsNativePaused = state?.paused ?? false;
             SourceNeedsPreparation = false;
-            if (state?.vessels != null)
+            // An empty source is NOT permission to reopen Native setup:
+            // a continued and subsequently paused experiment can have no
+            // stock yet still have setupClosed=true. Respect Native's own
+            // preparation boundary before offering any PrepareStock UI.
+            if (state?.vessels != null && !state.setupClosed)
                 foreach (var vessel in state.vessels)
-                    if (vessel.id == "source" && vessel.materialRevision == "0" && state.paused)
+                    if (vessel.id == "source" && vessel.materialRevision == "0" &&
+                        state.paused)
                         SourceNeedsPreparation = true;
             HoldReason = state?.hold?.reason ?? string.Empty;
             NativeRecoveryReady = state?.hold != null && state.hold.recoveryReady;
@@ -604,6 +706,7 @@ namespace PharmaLabVR.Core
             public HoldEnvelope hold;
             public string mode;
             public bool paused;
+            public bool setupClosed;
             public VesselEnvelope[] vessels;
             public InputWatermark[] inputWatermarks;
             public ObservationEnvelope[] observations;

@@ -26,6 +26,9 @@ namespace PharmaLabVR.UI
         private bool placedWithTrackedHead;
         private int settingsPage;
         private int instrumentPage;
+        private bool portableRecoveryPage;
+        private bool notebookReflectionPage;
+        private bool instructorFeedbackPage;
         private int researchStockIndex;
         private int researchConcentrationIndex = 2;
         private static readonly string[] ResearchStockIds =
@@ -137,22 +140,97 @@ namespace PharmaLabVR.UI
             AddButton("Explain: model", -306f, PanelAction.RecordResearchExplanation,
                 "model-limitations");
             AddButton("Open review", -138f, PanelAction.Review);
+            AddButton("Save + review evidence", -82f, PanelAction.SaveAndReviewStudy);
             AddButton("Open notebook", -306f, PanelAction.Notebook);
+            AddButton("Refresh local feedback", -306f,
+                PanelAction.RefreshStudentFeedback);
+            AddInstrumentButton("Quick notes", -82f, () => notebookReflectionPage = true);
+            AddInstrumentButton("Note: request another pH", 30f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I want another Native pH measurement before reaching a conclusion.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Note: compare hypothesis", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I will compare the recorded Native pH with my original hypothesis.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Note: method uncertainty", -82f, () =>
+            {
+                if (panels?.Request(PanelAction.AddNotebookNote,
+                        "Student selected reflection: I need to review real command receipts and method uncertainty.") == true)
+                    notebookReflectionPage = false;
+            });
+            AddInstrumentButton("Back to notebook", -306f,
+                () => notebookReflectionPage = false);
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
+            AddInstrumentButton("Instructor feedback choices", -306f,
+                () => instructorFeedbackPage = true);
+            AddInstrumentButton("Feedback: request another pH", 30f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "request-evidence") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Feedback: review method", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "check-method") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Feedback: compare hypothesis", -82f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "compare-hypothesis") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Back to imported note", -306f,
+                () => instructorFeedbackPage = false);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
+            AddButton("Export comparison CSV", -250f, PanelAction.ExportComparisonCsv);
+            AddInstrumentButton("Choose comparison run", -250f,
+                () => panels?.Request(PanelAction.ChooseLocalSave));
             AddButton("Preview portable archive", 30f, PanelAction.PreviewPortableArchive);
             AddButton("Choose local archive", -26f, PanelAction.ChoosePortableArchive);
             AddButton("Compare saved", -194f, PanelAction.CompareSaved);
             AddButton("Return to lab", -138f, PanelAction.Lab);
+            AddButton("Return to Hold", -138f, PanelAction.Hold);
             AddButton("Pause", -194f, PanelAction.Pause);
             AddButton("Save session", -250f, PanelAction.Save);
             AddButton("Continue", -194f, PanelAction.Continue);
             AddButton("Settings", -82f, PanelAction.Settings);
+            AddButton("Return to Boot", -250f, PanelAction.ExitFailedLab);
             AddButton("Back", -138f, PanelAction.Back);
             AddButton("Release docked tool", -138f, PanelAction.ReleaseTool);
             AddButton("Park tool", -306f, PanelAction.ParkTool);
             AddButton("Load saved session", -306f, PanelAction.Load);
+            AddInstrumentButton("Portable study restore", -194f,
+                () => portableRecoveryPage = true);
+            AddInstrumentButton("Choose study package", 30f,
+                () => panels?.Request(PanelAction.ChoosePortableArchive));
+            AddInstrumentButton("Restore study package", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.RestorePortable) == true)
+                    portableRecoveryPage = false;
+            });
+            AddInstrumentButton("Export portable study", -82f,
+                () => panels?.Request(PanelAction.ExportPortable));
+            AddInstrumentButton("Choose Native save", -138f,
+                () => panels?.Request(PanelAction.ChooseLocalSave));
+            AddInstrumentButton("Load chosen Native save", -194f, () =>
+            {
+                if (panels?.Request(PanelAction.LoadSelectedSave) == true)
+                    portableRecoveryPage = false;
+            });
+            AddInstrumentButton("Save new local copy", -250f,
+                () => panels?.Request(PanelAction.SaveCopy));
+            AddInstrumentButton("Start independent study", -250f, () =>
+            {
+                if (panels?.Request(PanelAction.NewStudy) == true)
+                    portableRecoveryPage = false;
+            });
+            AddInstrumentButton("Back to pause/hold", -306f,
+                () => portableRecoveryPage = false);
             AddButton("Recenter view", 30f, PanelAction.Recenter);
             AddButton("Snap left 30", -26f, PanelAction.SnapLeft);
             AddButton("Snap right 30", -26f, PanelAction.SnapRight);
@@ -208,6 +286,8 @@ namespace PharmaLabVR.UI
             });
             AddInstrumentButton("Switch pipette to reserve", 30f,
                 () => panels?.Request(PanelAction.PipetteSwitchReserve));
+            AddInstrumentButton("Switch pipette to source", 30f,
+                () => panels?.Request(PanelAction.PipetteSwitchPrimary));
             AddInstrumentButton("Refill bottle 0.01 ml", -26f,
                 () => panels?.Request(PanelAction.BottleRefill));
             AddInstrumentButton("Prime burette 0.05 ml", -82f,
@@ -254,12 +334,13 @@ namespace PharmaLabVR.UI
         {
             if (detail == null || router?.Current?.ScreenId != ScreenId.Lab ||
                 driver == null) return;
-            var current = driver.transform.root
-                .GetComponentInChildren<XRInputAdapter>(true)?.LastPhysicalDeliveryFeedback;
+            var physical = driver.transform.root.GetComponentInChildren<XRInputAdapter>(true);
+            var current = !string.IsNullOrEmpty(physical?.LastPhysicalInspectionFeedback) ?
+                physical.LastPhysicalInspectionFeedback : physical?.LastPhysicalDeliveryFeedback;
             if (string.Equals(lastPhysicalFeedback, current, StringComparison.Ordinal)) return;
             lastPhysicalFeedback = current;
             detail.text = string.IsNullOrEmpty(current) ? baselineDetail :
-                "Physical delivery: " + current + "\n" + baselineDetail;
+                "Physical tool action: " + current + "\n" + baselineDetail;
             if (detailScroller != null) detailScroller.verticalNormalizedPosition = 1f;
         }
 
@@ -354,7 +435,7 @@ namespace PharmaLabVR.UI
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() =>
             {
-                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 2);
+                settingsPage = Mathf.Clamp(settingsPage + direction, 0, 3);
                 if (router?.Current != null) Present(router.Current);
             });
         }
@@ -389,6 +470,13 @@ namespace PharmaLabVR.UI
                     else if (choice == 3) next = current.With(audioVolume:
                         current.AudioVolume >= 0.99f ? 0f : 1f);
                     break;
+                case 3:
+                    // These controls are explicitly marked local, unverified
+                    // workspaces. They never authorize grades or cloud roles.
+                    var workspaces = new[] { "Student", "Instructor", "Researcher", "Expert" };
+                    if (choice >= 0 && choice < workspaces.Length)
+                        panels?.Request(PanelAction.SelectWorkspace, workspaces[choice]);
+                    return;
             }
             if (!ReferenceEquals(current, next)) router.UpdateSetupPreferences(next);
         }
@@ -400,10 +488,12 @@ namespace PharmaLabVR.UI
             {
                 0 => new[] { "Posture: " + setup.Posture, "Hand: " + setup.DominantHand, "", "" },
                 1 => new[] { "Bench lower", "Bench higher", "Text larger", "Text smaller" },
-                _ => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
+                2 => new[] { "Captions: " + (setup.CaptionsEnabled ? "On" : "Off"),
                     "Reduced motion: " + (setup.ReducedMotion ? "On" : "Off"),
                     "Contrast: " + (setup.HighContrast ? "High" : "Normal"),
-                    "Audio: " + (setup.AudioVolume > 0f ? "On" : "Muted") }
+                    "Audio: " + (setup.AudioVolume > 0f ? "On" : "Muted") },
+                _ => new[] { "Local Student view", "Local Instructor view",
+                    "Local Researcher view", "Local Expert view" }
             };
             var names = new[] { "Settings choice A", "Settings choice B",
                 "Settings choice C", "Settings choice D" };
@@ -413,9 +503,14 @@ namespace PharmaLabVR.UI
                 var label = buttons[names[i]].GetComponentInChildren<Text>(true);
                 if (label != null) label.text = labels[i];
             }
-            SetButton("Next settings", settingsPage < 2);
+            SetButton("Next settings", settingsPage < 3);
             SetButton("Previous settings", settingsPage > 0);
-            detail.text = "Settings " + (settingsPage + 1) + "/3 · " +
+            detail.text = settingsPage == 3 ?
+                "OFFLINE LOCAL VIEW · NOT VERIFIED IDENTITY / GRADE AUTHORITY\n" +
+                "Current: " + state.Workspace + "\n" +
+                "Choose a local role view for recorded student evidence. " +
+                "No campus login, attestation, or permissions are granted." :
+                "Settings " + (settingsPage + 1) + "/4 · " +
                 setup.BenchHeightMeters.ToString("0.00") + "m · text " +
                 setup.TextScale.ToString("0.00") + "×";
         }
@@ -425,6 +520,26 @@ namespace PharmaLabVR.UI
             if (panelRoot == null || driver == null) return;
             panelRoot.SetActive(driver.CurrentMode == "VR");
             if (panelRoot.activeSelf) UpdatePlacement();
+            if (driver.Session == null)
+            {
+                // Never show working chemistry controls while the pinned
+                // scientific package is pending/missing. XR needs visible
+                // failure text, since Desktop IMGUI is suppressed in VR.
+                foreach (var control in buttons.Values)
+                    control.gameObject.SetActive(false);
+                var failure = !string.IsNullOrWhiteSpace(driver.StartupError);
+                SetButton("Return to Boot", failure &&
+                    panels != null && panels.CanExitFailedNativeLab);
+                title.text = failure ? "Lab unavailable" : "Initializing laboratory";
+                detail.text = failure ?
+                    "Scientific package unavailable. No Native research session or material commands are available.\n" +
+                    driver.StartupError :
+                    "Initializing Native scientific package. Lab controls remain disabled until scientific authority is ready.";
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+                baselineDetail = detail.text;
+                return;
+            }
             title.fontSize = Mathf.RoundToInt(26f * state.Setup.TextScale);
             detail.fontSize = Mathf.RoundToInt(20f * state.Setup.TextScale);
             background.color = state.Setup.HighContrast ? Color.white :
@@ -438,15 +553,35 @@ namespace PharmaLabVR.UI
             }
             if (state.ScreenId != ScreenId.Settings) settingsPage = 0;
             if (state.ScreenId != ScreenId.Lab) instrumentPage = 0;
+            if (state.ScreenId != ScreenId.Pause && state.ScreenId != ScreenId.Hold)
+                portableRecoveryPage = false;
+            if (state.ScreenId != ScreenId.Notebook)
+                notebookReflectionPage = false;
+            if (state.ScreenId != ScreenId.Review ||
+                panels == null || !panels.CanRecordInstructorFeedback)
+                instructorFeedbackPage = false;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
-                ScreenId.Hold => state.HoldReason + " hold. Close the valve and restore a neutral tracked input.",
+                ScreenId.Hold => state.HoldReason +
+                    " hold. Close the valve and restore a neutral tracked input." +
+                    (driver.transform.root.GetComponentInChildren<XRInputAdapter>(true) is var xr &&
+                     xr != null && !xr.HasFreshGripSinceRestore ?
+                        "\nAfter SessionLoad: release every tool grip and trigger on both tracked hands, then re-grip a tool." :
+                        string.Empty) +
+                    (panels != null && panels.HasResearchLesson ?
+                        "\nSaved Research lesson and hypothesis recovered from local Notebook; " +
+                        "Native Continue is still required.\n" + panels.ResearchPredictionSummary :
+                        string.Empty),
                 ScreenId.Pause => "Material and simulation time are paused.",
                 ScreenId.Review => ReviewDetails(),
                 ScreenId.Learn => ResearchConceptReadout.Describe(
                     driver.CurrentLabView, state.SelectedEntityId),
-                ScreenId.Notebook => panels?.NotebookSummary ?? "Research notebook unavailable.",
+                ScreenId.Notebook => "Physical instrument transfers are inactive on this Notebook page. " +
+                    "Return to Lab to perform a deliberate Native action.\n" +
+                    (panels?.NotebookSummary ?? "Research notebook unavailable.") +
+                    "\nSave + review evidence deliberately saves the Native run first; " +
+                    "it is offered only after recording a current supported receiver pH.",
                 ScreenId.Compare => panels?.ComparisonSummary ?? "Recorded comparison unavailable.",
                 ScreenId.Inspect or ScreenId.Measure => ScientificReadoutPolicy.Describe(
                     state.SelectedEntityId,
@@ -455,9 +590,19 @@ namespace PharmaLabVR.UI
                     state.ObservationValidity, state.ObservationFreshness,
                     state.Maturity, state.ModelIdentity),
                 _ => state.Setup.CaptionsEnabled ?
-                    "Select a vessel to inspect. Research model · " + state.SaveState :
+                    "Empty tracked hand: touch receiver and press trigger to inspect its current Native pH. Research model · " + state.SaveState :
                     "Research model · " + state.SaveState
             };
+            if (state.ScreenId == ScreenId.Review && state.Workspace == "Student")
+                detail.text += "\n" + (panels?.StudentFormativeFeedbackSummary ??
+                    "Local student formative feedback unavailable.");
+            if (state.ScreenId == ScreenId.Compare &&
+                !string.IsNullOrEmpty(panels?.LastComparisonCsvFileName))
+                detail.text += "\nExported offline recorded-only CSV: " +
+                    panels.LastComparisonCsvFileName;
+            if (state.ScreenId == ScreenId.Measure &&
+                state.SelectedEntityId == "receiver")
+                detail.text += "\nRelease the first trigger, then touch the physical receiver with an empty hand and trigger again to record only Current Native pH in the offline Notebook.";
             if (state.ScreenId == ScreenId.Lab)
                 detail.text = "Native research bench\n" +
                     LabBenchReadout.Compact(driver.CurrentLabView) + "\n" +
@@ -484,37 +629,189 @@ namespace PharmaLabVR.UI
                 state.SupportedActions.Contains("ParkTool");
             buttons["Park tool"].GetComponent<RectTransform>().anchoredPosition =
                 new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f : -306f);
+            var mayFinishNativeStudy = state.ScreenId == ScreenId.Notebook &&
+                state.SupportedActions.Contains("SaveAndReviewStudy") &&
+                panels?.CanFinishNativeStudy == true;
             SetButton("Open review", state.SupportedActions.Contains("Review") &&
-                !dockReleaseVisible && !(parkVisible && state.ScreenId == ScreenId.Lab));
-            buttons["Open review"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Lab ? -138f :
+                !mayFinishNativeStudy && !dockReleaseVisible &&
+                !(parkVisible && state.ScreenId == ScreenId.Lab));
+            SetButton("Save + review evidence", mayFinishNativeStudy);
+            // Notebook uses a genuinely split row, not two raycast hit
+            // rectangles covering each other.
+            var notebookSplitReview = state.ScreenId == ScreenId.Notebook &&
+                state.SupportedActions.Contains("AddNotebookNote");
+            var reviewRect = buttons["Open review"].GetComponent<RectTransform>();
+            reviewRect.sizeDelta = new Vector2(notebookSplitReview ? 176f : 368f, 46f);
+            reviewRect.anchoredPosition =
+                new Vector2(notebookSplitReview ? 94f : 0f,
+                    state.ScreenId == ScreenId.Lab ? -138f :
                     state.ScreenId == ScreenId.Notebook ? -82f : 30f);
+            buttons["Open review"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(notebookSplitReview ? 164f : 368f, 35f);
+            var finishButton = buttons["Save + review evidence"];
+            finishButton.GetComponent<RectTransform>().sizeDelta =
+                new Vector2(176f, 46f);
+            finishButton.GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(94f, -82f);
+            finishButton.GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
+            var quickRect = buttons["Quick notes"].GetComponent<RectTransform>();
+            quickRect.sizeDelta = new Vector2(176f, 46f);
+            quickRect.anchoredPosition = new Vector2(-94f, -82f);
+            buttons["Quick notes"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
+            SetButton("Quick notes", notebookSplitReview && !notebookReflectionPage);
+            SetButton("Note: request another pH", false);
+            SetButton("Note: compare hypothesis", false);
+            SetButton("Note: method uncertainty", false);
+            SetButton("Back to notebook", false);
             var importedStudentNotes = state.ScreenId == ScreenId.Review &&
+                (state.Workspace == "Instructor" || state.Workspace == "Expert") &&
                 panels != null && panels.CanNextInstructorAnnotation;
-            SetButton("Open notebook", state.ScreenId == ScreenId.Review &&
-                state.SupportedActions.Contains("Notebook") && !importedStudentNotes);
+            var studentRefreshAvailable = state.ScreenId == ScreenId.Review &&
+                state.Workspace == "Student" &&
+                state.SupportedActions.Contains("RefreshStudentFeedback");
+            var instructorFeedbackAvailable = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("RecordInstructorFeedback") &&
+                panels != null && panels.CanRecordInstructorFeedback;
+            var directLabNotebook = state.ScreenId == ScreenId.Lab &&
+                instrumentPage == 0 && state.SupportedActions.Contains("Notebook");
+            SetButton("Open notebook", directLabNotebook ||
+                (state.ScreenId == ScreenId.Review &&
+                 state.SupportedActions.Contains("Notebook") &&
+                 !importedStudentNotes && !instructorFeedbackAvailable));
+            // The primary Lab includes one-touch Notebook navigation even
+            // before any lesson was chosen. Save shares the row as a separate
+            // *half-width* raycast rectangle, never a second overlapping hit.
+            var notebookEntryRect = buttons["Open notebook"].GetComponent<RectTransform>();
+            var splitNotebookFeedback = directLabNotebook || studentRefreshAvailable;
+            notebookEntryRect.sizeDelta =
+                new Vector2(splitNotebookFeedback ? 176f : 368f, 46f);
+            notebookEntryRect.anchoredPosition =
+                new Vector2(splitNotebookFeedback ? -94f : 0f,
+                    directLabNotebook ? -250f : -306f);
+            buttons["Open notebook"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(splitNotebookFeedback ? 164f : 368f, 35f);
+            SetButton("Refresh local feedback", studentRefreshAvailable);
+            var refreshRect = buttons["Refresh local feedback"].GetComponent<RectTransform>();
+            refreshRect.sizeDelta = new Vector2(176f, 46f);
+            refreshRect.anchoredPosition = new Vector2(94f, -306f);
+            buttons["Refresh local feedback"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(164f, 35f);
             SetButton("Next imported note", importedStudentNotes &&
                 state.SupportedActions.Contains("NextInstructorAnnotation"));
-            SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
-                state.SupportedActions.Contains("ExportPortable"));
+            // Peer ray-hit rectangles never overlap; single-note feedback
+            // occupies this full row when note paging is unavailable.
+            var notePageRect = buttons["Next imported note"].GetComponent<RectTransform>();
+            notePageRect.sizeDelta = new Vector2(instructorFeedbackAvailable ? 176f : 368f, 46f);
+            notePageRect.anchoredPosition = new Vector2(instructorFeedbackAvailable ? -94f : 0f, -306f);
+            buttons["Next imported note"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                new Vector2(instructorFeedbackAvailable ? 164f : 368f, 35f);
+            SetButton("Instructor feedback choices", instructorFeedbackAvailable &&
+                !instructorFeedbackPage);
+            var formativeRect = buttons["Instructor feedback choices"].GetComponent<RectTransform>();
+            formativeRect.sizeDelta = new Vector2(importedStudentNotes ? 176f : 368f, 46f);
+            formativeRect.anchoredPosition = new Vector2(importedStudentNotes ? 94f : 0f, -306f);
+            buttons["Instructor feedback choices"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                new Vector2(importedStudentNotes ? 164f : 368f, 35f);
+            foreach (var choice in new[] { "Feedback: request another pH",
+                "Feedback: review method", "Feedback: compare hypothesis",
+                "Back to imported note" })
+                SetButton(choice, false);
+            var reviewExportAvailable = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("ExportPortable") &&
+                panels?.CanExportCurrentReviewPortable == true;
+            var canCompareNative = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("CompareSaved") &&
+                panels?.CanCompareSaved == true;
+            var splitReviewArchiveAndCompare = reviewExportAvailable &&
+                canCompareNative;
+            SetButton("Export archive",
+                (state.ScreenId == ScreenId.Notebook &&
+                 state.SupportedActions.Contains("ExportPortable")) ||
+                reviewExportAvailable);
+            var archiveRect = buttons["Export archive"].GetComponent<RectTransform>();
+            archiveRect.sizeDelta = new Vector2(
+                splitReviewArchiveAndCompare ? 176f : 368f, 46f);
+            archiveRect.anchoredPosition = new Vector2(
+                splitReviewArchiveAndCompare ? 94f : 0f,
+                state.ScreenId == ScreenId.Notebook ? -250f : -194f);
+            buttons["Export archive"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(
+                    splitReviewArchiveAndCompare ? 164f : 368f, 35f);
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ExportCsv"));
+            SetButton("Export comparison CSV", state.ScreenId == ScreenId.Compare &&
+                state.SupportedActions.Contains("ExportComparisonCsv") &&
+                panels?.CanExportRecordedComparison == true);
+            // These peer buttons share an XR ray row only after narrowing
+            // both hit surfaces and labels; no invisible CSV/chooser overlap.
+            var canChooseComparison = state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("ChooseLocalSave") &&
+                panels?.CanChooseLocalNativeSave == true;
+            SetButton("Choose comparison run", canChooseComparison);
+            var csv = buttons["Export results CSV"].GetComponent<RectTransform>();
+            csv.sizeDelta = new Vector2(canChooseComparison ? 176f : 368f, 46f);
+            csv.anchoredPosition = new Vector2(canChooseComparison ? -94f : 0f, -250f);
+            var csvLabel = buttons["Export results CSV"].GetComponentInChildren<Text>(true);
+            csvLabel.text = canChooseComparison ? "Export CSV" : "Export results CSV";
+            csvLabel.rectTransform.sizeDelta = new Vector2(
+                canChooseComparison ? 164f : 368f, 35f);
+            var chooser = buttons["Choose comparison run"].GetComponent<RectTransform>();
+            chooser.sizeDelta = new Vector2(176f, 46f);
+            chooser.anchoredPosition = new Vector2(94f, -250f);
+            var chooserLabel = buttons["Choose comparison run"].GetComponentInChildren<Text>(true);
+            chooserLabel.text = "Pick saved run";
+            chooserLabel.rectTransform.sizeDelta = new Vector2(164f, 35f);
             SetButton("Preview portable archive", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("PreviewPortableArchive") &&
                 panels != null && panels.CanPreviewLocalPortableArchive);
             SetButton("Choose local archive", state.ScreenId == ScreenId.Review &&
                 state.SupportedActions.Contains("ChoosePortableArchive") &&
                 panels != null && panels.CanChooseLocalPortableArchive);
-            SetButton("Compare saved", state.ScreenId == ScreenId.Review &&
-                state.SupportedActions.Contains("CompareSaved") &&
-                panels != null && panels.CanCompareSaved);
+            var portableRestoreAvailable =
+                (state.ScreenId == ScreenId.Pause || state.ScreenId == ScreenId.Hold) &&
+                state.SupportedActions.Contains("RestorePortable");
+            SetButton("Portable study restore", portableRestoreAvailable &&
+                !portableRecoveryPage);
+            buttons["Portable study restore"].GetComponent<RectTransform>().anchoredPosition =
+                new Vector2(0f, state.ScreenId == ScreenId.Hold ? -138f : -194f);
+            SetButton("Choose study package", false);
+            SetButton("Restore study package", false);
+            SetButton("Export portable study", false);
+            SetButton("Choose Native save", false);
+            SetButton("Load chosen Native save", false);
+            SetButton("Save new local copy", false);
+            SetButton("Start independent study", false);
+            SetButton("Back to pause/hold", false);
+            SetButton("Compare saved", canCompareNative);
+            var compareRect = buttons["Compare saved"].GetComponent<RectTransform>();
+            compareRect.sizeDelta = new Vector2(
+                splitReviewArchiveAndCompare ? 176f : 368f, 46f);
+            compareRect.anchoredPosition = new Vector2(
+                splitReviewArchiveAndCompare ? -94f : 0f, -194f);
+            buttons["Compare saved"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta = new Vector2(
+                    splitReviewArchiveAndCompare ? 164f : 368f, 35f);
             SetButton("Return to lab", state.SupportedActions.Contains("Lab"));
+            SetButton("Return to Hold", state.ScreenId == ScreenId.Review &&
+                state.SupportedActions.Contains("Hold"));
             SetButton("Pause", state.SupportedActions.Contains("Pause"));
             SetButton("Save session", state.SupportedActions.Contains("Save") &&
                 state.ScreenId != ScreenId.Settings && state.ScreenId != ScreenId.Review);
-            buttons["Save session"].GetComponent<RectTransform>().anchoredPosition =
-                new Vector2(0f, state.ScreenId == ScreenId.Notebook ? -194f : -250f);
+            var saveRect = buttons["Save session"].GetComponent<RectTransform>();
+            saveRect.sizeDelta = new Vector2(directLabNotebook ? 176f : 368f, 46f);
+            saveRect.anchoredPosition = new Vector2(directLabNotebook ? 94f : 0f,
+                state.ScreenId == ScreenId.Notebook ? -194f : -250f);
+            buttons["Save session"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(directLabNotebook ? 164f : 368f, 35f);
             SetButton("Continue", state.SupportedActions.Contains("Continue"));
+            SetButton("Return to Boot", false);
             SetButton("Settings", state.SupportedActions.Contains("Settings") &&
                 (state.ScreenId != ScreenId.Lab ||
                  ResearchInstrumentMenuLayout.ShowGlobalSettings(instrumentPage)));
@@ -525,6 +822,27 @@ namespace PharmaLabVR.UI
             SetButton("Load saved session", state.SupportedActions.Contains("Load") &&
                 panels != null && panels.CanLoadSavedSession && !parkVisible);
             SetButton("Recenter view", state.SupportedActions.Contains("Recenter"));
+            // Both actions live at y=30 on Pause/Hold. Give them separate,
+            // capped ray-hit rectangles instead of an overlapping full row.
+            var splitReviewRecenter = ResearchXRPanelHitLayout.SplitReviewAndRecenter(
+                state.ScreenId.ToString(),
+                state.SupportedActions.Contains("Review"),
+                state.SupportedActions.Contains("Recenter"));
+            var recenterRect = buttons["Recenter view"].GetComponent<RectTransform>();
+            recenterRect.sizeDelta =
+                new Vector2(splitReviewRecenter ? 176f : 368f, 46f);
+            recenterRect.anchoredPosition = new Vector2(
+                splitReviewRecenter ? 94f : 0f, 30f);
+            buttons["Recenter view"].GetComponentInChildren<Text>(true)
+                .rectTransform.sizeDelta =
+                    new Vector2(splitReviewRecenter ? 164f : 368f, 35f);
+            if (splitReviewRecenter)
+            {
+                reviewRect.sizeDelta = new Vector2(176f, 46f);
+                reviewRect.anchoredPosition = new Vector2(-94f, 30f);
+                buttons["Open review"].GetComponentInChildren<Text>(true)
+                    .rectTransform.sizeDelta = new Vector2(164f, 35f);
+            }
             SetButton("Snap left 30", state.SupportedActions.Contains("SnapLeft"));
             SetButton("Snap right 30", state.SupportedActions.Contains("SnapRight"));
             if (panels != null && !string.IsNullOrEmpty(panels.LastError))
@@ -545,7 +863,8 @@ namespace PharmaLabVR.UI
                     driver.ReserveStockPrepared, panels != null && panels.CanFillBurette,
                     panels != null && panels.CanRecordResearchPrediction,
                     panels != null && panels.CanPipetteDispense, driver.RinseWaterPrepared,
-                    state.SupportedActions.Contains("Notebook"));
+                    state.SupportedActions.Contains("Notebook"),
+                    panels?.PipetteUsingReserve == true);
                 foreach (var name in ResearchInstrumentMenuLayout.AllNames)
                     SetButton(name, false);
                 foreach (var item in visible)
@@ -570,10 +889,18 @@ namespace PharmaLabVR.UI
                     driver.SourceNeedsPreparation ?
                     "Prepare a supported stock and optional rinse water before entering the Lab." :
                     (panels?.ResearchLessonCompact ?? "Free Research laboratory") + "\n" +
-                    "Native pipette tip " +
+                    "Native pipette source: " +
+                    (panels?.PipetteUsingReserve == true ? "reserve-stock" :
+                        "source or awaiting tool registration") +
+                    ". Native pipette tip " +
                     ((panels?.PipetteTipVolumeM3 ?? 0.0) * 1e6).ToString("0.00") +
-                    " ml. Direct-grip and align the outlet over the receiver; " +
-                    "trigger requests a Native-delivered aliquot.";
+                    " ml. Direct-grip the pipette: immerse its tip in prepared source stock " +
+                    "and press trigger to aspirate Native 0.05 ml, then align the tip over receiver " +
+                    "and trigger to dispense after the retained-tip volume is satisfied. " +
+                    "Immerse the pipette in the other prepared bottle: first trigger changes its Native source, second trigger aspirates. " +
+                    "The Native selected source, real liquid level, and tracked grip must agree. " +
+                    "To prime a docked burette, invert source bottle over its upper inlet and trigger. " +
+                    "To refill source, grip prepared reserve bottle, invert its outlet over the source neck and trigger for one Native 0.01 ml transfer. To rinse, dip the directly gripped pipette tip or inverted SOURCE-bottle outlet into the open prepared Native-water cup and trigger; Native removes 0.01 ml of water to waste, leaving stock inventory intact. With empty hands touch exactly one bottle or receiver and trigger: stock opens Native material Inspect, receiver opens supported Measure. No fake stock pH.";
                 if (panels != null && !string.IsNullOrEmpty(panels.LastInstrumentReceipt))
                     detail.text += "\n" + panels.LastInstrumentReceipt;
                 if (panels != null && !string.IsNullOrEmpty(panels.LastError))
@@ -586,6 +913,114 @@ namespace PharmaLabVR.UI
                 SetButton("Research instruments",
                     state.ScreenId == ScreenId.Lab && !state.SupportedActions.Contains("Load"));
             }
+            if (state.ScreenId == ScreenId.Notebook && notebookReflectionPage)
+            {
+                // A separate XR Notebook page ensures deliberate ray hits:
+                // notes are the learner's explicit choices, not inferred
+                // scientific observations, outcomes, or grades.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                var canWrite = state.SupportedActions.Contains("AddNotebookNote");
+                SetButton("Note: request another pH", canWrite);
+                SetButton("Note: compare hypothesis", canWrite);
+                SetButton("Note: method uncertainty", canWrite);
+                SetButton("Back to notebook", true);
+                detail.text = "STUDENT QUICK NOTES · NOT GRADED\n" +
+                    "Choose a reflection to write exactly the labeled statement " +
+                    "into your local, Native-event-linked Notebook. " +
+                    "These are your choices, NOT Native measurements.\n" +
+                    (panels?.NotebookSummary ?? "No local notebook available.");
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            if (state.ScreenId == ScreenId.Review && instructorFeedbackPage)
+            {
+                // Recorded-only teaching action. Separate XR ray-hit page
+                // prevents the three answer choices from overlapping the
+                // scientific CSV, study preview, recovery and settings actions.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                foreach (var choice in new[] { "Feedback: request another pH",
+                    "Feedback: review method", "Feedback: compare hypothesis",
+                    "Back to imported note" })
+                    SetButton(choice, true);
+                detail.text =
+                    "OFFLINE INSTRUCTOR FORMATIVE FEEDBACK · NO GRADES OR ATTESTATION\n" +
+                    "Choose one bounded response for the selected saved student note. " +
+                    "Only a validated imported archive and its recorded Native branch/event " +
+                    "are referenced. No chemistry, student Notebook, or cloud record is changed.\n" +
+                    (panels?.InstructorPortableCompactSummary ??
+                        "No local student preview selected.");
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            if (portableRestoreAvailable && portableRecoveryPage)
+            {
+                // Dedicated UI page: an XR ray must never click a restore
+                // action through overlapping Save/Continue/tool buttons.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                SetButton("Choose study package",
+                    state.SupportedActions.Contains("ChoosePortableArchive") &&
+                    panels != null && panels.CanChooseLocalPortableArchive);
+                SetButton("Restore study package",
+                    state.SupportedActions.Contains("RestorePortable") &&
+                    panels != null && panels.CanRestoreLocalPortableSession);
+                SetButton("Export portable study",
+                    state.ScreenId == ScreenId.Pause &&
+                    state.SupportedActions.Contains("ExportPortable"));
+                SetButton("Choose Native save",
+                    state.SupportedActions.Contains("ChooseLocalSave") &&
+                    panels != null && panels.CanChooseLocalNativeSave);
+                SetButton("Load chosen Native save",
+                    state.SupportedActions.Contains("LoadSelectedSave") &&
+                    panels != null && panels.CanLoadSelectedLocalNativeSave);
+                SetButton("Save new local copy",
+                    state.SupportedActions.Contains("SaveCopy") &&
+                    panels != null && panels.CanSaveNewLocalCopy);
+                var independentAvailable = state.ScreenId == ScreenId.Pause &&
+                    state.SupportedActions.Contains("NewStudy") &&
+                    panels?.CanStartIndependentStudy == true;
+                SetButton("Start independent study", independentAvailable);
+                var copyRect = buttons["Save new local copy"].GetComponent<RectTransform>();
+                copyRect.sizeDelta = new Vector2(independentAvailable ? 176f : 368f, 46f);
+                copyRect.anchoredPosition = new Vector2(independentAvailable ? -94f : 0f, -250f);
+                var copyLabel = buttons["Save new local copy"]
+                    .GetComponentInChildren<Text>(true);
+                copyLabel.text = independentAvailable ? "Save same run" : "Save new local copy";
+                copyLabel.rectTransform.sizeDelta =
+                    new Vector2(independentAvailable ? 164f : 368f, 35f);
+                var freshRect = buttons["Start independent study"].GetComponent<RectTransform>();
+                freshRect.sizeDelta = new Vector2(176f, 46f);
+                freshRect.anchoredPosition = new Vector2(94f, -250f);
+                var freshLabel = buttons["Start independent study"]
+                    .GetComponentInChildren<Text>(true);
+                freshLabel.text = "New Native run";
+                freshLabel.rectTransform.sizeDelta = new Vector2(164f, 35f);
+                SetButton("Back to pause/hold", true);
+                detail.text = "OFFLINE SESSION RECOVERY · NOT ATTESTED / NOT GRADED\n" +
+                    "Native saves: choose an existing .plv.json session, then load it. " +
+                    "Its own local Notebook is read at the restored Native event ceiling.\n" +
+                    "Save new local copy keeps the SAME Native branch but protects " +
+                    "the previous .plv.json and Notebook under a separate name.\n" +
+                    "New Native run saves the previous study, starts a distinct " +
+                    "unprepared research branch and requires SessionLoad recovery.\n" +
+                    "Current: " + (panels?.ActiveLocalSessionName ?? "none") +
+                    " · Selected Native save: " +
+                    (panels?.SelectedLocalNativeSaveName ?? "none") +
+                    "\n" + (panels?.SelectedLocalNativeSavePreview ??
+                        "No local Native save selected.") +
+                    "\nStudy packages: .plvpack also carries a portable Notebook snapshot. " +
+                    "A package is imported to a new isolated session after validation.\n" +
+                    "Selected .plvpack: " + (panels?.SelectedArchiveFileName ?? "none") +
+                    "\nLast export: " + (panels?.LastPortableArchiveFileName ?? "none") +
+                    "\nBoth loads require Native SessionLoad Hold and fresh neutral grip.";
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            if (state.ScreenId == ScreenId.Hold &&
+                !string.IsNullOrEmpty(panels?.LastPortableImportSummary))
+                detail.text += "\n" + panels.LastPortableImportSummary;
             if (state.ScreenId == ScreenId.Settings) PresentSettings(state);
             else
             {
@@ -623,6 +1058,10 @@ namespace PharmaLabVR.UI
             return "Recorded · no recomputation\n" +
                 (recorded.Observations.Length == 0 ? "No observations recorded." : string.Join("\n", values)) +
                 "\n" + latest + "\n" +
+                "Recorded comparison baseline: " + (panels?.ComparisonBaselineName ?? "none") +
+                " (selected or active local Native save)\n" +
+                (panels?.SelectedLocalNativeSavePreview ??
+                    "Choose a local Native save for recorded comparison.") + "\n" +
                 (panels?.LearningReviewCompact ?? "Local student notebook unavailable.") +
                 (panels?.SelectedArchiveFileName != null ?
                     "\nSelected local .plvpack: " + panels.SelectedArchiveFileName : "") +

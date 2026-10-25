@@ -176,7 +176,8 @@ namespace PharmaLabVR.Editor
             // remain explicit SessionController commands under Native authority.
             foreach (var item in new[] {
                 ("ResearchPipette", new Vector3(-0.34f, 0.49f, 0.26f)),
-                ("ResearchStockBottle", new Vector3(-0.58f, 0.49f, 0.22f))
+                ("ResearchStockBottle", new Vector3(-0.58f, 0.49f, 0.22f)),
+                ("ResearchReserveStockBottle", new Vector3(-0.58f, 0.49f, -0.22f))
             })
             {
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -188,8 +189,20 @@ namespace PharmaLabVR.Editor
                 toolInstance.transform.localPosition = item.Item2;
                 toolInstance.AddComponent<DesktopGrabbable>().Configure(
                     item.Item1 == "ResearchPipette" ?
-                        "research-pipette-visual" : "research-stock-bottle-visual");
+                        "research-pipette-visual" :
+                    item.Item1 == "ResearchStockBottle" ?
+                        "research-stock-bottle-visual" : "research-reserve-stock-bottle-visual");
             }
+            var rinsePrefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/PharmaLabVR/Prefabs/Vessels/ResearchRinseStation.prefab");
+            if (rinsePrefab == null)
+                throw new InvalidOperationException("Missing Native-bound open rinse station.");
+            var rinseStation = (GameObject)PrefabUtility.InstantiatePrefab(rinsePrefab);
+            rinseStation.transform.SetParent(lab.transform, false);
+            rinseStation.transform.localPosition = new Vector3(-0.14f, 0.49f, -0.20f);
+            var rinseTarget = rinseStation.GetComponent<ResearchRinseWaterTarget>();
+            if (rinseTarget == null)
+                throw new InvalidOperationException("Rinse station lacks real immersion admission.");
             new GameObject("ToolRegistry").transform.SetParent(lab.transform);
             new GameObject("VesselRegistry").transform.SetParent(lab.transform);
             var coreDriver = new GameObject("CoreDriver").AddComponent<CoreDriver>();
@@ -299,6 +312,10 @@ namespace PharmaLabVR.Editor
             receiverGrab.forceGravityOnDetach = false;
             var captureTarget = receiver.AddComponent<LabCaptureTarget>();
             captureTarget.Configure("receiver", 0.05f, 0.04f);
+            // F from the Desktop center ray deliberately picks the same
+            // physical receiver which XR already exposes as a grabbable.
+            // Ordinary pointer click continues to select Native pH instead.
+            receiver.AddComponent<DesktopGrabbable>().Configure("research-receiver-visual");
             desktopInput.Configure(lab.transform, camera.GetComponent<Camera>(), holdAnchor.transform,
                 researchTool.transform, captureTarget, "burette-50ml-research-v1", coreDriver);
             xrInput.Configure(lab.transform, leftController, rightController, researchTool.transform, grab,
@@ -324,6 +341,24 @@ namespace PharmaLabVR.Editor
                 UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
             xrInput.ConfigureAuxiliaryDelivery(pipetteGrip, bottleGrip,
                 sessionController.GetComponent<LabPanelController>());
+            var aspirationTarget = bottleGrip != null ?
+                bottleGrip.GetComponent<ResearchStockAspirateTarget>() : null;
+            if (aspirationTarget == null)
+                throw new InvalidOperationException(
+                    "Generated stock bottle lacks a physical immersion target.");
+            desktopInput.ConfigureStockAspirateTarget(aspirationTarget);
+            xrInput.ConfigureStockAspirateTarget(aspirationTarget);
+            var reserveGrip = lab.transform.Find("ResearchReserveStockBottle")?.GetComponent<
+                UnityEngine.XR.Interaction.Toolkit.Interactables.XRGrabInteractable>();
+            var reserveTarget = reserveGrip != null ?
+                reserveGrip.GetComponent<ResearchStockAspirateTarget>() : null;
+            if (reserveTarget == null || reserveTarget.NativeInventoryId != "reserve-stock")
+                throw new InvalidOperationException(
+                    "Generated reserve stock needs a distinct Native-linked immersion target.");
+            desktopInput.ConfigureReserveStockAspirateTarget(reserveTarget);
+            xrInput.ConfigureReserveStockAspirateTarget(reserveTarget);
+            desktopInput.ConfigureRinseWaterTarget(rinseTarget);
+            xrInput.ConfigureRinseWaterTarget(rinseTarget);
             new GameObject("PerformanceRecorder").transform.SetParent(lab.transform);
             EditorSceneManager.SaveScene(scene, Scenes[1]);
         }

@@ -55,6 +55,49 @@ namespace PharmaLabVR.Lab
             return "Transfer 0.01 mL with the research stock bottle, then Inspect receiver.";
         }
 
+        // Only report an actual newly credited Native vessel inventory.
+        // A requested quantity, accepted command receipt, or unchanged
+        // event alone is NOT proof that material reached its destination.
+        // Display is derived from independently published Native snapshots.
+        public static string ObservedNativeTransfer(LabViewModel before,
+            LabViewModel after, string destinationId)
+        {
+            if (before?.Vessels == null || after?.Vessels == null ||
+                string.IsNullOrWhiteSpace(destinationId) ||
+                !ulong.TryParse(before.EventSequence, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out var previousEvent) ||
+                !ulong.TryParse(after.EventSequence, NumberStyles.None,
+                    CultureInfo.InvariantCulture, out var currentEvent) ||
+                currentEvent <= previousEvent ||
+                before.EventSequence != previousEvent.ToString(CultureInfo.InvariantCulture) ||
+                after.EventSequence != currentEvent.ToString(CultureInfo.InvariantCulture))
+                return null;
+            var oldMatching = before.Vessels.Where(v => v.Id == destinationId).ToArray();
+            var newMatching = after.Vessels.Where(v => v.Id == destinationId).ToArray();
+            if (oldMatching.Length != 1 || newMatching.Length != 1)
+                return null;
+            var oldValue = oldMatching[0];
+            var newValue = newMatching[0];
+            if (!ValidVolume(oldValue.CommittedVolumeM3, oldValue.CapacityM3) ||
+                !ValidVolume(newValue.CommittedVolumeM3, newValue.CapacityM3) ||
+                string.IsNullOrEmpty(oldValue.MaterialRevision) ||
+                string.IsNullOrEmpty(newValue.MaterialRevision) ||
+                oldValue.MaterialRevision == newValue.MaterialRevision)
+                return null;
+            var deltaM3 = newValue.CommittedVolumeM3 - oldValue.CommittedVolumeM3;
+            // Show only a credit large enough to survive the unit precision
+            // of the label. Do not emit "Native +0.000 mL".
+            var roundedMl = Math.Round(deltaM3 * 1e6, 3,
+                MidpointRounding.AwayFromZero);
+            if (double.IsNaN(deltaM3) || double.IsInfinity(deltaM3) || roundedMl <= 0d)
+                return null;
+            return "Native " + destinationId + " +" +
+                roundedMl.ToString("0.000", CultureInfo.InvariantCulture) +
+                " mL · events " +
+                previousEvent.ToString(CultureInfo.InvariantCulture) + " → " +
+                currentEvent.ToString(CultureInfo.InvariantCulture);
+        }
+
         private static string CompactVolume(LabViewModel view, string id, string title)
         {
             if (!view.Vessels.Any(item => item.Id == id)) return title + " --";

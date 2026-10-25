@@ -50,6 +50,207 @@ json command(const std::string& sequence, const std::string& type, json payload 
 }
 }  // namespace
 
+TEST_CASE("M3 staged blank second trial preserves old Native authority until import") {
+    std::uint64_t original = 0;
+    const std::string originalConfig = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(originalConfig.data(), static_cast<std::uint32_t>(originalConfig.size()), &original) == PLV_OK);
+    const std::string stagedConfig = R"({"schemaVersion":1,"branchId":"study-new","scienceBudgetMode":"Precision","stagedResearchBootstrap":true})";
+    std::uint64_t stage = 0;
+    CHECK(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &stage) == PLV_BUSY);
+    submit(original, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(original)["accepted"]);
+    submit(original, command("2", "Pause")); REQUIRE(poll(original)["accepted"]);
+    const auto savedOld = read_text(original, true);
+    REQUIRE(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &stage) == PLV_OK);
+    std::uint64_t next = 0;
+    CHECK(plv_create(stagedConfig.data(), static_cast<std::uint32_t>(stagedConfig.size()), &next) == PLV_BUSY);
+    CHECK(plv_input_batch(stage, "[]", 2) == PLV_BUSY);
+    CHECK(plv_step(stage, 0.0, 1000000000) == PLV_BUSY);
+    // Staged contexts may never install a background checkpoint writer or
+    // publish a Native checkpoint as though they were operating sessions.
+    const std::string stageCheckpoint = "/tmp/plv-staged-forbidden-checkpoint";
+    CHECK(plv_configure_checkpoint(stage, stageCheckpoint.data(),
+        static_cast<std::uint32_t>(stageCheckpoint.size())) == PLV_BUSY);
+    CHECK(plv_checkpoint(stage, stageCheckpoint.data(),
+        static_cast<std::uint32_t>(stageCheckpoint.size())) == PLV_BUSY);
+    auto stageCommand = [](const char* seq, const char* type, json payload = json::object()) {
+        return json{{"schemaVersion", 1}, {"branchId", "study-new"},
+            {"commandSequence", seq}, {"type", type},
+            {"expectedMaterialRevisions", json::object()}, {"payload", payload}};
+    };
+    const auto noContinue = stageCommand("1", "Continue").dump();
+    CHECK(plv_submit(stage, noContinue.data(), static_cast<std::uint32_t>(noContinue.size())) == PLV_BUSY);
+    submit(stage, stageCommand("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("3", "CreateSink", {{"id", "spill"}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("4", "PlaceTool",
+        {{"toolId", "research-tool"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+         {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+         {"profileRevision", "1"}})); REQUIRE(poll(stage)["accepted"]);
+    submit(stage, stageCommand("5", "Pause")); REQUIRE(poll(stage)["accepted"]);
+    CHECK(read_text(original, true) == savedOld);
+    // Even after staging an entire second empty bench the original remains
+    // the only real operating authority up to the final Native import.
+    submit(original, command("3", "Pause"));
+    REQUIRE(poll(original)["accepted"].get<bool>());
+    const auto committedOriginal = read_text(original, true);
+    CHECK(committedOriginal != savedOld);
+    const auto draft = read_text(stage, true);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(draft.data(), static_cast<std::uint32_t>(draft.size()), &imported) == PLV_OK);
+    const auto restored = json::parse(read_text(imported));
+    CHECK(restored["branchId"] == "study-new");
+    CHECK(restored["hold"]["reason"] == "SessionLoad");
+    CHECK(restored["paused"].get<bool>());
+    CHECK_FALSE(restored["setupClosed"].get<bool>());
+    const auto oldContinue = command("4", "Continue").dump();
+    CHECK(plv_submit(original, oldContinue.data(), static_cast<std::uint32_t>(oldContinue.size())) == PLV_BUSY);
+    CHECK(plv_destroy(stage) == PLV_OK);
+    CHECK(plv_destroy(original) == PLV_OK);
+    CHECK(plv_destroy(imported) == PLV_OK);
+}
+
+TEST_CASE("M3 unprepared Native stock survives FocusLoss TrackingLoss and CheckpointRestart holds") {
+    std::uint64_t handle = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &handle) == PLV_OK);
+    submit(handle, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("2", "Pause"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("3", "CreateCheckpoint", {{"checkpointId", "unprepared"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto unprepared = json::parse(read_text(handle));
+    CHECK(unprepared["paused"].get<bool>());
+    CHECK_FALSE(unprepared["setupClosed"].get<bool>());
+
+    submit(handle, command("4", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("5", "ResumeSetup", {{"monotonicNowNs", "1000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 1000) == PLV_OK);
+    CHECK(json::parse(read_text(handle))["hold"]["recoveryReady"].get<bool>());
+    submit(handle, command("6", "ResumeSetup", {{"monotonicNowNs", "1000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto recovered = json::parse(read_text(handle));
+    CHECK_FALSE(recovered["hold"]["active"].get<bool>());
+    CHECK_FALSE(recovered["setupClosed"].get<bool>());
+    CHECK(recovered["paused"].get<bool>());
+    CHECK(recovered["vessels"] == unprepared["vessels"]);
+
+    submit(handle, command("7", "BeginInputHold", {{"reason", "TrackingLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 2000) == PLV_OK);
+    submit(handle, command("8", "ResumeSetup", {{"monotonicNowNs", "2000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK_FALSE(json::parse(read_text(handle))["setupClosed"].get<bool>());
+
+    submit(handle, command("9", "RestartCheckpoint", {{"checkpointId", "unprepared"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    auto restarted = json::parse(read_text(handle));
+    CHECK(restarted["hold"]["reason"] == "CheckpointRestart");
+    CHECK(restarted["paused"].get<bool>());
+    CHECK_FALSE(restarted["setupClosed"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 3000) == PLV_OK);
+    submit(handle, command("10", "ResumeSetup", {{"monotonicNowNs", "3000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK_FALSE(json::parse(read_text(handle))["setupClosed"].get<bool>());
+
+    submit(handle, command("11", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    submit(handle, command("12", "Continue"));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    const auto science = json::parse(read_text(handle));
+    CHECK(science["setupClosed"].get<bool>());
+    CHECK_FALSE(science["paused"].get<bool>());
+    submit(handle, command("13", "BeginInputHold", {{"reason", "FocusLoss"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    REQUIRE(plv_step(handle, 0.0, 4000) == PLV_OK);
+    submit(handle, command("14", "ResumeSetup", {{"monotonicNowNs", "4000"}}));
+    CHECK_FALSE(poll(handle)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(handle))["vessels"] == science["vessels"]);
+    submit(handle, command("15", "Continue", {{"monotonicNowNs", "4000"}}));
+    REQUIRE(poll(handle)["accepted"].get<bool>());
+    CHECK(plv_destroy(handle) == PLV_OK);
+}
+
+TEST_CASE("M3 imported fresh Native setup resumes only after neutral SessionLoad recovery") {
+    std::uint64_t initial = 0;
+    const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
+    REQUIRE(plv_create(config.data(), static_cast<std::uint32_t>(config.size()), &initial) == PLV_OK);
+    submit(initial, command("1", "CreateVessel", {{"id", "source"}, {"capacityM3", 5e-5}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("2", "CreateVessel", {{"id", "receiver"}, {"capacityM3", 1e-4}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("3", "CreateSink", {{"id", "spill"}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("4", "PlaceTool",
+        {{"toolId", "research-tool"}, {"sourceInventoryId", "source"}, {"overflowSinkId", "spill"},
+         {"coordinateFrame", "lab"}, {"geometryProfileHash", "burette-50ml-research-v1"},
+         {"profileRevision", "1"}})); REQUIRE(poll(initial)["accepted"]);
+    submit(initial, command("5", "Pause")); REQUIRE(poll(initial)["accepted"]);
+    const auto saved = read_text(initial, true);
+    REQUIRE(plv_destroy(initial) == PLV_OK);
+    std::uint64_t imported = 0;
+    REQUIRE(plv_import(saved.data(), static_cast<std::uint32_t>(saved.size()), &imported) == PLV_OK);
+    const auto before = json::parse(read_text(imported));
+    CHECK(before["hold"]["reason"] == "SessionLoad");
+    CHECK(before["paused"].get<bool>());
+    CHECK_FALSE(before["setupClosed"].get<bool>());
+    submit(imported, command("6", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    submit(imported, command("7", "ResumeSetup", {{"monotonicNowNs", "1020000000"}}));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    const std::string neutral = R"([{"toolId":"research-tool","sampleSequence":"1","captureMonotonicNs":"1010000000","positionMetres":[0,1,0],"rotation":[0,0,0,1],"trackingValid":true,"actuator01":0.0,"coordinateFrame":"lab","geometryProfileHash":"burette-50ml-research-v1","profileRevision":"1","toolRevision":"1","captureFractions":[]}])";
+    REQUIRE(plv_input_batch(imported, neutral.data(), static_cast<std::uint32_t>(neutral.size())) == PLV_OK);
+    REQUIRE(plv_step(imported, 0.0, 1020000000) == PLV_OK);
+    REQUIRE(json::parse(read_text(imported))["hold"]["recoveryReady"].get<bool>());
+    submit(imported, command("8", "ResumeSetup", {{"monotonicNowNs", "1020000000"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto resumed = json::parse(read_text(imported));
+    CHECK_FALSE(resumed["hold"]["active"].get<bool>());
+    CHECK(resumed["paused"].get<bool>());
+    CHECK_FALSE(resumed["setupClosed"].get<bool>());
+    CHECK(resumed["vessels"] == before["vessels"]);
+    submit(imported, command("9", "PrepareStock",
+        {{"vesselId", "source"}, {"stockKind", "HydrochloricAcid"},
+         {"concentrationMolPerL", 0.05}, {"referenceVolumeM3", 2.5e-5}},
+        {{"source", "0"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    submit(imported, command("10", "Continue"));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto working = json::parse(read_text(imported));
+    CHECK(working["setupClosed"].get<bool>());
+    CHECK_FALSE(working["paused"].get<bool>());
+    // Complete the second trial with a REAL Native material transfer after
+    // stock preparation; no canned pH or Unity-side mass calculation.
+    submit(imported, command("11", "TransferFixed",
+        {{"sourceInventoryId", "source"}, {"sourceRegion", "Homogeneous"},
+         {"selection", "HomogeneousAqueousLiquid"},
+         {"quantity", {{"basis", "LiquidVolumeM3"}, {"value", 1e-8}}},
+         {"captureFractions", {{{"destinationInventoryId", "receiver"}, {"fraction", 1.0}}}},
+         {"overflowSinkId", "spill"}},
+        {{"source", "1"}, {"receiver", "0"}}));
+    REQUIRE(poll(imported)["accepted"].get<bool>());
+    const auto transferred = json::parse(read_text(imported));
+    double sourceVolume = -1.0, receiverVolume = -1.0;
+    for (const auto& vessel : transferred["vessels"]) {
+        if (vessel["id"] == "source")
+            sourceVolume = vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+        if (vessel["id"] == "receiver")
+            receiverVolume = vessel["inventory"]["researchAdditiveVolumeM3"].get<double>();
+    }
+    CHECK(sourceVolume == doctest::Approx(2.5e-5 - 1e-8));
+    CHECK(receiverVolume == doctest::Approx(1e-8));
+    CHECK(sourceVolume + receiverVolume == doctest::Approx(2.5e-5));
+    submit(imported, command("12", "ResumeSetup"));
+    CHECK_FALSE(poll(imported)["accepted"].get<bool>());
+    CHECK(json::parse(read_text(imported))["vessels"] == transferred["vessels"]);
+    CHECK(plv_destroy(imported) == PLV_OK);
+}
+
 TEST_CASE("M2 first research burette primes from separate source under Native conservation") {
     std::uint64_t handle = 0;
     const std::string config = R"({"schemaVersion":1,"branchId":"branch-1","scienceBudgetMode":"Precision"})";
