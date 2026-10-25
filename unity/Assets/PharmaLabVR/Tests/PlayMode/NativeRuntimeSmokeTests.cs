@@ -2032,6 +2032,8 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(actions.Request(PanelAction.NextInstructorAnnotation), Is.True);
                 Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
                     "compare-hypothesis"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.RefreshStudentFeedback), Is.False,
+                    "Instructor/Expert view must not invoke Student-only XR refresh.");
                 Assert.That(sessions.InstructorFeedbackSummary,
                     Does.Contain("2 formative response"));
                 Assert.That(sessions.InstructorFeedbackSummary,
@@ -2048,6 +2050,9 @@ namespace PharmaLabVR.Tests.PlayMode
                 Assert.That(actions.Request(PanelAction.Back), Is.True);
                 Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
                     "request-evidence"), Is.False);
+                Assert.That(actions.Request(PanelAction.RefreshStudentFeedback), Is.True,
+                    "The Student must be able to refresh newly received offline feedback in XR Review.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
                 Assert.That(sessions.StudentFormativeFeedbackSummary,
                     Does.Contain("Review the instrument method"),
                     "Switching to Student must expose locally received formative feedback for this exact exported pack.");
