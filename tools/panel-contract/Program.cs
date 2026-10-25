@@ -550,7 +550,7 @@ internal static class Program
             "This is a learner prediction, not a Native result or certified endpoint.",
             DateTime.UtcNow.ToString("O"));
         var progressMeasurement = new NotebookEntry("predict-branch", "7", "receiver", nativeNote,
-            DateTime.UtcNow.ToString("O"));
+            DateTime.UtcNow.ToString("O"), NotebookRecordKind.NativePH);
         var progressExplanation = new NotebookEntry("predict-branch", "7", "receiver",
             "Student explanation for strong-acid-titration-research at Native event 7 · model-limitations: " +
             "Selected by learner; not Native scientific evidence.",
