@@ -1768,6 +1768,116 @@ namespace PharmaLabVR.Tests.PlayMode
             finally { SceneManager.UnloadSceneAsync(scene); }
         }
 
+        // Author-only Unity PlayMode coverage: actual Native authority and a
+        // saved student pack, not headless/stubbed learner evidence.
+        [UnityTest]
+        public IEnumerator M4_OfflineTeacherFeedbackKeepsNativeAndStudentEvidenceUnchanged()
+        {
+#if UNITY_EDITOR
+            var scene = EditorSceneManager.LoadSceneInPlayMode(
+                "Assets/PharmaLabVR/Scenes/Lab.unity",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+            var scene = SceneManager.LoadScene("Lab",
+                new LoadSceneParameters(LoadSceneMode.Additive));
+#endif
+            yield return null;
+            string notes = null;
+            string pack = null;
+            string saved = null;
+            string feedback = null;
+            try
+            {
+                var roots = scene.GetRootGameObjects();
+                var driver = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<CoreDriver>(true)).Single();
+                var sessions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<SessionController>(true)).Single();
+                var actions = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<LabPanelController>(true)).Single();
+                var router = roots.SelectMany(root =>
+                    root.GetComponentsInChildren<ScreenRouter>(true)).Single();
+                Assert.That(driver.Session, Is.Not.Null, driver.StartupError);
+                var name = "teacher-feedback-" + System.Guid.NewGuid().ToString("N");
+                sessions.Configure(driver, name);
+                notes = Path.Combine(Application.persistentDataPath,
+                    "sessions", name + ".plv-notes");
+                Assert.That(actions.Request(PanelAction.SelectResearchLesson,
+                    "strong-acid-titration-research"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.RecordResearchPrediction,
+                    "below-7"), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.PrepareResearchStock,
+                    "hcl", 0.05), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.Notebook), Is.True);
+                Assert.That(actions.Request(PanelAction.AddNotebookNote,
+                    "I will recheck the actual Native result."), Is.True, sessions.LastError);
+                Assert.That(actions.Request(PanelAction.Lab), Is.True);
+                Assert.That(actions.Request(PanelAction.Pause), Is.True);
+                Assert.That(actions.Request(PanelAction.ExportPortable), Is.True,
+                    sessions.LastError);
+                pack = sessions.LastPortableArchivePath;
+                Assert.That(File.Exists(pack), Is.True);
+                Assert.That(actions.Request(PanelAction.Save), Is.True, sessions.LastError);
+                saved = sessions.LastDurableSavePath;
+                Assert.That(actions.Request(PanelAction.Review), Is.True, sessions.LastError);
+                var fileName = Path.GetFileName(pack);
+                for (var i = 0; i < 64 && sessions.SelectedArchiveFileName != fileName; i++)
+                    Assert.That(actions.Request(PanelAction.ChoosePortableArchive),
+                        Is.True, sessions.LastError);
+                Assert.That(sessions.SelectedArchiveFileName, Is.EqualTo(fileName));
+                Assert.That(actions.Request(PanelAction.PreviewPortableArchive), Is.True,
+                    sessions.LastError);
+                var imported = sessions.LastInstructorPortableReview;
+                Assert.That(imported, Is.Not.Null);
+                Assert.That(imported.StudentAnnotations.Count, Is.EqualTo(2));
+                var scientificBefore = driver.Session.ExportSession();
+                var notesBefore = File.ReadAllBytes(notes);
+                Assert.That(sessions.CanRecordInstructorFeedback, Is.False);
+
+                Assert.That(actions.Request(PanelAction.Settings), Is.True);
+                Assert.That(actions.Request(PanelAction.SelectWorkspace, "Instructor"),
+                    Is.True);
+                Assert.That(actions.Request(PanelAction.Back), Is.True);
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
+                Assert.That(sessions.CanRecordInstructorFeedback, Is.True);
+                Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
+                    "check-method"), Is.True, sessions.LastError);
+                feedback = InstructorFeedbackService.FeedbackPath(
+                    Path.GetDirectoryName(pack), imported.PackageFingerprint);
+                Assert.That(File.Exists(feedback), Is.True);
+                Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
+                    "check-method"), Is.False, "An identical response was duplicated.");
+                Assert.That(actions.Request(PanelAction.NextInstructorAnnotation), Is.True);
+                Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
+                    "compare-hypothesis"), Is.True, sessions.LastError);
+                Assert.That(sessions.InstructorFeedbackSummary,
+                    Does.Contain("2 formative response"));
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore),
+                    "Local teaching comments modified Native scientific authority.");
+                Assert.That(File.ReadAllBytes(notes), Is.EqualTo(notesBefore),
+                    "Local instructor notes overwrote the learner journal.");
+
+                Assert.That(actions.Request(PanelAction.Settings), Is.True);
+                Assert.That(actions.Request(PanelAction.SelectWorkspace, "Student"),
+                    Is.True);
+                Assert.That(actions.Request(PanelAction.Back), Is.True);
+                Assert.That(actions.Request(PanelAction.RecordInstructorFeedback,
+                    "request-evidence"), Is.False);
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(scientificBefore));
+            }
+            finally
+            {
+                foreach (var file in new[] {
+                    notes, notes == null ? null : notes + ".bak",
+                    pack, pack == null ? null : pack + ".bak",
+                    saved, saved == null ? null : saved + ".bak",
+                    feedback, feedback == null ? null : feedback + ".bak" })
+                    if (!string.IsNullOrEmpty(file) && File.Exists(file))
+                        File.Delete(file);
+                SceneManager.UnloadSceneAsync(scene);
+            }
+        }
+
         // Source test only. Real Editor/Player execution remains the final
         // local Codex verification gate; no simulated pH or note fixture.
         // This is a real local .plvpack journey, not a cloud teacher grant.
