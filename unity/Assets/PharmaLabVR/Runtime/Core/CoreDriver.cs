@@ -278,7 +278,10 @@ namespace PharmaLabVR.Core
 
         public bool PauseSession()
         {
-            if (Session == null) return false;
+            // Native Hold is a distinct recovery authority. A direct Pause
+            // must not generate a receipt or change that authority while
+            // fresh-neutral input baselines are being established.
+            if (Session == null || IsTimeHeld) return false;
             var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Pause"));
             if (outcome == null || !outcome.accepted) return false;
             accumulator = 0.0;
@@ -288,7 +291,10 @@ namespace PharmaLabVR.Core
 
         public bool ContinueSession()
         {
-            if (Session == null) return false;
+            // Ordinary Continue lacks the recovery-neutral input and baseline
+            // reset from ResumeAfterTimeHold. Never let a recovered-ready
+            // held session bypass that explicit recovery contract.
+            if (Session == null || IsTimeHeld) return false;
             var outcome = JsonUtility.FromJson<CommandOutcome>(Session.SubmitOrdered("Continue"));
             if (outcome == null || !outcome.accepted) return false;
             accumulator = 0.0;

@@ -2778,8 +2778,10 @@ namespace PharmaLabVR.Session
         {
             try
             {
-                if (driver == null || !driver.ResumeAfterTimeHold())
-                    throw new InvalidOperationException("Fresh neutral tracked baselines are required before continuing.");
+                if (driver == null || !driver.IsTimeHeld ||
+                    !driver.ResumeAfterTimeHold())
+                    throw new InvalidOperationException(
+                        "An active Native Hold and fresh neutral tracked baselines are required before continuing.");
                 LastError = null;
                 return true;
             }
