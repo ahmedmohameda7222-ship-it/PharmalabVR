@@ -548,6 +548,7 @@ namespace PharmaLabVR.Tests.PlayMode
             var folder = Path.Combine(Application.persistentDataPath, "sessions");
             var savePath = Path.Combine(folder, name + ".plv.json");
             var notesPath = Path.Combine(folder, name + ".plv-notes");
+            string studentPackPath = null;
             try
             {
                 var roots = scene.GetRootGameObjects();
@@ -613,11 +614,36 @@ namespace PharmaLabVR.Tests.PlayMode
                     "The explicit save/review action modified the scientific event log.");
                 Assert.That(File.ReadAllBytes(notesPath), Is.EqualTo(originalNotes),
                     "The explicit save/review action rewrote learner evidence.");
+
+                // The very same recorded Review can explicitly produce a
+                // portable CHECKSUM-bound Native + Notebook student package.
+                Assert.That(panels.Request(PanelAction.ExportPortable), Is.True,
+                    sessions.LastError);
+                studentPackPath = sessions.LastPortableArchivePath;
+                Assert.That(File.Exists(studentPackPath), Is.True);
+                var archive = PortableSessionArchive.Read(studentPackPath);
+                Assert.That(archive.BranchId, Is.EqualTo(driver.Session.BranchId));
+                Assert.That(archive.EventSequence,
+                    Is.EqualTo(driver.CurrentLabView.EventSequence));
+                Assert.That(archive.NativeJson, Is.EqualTo(originalNative));
+                var studentAnnotations = NotebookService.ReadPortableBranch(
+                    archive.NotebookSnapshot, archive.BranchId, archive.EventSequence);
+                Assert.That(studentAnnotations.Any(entry =>
+                    entry.VesselId == "receiver" &&
+                    entry.Text.StartsWith("Native pH ", System.StringComparison.Ordinal)),
+                    Is.True, "The portable student pack lost the actual Native pH annotation.");
+                Assert.That(File.ReadAllBytes(notesPath), Is.EqualTo(originalNotes),
+                    "Review export changed the student's original Notebook.");
+                Assert.That(driver.Session.ExportSession(), Is.EqualTo(originalNative),
+                    "Review export changed the pinned Native scientific event log.");
+                Assert.That(router.Current.ScreenId, Is.EqualTo(ScreenId.Review));
                 Assert.That(panels.Request(PanelAction.SaveAndReviewStudy), Is.False,
                     "A recorded-only Review cannot silently Save again.");
             }
             finally
             {
+                if (!string.IsNullOrEmpty(studentPackPath) && File.Exists(studentPackPath))
+                    File.Delete(studentPackPath);
                 if (Directory.Exists(savePath)) Directory.Delete(savePath);
                 foreach (var path in new[] { savePath, savePath + ".bak", notesPath,
                     notesPath + ".bak", notesPath + ".lock" })
