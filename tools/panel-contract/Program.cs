@@ -352,6 +352,26 @@ internal static class Program
         Check(!notePanels.Request(saveReviewAction) &&
               noteSession.ReviewOpens == opensBeforeFinish + 1,
             "Recorded Review repeated a saving-only Notebook transition.");
+        // Recorded student Review must let the learner explicitly export
+        // their active Native + Notebook as an immutable portable pack,
+        // without visiting a different screen or exporting teacher preview.
+        var exportedBeforeReview = noteSession.PortableExportCalls;
+        Check(noteRouter.Current.SupportedActions.Contains("ExportPortable") &&
+              notePanels.Request(PanelAction.ExportPortable) &&
+              noteSession.PortableExportCalls == exportedBeforeReview + 1 &&
+              noteRouter.Current.ScreenId == ScreenId.Review,
+            "An explicitly saved Native Review cannot export its current branch-bound student pack.");
+        noteRouter.Show(ScreenId.Lab);
+        Check(!notePanels.Request(PanelAction.ExportPortable) &&
+              noteSession.PortableExportCalls == exportedBeforeReview + 1,
+            "Lab operations bypassed the explicit Notebook/Review/Paused portable export gate.");
+        noteRouter.Show(ScreenId.Review);
+        var xrExportSource = System.IO.File.ReadAllText(
+            "unity/Assets/PharmaLabVR/Runtime/UI/SpatialPanelPresenter.cs");
+        Check(xrExportSource.Contains("reviewExportAvailable", StringComparison.Ordinal) &&
+              xrExportSource.Contains("Export archive", StringComparison.Ordinal) &&
+              xrExportSource.Contains("Compare saved", StringComparison.Ordinal),
+            "XR Review's Native pack export cannot coexist with Compare on non-overlapping ray targets.");
         var studentSource = System.IO.File.ReadAllText(
             "unity/Assets/PharmaLabVR/Runtime/Session/SessionController.cs");
         var spatialSource = System.IO.File.ReadAllText(
