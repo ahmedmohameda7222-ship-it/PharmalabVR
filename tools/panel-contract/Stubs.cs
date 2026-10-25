@@ -167,6 +167,7 @@ namespace PharmaLabVR.Session
         public RecordedSessionReview RecordedReview { get; private set; }
         public int SaveCalls { get; private set; }
         public bool CanFinishNativeStudy { get; set; }
+        public string StudentFormativeFeedbackSummary => "Local student feedback is not verified by this stub.";
         public bool CanExportCurrentReviewPortable { get; set; } = true;
         public bool SavePermitted { get; set; } = true;
         public bool InvalidateNativeStudyOnSave { get; set; }
