@@ -28,6 +28,7 @@ namespace PharmaLabVR.UI
         private int instrumentPage;
         private bool portableRecoveryPage;
         private bool notebookReflectionPage;
+        private bool instructorFeedbackPage;
         private int researchStockIndex;
         private int researchConcentrationIndex = 2;
         private static readonly string[] ResearchStockIds =
@@ -162,8 +163,25 @@ namespace PharmaLabVR.UI
             AddInstrumentButton("Back to notebook", -306f,
                 () => notebookReflectionPage = false);
             AddButton("Next imported note", -306f, PanelAction.NextInstructorAnnotation);
-            AddButton("Formative: review method", -306f, PanelAction.RecordInstructorFeedback,
-                "check-method");
+            AddInstrumentButton("Instructor feedback choices", -306f,
+                () => instructorFeedbackPage = true);
+            AddInstrumentButton("Feedback: request another pH", 30f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "request-evidence") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Feedback: review method", -26f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "check-method") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Feedback: compare hypothesis", -82f, () =>
+            {
+                if (panels?.Request(PanelAction.RecordInstructorFeedback, "compare-hypothesis") == true)
+                    instructorFeedbackPage = false;
+            });
+            AddInstrumentButton("Back to imported note", -306f,
+                () => instructorFeedbackPage = false);
             AddButton("Export archive", -250f, PanelAction.ExportPortable);
             AddButton("Export results CSV", -250f, PanelAction.ExportCsv);
             AddButton("Export comparison CSV", -250f, PanelAction.ExportComparisonCsv);
@@ -515,6 +533,9 @@ namespace PharmaLabVR.UI
                 portableRecoveryPage = false;
             if (state.ScreenId != ScreenId.Notebook)
                 notebookReflectionPage = false;
+            if (state.ScreenId != ScreenId.Review ||
+                panels == null || !panels.CanRecordInstructorFeedback)
+                instructorFeedbackPage = false;
             title.text = state.ScreenId.ToString();
             detail.text = state.ScreenId switch
             {
@@ -637,13 +658,18 @@ namespace PharmaLabVR.UI
             buttons["Next imported note"].GetComponentInChildren<Text>(true)
                 .rectTransform.sizeDelta =
                 new Vector2(instructorFeedbackAvailable ? 164f : 368f, 35f);
-            SetButton("Formative: review method", instructorFeedbackAvailable);
-            var formativeRect = buttons["Formative: review method"].GetComponent<RectTransform>();
+            SetButton("Instructor feedback choices", instructorFeedbackAvailable &&
+                !instructorFeedbackPage);
+            var formativeRect = buttons["Instructor feedback choices"].GetComponent<RectTransform>();
             formativeRect.sizeDelta = new Vector2(importedStudentNotes ? 176f : 368f, 46f);
             formativeRect.anchoredPosition = new Vector2(importedStudentNotes ? 94f : 0f, -306f);
-            buttons["Formative: review method"].GetComponentInChildren<Text>(true)
+            buttons["Instructor feedback choices"].GetComponentInChildren<Text>(true)
                 .rectTransform.sizeDelta =
                 new Vector2(importedStudentNotes ? 164f : 368f, 35f);
+            foreach (var choice in new[] { "Feedback: request another pH",
+                "Feedback: review method", "Feedback: compare hypothesis",
+                "Back to imported note" })
+                SetButton(choice, false);
             SetButton("Export archive", state.ScreenId == ScreenId.Notebook &&
                 state.SupportedActions.Contains("ExportPortable"));
             SetButton("Export results CSV", state.ScreenId == ScreenId.Review &&
@@ -826,6 +852,27 @@ namespace PharmaLabVR.UI
                     "into your local, Native-event-linked Notebook. " +
                     "These are your choices, NOT Native measurements.\n" +
                     (panels?.NotebookSummary ?? "No local notebook available.");
+                if (!string.IsNullOrEmpty(panels?.LastError))
+                    detail.text += "\n" + panels.LastError;
+            }
+            if (state.ScreenId == ScreenId.Review && instructorFeedbackPage)
+            {
+                // Recorded-only teaching action. Separate XR ray-hit page
+                // prevents the three answer choices from overlapping the
+                // scientific CSV, study preview, recovery and settings actions.
+                foreach (var entry in buttons.Values)
+                    entry.gameObject.SetActive(false);
+                foreach (var choice in new[] { "Feedback: request another pH",
+                    "Feedback: review method", "Feedback: compare hypothesis",
+                    "Back to imported note" })
+                    SetButton(choice, true);
+                detail.text =
+                    "OFFLINE INSTRUCTOR FORMATIVE FEEDBACK · NO GRADES OR ATTESTATION\n" +
+                    "Choose one bounded response for the selected saved student note. " +
+                    "Only a validated imported archive and its recorded Native branch/event " +
+                    "are referenced. No chemistry, student Notebook, or cloud record is changed.\n" +
+                    (panels?.InstructorPortableCompactSummary ??
+                        "No local student preview selected.");
                 if (!string.IsNullOrEmpty(panels?.LastError))
                     detail.text += "\n" + panels.LastError;
             }
