@@ -1788,7 +1788,8 @@ namespace PharmaLabVR.Session
             }
         }
 
-        private bool TryResearchCommand(string action, Func<LabCommandReceipt> command)
+        private bool TryResearchCommand(string action, Func<LabCommandReceipt> command,
+            string creditedNativeVessel = null)
         {
             LastInstrumentReceipt = null;
             try
@@ -1796,6 +1797,8 @@ namespace PharmaLabVR.Session
                 if (driver?.Session == null || driver.SourceNeedsPreparation ||
                     driver.IsNativePaused || driver.IsTimeHeld)
                     throw new InvalidOperationException("Prepare stock and leave Native Pause/Hold before transfer.");
+                var before = driver.CurrentLabView;
+                var authority = driver.Session;
                 var receipt = command();
                 if (!receipt.Accepted)
                     throw new InvalidOperationException("Native instrument refused: " + receipt.Code);
@@ -1805,6 +1808,15 @@ namespace PharmaLabVR.Session
                     receipt.CommandSequence;
                 LastError = null;
                 driver.RefreshAfterInstrumentCommand();
+                if (creditedNativeVessel != null)
+                {
+                    var delta = ReferenceEquals(authority, driver.Session) ?
+                        LabBenchReadout.ObservedNativeTransfer(
+                            before, driver.CurrentLabView, creditedNativeVessel) : null;
+                    LastInstrumentReceipt += delta != null ?
+                        " · " + delta :
+                        " · Destination credit unconfirmed; check actual Native inventory.";
+                }
                 if (router?.Current != null) router.Show(router.Current.ScreenId);
                 return true;
             }
@@ -1846,7 +1858,7 @@ namespace PharmaLabVR.Session
                 return false;
             }
             return TryResearchCommand("Pipette dispense 0.05 ml", () => ResearchPipette.Dispense(
-                ResearchInstrumentPayloads.DefaultPipetteDispenseM3));
+                ResearchInstrumentPayloads.DefaultPipetteDispenseM3), "receiver");
         }
         // 0.05 mL is the precision-session transport budget for one Native solve.
         // This is a deliberate small prime, NOT an instant 50 mL refill.
@@ -1928,7 +1940,7 @@ namespace PharmaLabVR.Session
                 ResearchInstrumentPayloads.RefillFromPreparedStock(
                     "source", "burette", "spill", BurettePrimeM3),
                 commands.CaptureTouchedRevisions("source", "burette"));
-        });
+        }, "burette");
 
         public bool TryFillBuretteFromBottle()
         {
@@ -1943,7 +1955,7 @@ namespace PharmaLabVR.Session
         }
 
         public bool TryBottleMeasuredPour() => TryResearchCommand("Bottle pour 0.01 ml",
-            () => ResearchBottle.Pour(1e-8));
+            () => ResearchBottle.Pour(1e-8), "receiver");
         // The actual scene station must still contain Native water at the
         // command edge; a stale target or distant held pipette never rinses.
         public bool TryPhysicalRinsePipette(Transform physicalPipette,
@@ -2166,7 +2178,7 @@ namespace PharmaLabVR.Session
         }
 
         public bool TryBottleRefillFromReserve() => TryResearchCommand("Bottle refill 0.01 ml",
-            () => ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8));
+            () => ResearchBottle.RefillFromPreparedStock("reserve-stock", 1e-8), "source");
 
         public bool TryPrepareResearchReserveStock(string stockId, double concentrationMolPerL)
         {
